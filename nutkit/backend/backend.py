@@ -27,7 +27,7 @@ def decode_hook(x):
 
     data = x['data']
     if not data:
-        return x
+        data = {}
 
     return protocolClasses[name](**data)
 

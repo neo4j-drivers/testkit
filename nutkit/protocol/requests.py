@@ -9,23 +9,35 @@ All requests will be sent to backend as:
     }
 """
 
-class NewDriverRequest:
+class NewDriver:
     def __init__(self, uri, authToken):
         self.uri = uri
         self.authorizationToken = authToken
 
 
-class NewSessionRequest:
+class NewSession:
     def __init__(self, driverId, accessMode, bookmarks):
         self.driverId = driverId
         self.accessMode = accessMode
         self.bookmarks = bookmarks
 
 
-class SessionRunRequest:
+"""
+Response should be Result model or raised Error model
+"""
+class SessionRun:
     def __init__(self, sessionId, cypher):
         self.sessionId = sessionId
         self.cypher = cypher
+
+
+"""
+Response should be Record model, NullRecord to indicate last record or raised Error model if record
+couldn't be retrieved.
+"""
+class ResultNext:
+    def __init__(self, resultId):
+        self.resultId = resultId
 
 
 class AuthorizationToken:
