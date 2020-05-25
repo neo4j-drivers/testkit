@@ -1,2 +1,2 @@
 from nutkit.frontend.driver import Driver
-from nutkit.protocol import AuthorizationToken
+from nutkit.protocol import AuthorizationToken, NullRecord

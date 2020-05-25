@@ -1,6 +1,6 @@
 
 from nutkit.backend import Backend
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver, AuthorizationToken, NullRecord
 
 
 if __name__ == "__main__":
@@ -12,10 +12,10 @@ if __name__ == "__main__":
     authToken = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
     driver = Driver(backend, "bolt://localhost:9999", authToken)
     session = driver.session("r", ["bm1"])
-    result = session.run("RETURN NULL AS nullcol, 1 AS intcol")
-    record = result.next()
-    print(record)
-    print(record.values[0])
-    print(record.values[1])
-    record = result.next()
-    print(record)
+    result = session.run("RETURN NULL AS nullcol, 1 AS intcol, [1, 'a'] AS arrcol ")
+    while True:
+        record = result.next()
+        if isinstance(record, NullRecord):
+            break
+        for v in record.values:
+            print("Record: "+str(v))
