@@ -23,8 +23,8 @@ class Session:
         self._backend = backend
         self._session = session
 
-    def run(self, cypher):
-        req = protocol.SessionRun(self._session.id, cypher)
+    def run(self, cypher, params=None):
+        req = protocol.SessionRun(self._session.id, cypher, params)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Result):
             raise "Should be result"

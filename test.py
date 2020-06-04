@@ -1,6 +1,7 @@
 
 from nutkit.backend import Backend
 from nutkit.frontend import Driver, AuthorizationToken, NullRecord
+from nutkit.protocol import CypherString
 
 
 if __name__ == "__main__":
@@ -13,6 +14,15 @@ if __name__ == "__main__":
     driver = Driver(backend, "bolt://localhost:9999", authToken)
     session = driver.session("r", ["bm1"])
     result = session.run("RETURN NULL AS nullcol, 1 AS intcol, [1, 'a'] AS arrcol ")
+    while True:
+        record = result.next()
+        if isinstance(record, NullRecord):
+            break
+        for v in record.values:
+            print("Record: "+str(v))
+
+
+    result = session.run("MATCH (n:X {txt: $txt}) RETURN n", {'txt': CypherString('txt')})
     while True:
         record = result.next()
         if isinstance(record, NullRecord):

@@ -26,9 +26,10 @@ class NewSession:
 Response should be Result model or raised Error model
 """
 class SessionRun:
-    def __init__(self, sessionId, cypher):
+    def __init__(self, sessionId, cypher, params):
         self.sessionId = sessionId
         self.cypher = cypher
+        self.params = params
 
 
 """

@@ -48,6 +48,23 @@ class CypherList:
     def __init__(self, value):
         self.value = value
 
+    def __str__(self):
+        v = []
+        for x in self.value:
+            v.append(str(x))
+        return "List {}".format(v)
+
+class CypherMap:
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        v = {}
+        for k in self.value:
+            v[k] = str(self.value[k])
+        print(self.value)
+        return "Map {}".format(v)
+
 
 class CypherInt:
     def __init__(self, value):
@@ -57,4 +74,20 @@ class CypherInt:
 class CypherString:
     def __init__(self, value):
         self.value = value
+
+    def __str__(self):
+        return self.value
+
+
+class Node:
+    def __init__(self, id, labels, props):
+        self.id = id
+        self.labels = labels
+        self.props = props
+
+    def __str__(self):
+        return "Node (id={}, labels={}), props={}".format(
+            self.id, self.labels, self.props)
+
+
 
