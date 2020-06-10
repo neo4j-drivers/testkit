@@ -32,7 +32,7 @@ if __name__ == "__main__":
     def retryableRead(tx):
         result = tx.run("MATCH (n:X {txt: $txt}) RETURN n", {'txt': CypherString('hello')})
         record = result.next()
-        return record.values
+        return record.values[0]
 
     r = session.readTransaction(retryableRead)
     print(r)
