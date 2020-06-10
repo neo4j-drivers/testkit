@@ -34,8 +34,16 @@ class NullRecord:
         pass
 
 
-class Error:
+class RetryableTry:
+    def __init__(self, id):
+        self.id = id
+
+class RetryableDone:
     def __init__(self):
+        pass
+
+class Error:
+    def __init__(self, id):
         pass
 
 

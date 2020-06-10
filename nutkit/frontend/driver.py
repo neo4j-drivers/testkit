@@ -1,5 +1,7 @@
 import nutkit.protocol as protocol
 
+from .session import Session
+
 
 class Driver:
     def __init__(self, backend, uri, authToken):
@@ -16,27 +18,3 @@ class Driver:
         if not isinstance(res, protocol.Session):
             raise "Should be session"
         return Session(self._backend, res)
-
-
-class Session:
-    def __init__(self, backend, session):
-        self._backend = backend
-        self._session = session
-
-    def run(self, cypher, params=None):
-        req = protocol.SessionRun(self._session.id, cypher, params)
-        res = self._backend.sendAndReceive(req)
-        if not isinstance(res, protocol.Result):
-            raise "Should be result"
-        return Result(self._backend, res)
-
-
-class Result:
-    def __init__(self, backend, result):
-        self._backend = backend
-        self._result = result
-
-    def next(self):
-        req = protocol.ResultNext(self._result.id)
-        return self._backend.sendAndReceive(req)
-

@@ -32,6 +32,35 @@ class SessionRun:
         self.params = params
 
 
+class SessionReadTransaction:
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+"""
+Indicates a positive intent from the client application to commit the retryable transaction
+"""
+class RetryablePositive:
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+"""
+Indicates a negative intent from the client application to commit the retryable transaction
+"""
+class RetryableNegative:
+    def __init__(self, sessionId, errorId=""):
+        self.sessionId = sessionId
+        self.errorId = errorId
+
+
+class TransactionRun:
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
+        self.cypher = cypher
+        self.params = params
+
+
 """
 Response should be Record model, NullRecord to indicate last record or raised Error model if record
 couldn't be retrieved.

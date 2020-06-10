@@ -6,7 +6,6 @@ from nutkit.protocol import CypherString
 
 if __name__ == "__main__":
     # Start backend
-    #backend = Backend(["python3", "backendexample.py"])
     backend = Backend(["/home/peter/code/neo4j/neo4j-go-driver/nutbackend/nutbackend"])
 
     # Example test case
@@ -22,10 +21,18 @@ if __name__ == "__main__":
             print("Record: "+str(v))
 
 
-    result = session.run("MATCH (n:X {txt: $txt}) RETURN n", {'txt': CypherString('txt')})
+    result = session.run("MATCH (n:X {txt: $txt}) RETURN n", {'txt': CypherString('hello')})
     while True:
         record = result.next()
         if isinstance(record, NullRecord):
             break
         for v in record.values:
             print("Record: "+str(v))
+
+    def retryableRead(tx):
+        result = tx.run("MATCH (n:X {txt: $txt}) RETURN n", {'txt': CypherString('hello')})
+        record = result.next()
+        return record.values
+
+    r = session.readTransaction(retryableRead)
+    print(r)

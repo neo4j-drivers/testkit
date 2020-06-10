@@ -46,12 +46,13 @@ class Backend:
         self._p.kill()
         self._timeout = True
 
-    def sendAndReceive(self, req, timeout=2):
+    def send(self, req):
         reqJson = self._encoder.encode(req)
         self._p.stdin.write("#request begin\n")
         self._p.stdin.write(reqJson+"\n")
         self._p.stdin.write("#request end\n")
 
+    def receive(self, timeout=2):
         response = ""
         in_response = False
         while True:
@@ -86,4 +87,9 @@ class Backend:
                     response = response + line
                 else:
                     sys.stdout.write(line)
+
+    def sendAndReceive(self, req, timeout=2):
+        self.send(req)
+        return self.receive(timeout)
+
 
