@@ -51,6 +51,9 @@ class CypherNull:
     def __init__(self):
         pass
 
+    def __str__(self):
+        return "<null>"
+
 
 class CypherList:
     def __init__(self, value):
@@ -77,6 +80,9 @@ class CypherMap:
 class CypherInt:
     def __init__(self, value):
         self.value = value
+
+    def __str__(self):
+        return str(self.value)
 
 
 class CypherString:

@@ -28,7 +28,6 @@ class Session:
                     self._backend.send(protocol.RetryablePositive(self._session.id))
                 except Exception as e:
                     # Todo: Check exception for id of error
-                    print(e)
                     self._backend.send(protocol.RetryableNegative(self._session.id))
             elif isinstance(res, protocol.RetryableDone):
                 return x
