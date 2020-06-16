@@ -111,7 +111,7 @@ if __name__ == "__main__":
     backend = Backend(args)
 
     # Wait until server is listening before running tests
-    time.sleep(5)
+    time.sleep(10)
     print("Neo4j server started")
 
     print("Running tests on server...")
