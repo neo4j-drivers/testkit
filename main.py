@@ -5,19 +5,18 @@ from nutkit.backend import Backend
 
 
 containers = ["driver", "neo4jserver"]
+networks = ["the-bridge"]
 
 
 def cleanup():
     for c in containers:
         subprocess.run(["docker", "rm", "-f", "-v", c],
             check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        pass
+    for n in networks:
+        subprocess.run(["docker", "network", "rm", n],
+            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 if __name__ == "__main__":
-    s = "hell"
-    b = bytearray(s, 'utf-8')
-
-
     # Retrieve needed parameters from environment
     driverRepo = os.environ.get('NUT_DRIVER_REPO')
     driverImage = os.environ.get('NUT_DRIVER_IMAGE')
@@ -33,6 +32,12 @@ if __name__ == "__main__":
 
     # Also make sure that none of those images are running at this point
     cleanup()
+
+    # Create network to be shared among the instances
+    args = [
+        "docker", "network", "create", "the-bridge"
+    ]
+    subprocess.run(args)
 
     # Bootstrap the driver docker image by running a bootstrap script in the image.
     # The driver docker image only contains the tools needed to build, not the built driver.
