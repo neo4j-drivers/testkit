@@ -18,9 +18,16 @@ def cleanup():
 
 if __name__ == "__main__":
     # Retrieve needed parameters from environment
+    #
+    # NUT_DRIVER_REPO  - Path to root of driver git repository
+    # NUT_NUTKIT_REPO  - Path to root of nutkit git repository
+    # NUT_DRIVER_IMAGE - Name of docker image that can be used to build the driver and host the
+    #                    nut backend
+    # NUT_BUILD_ROOT   - Path on the driver image where build output is to be placed, the drivers
+    #                    nut backend should be placed here and be named 'nutbackend'
     driverRepo = os.environ.get('NUT_DRIVER_REPO')
+    nutRepo = os.environ.get('NUT_NUTKIT_REPO')
     driverImage = os.environ.get('NUT_DRIVER_IMAGE')
-    nutRepo = os.environ.get('NUT_NUT_REPO')
     buildRoot = os.environ.get('NUT_BUILD_ROOT')
 
     if not driverRepo or not nutRepo or not driverImage or not buildRoot:

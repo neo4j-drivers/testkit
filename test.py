@@ -18,14 +18,9 @@ def a_test(backend):
             print("Record: "+str(v))
 
 
-
-
-
-
-
 if __name__ == "__main__":
     # Start backend
-    backend = Backend(["/home/peter/code/neo4j/neo4j-go-driver/nutbackend/nutbackend"])
+    backend = Backend("localhost", 9876)
 
     # Example test case
     authToken = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")

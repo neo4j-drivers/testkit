@@ -1,9 +1,8 @@
-from subprocess import Popen, PIPE
-from select import select
 import json
 import sys
 import inspect
 import threading
+import socket
 
 import nutkit.protocol as protocol
 
@@ -33,24 +32,25 @@ def decode_hook(x):
 
 
 class Backend:
-    def __init__(self, args):
-        self._p = Popen(
-            args, bufsize=0, encoding='utf-8',
-            stdin=PIPE, stdout=PIPE, stderr=PIPE, shell=False)
+    def __init__(self, address, port):
+        self._socket = socket.socket(socket.AF_INET)
+        self._socket.connect((address, port))
+        self._reader = self._socket.makefile(mode='r', encoding='utf-8')
+        self._writer = self._socket.makefile(mode='w', encoding='utf-8')
         self._encoder = Encoder()
         self._timeout = False
-        self._died = False
 
     def _onTimeout(self):
-        self._died = self._p.poll() != None
-        self._p.kill()
+        self._reader.close()
+        self._socket.close()
         self._timeout = True
 
     def send(self, req):
         reqJson = self._encoder.encode(req)
-        self._p.stdin.write("#request begin\n")
-        self._p.stdin.write(reqJson+"\n")
-        self._p.stdin.write("#request end\n")
+        self._writer.write("#request begin\n")
+        self._writer.write(reqJson+"\n")
+        self._writer.write("#request end\n")
+        self._writer.flush()
 
     def receive(self, timeout=2):
         response = ""
@@ -58,21 +58,13 @@ class Backend:
         while True:
             t = threading.Timer(timeout, lambda: self._onTimeout())
             t.start()
-            line = self._p.stdout.readline()
+            line = self._reader.readline()
             t.cancel()
             if self._timeout:
                 raise "timeout"
-            if line == "" or self._died:
-                if self._p.poll() != None:
-                    if self._p.returncode != 0:
-                        sys.stdout.write(">>> Error output from subprocess:\n")
-                        for l in self._p.stderr:
-                            sys.stdout.write(l)
-                        sys.stdout.write("<<< End error output from subprocess\n\n")
-                        sys.stdout.flush()
-                        raise "died"
-                    else:
-                        raise "exited"
+            if line == "":
+                if self._reader.closed():
+                    raise "closed"
                 else:
                     sys.stdout.write(line)
             if line == "#response begin\n":
@@ -91,5 +83,4 @@ class Backend:
     def sendAndReceive(self, req, timeout=2):
         self.send(req)
         return self.receive(timeout)
-
 
