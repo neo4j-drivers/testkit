@@ -56,6 +56,8 @@ if __name__ == "__main__":
         "-v", "%s:/driver" % driverRepo,
         # Name of the docker container
         "--name", "driver",
+        # Expose backend on this port
+        "-p9876:9876",
         # Set working folder to the driver
         "-w", "/driver",
         # Remove itself upon exit
@@ -81,11 +83,20 @@ if __name__ == "__main__":
         "docker", "exec",
         "--env", "BUILD_ROOT=%s" % buildRoot,
         "driver",
-        "python3", "/nutkit/driver_go_build.py"
+        "python3", "/nutkit/driver_build_go.py"
     ])
     print("Finished building driver")
 
 
+    print("Start backend in driver container")
+    args = [
+        "docker", "exec",
+        "--detach",
+        "driver",
+        os.path.join(buildRoot, "nutbackend")
+    ]
+    subprocess.run(args)
+    print("Started backend in driver container")
 
     # Start a Neo4j server
     print("Starting neo4j server")
@@ -107,15 +118,9 @@ if __name__ == "__main__":
     subprocess.run(args)
 
 
-    # The nutbackend is invoked with the following docker command, need to use interactive
-    # to get stdin forwarded.
-    args = [
-        "docker", "exec",
-        "--interactive",
-        "driver",
-        os.path.join(buildRoot, "nutbackend")
-    ]
-    backend = Backend(args)
+    # Connect the frontend to the backend in the driver container
+    # Backend here is a wrapper around the real backend, communicates over a socket
+    backend = Backend("localhost", 9876)
 
     # Wait until server is listening before running tests
     time.sleep(10)
