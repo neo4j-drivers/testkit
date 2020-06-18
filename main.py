@@ -28,6 +28,27 @@ def cleanup():
         subprocess.run(["docker", "network", "rm", n],
             check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+
+class TeamCityTestResult(unittest.TextTestResult):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def startTest(self, test):
+        print("##teamcity[testStarted name='%s']" % test)
+
+    def stopTest(self, test):
+        print("##teamcity[testFinished name='%s']" % test)
+
+    def addError(self, test, err):
+        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (test, err[1], err[2]))
+
+    def addFailure(self, test, err):
+        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (test, err[1], err[2]))
+
+    def addSkip(self, test, reason):
+        print("##teamcity[testIgnored name='%s' message='%s']" % (test, reason))
+
+
 if __name__ == "__main__":
     # Retrieve needed parameters from environment
     driverRepo = os.environ.get('NUT_DRIVER_REPO')
@@ -127,8 +148,13 @@ if __name__ == "__main__":
     # Make sure that the tests instruct the driver to connect to neo4jserver docker container
     os.environ['NUT_NEO4J_HOST'] = neo4jserver
 
-    print("Running tests on server...")
-    runner = unittest.TextTestRunner()
-    runner.run(suites.single_community)
-    print("Done running tests")
+    failed = False
 
+    print("Running tests on server...")
+    runner = unittest.TextTestRunner(resultclass=TeamCityTestResult)
+    result = runner.run(suites.single_community)
+    if result.errors or result.failures:
+        failed = True
+
+    if failed:
+        sys.exit(1)
