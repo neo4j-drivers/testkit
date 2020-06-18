@@ -35,15 +35,13 @@ class Backend:
     def __init__(self, address, port):
         self._socket = socket.socket(socket.AF_INET)
         self._socket.connect((address, port))
-        self._reader = self._socket.makefile(mode='r', encoding='utf-8')
-        self._writer = self._socket.makefile(mode='w', encoding='utf-8')
         self._encoder = Encoder()
         self._timeout = False
+        self._reader = self._socket.makefile(mode='r', encoding='utf-8')
+        self._writer = self._socket.makefile(mode='w', encoding='utf-8')
 
-    def _onTimeout(self):
-        self._reader.close()
+    def close(self):
         self._socket.close()
-        self._timeout = True
 
     def send(self, req):
         reqJson = self._encoder.encode(req)
@@ -52,26 +50,17 @@ class Backend:
         self._writer.write("#request end\n")
         self._writer.flush()
 
-    def receive(self, timeout=2):
+    def receive(self, timeout=5):
+        self._socket.settimeout(timeout)
         response = ""
         in_response = False
         while True:
-            t = threading.Timer(timeout, lambda: self._onTimeout())
-            t.start()
-            line = self._reader.readline()
-            t.cancel()
-            if self._timeout:
-                raise "timeout"
-            if line == "":
-                if self._reader.closed():
-                    raise "closed"
-                else:
-                    sys.stdout.write(line)
-            if line == "#response begin\n":
+            line = self._reader.readline().strip()
+            if line == "#response begin":
                 if in_response:
                     raise "already in response"
                 in_response = True
-            elif line == "#response end\n":
+            elif line == "#response end":
                 res = json.loads(response, object_hook=decode_hook)
                 return res
             else:

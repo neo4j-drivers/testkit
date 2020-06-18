@@ -8,6 +8,9 @@ class Session:
         self._backend = backend
         self._session = session
 
+    def close(self):
+        pass
+
     def run(self, cypher, params=None):
         req = protocol.SessionRun(self._session.id, cypher, params)
         res = self._backend.sendAndReceive(req)
@@ -31,3 +34,4 @@ class Session:
                     self._backend.send(protocol.RetryableNegative(self._session.id))
             elif isinstance(res, protocol.RetryableDone):
                 return x
+

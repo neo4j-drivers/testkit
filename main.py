@@ -1,7 +1,19 @@
-import os, sys, atexit, subprocess, time
+"""
+Runs all test suites in docker containers.
 
-from test import a_test
-from nutkit.backend import Backend
+Relies on the following environment variables:
+
+NUT_DRIVER_REPO     Path to root of driver git repository
+NUT_NUTKIT_REPO     Path to root of nutkit git repository
+NUT_DRIVER_IMAGE    Name of docker image that can be used to build the driver and host the
+                    nut backend
+NUT_BUILD_ROOT      Path on the driver image where build output is to be placed, the drivers
+                    nut backend should be placed here and be named 'nutbackend'
+"""
+
+import os, sys, atexit, subprocess, time, unittest
+
+import tests.neo4j.suites as suites
 
 
 containers = ["driver", "neo4jserver"]
@@ -18,13 +30,6 @@ def cleanup():
 
 if __name__ == "__main__":
     # Retrieve needed parameters from environment
-    #
-    # NUT_DRIVER_REPO  - Path to root of driver git repository
-    # NUT_NUTKIT_REPO  - Path to root of nutkit git repository
-    # NUT_DRIVER_IMAGE - Name of docker image that can be used to build the driver and host the
-    #                    nut backend
-    # NUT_BUILD_ROOT   - Path on the driver image where build output is to be placed, the drivers
-    #                    nut backend should be placed here and be named 'nutbackend'
     driverRepo = os.environ.get('NUT_DRIVER_REPO')
     nutRepo = os.environ.get('NUT_NUTKIT_REPO')
     driverImage = os.environ.get('NUT_DRIVER_IMAGE')
@@ -66,7 +71,7 @@ if __name__ == "__main__":
         # Name of the image
         driverImage,
         # Bootstrap command
-        "python3", "/nutkit/driver_bootstrap.py"
+        "python3", "/nutkit/driver/bootstrap.py"
     ]
     p = subprocess.Popen(args, bufsize=0, encoding='utf-8', stdout=subprocess.PIPE)
     print("Waiting for driver container to start")
@@ -83,51 +88,47 @@ if __name__ == "__main__":
         "docker", "exec",
         "--env", "BUILD_ROOT=%s" % buildRoot,
         "driver",
-        "python3", "/nutkit/driver_build_go.py"
+        "python3", "/nutkit/driver/build_go.py"
     ])
     print("Finished building driver")
 
-
     print("Start backend in driver container")
-    args = [
+    subprocess.run([
         "docker", "exec",
         "--detach",
         "driver",
         os.path.join(buildRoot, "nutbackend")
-    ]
-    subprocess.run(args)
+    ])
     print("Started backend in driver container")
 
     # Start a Neo4j server
+    neo4jserver = "neo4jserver"
     print("Starting neo4j server")
-    args = [
+    subprocess.run([
         "docker", "run",
         # Name of the docker container
-        "--name", "neo4jserver",
+        "--name", neo4jserver,
         # Remove itself upon exit
         "--rm",
         # Run in background
         "--detach",
-        "--env", "NEO4J_dbms_connector_bolt_advertised__address=neo4jserver:7687",
+        "--env", "NEO4J_dbms_connector_bolt_advertised__address=%s:7687" % neo4jserver,
         "--net=the-bridge",
         # Force a password
         "--env", "NEO4J_AUTH=%s/%s" % ("neo4j", "pass"),
         # Image
         "neo4j:latest",
-    ]
-    subprocess.run(args)
-
-
-    # Connect the frontend to the backend in the driver container
-    # Backend here is a wrapper around the real backend, communicates over a socket
-    backend = Backend("localhost", 9876)
+    ])
 
     # Wait until server is listening before running tests
     time.sleep(10)
     print("Neo4j server started")
 
-    print("Running tests on server...")
-    a_test(backend)
-    print("Done running tests")
+    # Make sure that the tests instruct the driver to connect to neo4jserver docker container
+    os.environ['NUT_NEO4J_HOST'] = neo4jserver
 
+    print("Running tests on server...")
+    runner = unittest.TextTestRunner()
+    runner.run(suites.single_community)
+    print("Done running tests")
 
