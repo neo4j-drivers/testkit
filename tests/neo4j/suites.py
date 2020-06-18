@@ -3,7 +3,7 @@ Defines suites of test to run in different setups
 """
 
 import unittest
-import tests.neo4j.test_datatypes as datatypes
+import tests.neo4j.datatypes as datatypes
 
 loader = unittest.TestLoader()
 

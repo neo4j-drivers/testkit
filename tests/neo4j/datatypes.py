@@ -6,7 +6,6 @@ import nutkit.protocol as types
 from tests.neo4j.shared import *
 
 
-
 class TestDatatypes(unittest.TestCase):
     def setUp(self):
         self._backend = newBackend()
@@ -21,10 +20,18 @@ class TestDatatypes(unittest.TestCase):
     def test_primitives(self):
         result = self._session.run("RETURN NULL, 1, 'string', [1, 'a']")
         record = result.next()
-
         self.assertNotIsInstance(record, types.NullRecord)
+
         values = record.values
         self.assertIsInstance(values[0], types.CypherNull)
         self.assertIsInstance(values[1], types.CypherInt)
         self.assertIsInstance(values[2], types.CypherString)
         self.assertIsInstance(values[3], types.CypherList)
+
+    def test_graph_node(self):
+        result = self._session.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
+        record = result.next()
+        self.assertNotIsInstance(record, types.NullRecord)
+
+        node = record.values[0]
+        self.assertIsInstance(node, types.Node)
