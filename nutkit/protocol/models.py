@@ -1,4 +1,3 @@
-
 """
 All models are sent from backend as:
     {
@@ -104,4 +103,19 @@ class Node:
             self.id, self.labels, self.props)
 
 
+class BaseError(Exception):
+    """ Base class for all types of errors, should not be sent from backend
+
+    All models inheriting from this will be thrown as exceptions upon retrieval from backend.
+    """
+    pass
+
+
+class BackendError(BaseError):
+    """ Sent by backend when there is an internal error in the backend, not the driver.  """
+    def __init__(self, msg):
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 

@@ -62,6 +62,9 @@ class Backend:
                 in_response = True
             elif line == "#response end":
                 res = json.loads(response, object_hook=decode_hook)
+                # All received errors are raised as exceptions
+                if isinstance(res, protocol.BaseError):
+                    raise res
                 return res
             else:
                 if in_response:
