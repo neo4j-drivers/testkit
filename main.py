@@ -7,8 +7,6 @@ NUT_DRIVER_REPO     Path to root of driver git repository
 NUT_NUTKIT_REPO     Path to root of nutkit git repository
 NUT_DRIVER_IMAGE    Name of docker image that can be used to build the driver and host the
                     nut backend
-NUT_BUILD_ROOT      Path on the driver image where build output is to be placed, the drivers
-                    nut backend should be placed here and be named 'nutbackend'
 """
 
 import os, sys, atexit, subprocess, time, unittest
@@ -54,9 +52,8 @@ if __name__ == "__main__":
     driverRepo = os.environ.get('NUT_DRIVER_REPO')
     nutRepo = os.environ.get('NUT_NUTKIT_REPO')
     driverImage = os.environ.get('NUT_DRIVER_IMAGE')
-    buildRoot = os.environ.get('NUT_BUILD_ROOT')
 
-    if not driverRepo or not nutRepo or not driverImage or not buildRoot:
+    if not driverRepo or not nutRepo or not driverImage:
         print("Missing environment variables")
         sys.exit(1)
 
@@ -100,27 +97,26 @@ if __name__ == "__main__":
     if line.strip() != "ok":
         print(line)
         sys.exit(2)
-    print("Driver container started")
+    print("Started")
 
 
     # Build the driver and it's nutkit backend
     print("Build nutkit backend in driver container")
     subprocess.run([
         "docker", "exec",
-        "--env", "BUILD_ROOT=%s" % buildRoot,
         "driver",
         "python3", "/nutkit/driver/build_go.py"
     ])
-    print("Finished building driver")
+    print("Finished building")
 
     print("Start backend in driver container")
     subprocess.run([
         "docker", "exec",
         "--detach",
         "driver",
-        os.path.join(buildRoot, "nutbackend")
+        "python3", "/nutkit/driver/backend_go.py"
     ])
-    print("Started backend in driver container")
+    print("Started")
 
     # Start a Neo4j server
     neo4jserver = "neo4jserver"
