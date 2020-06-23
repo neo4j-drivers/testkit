@@ -8,6 +8,7 @@ is executed in each context.
 import os, sys, atexit, subprocess, time, unittest
 
 import tests.neo4j.suites as suites
+import tests.stub.suites as stub_suites
 
 
 # Environment variables
@@ -124,6 +125,14 @@ if __name__ == "__main__":
     ])
     print("Finished building")
 
+
+    """
+    TODO:
+    Unit tests
+    """
+
+
+
     print("Start backend in driver container")
     subprocess.run([
         "docker", "exec",
@@ -132,6 +141,27 @@ if __name__ == "__main__":
         "python3", "/nutkit/driver/backend_go.py"
     ])
     print("Started")
+
+    failed = False
+
+    """
+    TODO:
+    Stub tests, protocol version 4
+    """
+    print("Running stub suites")
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class())
+    result = runner.run(stub_suites.protocol4x0)
+    if result.errors or result.failures:
+        failed = True
+
+    if failed:
+        sys.exit(1)
+
+
+    """
+    Neo4j 4.0 server tests
+    """
+    # TODO: Write suite name to TeamCity
 
     # Start a Neo4j server
     neo4jserver = "neo4jserver"
@@ -159,13 +189,20 @@ if __name__ == "__main__":
     # Make sure that the tests instruct the driver to connect to neo4jserver docker container
     os.environ['TEST_NEO4J_HOST'] = neo4jserver
 
-    failed = False
-
     print("Running tests on server...")
     runner = unittest.TextTestRunner(resultclass=get_test_result_class())
-    result = runner.run(suites.single_community)
+    result = runner.run(suites.single_community_neo4j4x0)
     if result.errors or result.failures:
         failed = True
 
     if failed:
         sys.exit(1)
+
+
+    """
+    TODO:
+    Neo4j 4.1 server tests
+    """
+
+
+

@@ -31,6 +31,10 @@ def decode_hook(x):
     return protocolClasses[name](**data)
 
 
+# How long to wait before backend responds
+default_timeout = 10
+
+
 class Backend:
     def __init__(self, address, port):
         self._socket = socket.socket(socket.AF_INET)
@@ -49,7 +53,7 @@ class Backend:
         self._writer.write("#request end\n")
         self._writer.flush()
 
-    def receive(self, timeout=10):
+    def receive(self, timeout=default_timeout):
         self._socket.settimeout(timeout)
         response = ""
         in_response = False
@@ -71,7 +75,7 @@ class Backend:
                 else:
                     sys.stdout.write(line)
 
-    def sendAndReceive(self, req, timeout=10):
+    def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)
         return self.receive(timeout)
 
