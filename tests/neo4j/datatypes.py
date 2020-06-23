@@ -4,12 +4,13 @@ from nutkit.backend import Backend
 from nutkit.frontend import Driver, AuthorizationToken, NullRecord
 import nutkit.protocol as types
 from tests.neo4j.shared import *
+from tests.shared import *
 
 
 class TestDatatypes(unittest.TestCase):
     def setUp(self):
-        self._backend = newBackend()
-        self._driver = getDriver(self._backend)
+        self._backend = new_backend()
+        self._driver = get_driver(self._backend)
         self._session = self._driver.session("r")
 
     def tearDown(self):
