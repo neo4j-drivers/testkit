@@ -3,10 +3,10 @@ Shared utilities for writing tests
 
 Uses environment variables for configuration:
 
-NUT_BACKEND_HOST  Hostname of backend, default is localhost
-NUT_BACKEND_PORT  Port on backend host, default is 9876
-NUT_NEO4J_HOST    Neo4j server host, no default, required
-NUT_NEO4J_PORT    Neo4j server port, default is 7687
+TEST_BACKEND_HOST  Hostname of backend, default is localhost
+TEST_BACKEND_PORT  Port on backend host, default is 9876
+TEST_NEO4J_HOST    Neo4j server host, no default, required
+TEST_NEO4J_PORT    Neo4j server port, default is 7687
 """
 import os
 from nutkit.backend import Backend
@@ -14,11 +14,11 @@ from nutkit.frontend import Driver, AuthorizationToken
 
 
 def get_backend_host_and_port():
-    return (os.environ.get('NUT_BACKEND_HOST', 'localhost'), os.environ.get('NUT_BACKEND_PORT', 9876))
+    return (os.environ.get('TEST_BACKEND_HOST', 'localhost'), os.environ.get('TEST_BACKEND_PORT', 9876))
 
 
 def get_neo4j_host_and_port():
-    return (os.environ.get('NUT_NEO4J_HOST'), os.environ.get('NUT_NEO4J_PORT', 7687))
+    return (os.environ.get('TEST_NEO4J_HOST'), os.environ.get('TEST_NEO4J_PORT', 7687))
 
 
 def newBackend():

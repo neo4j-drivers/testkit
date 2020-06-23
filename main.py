@@ -1,17 +1,19 @@
 """
-Runs all test suites in docker containers.
-
-Relies on the following environment variables:
-
-NUT_DRIVER_REPO     Path to root of driver git repository
-NUT_NUTKIT_REPO     Path to root of nutkit git repository
-NUT_DRIVER_IMAGE    Name of docker image that can be used to build the driver and host the
-                    nut backend
+Runs all test suites in their appropriate context.
+The same test suite might be executed on different Neo4j server versions or setups, it is the
+responsibility of this script to setup these contexts and orchestrate which suites that
+is executed in each context.
 """
 
 import os, sys, atexit, subprocess, time, unittest
 
 import tests.neo4j.suites as suites
+
+
+# Environment variables
+env_driver_repo  = 'TEST_DRIVER_REPO'
+env_driver_image = 'TEST_DRIVER_IMAGE'
+env_teamcity     = 'TEST_IN_TEAMCITY'
 
 
 containers = ["driver", "neo4jserver"]
@@ -46,16 +48,31 @@ class TeamCityTestResult(unittest.TextTestResult):
     def addSkip(self, test, reason):
         print("##teamcity[testIgnored name='%s' message='%s']" % (test, reason))
 
+def get_test_result_class():
+    in_teamcity = os.environ.get(env_teamcity)
+    if not in_teamcity:
+        return None
+    return TeamCityTestResult
 
 if __name__ == "__main__":
-    # Retrieve needed parameters from environment
-    driverRepo = os.environ.get('NUT_DRIVER_REPO')
-    nutRepo = os.environ.get('NUT_NUTKIT_REPO')
-    driverImage = os.environ.get('NUT_DRIVER_IMAGE')
-
-    if not driverRepo or not nutRepo or not driverImage:
-        print("Missing environment variables")
+    # Retrieve path to driver git repository
+    driverRepo = os.environ.get(env_driver_repo)
+    if not driverRepo:
+        print("Missing environment variable %s that contains path to driver repository" % env_driver_repo)
         sys.exit(1)
+
+    # Retrieve name of driver Docker image.
+    # The driver Docker image should be capable of building the driver and the test backend.
+    # Python3.6 or later must be installed on the image.
+    driverImage = os.environ.get(env_driver_image)
+    if not driverImage:
+        print("Missing environment variable %s that contains name of driver Docker image" % env_driver_image)
+        sys.exit(1)
+
+
+    # Retrieve path to the repository containing this script, assumes we're in the root of the
+    # repository.
+    nutRepo = os.path.dirname(os.path.abspath(__file__))
 
     # Important to stop all docker images upon exit
     atexit.register(cleanup)
@@ -64,14 +81,13 @@ if __name__ == "__main__":
     cleanup()
 
     # Create network to be shared among the instances
-    args = [
+    subprocess.run([
         "docker", "network", "create", "the-bridge"
-    ]
-    subprocess.run(args)
+    ])
 
     # Bootstrap the driver docker image by running a bootstrap script in the image.
     # The driver docker image only contains the tools needed to build, not the built driver.
-    args = [
+    p = subprocess.Popen([
         "docker", "run",
         # Bootstrap script is in the repo containing this script mounted as /nutkit
         "-v", "%s:/nutkit" % nutRepo,
@@ -90,8 +106,7 @@ if __name__ == "__main__":
         driverImage,
         # Bootstrap command
         "python3", "/nutkit/driver/bootstrap.py"
-    ]
-    p = subprocess.Popen(args, bufsize=0, encoding='utf-8', stdout=subprocess.PIPE)
+    ], bufsize=0, encoding='utf-8', stdout=subprocess.PIPE)
     print("Waiting for driver container to start")
     line = p.stdout.readline()
     if line.strip() != "ok":
@@ -142,12 +157,12 @@ if __name__ == "__main__":
     print("Neo4j server started")
 
     # Make sure that the tests instruct the driver to connect to neo4jserver docker container
-    os.environ['NUT_NEO4J_HOST'] = neo4jserver
+    os.environ['TEST_NEO4J_HOST'] = neo4jserver
 
     failed = False
 
     print("Running tests on server...")
-    runner = unittest.TextTestRunner(resultclass=TeamCityTestResult)
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class())
     result = runner.run(suites.single_community)
     if result.errors or result.failures:
         failed = True
