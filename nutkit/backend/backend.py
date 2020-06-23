@@ -36,7 +36,6 @@ class Backend:
         self._socket = socket.socket(socket.AF_INET)
         self._socket.connect((address, port))
         self._encoder = Encoder()
-        self._timeout = False
         self._reader = self._socket.makefile(mode='r', encoding='utf-8')
         self._writer = self._socket.makefile(mode='w', encoding='utf-8')
 
@@ -50,7 +49,7 @@ class Backend:
         self._writer.write("#request end\n")
         self._writer.flush()
 
-    def receive(self, timeout=5):
+    def receive(self, timeout=10):
         self._socket.settimeout(timeout)
         response = ""
         in_response = False
@@ -72,7 +71,7 @@ class Backend:
                 else:
                     sys.stdout.write(line)
 
-    def sendAndReceive(self, req, timeout=2):
+    def sendAndReceive(self, req, timeout=10):
         self.send(req)
         return self.receive(timeout)
 
