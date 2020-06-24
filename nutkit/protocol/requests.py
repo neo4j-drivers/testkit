@@ -15,11 +15,21 @@ class NewDriver:
         self.authorizationToken = authToken
 
 
+class DriverClose:
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
 class NewSession:
     def __init__(self, driverId, accessMode, bookmarks):
         self.driverId = driverId
         self.accessMode = accessMode
         self.bookmarks = bookmarks
+
+
+class SessionClose:
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
 
 
 """

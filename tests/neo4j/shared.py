@@ -1,5 +1,5 @@
 """
-Shared utilities for writing tests
+Shared utilities for writing tests against Neo4j server
 
 Uses environment variables for configuration:
 

@@ -9,7 +9,10 @@ class Session:
         self._session = session
 
     def close(self):
-        pass
+        req = protocol.SessionClose(self._session.id)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Session):
+            raise "Should be session"
 
     def run(self, cypher, params=None):
         req = protocol.SessionRun(self._session.id, cypher, params)

@@ -13,7 +13,10 @@ class Driver:
         self._driver = res
 
     def close(self):
-        pass
+        req = protocol.DriverClose(self._driver.id)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Driver):
+            raise "Should be driver"
 
     def session(self, accessMode, bookmarks=None):
         req = protocol.NewSession(self._driver.id, accessMode, bookmarks)
