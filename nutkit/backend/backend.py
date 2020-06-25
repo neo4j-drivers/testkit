@@ -73,7 +73,7 @@ class Backend:
                 if in_response:
                     response = response + line
                 else:
-                    sys.stdout.write(line)
+                    print(line)
 
     def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)

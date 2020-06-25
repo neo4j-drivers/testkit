@@ -8,4 +8,4 @@ import os, subprocess
 if __name__ == "__main__":
     goPath = "/home/build"
     backendPath = os.path.join(goPath, "bin", "nutbackend")
-    subprocess.call([backendPath])
+    subprocess.check_call([backendPath])

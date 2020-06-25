@@ -5,7 +5,7 @@ responsibility of this script to setup these contexts and orchestrate which suit
 is executed in each context.
 """
 
-import os, sys, atexit, subprocess, time, unittest
+import os, sys, atexit, subprocess, time, unittest, json
 
 import tests.neo4j.suites as suites
 import tests.stub.suites as stub_suites
@@ -82,9 +82,17 @@ if __name__ == "__main__":
     cleanup()
 
     # Create network to be shared among the instances
+    # Retrieve the gateway (docker host) to be able to start stub server on host
+    # but available to driver container.
     subprocess.run([
         "docker", "network", "create", "the-bridge"
     ])
+    networkConfig = subprocess.check_output([
+        "docker", "network", "inspect", "the-bridge"
+    ])
+    networkConfig = json.loads(networkConfig)
+    gateway = networkConfig[0]['IPAM']['Config'][0]['Gateway']
+    os.environ['TEST_STUB_ADDRESS'] = gateway
 
     # Bootstrap the driver docker image by running a bootstrap script in the image.
     # The driver docker image only contains the tools needed to build, not the built driver.
@@ -113,17 +121,17 @@ if __name__ == "__main__":
     if line.strip() != "ok":
         print(line)
         sys.exit(2)
-    print("Started")
+    print("Started driver container")
 
 
     # Build the driver and it's nutkit backend
-    print("Build nutkit backend in driver container")
+    print("Build driver and test backend in driver container")
     subprocess.run([
         "docker", "exec",
         "driver",
         "python3", "/nutkit/driver/build_go.py"
     ])
-    print("Finished building")
+    print("Finished building driver and test backend")
 
 
     """
@@ -133,14 +141,16 @@ if __name__ == "__main__":
 
 
 
-    print("Start backend in driver container")
+    print("Start test backend in driver container")
     subprocess.run([
         "docker", "exec",
         "--detach",
         "driver",
         "python3", "/nutkit/driver/backend_go.py"
     ])
-    print("Started")
+    print("Started test backend")
+    # Wait until backend started
+    time.sleep(1)
 
     failed = False
 
@@ -149,7 +159,7 @@ if __name__ == "__main__":
     Stub tests, protocol version 4
     """
     print("Running stub suites")
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class())
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
     result = runner.run(stub_suites.protocol4x0)
     if result.errors or result.failures:
         failed = True
@@ -190,7 +200,7 @@ if __name__ == "__main__":
     os.environ['TEST_NEO4J_HOST'] = neo4jserver
 
     print("Running tests on server...")
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class())
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
     result = runner.run(suites.single_community_neo4j4x0)
     if result.errors or result.failures:
         failed = True
