@@ -48,6 +48,7 @@ class Backend:
 
     def send(self, req):
         reqJson = self._encoder.encode(req)
+        print("req: %s" % reqJson)
         self._writer.write("#request begin\n")
         self._writer.write(reqJson+"\n")
         self._writer.write("#request end\n")
@@ -57,6 +58,7 @@ class Backend:
         self._socket.settimeout(timeout)
         response = ""
         in_response = False
+        num_blanks = 0
         while True:
             line = self._reader.readline().strip()
             if line == "#response begin":
@@ -73,7 +75,14 @@ class Backend:
                 if in_response:
                     response = response + line
                 else:
+                    # When backend crashes we will end up reading empty lines until end of universe
+                    # Use this simple check to detect this condition and abort
+                    if not line:
+                        num_blanks += 1
+                        if num_blanks > 50:
+                            raise Exception("Detected possible crash in backend")
                     print(line)
+        print("res: %s" % response)
 
     def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)
