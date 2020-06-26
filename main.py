@@ -21,6 +21,7 @@ env_teamcity     = 'TEST_IN_TEAMCITY'
 containers = ["driver", "neo4jserver"]
 networks = ["the-bridge"]
 
+in_teamcity = os.environ.get(env_teamcity)
 
 def cleanup():
     for c in containers:
@@ -31,42 +32,51 @@ def cleanup():
             check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
+def _tc_escape(s):
+    s = s.replace("|", "||")
+    s = s.replace("\n", "|n")
+    s = s.replace("\r", "|r")
+    s = s.replace("'", "|'")
+    s = s.replace("[", "|[")
+    s = s.replace("]", "|]")
+    return s
+
 class TeamCityTestResult(unittest.TextTestResult):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def _escape(self, s):
-        s = s.replace("|", "||")
-        s = s.replace("\n", "|n")
-        s = s.replace("\r", "|r")
-        s = s.replace("'", "|'")
-        s = s.replace("[", "|[")
-        s = s.replace("]", "|]")
-        return s
-
     def startTest(self, test):
-        print("##teamcity[testStarted name='%s']" % self._escape(str(test)))
+        print("##teamcity[testStarted name='%s']" % _tc_escape(str(test)))
         return super().startTest(test)
 
     def stopTest(self, test):
-        print("##teamcity[testFinished name='%s']" % self._escape(str(test)))
+        print("##teamcity[testFinished name='%s']" % _tc_escape(str(test)))
         return super().stopTest(test)
 
     def addError(self, test, err):
-        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (self._escape(str(test)), self._escape(str(err[1])), self._escape(str(err[2]))))
+        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (_tc_escape(str(test)), _tc_escape(str(err[1])), _tc_escape(str(err[2]))))
         return super().addError(test, err)
 
     def addFailure(self, test, err):
-        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (self._escape(str(test)), self._escape(str(err[1])), self._escape(str(err[2]))))
+        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (_tc_escape(str(test)), _tc_escape(str(err[1])), _tc_escape(str(err[2]))))
         return super().addFailure(test, err)
 
     def addSkip(self, test, reason):
-        print("##teamcity[testIgnored name='%s' message='%s']" % (self._escape(str(test)), self._escape(str(reason))))
+        print("##teamcity[testIgnored name='%s' message='%s']" % (_tc_escape(str(test)), _tc_escape(str(reason))))
         return super().addSkip(test, reason)
 
 
+def beginTestSuite(name):
+    if in_teamcity:
+        print("##teamcity[testSuiteStarted name='%s']" % _tc_escape(name))
+
+
+def endTestSuite(name):
+    if in_teamcity:
+        print("##teamcity[testSuiteFinished name='%s']" %  _tc_escape(name))
+
+
 def get_test_result_class():
-    in_teamcity = os.environ.get(env_teamcity)
     if not in_teamcity:
         return None
     return TeamCityTestResult
@@ -159,11 +169,13 @@ if __name__ == "__main__":
     """
     Unit tests
     """
+    beginTestSuite('Unit tests')
     subprocess.run([
         "docker", "exec",
         "driver",
         "python3", "/nutkit/driver/unittests_%s.py" % driverName
     ], check=True)
+    endTestSuite('Unit tests')
 
     print("Start test backend in driver container")
     subprocess.run([
@@ -183,11 +195,14 @@ if __name__ == "__main__":
     Stub tests, protocol version 4
     """
     """
+    suiteName = "Stub tests, protocol 4"
+    beginTestSuite(suiteName)
     print("Running stub suites")
     runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
     result = runner.run(stub_suites.protocol4x0)
     if result.errors or result.failures:
         failed = True
+    endTestSuite(suiteName)
 
     if failed:
         sys.exit(1)
@@ -226,10 +241,13 @@ if __name__ == "__main__":
     os.environ['TEST_NEO4J_HOST'] = neo4jserver
 
     print("Running tests on server...")
+    suiteName = "Integration tests, Neo4j latest"
+    beginTestSuite(suiteName)
     runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
     result = runner.run(suites.single_community_neo4j4x0)
     if result.errors or result.failures:
         failed = True
+    endTestSuite(suiteName)
 
     if failed:
         sys.exit(1)
