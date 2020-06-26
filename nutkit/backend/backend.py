@@ -48,7 +48,6 @@ class Backend:
 
     def send(self, req):
         reqJson = self._encoder.encode(req)
-        print("req: %s" % reqJson)
         self._writer.write("#request begin\n")
         self._writer.write(reqJson+"\n")
         self._writer.write("#request end\n")
@@ -82,7 +81,6 @@ class Backend:
                         if num_blanks > 50:
                             raise Exception("Detected possible crash in backend")
                     print(line)
-        print("res: %s" % response)
 
     def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)
