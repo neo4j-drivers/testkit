@@ -35,20 +35,29 @@ class TeamCityTestResult(unittest.TextTestResult):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def _escape(self, s):
+        s = s.replace("|", "||")
+        s = s.replace("\n", "|n")
+        s = s.replace("\r", "|r")
+        s = s.replace("'", "|'")
+        s = s.replace("[", "|[")
+        s = s.replace("]", "|]")
+        return s
+
     def startTest(self, test):
-        print("##teamcity[testStarted name='%s']" % test)
+        print("##teamcity[testStarted name='%s']" % self._escape(str(test)))
 
     def stopTest(self, test):
-        print("##teamcity[testFinished name='%s']" % test)
+        print("##teamcity[testFinished name='%s']" % self._escape(str(test)))
 
     def addError(self, test, err):
-        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (test, err[1], err[2]))
+        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (self._escape(str(test)), self._escape(err[1]), self._escape(err[2])))
 
     def addFailure(self, test, err):
-        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (test, err[1], err[2]))
+        print("##teamcity[testFailed name='%s' message='%s' details='%s']" % (self._escape(str(test)), self._escape(err[1]), self._escape(err[2])))
 
     def addSkip(self, test, reason):
-        print("##teamcity[testIgnored name='%s' message='%s']" % (test, reason))
+        print("##teamcity[testIgnored name='%s' message='%s']" % (self._escape(str(test)), self._escape(reason)))
 
 
 def get_test_result_class():
