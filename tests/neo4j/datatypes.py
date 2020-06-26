@@ -11,7 +11,7 @@ class TestDatatypes(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._driver = get_driver(self._backend)
-        self._session = self._driver.session("r")
+        self._session = self._driver.session("w")
 
     def tearDown(self):
         self._session.close()
