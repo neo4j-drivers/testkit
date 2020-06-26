@@ -161,7 +161,6 @@ if __name__ == "__main__":
     """
     subprocess.run([
         "docker", "exec",
-        "-it",
         "driver",
         "python3", "/nutkit/driver/unittests_%s.py" % driverName
     ], check=True)
