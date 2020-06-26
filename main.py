@@ -12,6 +12,7 @@ import tests.stub.suites as stub_suites
 
 
 # Environment variables
+env_driver_name  = 'TEST_DRIVER_NAME'
 env_driver_repo  = 'TEST_DRIVER_REPO'
 env_driver_image = 'TEST_DRIVER_IMAGE'
 env_teamcity     = 'TEST_IN_TEAMCITY'
@@ -49,13 +50,20 @@ class TeamCityTestResult(unittest.TextTestResult):
     def addSkip(self, test, reason):
         print("##teamcity[testIgnored name='%s' message='%s']" % (test, reason))
 
+
 def get_test_result_class():
     in_teamcity = os.environ.get(env_teamcity)
     if not in_teamcity:
         return None
     return TeamCityTestResult
 
+
 if __name__ == "__main__":
+    driverName = os.environ.get(env_driver_name)
+    if not driverName:
+        print("Missing environment variable %s that contains name of the driver" % env_driver_name)
+        sys.exit(1)
+
     # Retrieve path to driver git repository
     driverRepo = os.environ.get(env_driver_repo)
     if not driverRepo:
@@ -129,7 +137,7 @@ if __name__ == "__main__":
     subprocess.run([
         "docker", "exec",
         "driver",
-        "python3", "/nutkit/driver/build_go.py"
+        "python3", "/nutkit/driver/build_%s.py" % driverName
     ])
     print("Finished building driver and test backend")
 
@@ -146,7 +154,7 @@ if __name__ == "__main__":
         "docker", "exec",
         "--detach",
         "driver",
-        "python3", "/nutkit/driver/backend_go.py"
+        "python3", "/nutkit/driver/backend_%s.py" % driverName
     ])
     print("Started test backend")
     # Wait until backend started
@@ -158,6 +166,7 @@ if __name__ == "__main__":
     TODO:
     Stub tests, protocol version 4
     """
+    """
     print("Running stub suites")
     runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
     result = runner.run(stub_suites.protocol4x0)
@@ -166,6 +175,7 @@ if __name__ == "__main__":
 
     if failed:
         sys.exit(1)
+    """
 
 
     """
