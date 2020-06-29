@@ -70,7 +70,7 @@ class StubServer:
         while polls:
             self._process.poll()
             if self._process.returncode is None:
-                time.sleep(1)
+                time.sleep(0.5)
                 polls -= 1
             else:
                 if self._process.returncode:

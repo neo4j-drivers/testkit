@@ -1,0 +1,24 @@
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {"mode": "r"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": -1}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+C: RESET
+S: SUCCESS {}
+C: BEGIN {"mode": "r"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": -1}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}

@@ -12,4 +12,3 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-

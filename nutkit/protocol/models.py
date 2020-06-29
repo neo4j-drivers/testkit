@@ -111,6 +111,13 @@ class BaseError(Exception):
     pass
 
 
+class DriverError(BaseError):
+    """ Base class for all kind of driver errors that is NOT a backend specific error
+    """
+    def __init__(self, id):
+        self.id = id
+
+
 class BackendError(BaseError):
     """ Sent by backend when there is an internal error in the backend, not the driver.  """
     def __init__(self, msg):

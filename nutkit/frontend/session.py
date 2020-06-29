@@ -22,19 +22,29 @@ class Session:
         return Result(self._backend, res)
 
     def readTransaction(self, fn, config=None):
+        # Send request to enter transactional read function
         req = protocol.SessionReadTransaction(self._session.id)
-        res = self._backend.send(req)
+        self._backend.send(req)
         x = None
         while True:
             res = self._backend.receive()
             if isinstance(res, protocol.RetryableTry):
                 tx = Transaction(self._backend, res.id)
                 try:
+                    # Invoke the frontend test function until we succeed, note that the
+                    # frontend test function makes calls to the backend it self.
                     x = fn(tx)
+                    # The frontend test function were fine with the interaction, notify backend
+                    # that we're happy to go.
                     self._backend.send(protocol.RetryablePositive(self._session.id))
                 except Exception as e:
-                    # Todo: Check exception for id of error
-                    self._backend.send(protocol.RetryableNegative(self._session.id))
+                    # If this is an error originating from the backend, retrieve the id of the error
+                    # and send that, this saves us from having to recreate errors on backend side,
+                    # backend just needs to track the returned errors.
+                    errorId = ""
+                    if isinstance(e, protocol.DriverError):
+                        errorId = e.id
+                    self._backend.send(protocol.RetryableNegative(self._session.id, errorId=errorId))
             elif isinstance(res, protocol.RetryableDone):
                 return x
 
