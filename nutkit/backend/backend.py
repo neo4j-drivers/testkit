@@ -38,7 +38,10 @@ default_timeout = 10
 class Backend:
     def __init__(self, address, port):
         self._socket = socket.socket(socket.AF_INET)
-        self._socket.connect((address, port))
+        try:
+            self._socket.connect((address, port))
+        except ConnectionRefusedError:
+            raise Exception("Driver backend is not running or is not listening on port %d or is just refusing connections" % port)
         self._encoder = Encoder()
         self._reader = self._socket.makefile(mode='r', encoding='utf-8')
         self._writer = self._socket.makefile(mode='w', encoding='utf-8')

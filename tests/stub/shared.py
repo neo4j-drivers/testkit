@@ -16,7 +16,7 @@ env_host_address = "TEST_STUB_ADDRESS"
 
 class StubServer:
     def __init__(self, port):
-        address = os.environ.get(env_host_address, 'xlocalhost')
+        address = os.environ.get(env_host_address, 'localhost')
         self._port = port
         self._process = None
         self.address = "%s:%d" % (address, port)

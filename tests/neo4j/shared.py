@@ -11,11 +11,15 @@ from nutkit.frontend import Driver, AuthorizationToken
 
 
 env_neo4j_host = "TEST_NEO4J_HOST"
+env_neo4j_user = "TEST_NEO4J_USER"
+env_neo4j_pass = "TEST_NEO4J_PASS"
 
 def get_authorization():
     """ Returns default authorization for tests that do not test this aspect
     """
-    return AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
+    user = os.environ.get(env_neo4j_user, 'neo4j')
+    passw = os.environ.get(env_neo4j_pass, 'pass')
+    return AuthorizationToken(scheme="basic", principal=user, credentials=passw)
 
 
 def get_neo4j_host_and_port():
