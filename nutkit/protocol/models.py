@@ -9,26 +9,42 @@ All models are sent from backend as:
 """
 
 class Driver:
+    """
+    data: {id: 'driver id'}
+    """
     def __init__(self, id):
         self.id = id
 
 
 class Session:
+    """
+    data: {id: 'session id'}
+    """
     def __init__(self, id):
         self.id = id
 
 
 class Result:
+    """
+    data: {id: 'result id'}
+    TODO: keys: ['field1', 'field2']
+    """
     def __init__(self, id):
         self.id = id
 
 
 class Record:
+    """
+    data: {values: [CypherX, CypherY] }
+    """
     def __init__(self, values=None):
         self.values = values
 
 
 class NullRecord:
+    """
+    data: null
+    """
     def __init__(self):
         pass
 
@@ -36,6 +52,7 @@ class NullRecord:
 class RetryableTry:
     def __init__(self, id):
         self.id = id
+
 
 class RetryableDone:
     def __init__(self):
@@ -47,7 +64,7 @@ class Error:
 
 
 class CypherNull:
-    def __init__(self):
+    def __init__(self, value=None):
         pass
 
     def __str__(self):
@@ -63,6 +80,7 @@ class CypherList:
         for x in self.value:
             v.append(str(x))
         return "List {}".format(v)
+
 
 class CypherMap:
     def __init__(self, value):
