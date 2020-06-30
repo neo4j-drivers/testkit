@@ -1,5 +1,7 @@
-
 """
+Requests are sent to the backend from this test framework. Each request should have one and
+only one  matching response.
+
 All requests will be sent to backend as:
     {
         name: <class name>,
@@ -7,79 +9,24 @@ All requests will be sent to backend as:
             <all instance variables>
         }
     }
+
+Backend responds with a suitable response as defined in responses.py or an error as defined
+in errors.py. See the requests for information on which response they expect.
 """
 
 class NewDriver:
+    """ Request to create a new driver instance on the backend.
+    Backend should respond with a Driver response or an Error response.
+    """
     def __init__(self, uri, authToken):
+        # Neo4j URI to connect to
         self.uri = uri
+        # Authorization token used by driver when connecting to Neo4j
         self.authorizationToken = authToken
 
 
-class DriverClose:
-    def __init__(self, driverId):
-        self.driverId = driverId
-
-
-class NewSession:
-    def __init__(self, driverId, accessMode, bookmarks):
-        self.driverId = driverId
-        self.accessMode = accessMode
-        self.bookmarks = bookmarks
-
-
-class SessionClose:
-    def __init__(self, sessionId):
-        self.sessionId = sessionId
-
-
+""" Not a request but used in NewDriver request
 """
-Response should be Result model or raised Error model
-"""
-class SessionRun:
-    def __init__(self, sessionId, cypher, params):
-        self.sessionId = sessionId
-        self.cypher = cypher
-        self.params = params
-
-
-class SessionReadTransaction:
-    def __init__(self, sessionId):
-        self.sessionId = sessionId
-
-
-"""
-Indicates a positive intent from the client application to commit the retryable transaction
-"""
-class RetryablePositive:
-    def __init__(self, sessionId):
-        self.sessionId = sessionId
-
-
-"""
-Indicates a negative intent from the client application to commit the retryable transaction
-"""
-class RetryableNegative:
-    def __init__(self, sessionId, errorId=""):
-        self.sessionId = sessionId
-        self.errorId = errorId
-
-
-class TransactionRun:
-    def __init__(self, txId, cypher, params):
-        self.txId = txId
-        self.cypher = cypher
-        self.params = params
-
-
-"""
-Response should be Record model, NullRecord to indicate last record or raised Error model if record
-couldn't be retrieved.
-"""
-class ResultNext:
-    def __init__(self, resultId):
-        self.resultId = resultId
-
-
 class AuthorizationToken:
     def __init__(self, scheme="none", principal="", credentials="", realm="", ticket=""):
         self.scheme=scheme
@@ -87,4 +34,97 @@ class AuthorizationToken:
         self.credentials=credentials
         self.realm=realm
         self.ticket=ticket
+
+
+class DriverClose:
+    """ Request to close the driver instance on the backend.
+    Backend should respond with a Driver response representing the closed driver or an error
+    response.
+    """
+    def __init__(self, driverId):
+        # Id of driver to close on backend
+        self.driverId = driverId
+
+
+class NewSession:
+    """ Request to create a new session instance on the backend on the driver instance
+    corresponding to the specified driver id.
+    Backend should respond with a Session response or an Error response.
+    """
+    def __init__(self, driverId, accessMode, bookmarks):
+        # Id of driver on backend that sessio should be created on
+        self.driverId = driverId
+        # Session accessmode: 'r' for read access and 'w' for write access.
+        self.accessMode = accessMode
+        # Array of boookmarks in the form of list of strings.
+        self.bookmarks = bookmarks
+
+
+class SessionClose:
+    """ Request to close the session instance on the backend.
+    Backend should respond with a Session response representing the closed session or an error
+    response.
+    """
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+class SessionRun:
+    """ Request to run a query on a specified session.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, sessionId, cypher, params):
+        self.sessionId = sessionId
+        self.cypher = cypher
+        self.params = params
+
+
+class TransactionRun:
+    """ Request to run a query in a specified transaction.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
+        self.cypher = cypher
+        self.params = params
+
+
+class SessionReadTransaction:
+    """ Request to run a retryable transaction.
+    Backend should respond with a RetryableTry response or an Error response.
+    """
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+class ResultNext:
+    """ Request to retrieve the next record on a result living on the backend.
+    Backend should respond with a Record if there is a record, an Error if an error occured
+    while retrieving next record or NullRecord if there were no error and no record.
+    """
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
+class RetryablePositive:
+    """ Request to commit the retryable transaction.
+    Backend responds with either a RetryableTry response (if it failed to commit and wants to
+    retry) or a RetryableDone response if committed succesfully or an Error response if the
+    backend failed in an unretriable way.
+    """
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+class RetryableNegative:
+    """ Request to rollback (or more correct NOT commit) the retryable transaction.
+    Backend will abort retrying and respond with an Error response.
+    If the backend sends an error that is generated by the test code (or in comparison with
+    real driver usage, client code) the errorId should be "" and the backend will respond
+    with a ClientError, if error id is not empty the backend will resend
+    that error.
+    """
+    def __init__(self, sessionId, errorId=""):
+        self.sessionId = sessionId
+        self.errorId = errorId
 
