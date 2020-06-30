@@ -7,7 +7,7 @@ import os, subprocess, shutil
 
 def run(args):
     subprocess.run(
-        args, universal_newlines=True, stderr=subprocess.STDOUT)
+        args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
 
 if __name__ == "__main__":
     # Setup a Go path environment to build in (since we allow Go 1.10)

@@ -7,15 +7,15 @@ import os, subprocess, shutil
 
 def run(args):
     subprocess.run(
-        args, universal_newlines=True, stderr=subprocess.STDOUT)
+        args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
 
 
 if __name__ == "__main__":
     # Fetch all dependencies
     run([
-        "dotnet", "restore", "--disable-parallel", "-v", "n", "DotNetNutkit/NutKitDotNet.csproj"
+        "dotnet", "restore", "--disable-parallel", "-v", "n", "Neo4j.Driver/Neo4j.Driver.sln"
     ])
     run([
-        "dotnet", "msbuild", "-v:n", "DotNetNutkit/NutKitDotNet.csproj"
+        "dotnet", "msbuild", "Neo4j.Driver/Neo4j.Driver.sln"
     ])
 
