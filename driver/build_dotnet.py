@@ -2,7 +2,7 @@
 Executed in dotnet driver container.
 Responsible for building driver and test backend.
 """
-import os, subprocess, shutil
+import os, subprocess
 
 
 def run(args):
