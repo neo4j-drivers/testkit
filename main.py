@@ -6,6 +6,7 @@ is executed in each context.
 """
 
 import os, sys, atexit, subprocess, time, unittest, json
+from datetime import datetime
 
 import tests.neo4j.suites as suites
 import tests.stub.suites as stub_suites
@@ -102,6 +103,12 @@ if __name__ == "__main__":
         print("Missing environment variable %s that contains name of driver Docker image" % env_driver_image)
         sys.exit(1)
 
+    # Prepare collecting of artifacts, collected to ./artifcats/now
+    # Use a subfolder of current time to make it easier to run on host and not losing logs
+    artifactsPath = os.path.abspath(os.path.join(".", "artifacts",datetime.now().strftime("%Y%m%d_%H%M")))
+    if not os.path.exists(artifactsPath):
+        os.makedirs(artifactsPath)
+    print("Putting artifacts in %s" % artifactsPath)
 
     # Retrieve path to the repository containing this script, assumes we're in the root of the
     # repository.
@@ -130,10 +137,12 @@ if __name__ == "__main__":
     # The driver docker image only contains the tools needed to build, not the built driver.
     p = subprocess.Popen([
         "docker", "run",
-        # Bootstrap script is in the repo containing this script mounted as /nutkit
+        # This repo monted as /nutkit
         "-v", "%s:/nutkit" % nutRepo,
         # The driver repo mounted as /driver
         "-v", "%s:/driver" % driverRepo,
+        # Artifacts mounted as /artifacts
+        "-v", "%s:/artifacts" % artifactsPath,
         # Name of the docker container
         "--name", "driver",
         # Expose backend on this port
@@ -215,6 +224,10 @@ if __name__ == "__main__":
     # TODO: Write suite name to TeamCity
 
     # Start a Neo4j server
+    # Make an artifacts folder where the database can place it's logs, each time
+    # we start a database server we should use a different folder.
+    neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
+    os.makedirs(neo4jArtifactsPath)
     neo4jserver = "neo4jserver"
     print("Starting neo4j server")
     subprocess.run([
@@ -223,6 +236,8 @@ if __name__ == "__main__":
         "--name", neo4jserver,
         # Remove itself upon exit
         "--rm",
+        # Collect logs into the artifacts tree
+        "-v", "%s:/logs" % os.path.join(neo4jArtifactsPath, "logs"),
         # Run in background
         "--detach",
         "--env", "NEO4J_dbms_connector_bolt_advertised__address=%s:7687" % neo4jserver,
