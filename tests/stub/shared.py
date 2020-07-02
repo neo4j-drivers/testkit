@@ -12,7 +12,6 @@ env_host_address = "TEST_STUB_ADDRESS"
 class StubServer:
     def __init__(self, port):
         address = os.environ.get(env_host_address, 'localhost')
-        self._port = port
         self._process = None
         self.address = "%s:%d" % (address, port)
 
@@ -24,14 +23,15 @@ class StubServer:
         self._process = subprocess.Popen(
             ["python3", "-m", "boltstub", "-v", "-l", self.address, script],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, encoding='utf-8')
-        # TODO: Fix
-        time.sleep(1)
+        # Wait until something is written to know it started, requires -v
+        self._process.stdout.readline()
         # Double check that the process started, a script that doesn't exist would exit the process
         self._process.poll()
         if self._process.returncode:
             self._dump()
             self._process = None
             raise Exception("Stub server didn't start")
+
 
     def _dump(self):
         print("")
@@ -61,11 +61,11 @@ class StubServer:
         If the server process is running it will be polled until timeout and proceed as above.
         If the server process is still running after polling it will be killed and an exception will be raised.
         """
-        polls = 20
+        polls = 100
         while polls:
             self._process.poll()
             if self._process.returncode is None:
-                time.sleep(0.5)
+                time.sleep(0.1)
                 polls -= 1
             else:
                 if self._process.returncode:
