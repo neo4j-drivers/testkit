@@ -39,11 +39,11 @@ class Session:
 class Result:
     """ Represents a result instance on the backend
     """
-    def __init__(self, id):
+    def __init__(self, id, keys=None):
         # Id of Result instance on backend
         self.id = id
-        # TODO: keys is a list of strings: ['field1', 'field2']
-        self.keys = None
+        # Keys is a list of strings: ['field1', 'field2']
+        self.keys = keys
 
 
 class Record:

@@ -1,0 +1,115 @@
+@startuml
+participant "Frontend"
+participant "Backend"
+hide footbox
+
+group Succeeding at first try
+    Frontend -> Backend: SessionReadTransaction { session id }
+    Backend -> Frontend: RetryableTry { transaction id }
+
+    group Frontend retry function
+        Frontend -> Backend: TransactionRun { transaction id, cypher, params }
+        Backend -> Frontend: Result { result id, keys }
+    end
+
+    Frontend -> Backend: RetryablePositive { session id }
+    note right of Frontend
+        Retryable function on frontend
+        indicates success
+    end note
+    Backend -> Frontend: RetryableDone {}
+    note right of Backend
+        Backend has succesfully committed
+        the transaction
+    end note
+end
+
+||50||
+
+group Commit first fails on backend, second try succeeds
+    Frontend -> Backend: SessionReadTransaction { session id }
+    Backend -> Frontend: RetryableTry { transaction id }
+    group Frontend retry function...
+    end
+
+    Frontend -> Backend: RetryablePositive { session id }
+    note right of Frontend
+        Retryable function on frontend
+        indicates success
+    end note
+    Backend -> Frontend: RetryableTry {}
+    note right of Backend
+        Backend failed to commit
+        the transaction
+    end note
+
+    group Frontend retry function...
+    end
+    Frontend -> Backend: RetryablePositive { session id }
+    note right of Frontend
+        Frontend retryable executes again
+        indicates success
+    end note
+
+    Backend -> Frontend: RetryableDone {}
+    note right of Backend
+        Backend has succesfully committed
+        the transaction
+    end note
+end
+
+||50||
+
+group Commit first fails on backend, second commit fails, gives up
+    Frontend -> Backend: SessionReadTransaction { session id }
+    Backend -> Frontend: RetryableTry { transaction id }
+    group Frontend retry function...
+    end
+
+    Frontend -> Backend: RetryablePositive { session id }
+    note right of Frontend
+        Retryable function on frontend
+        indicates success
+    end note
+    Backend -> Frontend: RetryableTry {}
+    note right of Backend
+        Backend failed to commit
+        the transaction
+    end note
+
+    group Frontend retry function...
+    end
+    Frontend -> Backend: RetryablePositive { session id }
+    note right of Frontend
+        Frontend retryable executes again
+        indicates success
+    end note
+
+    Backend -> Frontend: DriverError { error id }
+    note right of Backend
+        Backend failed to commit and gives up
+        the transaction
+    end note
+end
+
+group Frontend encounters error in transaction function
+    Frontend -> Backend: SessionReadTransaction { session id }
+    Backend -> Frontend: RetryableTry { transaction id }
+    group Frontend retry function...
+        Frontend -> Backend: TransactionRun { transaction id, cypher, params }
+        Backend -> Frontend: DriverError { error id }
+        note right of Backend
+            Backend failed during run, backend
+            store the error and responds with id of error
+            This error is returned by frontend transaction function
+        end note
+    end
+    Frontend -> Backend: RetryableNegative { error id }
+    Backend -> Frontend: DriverError { error id }
+    note right of Backend
+        If this error is retryable, backend will trigger
+        retry otherwise fail as here
+    end note
+end
+
+@enduml
