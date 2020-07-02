@@ -7,11 +7,6 @@ TEST_STUB_ADDRESS   Address that stub server should be listenig on (no port)
 """
 import subprocess, os, time
 
-# TODO: Fix!!!
-stubserver_repo = "/home/peter/code/neo4j-drivers/boltstub"
-# Needed to run boltstub server as a module
-os.environ['PYTHONPATH'] = stubserver_repo
-
 env_host_address = "TEST_STUB_ADDRESS"
 
 class StubServer:

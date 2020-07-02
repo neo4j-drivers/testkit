@@ -200,9 +200,7 @@ if __name__ == "__main__":
     failed = False
 
     """
-    TODO:
     Stub tests, protocol version 4
-    """
     """
     suiteName = "Stub tests, protocol 4"
     beginTestSuite(suiteName)
@@ -215,7 +213,6 @@ if __name__ == "__main__":
 
     if failed:
         sys.exit(1)
-    """
 
 
     """
