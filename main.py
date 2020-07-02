@@ -113,6 +113,8 @@ if __name__ == "__main__":
     # Retrieve path to the repository containing this script, assumes we're in the root of the
     # repository.
     nutRepo = os.path.dirname(os.path.abspath(__file__))
+    # Add this path to python sys path to be able to invoke modules from this repo
+    os.environ['PYTHONPATH'] = nutRepo
 
     # Important to stop all docker images upon exit
     atexit.register(cleanup)

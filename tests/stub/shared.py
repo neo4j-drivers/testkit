@@ -25,7 +25,7 @@ class StubServer:
             ["python3", "-m", "boltstub", "-v", "-l", self.address, script],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, encoding='utf-8')
         # TODO: Fix
-        time.sleep(3)
+        time.sleep(1)
         # Double check that the process started, a script that doesn't exist would exit the process
         self._process.poll()
         if self._process.returncode:
