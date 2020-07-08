@@ -12,7 +12,6 @@ All cypher types are sent from backend as:
     }
 """
 
-
 class CypherNull:
     """ Represents null/nil as sent/received to/from the database
     """
@@ -67,7 +66,16 @@ class Node:
         self.value = value
 
     def __str__(self):
-        return self.value
+        return str(self.value)
 
+    """
+    def __init__(self, id, labels, props):
+        self.id = id
+        self.labels = labels
+        self.props = props
 
+    def __str__(self):
+        return "Node (id={}, labels={}), props={}".format(
+            self.id, self.labels, self.props)
+    """
 

@@ -36,3 +36,12 @@ class TestDatatypes(unittest.TestCase):
 
         node = record.values[0]
         self.assertIsInstance(node, types.Node)
+        self.assertIsInstance(node.value["id"], types.CypherInt)
+
+        self.assertIsInstance(node.value["labels"], types.CypherList)
+        print(node.value["labels"].value[0].value)
+        self.assertEqual(node.value["labels"].value[0].value, "TestLabel")
+
+        self.assertIsInstance(node.value["props"], types.CypherMap)
+        self.assertEqual(node.value["props"].value["num"].value, 1)
+        self.assertEqual(node.value["props"].value["txt"].value, "abc")
