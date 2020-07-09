@@ -49,12 +49,12 @@ class Session:
     def readTransaction(self, fn, config=None):
         # Send request to enter transactional read function
         req = protocol.SessionReadTransaction(self._session.id)
-        return self.processTransaction(self, req, fn)
+        return self.processTransaction(req, fn)
 
     def writeTransaction(self, fn, config=None):
         # Send request to enter transactional read function
         req = protocol.SessionWriteTransaction(self._session.id)
-        return self.processTransaction(self, req, fn)
+        return self.processTransaction(req, fn)
 
     def beginTransaction(self, cypher, params=None):
         req = protocol.SessionBeginTransaction(self._session.id)
