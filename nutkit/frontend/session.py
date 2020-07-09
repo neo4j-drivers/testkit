@@ -56,4 +56,11 @@ class Session:
         req = protocol.SessionWriteTransaction(self._session.id)
         return self.processTransaction(self, req, fn)
 
+    def beginTransaction(self, cypher, params=None):
+        req = protocol.SessionBeginTransaction(self._session.id)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Transaction):
+            raise "Should be transaction"
+        return Result(self._backend, res)
+
 

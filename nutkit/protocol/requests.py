@@ -89,6 +89,22 @@ class TransactionRun:
         self.params = params
 
 
+class TransactionCommit:
+    """ Request to run a query in a specified transaction.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
+
+
+class TransactionRollback:
+    """ Request to run a query in a specified transaction.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
+
+
 class SessionReadTransaction:
     """ Request to run a retryable read transaction.
     Backend should respond with a RetryableTry response or an Error response.
