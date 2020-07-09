@@ -20,6 +20,7 @@ For example response to NewDriver request should be sent from backend as:
     }
 """
 
+
 class Driver:
     """ Represents a driver instance on the backend
     """
@@ -33,6 +34,14 @@ class Session:
     """
     def __init__(self, id):
         # Id of Session instance on backend
+        self.id = id
+
+
+class Transaction:
+    """ Represents a session instance on the backend
+    """
+    def __init__(self, id):
+        # Id of Transaction instance on backend
         self.id = id
 
 

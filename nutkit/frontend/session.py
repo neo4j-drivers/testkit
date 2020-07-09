@@ -21,9 +21,7 @@ class Session:
             raise "Should be result"
         return Result(self._backend, res)
 
-    def readTransaction(self, fn, config=None):
-        # Send request to enter transactional read function
-        req = protocol.SessionReadTransaction(self._session.id)
+    def processTransaction(self, req, fn, config=None):
         self._backend.send(req)
         x = None
         while True:
@@ -47,4 +45,15 @@ class Session:
                     self._backend.send(protocol.RetryableNegative(self._session.id, errorId=errorId))
             elif isinstance(res, protocol.RetryableDone):
                 return x
+
+    def readTransaction(self, fn, config=None):
+        # Send request to enter transactional read function
+        req = protocol.SessionReadTransaction(self._session.id)
+        return self.processTransaction(self, req, fn)
+
+    def writeTransaction(self, fn, config=None):
+        # Send request to enter transactional read function
+        req = protocol.SessionWriteTransaction(self._session.id)
+        return self.processTransaction(self, req, fn)
+
 

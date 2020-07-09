@@ -90,8 +90,24 @@ class TransactionRun:
 
 
 class SessionReadTransaction:
-    """ Request to run a retryable transaction.
+    """ Request to run a retryable read transaction.
     Backend should respond with a RetryableTry response or an Error response.
+    """
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+class SessionWriteTransaction:
+    """ Request to run a retryable write transaction.
+    Backend should respond with a RetryableTry response or an Error response.
+    """
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+class SessionBeginTransaction:
+    """ Request to Begin a transaction.
+    Backend should respond with a Transaction response or an Error response.
     """
     def __init__(self, sessionId):
         self.sessionId = sessionId
