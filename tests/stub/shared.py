@@ -11,7 +11,7 @@ env_host_address = "TEST_STUB_ADDRESS"
 
 class StubServer:
     def __init__(self, port):
-        address = os.environ.get(env_host_address, 'localhost')
+        address = os.environ.get(env_host_address, '127.0.0.1')
         self._process = None
         self.address = "%s:%d" % (address, port)
 
@@ -21,16 +21,16 @@ class StubServer:
             raise Exception("Stub server in use")
 
         self._process = subprocess.Popen(
-            ["python3", "-m", "boltstub", "-v", "-l", self.address, script],
+            ["python", "-m", "boltstub", "-v", self.address, script],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, encoding='utf-8')
-        # Wait until something is written to know it started, requires -v
-        self._process.stdout.readline()
-        # Double check that the process started, a script that doesn't exist would exit the process
-        self._process.poll()
-        if self._process.returncode:
-            self._dump()
-            self._process = None
-            raise Exception("Stub server didn't start")
+
+        while True:
+            return_code = self._process.poll()
+            if return_code is not None:
+                line = self._process.stdout.readline()
+                if line == "":
+                    break
+                print(line.strip("\n"))
 
 
     def _dump(self):
