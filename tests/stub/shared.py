@@ -5,7 +5,7 @@ Uses environment variables for configuration:
 
 TEST_STUB_ADDRESS   Address that stub server should be listenig on (no port)
 """
-import subprocess, os, time
+import subprocess, os, time, io, platform
 
 env_host_address = "TEST_STUB_ADDRESS"
 
@@ -14,28 +14,49 @@ class StubServer:
         address = os.environ.get(env_host_address, '127.0.0.1')
         self._process = None
         self.address = "%s:%d" % (address, port)
+        self.port = port
 
     def start(self, script):
         print("Starting stubserver on %s with script %s" % (self.address, script))
         if self._process:
             raise Exception("Stub server in use")
 
-        self._process = subprocess.Popen(
-            ["python", "-m", "boltstub", "-v", self.address, script],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, encoding='utf-8')
+        if platform.os is 'Windows':
+            self._process = subprocess.Popen(["boltstub",
+                                             "-v",
+                                             str(self.port),
+                                             script],
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE,
+                                             close_fds=True)
 
-        while True:
-            return_code = self._process.poll()
-            if return_code is not None:
-                line = self._process.stdout.readline()
-                if isinstance(line, bytes):
-                    line = line.decode("utf-8")
-                if line == "":
-                    break
-                print(line.strip("\n"))
+            # This signifies that the process is no longer running, so exited with an error
+            if self._process.poll() is not None:
+                for line in io.TextIOWrapper(self._process.stderr, encoding="utf-8"):  # or another encoding
+                    print(line)
 
+                for line in io.TextIOWrapper(self._process.stdout, encoding="utf-8"):  # or another encoding
+                    print(line)
+        else:
+            self._process = subprocess.Popen(["python",
+                                              "-m",
+                                              "boltstub",
+                                              "-v",
+                                              self.address, script],
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE,
+                                             close_fds=True,
+                                             encoding='utf-8')
 
-
+            while True:
+                return_code = self._process.poll()
+                if return_code is not None:
+                    line = self._process.stdout.readline()
+                    if isinstance(line, bytes):
+                        line = line.decode("utf-8")
+                    if line == "":
+                        break
+                    print(line.strip("\n"))
 
     def _dump(self):
         print("")
