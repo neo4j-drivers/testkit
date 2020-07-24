@@ -21,7 +21,7 @@ class StubServer:
         if self._process:
             raise Exception("Stub server in use")
 
-        if platform.os is 'Windows':
+        if platform.system() is 'Windows':
             self._process = subprocess.Popen(["boltstub",
                                              "-v",
                                              str(self.port),
