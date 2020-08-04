@@ -31,32 +31,43 @@ class StubServer:
                                              close_fds=True)
 
             # This signifies that the process is no longer running, so exited with an error
-            if self._process.poll() is not None:
-                for line in io.TextIOWrapper(self._process.stderr, encoding="utf-8"):  # or another encoding
-                    print(line)
-
-                for line in io.TextIOWrapper(self._process.stdout, encoding="utf-8"):  # or another encoding
-                    print(line)
+            #if self._process.poll() is not None:
+            #    for line in io.TextIOWrapper(self._process.stderr, encoding="utf-8"):  # or another encoding
+            #        print(line)
+            #
+            #    for line in io.TextIOWrapper(self._process.stdout, encoding="utf-8"):  # or another encoding
+            #        print(line)
         else:
-            self._process = subprocess.Popen(["python",
+            self._process = subprocess.Popen(["python3",
                                               "-m",
                                               "boltstub",
+                                              "-l",
+                                              self.address,
                                               "-v",
-                                              self.address, script],
+                                              script],
                                              stdout=subprocess.PIPE,
                                              stderr=subprocess.PIPE,
                                              close_fds=True,
                                              encoding='utf-8')
 
-            while True:
-                return_code = self._process.poll()
-                if return_code is not None:
-                    line = self._process.stdout.readline()
-                    if isinstance(line, bytes):
-                        line = line.decode("utf-8")
-                    if line == "":
-                        break
-                    print(line.strip("\n"))
+        # Wait until something is written to know it started, requires -v
+        self._process.stdout.readline()
+
+        # Double check that the process started, a missing script would exit process immediately
+        if self._process.poll():
+            self._dump()
+            self._process = None
+            raise Exception("Stub server didn't start")
+
+            #while True:
+            #    return_code = self._process.poll()
+            #    if return_code is not None:
+            #        line = self._process.stdout.readline()
+            #        if isinstance(line, bytes):
+            #            line = line.decode("utf-8")
+            #        if line == "":
+            #            break
+            #        print(line.strip("\n"))
 
     def _dump(self):
         print("")
