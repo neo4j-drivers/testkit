@@ -59,15 +59,6 @@ class StubServer:
             self._process = None
             raise Exception("Stub server didn't start")
 
-            #while True:
-            #    return_code = self._process.poll()
-            #    if return_code is not None:
-            #        line = self._process.stdout.readline()
-            #        if isinstance(line, bytes):
-            #            line = line.decode("utf-8")
-            #        if line == "":
-            #            break
-            #        print(line.strip("\n"))
 
     def _dump(self):
         print("")

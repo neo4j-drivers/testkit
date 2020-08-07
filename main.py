@@ -121,7 +121,7 @@ if __name__ == "__main__":
     subprocess.run([
         "docker", "exec",
         "driver",
-        "python3", "/nutkit/driver/build_%s.py" % driverName
+        "python3", "/nutkit/driver/%s/build.py" % driverName
     ], check=True)
     print("Finished building driver and test backend")
 
@@ -133,7 +133,7 @@ if __name__ == "__main__":
     subprocess.run([
         "docker", "exec",
         "driver",
-        "python3", "/nutkit/driver/unittests_%s.py" % driverName
+        "python3", "/nutkit/driver/%s/unittests.py" % driverName
     ], check=True)
     end_test_suite('Unit tests')
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         "docker", "exec",
         "--detach",
         "driver",
-        "python3", "/nutkit/driver/backend_%s.py" % driverName
+        "python3", "/nutkit/driver/%s/backend.py" % driverName
     ], check=True)
     print("Started test backend")
     # Wait until backend started
