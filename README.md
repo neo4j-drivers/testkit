@@ -11,11 +11,8 @@ Environment variables:
     Set to the name of the driver in lowercase, should match any of the drivers in drivers folder.
   * TEST_DRIVER_REPO
     Path to driver repository
-  * TEST_DRIVER_IMAGE
-    Name of Docker image that is used to build the driver, the image needs the following:
-    * Python 3.6 >=
-    * SDK for building the driver
-    * Be "compatible" with the driver specific python scripts in this repository in drivers folder.
+  * TEST_BRANCH
+    Name of testkit branch. When running locally set this to 'local'.
 
 ```console
 export TEST_DRIVER_NAME=go

@@ -32,6 +32,8 @@ Suggested testkit repository driver tree:
             ...
         /python
             ...
+
+
 Docker images on TeamCity agent would look like this ($ docker image ls)
     Repository          Tag
     drivers-go-4.2      1
