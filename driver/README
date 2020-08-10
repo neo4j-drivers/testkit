@@ -1,0 +1,5 @@
+Scripts in this folder will be executed within all driver Docker images.
+
+Scripts within the specifiec driver folders will be executed within that specific driver
+Docker image.
+

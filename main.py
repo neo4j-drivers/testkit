@@ -7,7 +7,7 @@ is executed in each context.
 
 import os, sys, atexit, subprocess, time, unittest, json
 from datetime import datetime
-from testenv import get_test_result_class, begin_test_suite, end_test_suite
+from testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
 
 import tests.neo4j.suites as suites
 import tests.stub.suites as stub_suites
@@ -30,6 +30,7 @@ def cleanup():
         subprocess.run(["docker", "network", "rm", n],
             check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+
 def find_driver_images(repository, tag=None):
     image_filter = repository
     if tag:
@@ -40,36 +41,25 @@ def find_driver_images(repository, tag=None):
     ], universal_newlines=True)
     return images.splitlines()
 
+
 def ensure_driver_image(root_path, branch_name, driver_name):
     """ Ensures that an up to date Docker image exists for the driver.
     """
-    # Construct Docker repository name
-    repository = "drivers-%s-%s" % (driver_name, branch_name)
-    # Read tag name from file, this should be updated by testkit author whenever Docker image changes
-    tagfile_path = os.path.join(root_path, "driver", driver_name, "Dockertag")
-    tag = open(tagfile_path).read().splitlines()[0].rstrip()
-
-    image_name = "%s:%s" % (repository, tag)
-
-    # Check if the Docker image exists
-    existing_images = find_driver_images(repository, tag)
-    if len(existing_images):
-        print("Found existing driver Docker image: %s" % image_name)
-        return existing_images[0]
-
-    print("Building driver Docker image: %s" % image_name)
-
-    # Need to build a new Docker image
-    # Start by removing all existing images in the same repository
-    existing_images = find_driver_images(repository)
-    if existing_images:
-        print("Removing old driver Docker images: %s" % existing_images)
-        subprocess.check_call(["docker", "image", "rm", *existing_images])
-
-    # And now build it
+    # Construct Docker image name from driver name (i.e drivers-go, drivers-java)
+    # and branch name (i.e 4.2, go-1.14-image)
+    image_name = "drivers-%s:%s" % (driver_name, branch_name)
     image_path = os.path.join(root_path, "driver", driver_name)
+
+    # Build the image using caches, this will rebuild the image if it has changed
+    # in git repo or if the image doesn't exist on this agent/host. A build will
+    # occure once per driver/agent/branch (reusing layers for different branches if
+    # the image file hasn't changed).
+    #
+    # This will use the driver folder as build context.
+    print("Building driver Docker image %s from %s" % (image_name, image_path))
     subprocess.check_call(["docker", "build", "--tag", image_name, image_path])
-    return find_driver_images(repository, tag)[0]
+
+    return image_name
 
 
 if __name__ == "__main__":
@@ -80,10 +70,11 @@ if __name__ == "__main__":
 
     testkitBranch = os.environ.get(env_testkit_branch)
     if not testkitBranch:
-        print("Missing environment variable %s that contains name of testkit branch. "
-              "This name is used to name Docker repository. "
-              "If running locally set this to 'local' " % env_testkit_branch)
-        sys.exit(1)
+        if in_teamcity:
+            print("Missing environment variable %s that contains name of testkit branch. "
+                  "This name is used to name Docker repository. " % env_testkit_branch)
+            sys.exit(1)
+        testkitBranch = "local"
 
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
@@ -268,6 +259,4 @@ if __name__ == "__main__":
     TODO:
     Neo4j 4.1 server tests
     """
-
-
 
