@@ -21,3 +21,6 @@ def new_backend():
     """
     host, port = get_backend_host_and_port()
     return Backend(host, port)
+
+def get_driver_name():
+    return os.environ['TEST_DRIVER_NAME']

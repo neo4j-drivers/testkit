@@ -41,7 +41,6 @@ class CypherMap:
         v = {}
         for k in self.value:
             v[k] = str(self.value[k])
-        print(self.value)
         return "Map {}".format(v)
 
 

@@ -111,4 +111,3 @@ class StubServer:
             self._kill()
 
 scripts_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
-
