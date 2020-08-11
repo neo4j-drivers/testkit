@@ -10,7 +10,7 @@ loader = unittest.TestLoader()
 
 protocol4x0 = unittest.TestSuite()
 
-# Support for transactional functions not implemented in Java
-if not get_driver_name() in ['java']:
+# Support for transactional functions not implemented in Java or dotnet
+if not get_driver_name() in ['java', 'dotnet']:
     protocol4x0.addTests(loader.loadTestsFromModule(retry))
 
