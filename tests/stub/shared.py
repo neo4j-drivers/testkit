@@ -22,33 +22,21 @@ class StubServer:
             raise Exception("Stub server in use")
 
         if platform.system() is 'Windows':
-            self._process = subprocess.Popen(["boltstub",
-                                             "-v",
-                                             str(self.port),
-                                             script],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             close_fds=True)
-
-            # This signifies that the process is no longer running, so exited with an error
-            #if self._process.poll() is not None:
-            #    for line in io.TextIOWrapper(self._process.stderr, encoding="utf-8"):  # or another encoding
-            #        print(line)
-            #
-            #    for line in io.TextIOWrapper(self._process.stdout, encoding="utf-8"):  # or another encoding
-            #        print(line)
+            pythonCommand = "python"
         else:
-            self._process = subprocess.Popen(["python3",
-                                              "-m",
-                                              "boltstub",
-                                              "-l",
-                                              self.address,
-                                              "-v",
-                                              script],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             close_fds=True,
-                                             encoding='utf-8')
+            pythonCommand = "python3"
+
+        self._process = subprocess.Popen([pythonCommand,
+                                          "-m",
+                                          "boltstub",
+                                          "-l",
+                                          self.address,
+                                          "-v",
+                                          script],
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,
+                                         close_fds=True,
+                                         encoding='utf-8')
 
         # Wait until something is written to know it started, requires -v
         self._process.stdout.readline()
