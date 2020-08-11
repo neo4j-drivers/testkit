@@ -9,5 +9,5 @@ def run(args):
         args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
 
 if __name__ == "__main__":
-    run(["mvn", "clean", "install", "-DskipTests"])
+    run(["mvn", "clean", "install", "-P", "!determine-revision", "-DskipTests"])
 
