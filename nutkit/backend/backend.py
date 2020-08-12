@@ -51,6 +51,7 @@ class Backend:
 
     def send(self, req):
         reqJson = self._encoder.encode(req)
+        print("Request: %s" % reqJson)
         self._writer.write("#request begin\n")
         self._writer.write(reqJson+"\n")
         self._writer.write("#request end\n")
@@ -68,7 +69,12 @@ class Backend:
                     raise "already in response"
                 in_response = True
             elif line == "#response end":
-                res = json.loads(response, object_hook=decode_hook)
+                print("Response: %s" % response)
+                try:
+                    res = json.loads(response, object_hook=decode_hook)
+                except json.decoder.JSONDecodeError as e:
+                    raise Exception("Failed to decode: %s" % response)
+
                 # All received errors are raised as exceptions
                 if isinstance(res, protocol.BaseError):
                     raise res

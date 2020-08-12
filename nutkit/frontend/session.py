@@ -36,9 +36,13 @@ class Session:
                     # that we're happy to go.
                     self._backend.send(protocol.RetryablePositive(self._session.id))
                 except Exception as e:
-                    # If this is an error originating from the backend, retrieve the id of the error
-                    # and send that, this saves us from having to recreate errors on backend side,
-                    # backend just needs to track the returned errors.
+                    # If the backend failed to handle this, raise for easier debugging
+                    if isinstance(e, protocol.BackendError):
+                        raise e
+
+                    # If this is an error originating from the driver in the backend, retrieve the
+                    # id of the error  and send that, this saves us from having to recreate errors
+                    # on backend side, backend just needs to track the returned errors.
                     errorId = ""
                     if isinstance(e, protocol.DriverError):
                         errorId = e.id
