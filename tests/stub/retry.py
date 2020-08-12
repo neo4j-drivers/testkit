@@ -10,6 +10,7 @@ class TestRetry(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._server = StubServer(9001)
+        self._driver = get_driver_name()
 
     def tearDown(self):
         self._backend.close()
@@ -18,8 +19,11 @@ class TestRetry(unittest.TestCase):
         self._server.reset()
 
     def test_read(self):
+        if self._driver in ["dotnet"]:
+            self.skipTest("Transactional functions not implemented in backend")
+
         script = "retry_read.script"
-        if get_driver_name() == "go":
+        if self._driver in ["go"]:
             # Until Go is updated to use PULL with n
             script = "retry_read_v3.script"
         self._server.start(os.path.join(scripts_path, script))
@@ -45,8 +49,11 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
     def test_read_twice(self):
+        if self._driver in ["dotnet"]:
+            self.skipTest("Transactional functions not implemented in backend")
+
         script = "retry_read_twice.script"
-        if get_driver_name() == "go":
+        if self._driver in ["go"]:
             # Until Go is updated to use PULL with n
             # Lean version has fewer resets
             script = "retry_read_twice_lean_v3.script"
