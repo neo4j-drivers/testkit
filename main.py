@@ -31,17 +31,6 @@ def cleanup():
             check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def find_driver_images(repository, tag=None):
-    image_filter = repository
-    if tag:
-        image_filter = image_filter + ":" + tag
-
-    images = subprocess.check_output([
-        "docker", "image", "ls", "--format", "{{.Repository}}:{{.Tag}}", image_filter
-    ], universal_newlines=True)
-    return images.splitlines()
-
-
 def ensure_driver_image(root_path, branch_name, driver_name):
     """ Ensures that an up to date Docker image exists for the driver.
     """
@@ -58,6 +47,14 @@ def ensure_driver_image(root_path, branch_name, driver_name):
     # This will use the driver folder as build context.
     print("Building driver Docker image %s from %s" % (image_name, image_path))
     subprocess.check_call(["docker", "build", "--tag", image_name, image_path])
+
+    print("Checking for dangling intermediate images")
+    images = subprocess.check_output([
+        "docker", "images", "-a", "--filter=dangling=true", "-q"
+    ]).splitlines()
+    if len(images):
+        print("Cleaning up images: %s" % images)
+        subprocess.check_call(["docker", "rmi", " ".join(images)])
 
     return image_name
 
