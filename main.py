@@ -169,6 +169,13 @@ if __name__ == "__main__":
     ], check=True)
     end_test_suite('Unit tests')
 
+    # Start the test backend in the driver Docker instance.
+    # Note that this is done detached which means that we don't know for
+    # sure if the test backend actually started and we will not see
+    # any output of this command.
+    # When failing due to not being able to connect from client or seeing
+    # issues like 'detected possible backend crash', make sure that this
+    # works simply by commenting detach and see that the backend starts.
     print("Start test backend in driver container")
     subprocess.run([
         "docker", "exec",

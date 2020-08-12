@@ -11,11 +11,6 @@ def run(args):
 
 
 if __name__ == "__main__":
-    # Fetch all dependencies
-    run([
-        "dotnet", "restore", "--disable-parallel", "-v", "n", "Neo4j.Driver/Neo4j.Driver.sln"
-    ])
-    run([
-        "dotnet", "msbuild", "Neo4j.Driver/Neo4j.Driver.sln"
-    ])
+    run(["dotnet", "restore", "--disable-parallel", "-v", "n", "Neo4j.Driver/Neo4j.Driver.sln"])
+    run(["dotnet", "msbuild", "Neo4j.Driver/Neo4j.Driver.sln"])
 

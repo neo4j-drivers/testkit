@@ -89,7 +89,7 @@ class Backend:
                         num_blanks += 1
                         if num_blanks > 50:
                             raise Exception("Detected possible crash in backend")
-                    print(line)
+                    print("[BACKEND]: %s" % line)
 
     def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)
