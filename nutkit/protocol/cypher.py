@@ -32,6 +32,10 @@ class CypherList:
             v.append(str(x))
         return "List {}".format(v)
 
+    def __eq__(self, other):
+        if isinstance(other, CypherList):
+            return other.value == self.value
+        return other == self.value
 
 class CypherMap:
     def __init__(self, value):
@@ -43,6 +47,10 @@ class CypherMap:
             v[k] = str(self.value[k])
         return "Map {}".format(v)
 
+    def __eq__(self, other):
+        if isinstance(other, CypherMap):
+            return other.value == self.value
+        return other == self.value
 
 class CypherInt:
     def __init__(self, value):
@@ -51,6 +59,11 @@ class CypherInt:
     def __str__(self):
         return str(self.value)
 
+    def __eq__(self, other):
+        if isinstance(other, CypherInt):
+            return other.value == self.value
+        return other == self.value
+
 
 class CypherString:
     def __init__(self, value):
@@ -58,6 +71,11 @@ class CypherString:
 
     def __str__(self):
         return self.value
+
+    def __eq__(self, other):
+        if isinstance(other, CypherString):
+            return other.value == self.value
+        return other == self.value
 
 
 class Node:
@@ -70,4 +88,6 @@ class Node:
         return "Node (id={}, labels={}), props={}".format(
             self.id, self.labels, self.props)
 
+# More in line with other naming
+CypherNode = Node
 

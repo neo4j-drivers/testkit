@@ -28,6 +28,9 @@ class TestDatatypes(unittest.TestCase):
         self.assertIsInstance(values[1], types.CypherInt)
         self.assertIsInstance(values[2], types.CypherString)
         self.assertIsInstance(values[3], types.CypherList)
+        self.assertEqual(values[1], 1)
+        self.assertEqual(values[2], 'string')
+        self.assertEqual(values[3].value, [types.CypherInt(1), types.CypherString('a')])
 
     def test_graph_node(self):
         result = self._session.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
@@ -35,14 +38,7 @@ class TestDatatypes(unittest.TestCase):
         self.assertNotIsInstance(record, types.NullRecord)
 
         node = record.values[0]
-        self.assertIsInstance(node, types.Node)
-        self.assertIsInstance(node.id, types.CypherInt)
-
-        self.assertIsInstance(node.labels, types.CypherList)
-        self.assertIsInstance(node.labels.value[0], types.CypherString)
-        self.assertEqual(node.labels.value[0].value, "TestLabel")
-
-        self.assertIsInstance(node.props, types.CypherMap)
-        self.assertEqual(node.props.value["num"].value, 1)
-        self.assertEqual(node.props.value["txt"].value, "abc")
+        self.assertIsInstance(node, types.CypherNode)
+        self.assertEqual(node.labels, ['TestLabel'])
+        self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
 
