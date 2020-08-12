@@ -18,7 +18,11 @@ class TestRetry(unittest.TestCase):
         self._server.reset()
 
     def test_read(self):
-        self._server.start(os.path.join(scripts_path, "retry_read.script"))
+        script = "retry_read.script"
+        if get_driver_name() == "go":
+            # Until Go is updated to use PULL with n
+            script = "retry_read_v3.script"
+        self._server.start(os.path.join(scripts_path, script))
 
         num_retries = 0
         def retry_once(tx):
@@ -41,7 +45,12 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
     def test_read_twice(self):
-        self._server.start(os.path.join(scripts_path, "retry_read_twice.script"))
+        script = "retry_read_twice.script"
+        if get_driver_name() == "go":
+            # Until Go is updated to use PULL with n
+            # Lean version has fewer resets
+            script = "retry_read_twice_lean_v3.script"
+        self._server.start(os.path.join(scripts_path, script))
 
         num_retries = 0
         def retry_twice(tx):

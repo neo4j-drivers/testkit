@@ -6,7 +6,7 @@
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
-   PULL {"n": 1000}
+   PULL {"n": -1}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
