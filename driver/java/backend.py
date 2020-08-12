@@ -8,5 +8,5 @@ import os, subprocess
 
 if __name__ == "__main__":
     subprocess.check_call(
-        ["java", "-jar", "nutkit-backend/target/nutkit-backend-4.1-SNAPSHOT.jar"])
+        ["java", "-jar", "testkit-backend/target/testkit-backend-4.1-SNAPSHOT.jar"])
 
