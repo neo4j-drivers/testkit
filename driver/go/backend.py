@@ -7,5 +7,5 @@ import os, subprocess
 
 if __name__ == "__main__":
     goPath = "/home/build"
-    backendPath = os.path.join(goPath, "bin", "nutbackend")
+    backendPath = os.path.join(goPath, "bin", "testkit-backend")
     subprocess.check_call([backendPath])

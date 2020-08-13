@@ -18,4 +18,4 @@ if __name__ == "__main__":
     shutil.copytree(".", buildPath)
     os.environ["GOPATH"] = goPath
     run(["go", "get", "-v", "github.com/neo4j/neo4j-go-driver/..."])
-    run(["go", "install","-v", "github.com/neo4j/neo4j-go-driver/nutbackend"])
+    run(["go", "install","-v", "github.com/neo4j/neo4j-go-driver/testkit-backend"])
