@@ -6,5 +6,14 @@ RUN apt-get --quiet --quiet update \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHON=python3
-ENV JAVA_HOME=$JAVA8
+ENV JAVA_HOME=/usr/local/openjdk-8
 ENV PATH=$JAVA_HOME/bin:$PATH
+
+# For Linux Debian
+ADD trustedRoot.crt /usr/local/share/ca-certificates/the_host.crt
+RUN update-ca-certificates
+# JAVA_HOME needed by hook
+# ADD CA file to /usr/local/share/ca-certificates/<hostname>/<cert>.crt
+# ADD CA file to /usr/local/share/ca-certificates/<cert>.crt
+# RUN update-ca-certificates
+# pem to crt: openssl x509 x.pem -inform PEM out y.crt

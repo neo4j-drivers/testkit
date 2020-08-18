@@ -129,12 +129,12 @@ func main() {
 	// fine to just write it as this.
 	// The name ca-certificates.crt assumes that driver Docker images are based on Debian and path
 	// should be mounted as /etc/ssl/certs/
-	writeCert(path.Join(basePath, "driver", "ca-certificates.crt"), trustedRootDer)
+	writeCert(path.Join(basePath, "driver", "trustedRoot.crt"), trustedRootDer)
 
 	// trustedRoot_server1
 	// Valid dates with hostname set to something that drivers can connect to from driver
 	// Docker container.
-	server1Key, server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_server1", "localhost")
+	server1Key, server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_server1", "the_host")
 	writeKey(path.Join(basePath, "server", "trustedRoot_server1.key"), server1Key)
 	writeCert(path.Join(basePath, "server", "trustedRoot_server1.pem"), server1Der)
 

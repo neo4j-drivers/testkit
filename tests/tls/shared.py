@@ -8,21 +8,21 @@ from nutkit.frontend import Driver, AuthorizationToken
 # Use this path as base for locating a whole bunch of other stuff.
 thisPath = os.path.dirname(os.path.abspath(__file__))
 
+env_host_address = "TEST_TLSSERVER_ADDRESS"
+def get_tlsserver_address():
+        return os.environ.get(env_host_address, "127.0.0.1")
 
 class TlsServer:
-    def __init__(self):
-        pass
-
     def start(self):
         print("Starting TLS server")
 
         pycmd = "python3"
         if platform.system() is "Windows":
             pycmd = "python"
-        serverPath = os.path.join(thisPath, "tlsserver.py")
+        scriptPath = os.path.join(thisPath, "tlsserver.py")
         certPath = os.path.join(thisPath, "certs", "server", "trustedRoot_server1.pem")
         keyPath = os.path.join(thisPath, "certs", "server", "trustedRoot_server1.key")
-        self._process = subprocess.Popen([pycmd, "-u", serverPath, certPath, keyPath],
+        self._process = subprocess.Popen([pycmd, "-u", scriptPath, get_tlsserver_address(), certPath, keyPath],
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE,
                                          close_fds=True,
@@ -106,9 +106,6 @@ neo4j:
 
 """
 
-# TODO: Cleanup
-address = os.environ.get("TEST_TLSSERVER_ADDRESS", '127.0.0.1')
-
 class TestCASigned(unittest.TestCase):
     """ Tests URL scheme neo4j+s where server is assumed to present a server certificate
     signed by a certificate authority recognized by the driver.
@@ -118,7 +115,7 @@ class TestCASigned(unittest.TestCase):
         self._server = None
         # Doesn't really matter
         self._auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        self._scheme = "neo4j+s://%s:%d" % (address, 6666)
+        self._scheme = "neo4j+s://%s:%d" % (get_tlsserver_address(), 6666)
 
     def tearDown(self):
         if self._server:

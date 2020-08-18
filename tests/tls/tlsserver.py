@@ -7,12 +7,12 @@ handshake.
 All other types of errors will raise and exit with non zero.
 """
 
-env_host_address = "TEST_TLSSERVER_ADDRESS"
 
 if __name__ == "__main__":
-    serverCertPath = sys.argv[1]
-    serverKeyPath = sys.argv[2]
-    address = os.environ.get(env_host_address, '127.0.0.1')
+    address = sys.argv[1]
+    serverCertPath = sys.argv[2]
+    serverKeyPath = sys.argv[3]
+    print(".") # Discarded output
     print("Starting TLS server on %s with cert %s and key %s" % (address, serverCertPath, serverKeyPath))
     context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     context.load_cert_chain(serverCertPath, serverKeyPath)

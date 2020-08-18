@@ -11,6 +11,7 @@ from testenv import get_test_result_class, begin_test_suite, end_test_suite, in_
 
 import tests.neo4j.suites as suites
 import tests.stub.suites as stub_suites
+import tests.tls.suites as tls_suites
 
 
 # Environment variables
@@ -51,7 +52,7 @@ def ensure_driver_image(root_path, branch_name, driver_name):
     print("Checking for dangling intermediate images")
     images = subprocess.check_output([
         "docker", "images", "-a", "--filter=dangling=true", "-q"
-    ]).splitlines()
+    ], encoding="utf-8").splitlines()
     if len(images):
         print("Cleaning up images: %s" % images)
         subprocess.check_call(["docker", "rmi", " ".join(images)])
@@ -115,6 +116,7 @@ if __name__ == "__main__":
     networkConfig = json.loads(networkConfig)
     gateway = networkConfig[0]['IPAM']['Config'][0]['Gateway']
     os.environ['TEST_STUB_ADDRESS'] = gateway
+    os.environ['TEST_TLSSERVER_ADDRESS'] = gateway
 
     # Bootstrap the driver docker image by running a bootstrap script in the image.
     # The driver docker image only contains the tools needed to build, not the built driver.
@@ -199,7 +201,19 @@ if __name__ == "__main__":
     if result.errors or result.failures:
         failed = True
     end_test_suite(suiteName)
+    if failed:
+        sys.exit(1)
 
+    """
+    TLS tests
+    """
+    suiteName = "TLS tests"
+    begin_test_suite(suiteName)
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
+    result = runner.run(tls_suites.protocol4x0)
+    if result.errors or result.failures:
+        failed = True
+    end_test_suite(suiteName)
     if failed:
         sys.exit(1)
 
