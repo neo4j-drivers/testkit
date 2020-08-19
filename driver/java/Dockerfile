@@ -9,11 +9,8 @@ ENV PYTHON=python3
 ENV JAVA_HOME=/usr/local/openjdk-8
 ENV PATH=$JAVA_HOME/bin:$PATH
 
-# For Linux Debian
-ADD trustedRoot.crt /usr/local/share/ca-certificates/the_host.crt
+# Install our own CAs on the image.
+# Assumes Linux Debian based image.
+# JAVA_HOME needed by update-ca-certificates hook to update Java with changed system CAs.
+COPY CAs/* /usr/local/share/ca-certificates/
 RUN update-ca-certificates
-# JAVA_HOME needed by hook
-# ADD CA file to /usr/local/share/ca-certificates/<hostname>/<cert>.crt
-# ADD CA file to /usr/local/share/ca-certificates/<cert>.crt
-# RUN update-ca-certificates
-# pem to crt: openssl x509 x.pem -inform PEM out y.crt

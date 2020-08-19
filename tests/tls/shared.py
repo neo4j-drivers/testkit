@@ -115,7 +115,7 @@ class TestCASigned(unittest.TestCase):
         self._server = None
         # Doesn't really matter
         self._auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        self._scheme = "neo4j+s://%s:%d" % (get_tlsserver_address(), 6666)
+        self._scheme = "neo4j+s://%s:%d" % ("thehost", 6666)
 
     def tearDown(self):
         if self._server:

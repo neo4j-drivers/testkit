@@ -134,7 +134,7 @@ func main() {
 	// trustedRoot_server1
 	// Valid dates with hostname set to something that drivers can connect to from driver
 	// Docker container.
-	server1Key, server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_server1", "the_host")
+	server1Key, server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_server1", "thehost")
 	writeKey(path.Join(basePath, "server", "trustedRoot_server1.key"), server1Key)
 	writeCert(path.Join(basePath, "server", "trustedRoot_server1.pem"), server1Der)
 

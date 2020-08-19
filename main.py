@@ -5,7 +5,7 @@ responsibility of this script to setup these contexts and orchestrate which suit
 is executed in each context.
 """
 
-import os, sys, atexit, subprocess, time, unittest, json
+import os, sys, atexit, subprocess, time, unittest, json, shutil
 from datetime import datetime
 from testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
 
@@ -38,7 +38,16 @@ def ensure_driver_image(root_path, branch_name, driver_name):
     # Construct Docker image name from driver name (i.e drivers-go, drivers-java)
     # and branch name (i.e 4.2, go-1.14-image)
     image_name = "drivers-%s:%s" % (driver_name, branch_name)
-    image_path = os.path.join(root_path, "driver", driver_name)
+    # Context path is the Docker build context, all files added/copied to the
+    # driver image needs to be here.
+    context_path = os.path.join(root_path, "driver", driver_name)
+    # Copy CAs that the driver should know of to the Docker build context
+    # (first remove any previous...). Each driver container should contain those CAs
+    # in such a way that driver language can use them as system CAs without any
+    # custom modification of the driver.
+    cas_path = os.path.join(context_path, "CAs")
+    shutil.rmtree(cas_path, ignore_errors=True)
+    shutil.copytree(os.path.join(root_path, "tests", "tls", "certs", "driver"), cas_path)
 
     # Build the image using caches, this will rebuild the image if it has changed
     # in git repo or if the image doesn't exist on this agent/host. A build will
@@ -46,8 +55,8 @@ def ensure_driver_image(root_path, branch_name, driver_name):
     # the image file hasn't changed).
     #
     # This will use the driver folder as build context.
-    print("Building driver Docker image %s from %s" % (image_name, image_path))
-    subprocess.check_call(["docker", "build", "--tag", image_name, image_path])
+    print("Building driver Docker image %s from %s" % (image_name, context_path))
+    subprocess.check_call(["docker", "build", "--tag", image_name, context_path])
 
     print("Checking for dangling intermediate images")
     images = subprocess.check_output([
@@ -76,7 +85,9 @@ if __name__ == "__main__":
 
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
+    # Add this path to python sys path to be able to invoke modules from this repo
     thisPath = os.path.dirname(os.path.abspath(__file__))
+    os.environ['PYTHONPATH'] = thisPath
 
     # Retrieve path to driver git repository
     driverRepo = os.environ.get(env_driver_repo)
@@ -95,18 +106,16 @@ if __name__ == "__main__":
         os.makedirs(artifactsPath)
     print("Putting artifacts in %s" % artifactsPath)
 
-    # Add this path to python sys path to be able to invoke modules from this repo
-    os.environ['PYTHONPATH'] = thisPath
 
     # Important to stop all docker images upon exit
-    atexit.register(cleanup)
-
     # Also make sure that none of those images are running at this point
+    atexit.register(cleanup)
     cleanup()
 
-    # Create network to be shared among the instances
-    # Retrieve the gateway (docker host) to be able to start stub server on host
-    # but available to driver container.
+    # Create network to be shared among the instances.
+    # The host running this will be gateway on that network, retrieve that
+    # address to be able to start services on the network that the driver
+    # connects to (stub server and TLS server).
     subprocess.run([
         "docker", "network", "create", "the-bridge"
     ])
@@ -137,6 +146,8 @@ if __name__ == "__main__":
         # Remove itself upon exit
         "--rm",
         "--net=the-bridge",
+        # Host to ip mapping, name to use when connecting from driver to host
+        "--add-host", "thehost:%s" % gateway,
         # Name of the image
         driverImage,
         # Bootstrap command
