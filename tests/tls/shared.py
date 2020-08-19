@@ -123,6 +123,7 @@ class TestCASigned(unittest.TestCase):
             # is killed and it's output is dumped for analys.
             self._server.reset()
             self._server = None
+        self._backend.close()
 
         """ Happy path, the server has a valid server certificate signed by a trusted
         certificate authority.
@@ -134,10 +135,10 @@ class TestCASigned(unittest.TestCase):
         session = driver.session("r")
         try:
             session.run("RETURN 1")
-            session.close()
-            driver.close()
-        except Exception as e:
+        except:
             pass
+        session.close()
+        driver.close()
 
         self._server.done(expect_connect=True)
 

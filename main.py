@@ -228,7 +228,6 @@ if __name__ == "__main__":
     if failed:
         sys.exit(1)
 
-
     """
     Neo4j 4.0 server tests
     """
@@ -279,7 +278,6 @@ if __name__ == "__main__":
     if result.errors or result.failures:
         failed = True
     end_test_suite(suiteName)
-
     if failed:
         sys.exit(1)
 
@@ -288,4 +286,5 @@ if __name__ == "__main__":
     TODO:
     Neo4j 4.1 server tests
     """
+
 
