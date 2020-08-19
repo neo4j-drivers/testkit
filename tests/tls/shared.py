@@ -1,6 +1,4 @@
-
 import subprocess, platform, os, time, sys
-import unittest
 from tests.shared import *
 from nutkit.frontend import Driver, AuthorizationToken
 
@@ -9,26 +7,28 @@ from nutkit.frontend import Driver, AuthorizationToken
 thisPath = os.path.dirname(os.path.abspath(__file__))
 
 env_host_address = "TEST_TLSSERVER_ADDRESS"
-def get_tlsserver_address():
-        return os.environ.get(env_host_address, "127.0.0.1")
+
 
 class TlsServer:
-    def start(self):
-        print("Starting TLS server")
+    def __init__(self, server_cert):
+        """ Name of server certificate, corresponds to a .pem and .key file.
+        """
+
+        # Determine which address that server should bind to
+        addr = os.environ.get(env_host_address, "127.0.0.1")
 
         pycmd = "python3"
         if platform.system() is "Windows":
             pycmd = "python"
         scriptPath = os.path.join(thisPath, "tlsserver.py")
-        certPath = os.path.join(thisPath, "certs", "server", "trustedRoot_server1.pem")
-        keyPath = os.path.join(thisPath, "certs", "server", "trustedRoot_server1.key")
-        self._process = subprocess.Popen([pycmd, "-u", scriptPath, get_tlsserver_address(), certPath, keyPath],
+        certPath = os.path.join(thisPath, "certs", "server", "%s.pem" % server_cert)
+        keyPath = os.path.join(thisPath, "certs", "server", "%s.key" % server_cert)
+        self._process = subprocess.Popen([pycmd, "-u", scriptPath, addr, certPath, keyPath],
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE,
                                          close_fds=True,
                                          encoding='utf-8')
         # Wait until something is written to know it started
-        print("Waiting for TLS server to start")
         self._process.stdout.readline()
         print("TLS server started")
 
@@ -36,11 +36,9 @@ class TlsServer:
         self._process.stdout.close()
         self._process.stderr.close()
 
-    def done(self, expect_connect):
-        """ Checks that the server has stopped and its exit code.
-        If expect_connect is True, the exit code should be zero otherwise raise an error.
-        If expect_connect is False, the exit code should be non-zero otherwise raise an error.
-        If server hasn't stopped, kill it and raise an error.
+    def connected(self):
+        """ Checks that the server has stopped and its exit code to determine if
+        driver connected or not.
         """
         polls = 100
         while polls:
@@ -49,19 +47,10 @@ class TlsServer:
                 time.sleep(0.1)
                 polls -= 1
             else:
-                if self._process.returncode:
-                    # Non-zero exit code, driver didn't connect
-                    if expect_connect:
-                        self._dump()
-                        raise Exception("Expected to connect but didn't (or TLS server failed)")
-                else:
-                    # Zero exit code, driver connected
-                    if not expect_connect:
-                        self._dump()
-                        raise Exception("Didn't expect connect but did")
+                connected = self._process.returncode == 0
                 self._close_pipes()
                 self._process = None
-                return
+                return connected
         raise Exception("Timeout")
 
     def _dump(self):
@@ -87,6 +76,22 @@ class TlsServer:
             self._kill()
 
 
+def try_connect(backend, server, scheme, host):
+    url = "%s://%s:%d" % (scheme, host, 6666)
+    # Doesn't really matter
+    auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
+    driver = Driver(backend, url, auth)
+    session = driver.session("r")
+    try:
+        session.run("RETURN 1")
+    except:
+        pass
+    session.close()
+    driver.close()
+    return server.connected()
+
+
+
 """
 neo4j+ssc
     no tls                        - no connection
@@ -106,41 +111,6 @@ neo4j:
 
 """
 
-class TestCASigned(unittest.TestCase):
-    """ Tests URL scheme neo4j+s where server is assumed to present a server certificate
-    signed by a certificate authority recognized by the driver.
-    """
-    def setUp(self):
-        self._backend = new_backend()
-        self._server = None
-        # Doesn't really matter
-        self._auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        self._scheme = "neo4j+s://%s:%d" % ("thehost", 6666)
-
-    def tearDown(self):
-        if self._server:
-            # If test raised an exception this will make sure that the stub server
-            # is killed and it's output is dumped for analys.
-            self._server.reset()
-            self._server = None
-        self._backend.close()
-
-        """ Happy path, the server has a valid server certificate signed by a trusted
-        certificate authority.
-        """
-    def test_connect_trusted_ca(self):
-        self._server = TlsServer()
-        self._server.start()
-        driver = Driver(self._backend, self._scheme, self._auth)
-        session = driver.session("r")
-        try:
-            session.run("RETURN 1")
-        except:
-            pass
-        session.close()
-        driver.close()
-
-        self._server.done(expect_connect=True)
 
 """
 

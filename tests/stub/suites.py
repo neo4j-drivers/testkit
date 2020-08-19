@@ -4,7 +4,6 @@ Defines stub suites
 
 import unittest
 import tests.stub.retry as retry
-from tests.shared import get_driver_name
 
 loader = unittest.TestLoader()
 

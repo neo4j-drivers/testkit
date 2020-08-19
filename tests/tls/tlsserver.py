@@ -20,7 +20,7 @@ if __name__ == "__main__":
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind((address, 6666))
-        sock.listen(5)
+        sock.listen()
         with context.wrap_socket(sock, server_side=True) as ssock:
             conn, addr = ssock.accept()
             print("Connected to %s. Receiving handshake.." % addr[0])

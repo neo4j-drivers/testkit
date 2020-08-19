@@ -148,6 +148,8 @@ if __name__ == "__main__":
         "--net=the-bridge",
         # Host to ip mapping, name to use when connecting from driver to host
         "--add-host", "thehost:%s" % gateway,
+        # Another mapping but different name to verify TLS hostname verification
+        "--add-host", "thehostbutwrong:%s" % gateway,
         # Name of the image
         driverImage,
         # Bootstrap command
