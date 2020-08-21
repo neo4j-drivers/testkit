@@ -221,54 +221,62 @@ if __name__ == "__main__":
     Neo4j 4.0 server tests
     """
     # TODO: Write suite name to TeamCity
-
-    # Start a Neo4j server
     # Make an artifacts folder where the database can place it's logs, each time
     # we start a database server we should use a different folder.
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
     os.makedirs(neo4jArtifactsPath)
     neo4jserver = "neo4jserver"
-    print("Starting neo4j server")
-    subprocess.run([
-        "docker", "run",
-        # Name of the docker container
-        "--name", neo4jserver,
-        # Remove itself upon exit
-        "--rm",
-        # Collect logs into the artifacts tree
-        "-v", "%s:/logs" % os.path.join(neo4jArtifactsPath, "logs"),
-        # Run in background
-        "--detach",
-        "--env", "NEO4J_dbms_connector_bolt_advertised__address=%s:7687" % neo4jserver,
-        "--net=the-bridge",
-        # Force a password
-        "--env", "NEO4J_AUTH=%s/%s" % ("neo4j", "pass"),
-        # Image
-        "neo4j:latest",
-    ])
-    print("Neo4j container server started, waiting for port to be available")
 
-    # Wait until server is listening before running tests
-    # Use driver container to check for Neo4j availability since connect will be done from there
-    subprocess.run([
-        "docker", "exec",
-        "driver",
-        "python3", "/nutkit/driver/wait_for_port.py", neo4jserver, "%d" % 7687
-    ], check=True)
-    print("Neo4j in container listens")
+    neo4jservers = [
+        { "image_name": "neo4j:4.0", "suite": suites.single_community_neo4j4x0 },
+        { "image_name": "neo4j:4.1", "suite": suites.single_enterprise_neo4j4x1 },
+    ]
+    for ix in neo4jservers:
+        # Start a Neo4j server
+        print("Starting neo4j server")
+        subprocess.run([
+            "docker", "run",
+            # Name of the docker container
+            "--name", neo4jserver,
+            # Remove itself upon exit
+            "--rm",
+            # Collect logs into the artifacts tree
+            "-v", "%s:/logs" % os.path.join(neo4jArtifactsPath, "logs"),
+            # Run in background
+            "--detach",
+            "--env", "NEO4J_dbms_connector_bolt_advertised__address=%s:7687" % neo4jserver,
+            "--net=the-bridge",
+            # Force a password
+            "--env", "NEO4J_AUTH=%s/%s" % ("neo4j", "pass"),
+            # Image
+            ix["image_name"],
+        ])
+        print("Neo4j container server started, waiting for port to be available")
 
-    # Make sure that the tests instruct the driver to connect to neo4jserver docker container
-    os.environ['TEST_NEO4J_HOST'] = neo4jserver
+        # Wait until server is listening before running tests
+        # Use driver container to check for Neo4j availability since connect will be done from there
+        subprocess.run([
+            "docker", "exec",
+            "driver",
+            "python3", "/nutkit/driver/wait_for_port.py", neo4jserver, "%d" % 7687
+        ], check=True)
+        print("Neo4j in container listens")
 
-    suiteName = "Integration tests, Neo4j latest"
-    begin_test_suite(suiteName)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
-    result = runner.run(suites.single_community_neo4j4x0)
-    if result.errors or result.failures:
-        failed = True
-    end_test_suite(suiteName)
-    if failed:
-        sys.exit(1)
+        # Make sure that the tests instruct the driver to connect to neo4jserver docker container
+        os.environ['TEST_NEO4J_HOST'] = neo4jserver
+
+        suiteName = "Integration tests, %s" % ix["image_name"]
+        begin_test_suite(suiteName)
+        runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
+        result = runner.run(ix["suite"])
+        if result.errors or result.failures:
+            failed = True
+        end_test_suite(suiteName)
+        if failed:
+            sys.exit(1)
+
+        subprocess.run([
+            "docker", "stop", "neo4jserver"])
 
     """
     TODO:
