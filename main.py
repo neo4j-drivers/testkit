@@ -19,7 +19,7 @@ env_driver_name    = 'TEST_DRIVER_NAME'
 env_driver_repo    = 'TEST_DRIVER_REPO'
 env_testkit_branch = 'TEST_BRANCH'
 
-containers = ["driver", "neo4jserver"]
+containers = ["driver", "neo4jserver", "gobuilder"]
 networks = ["the-bridge"]
 
 
@@ -218,19 +218,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     """
-    TLS tests
-    """
-    suiteName = "TLS tests"
-    begin_test_suite(suiteName)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
-    result = runner.run(tls_suites.protocol4x0)
-    if result.errors or result.failures:
-        failed = True
-    end_test_suite(suiteName)
-    if failed:
-        sys.exit(1)
-
-    """
     Neo4j 4.0 server tests
     """
     # TODO: Write suite name to TeamCity
@@ -283,10 +270,41 @@ if __name__ == "__main__":
     if failed:
         sys.exit(1)
 
-
     """
     TODO:
     Neo4j 4.1 server tests
     """
+
+    """
+    TLS tests
+    """
+    print("Building TLS server in Go image to be used for TLS tests")
+    goBuilderImage = ensure_driver_image(thisPath, testkitBranch, "go")
+    subprocess.run([
+        "docker", "run",
+        # This repo mounted as testkit
+        "-v", "%s:/testkit" % thisPath,
+        # Name of the docker container
+        "--name", "gobuilder",
+        # Remove itself upon exit
+        "--rm",
+        # Set working folder to the tlsserver source code
+        "-w", "/testkit/tlsserver",
+        # Name of the image
+        goBuilderImage,
+        # Build command
+        "go", "build", "-v", "."
+    ], check=True)
+    print("Finished building TLS server, ready for use")
+
+    suiteName = "TLS tests"
+    begin_test_suite(suiteName)
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
+    result = runner.run(tls_suites.protocol4x0)
+    if result.errors or result.failures:
+        failed = True
+    end_test_suite(suiteName)
+    if failed:
+        sys.exit(1)
 
 
