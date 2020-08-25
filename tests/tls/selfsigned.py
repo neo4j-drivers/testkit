@@ -3,9 +3,9 @@ from tests.shared import *
 from tests.tls.shared import *
 
 
-class TestCASigned(unittest.TestCase):
-    """ Tests URL scheme neo4j+s where server is assumed to present a server certificate
-    signed by a certificate authority recognized by the driver.
+class TestSelfSigned(unittest.TestCase):
+    """ Tests URL scheme neo4j+ssc where server is assumed to present a signed server certificate
+    but not necessarily signed by an authority recognized by the driver.
     """
     def setUp(self):
         self._backend = new_backend()
@@ -20,21 +20,22 @@ class TestCASigned(unittest.TestCase):
             self._server = None
         self._backend.close()
 
-    """ Happy path, the server has a valid server certificate signed by a trusted
-    certificate authority.
+    """ A server certificate signed by a trusted CA should be accepted even when configured
+    for self signed.
     """
     def test_trusted_ca_correct_hostname(self):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
         self._server = TlsServer("trustedRoot_thehost")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
 
     """ should not connect """
     def test_trusted_ca_expired_server_correct_hostname(self):
         self.skipTest("Test not implemented")
 
-    """ Verifies that driver rejects connect if hostnames doesn't match
+    """ A server certificate signed by a trusted CA but with wrong hostname will still be
+    accepted.
     """
     def test_trusted_ca_wrong_hostname(self):
         if self._driver in ["dotnet"]:
@@ -46,8 +47,14 @@ class TestCASigned(unittest.TestCase):
         # connect (expected) but get a timeout instead since the TLS server hasn't received
         # any connect attempt at all.
         self._server = TlsServer("trustedRoot_thehost")
-        self.assertFalse(try_connect(self._backend, self._server, "neo4j+s", "thehostbutwrong"))
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehostbutwrong"))
 
-    """ should not connect """
+    """ Should connect """
     def test_untrusted_ca_correct_hostname(self):
         self.skipTest("Test not implemented")
+
+    """ Should connect """
+    def test_untrusted_ca_wrong_hostname(self):
+        self.skipTest("Test not implemented")
+
+

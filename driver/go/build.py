@@ -17,7 +17,7 @@ if __name__ == "__main__":
     buildPath = os.path.join(goPath, "src", "github.com", "neo4j", "neo4j-go-driver")
     shutil.copytree(".", buildPath)
     os.environ["GOPATH"] = goPath
-    run(["go", "get", "-v", "github.com/neo4j/neo4j-go-driver/..."])
+    run(["go", "get", "-v", "github.com/neo4j/neo4j-go-driver/neo4j"])
     run(["go", "install","-v", "github.com/neo4j/neo4j-go-driver/testkit-backend"])
 
     # Compile for 32 bits ARM to make sure it builds

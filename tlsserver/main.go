@@ -44,11 +44,12 @@ func main() {
 	if err != nil {
 		exitWithError(err)
 	}
-	fmt.Printf("TLS, client connected from %s, validating Bolt handshake\n", conn.RemoteAddr())
+	fmt.Printf("TLS, client connected from %s, waiting for Bolt handshake\n", conn.RemoteAddr())
 
 	handshake := make([]byte, 4*5)
 	_, err = io.ReadFull(conn, handshake)
 	if err != nil {
+		fmt.Println("Failed to receive Bolt handshake")
 		exitWithError(err)
 	}
 	conn.Close()
@@ -59,4 +60,6 @@ func main() {
 			exitWithError(errors.New("Bad Bolt handshake"))
 		}
 	}
+
+	fmt.Println("Client connected with correct Bolt handshake")
 }
