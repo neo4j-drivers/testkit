@@ -31,8 +31,6 @@ class TestCASigned(unittest.TestCase):
     def test_connect_trusted_ca(self):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
-        if self._driver in ["go"]:
-            self.skipTest("Driver 4.0 URL schemes not implemented")
 
         self._server = TlsServer("trustedRoot_thehost")
         self.assertTrue(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
@@ -42,8 +40,6 @@ class TestCASigned(unittest.TestCase):
     def test_connect_wrong_hostname(self):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
-        if self._driver in ["go"]:
-            self.skipTest("Driver 4.0 URL schemes not implemented")
 
         # TLS server is setup to serve under the name 'thehost' but driver will connect
         # to this server using 'thehostbutwrong'. Note that the docker container must
