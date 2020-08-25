@@ -17,19 +17,17 @@ class TlsServer:
         # Determine which address that server should bind to
         addr = os.environ.get(env_host_address, "127.0.0.1")
 
-        pycmd = "python3"
-        if platform.system() is "Windows":
-            pycmd = "python"
-        scriptPath = os.path.join(thisPath, "tlsserver.py")
+        scriptPath = os.path.join(thisPath, "..", "..", "tlsserver", "tlsserver")
         certPath = os.path.join(thisPath, "certs", "server", "%s.pem" % server_cert)
         keyPath = os.path.join(thisPath, "certs", "server", "%s.key" % server_cert)
-        self._process = subprocess.Popen([pycmd, "-u", scriptPath, addr, certPath, keyPath],
+        self._process = subprocess.Popen([scriptPath, addr+":6666", certPath, keyPath],
                                          stdout=subprocess.PIPE,
                                          stderr=subprocess.PIPE,
                                          close_fds=True,
                                          encoding='utf-8')
         # Wait until something is written to know it started
-        self._process.stdout.readline()
+        line = self._process.stdout.readline()
+        print(line)
         print("TLS server started")
 
     def _close_pipes(self):

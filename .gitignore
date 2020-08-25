@@ -3,6 +3,7 @@ artifacts
 diagrams/*.png
 driver/*/CAs/*
 certgen/certgen
+tlsserver/tlsserver
 /.idea/.gitignore
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/misc.xml
