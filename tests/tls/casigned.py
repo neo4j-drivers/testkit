@@ -30,9 +30,15 @@ class TestCASigned(unittest.TestCase):
         self._server = TlsServer("trustedRoot_thehost")
         self.assertTrue(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
 
-    """ should not connect """
+    """ The certificate authority is ok, hostname is ok but the server certificate has expired.
+    Should not connect on expired certificate.
+    """
     def test_trusted_ca_expired_server_correct_hostname(self):
-        self.skipTest("Test not implemented")
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
+
+        self._server = TlsServer("trustedRoot_thehost_expired")
+        self.assertFalse(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
 
     """ Verifies that driver rejects connect if hostnames doesn't match
     """

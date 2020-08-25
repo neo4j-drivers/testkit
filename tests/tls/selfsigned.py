@@ -30,9 +30,15 @@ class TestSelfSigned(unittest.TestCase):
         self._server = TlsServer("trustedRoot_thehost")
         self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
 
-    """ should not connect """
+    """ A server certificate signed by a trusted CA but the certificate has expired.
+    Go driver happily connects when InsecureSkipVerify is enabled, same for all drivers ?
+    """
     def test_trusted_ca_expired_server_correct_hostname(self):
-        self.skipTest("Test not implemented")
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
+
+        self._server = TlsServer("trustedRoot_thehost_expired")
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
 
     """ A server certificate signed by a trusted CA but with wrong hostname will still be
     accepted.
