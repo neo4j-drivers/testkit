@@ -118,6 +118,7 @@ func main() {
 
 	now := time.Now()
 	tenYearsFromNow := now.Add(time.Hour * 24 * 365 * 20)
+	tenYearsAgo := now.Add(-1 * time.Hour * 24 * 365 * 20)
 	anHourAgo := now.Add(time.Hour * -1)
 
 	// trustedRoot
@@ -134,19 +135,25 @@ func main() {
 	// trustedRoot_server1
 	// Valid dates with hostname set to something that drivers can connect to from driver
 	// Docker container.
-	server1Key, server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_thehost", "thehost")
-	writeKey(path.Join(basePath, "server", "trustedRoot_thehost.key"), server1Key)
-	writeCert(path.Join(basePath, "server", "trustedRoot_thehost.pem"), server1Der)
+	trustedRoot_server1Key, trustedRoot_server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_thehost", "thehost")
+	writeKey(path.Join(basePath, "server", "trustedRoot_thehost.key"), trustedRoot_server1Key)
+	writeCert(path.Join(basePath, "server", "trustedRoot_thehost.pem"), trustedRoot_server1Der)
 
 	// trustedRoot_server2
-	// Invalid dates, otherwise same as server1.
+	// Expired dates, otherwise same as server1.
+	trustedRoot_server2Key, trustedRoot_server2Der := generateServer(trustedRootCert, trustedRootKey, tenYearsAgo, anHourAgo, "trustedRoot_thehost", "thehost")
+	writeKey(path.Join(basePath, "server", "trustedRoot_thehost_expired.key"), trustedRoot_server2Key)
+	writeCert(path.Join(basePath, "server", "trustedRoot_thehost_expired.pem"), trustedRoot_server2Der)
 
 	// untrustedRoot
 	// Not trusted by drivers otherwise same as trustedRoot.
+	untrustedRootCert, untrustedRootKey, _ := generateRoot(anHourAgo, tenYearsFromNow, "untrustedRoot")
+	writeKey(path.Join(basePath, "trustedRoot.key"), untrustedRootKey)
+	// Do not write the DER to driver/*.crt folder, that would install it as trusted!
 
 	// untrustedRoot_server1
 	// Different root, otherwise same as trustedRoot_server1
-
-	// untrustedRoot_server2
-	// Different root, otherwise same as trustedRoot_server2
+	untrustedRoot_server1Key, untrustedRoot_server1Der := generateServer(untrustedRootCert, untrustedRootKey, anHourAgo, tenYearsFromNow, "untrustedRoot_thehost", "thehost")
+	writeKey(path.Join(basePath, "server", "untrustedRoot_thehost.key"), untrustedRoot_server1Key)
+	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
 }

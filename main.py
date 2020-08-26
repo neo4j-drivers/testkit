@@ -279,11 +279,6 @@ if __name__ == "__main__":
             "docker", "stop", "neo4jserver"])
 
     """
-    TODO:
-    Neo4j 4.1 server tests
-    """
-
-    """
     TLS tests
     """
     print("Building TLS server in Go image to be used for TLS tests")

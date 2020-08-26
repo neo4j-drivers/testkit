@@ -87,36 +87,3 @@ def try_connect(backend, server, scheme, host):
     session.close()
     driver.close()
     return server.connected()
-
-
-
-"""
-neo4j+ssc
-    no tls                        - no connection
-    valid cert                    - connection
-    invalid date                  - no connection
-neo4j+s:
-    no tls                        - no connection
-    trusted CA                    - connection
-    trusted CA, wrong server name - no connection
-    trusted CA, invalid date      - no connection
-    untrusted CA                  - no connection
-    trusted CA, tls 1.1 only      - connection
-    trusted CA, tls 1.2 only      - connection
-neo4j:
-    trusted CA                    - no connection
-    
-
-"""
-
-
-"""
-
-class TestSelfSigned(unittest.TestCase):
-    pass
-
-
-class TestUnsecure(unittest.TestCase):
-    pass
-"""
-
