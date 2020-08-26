@@ -147,10 +147,13 @@ func main() {
 
 	// untrustedRoot
 	// Not trusted by drivers otherwise same as trustedRoot.
+	untrustedRootCert, untrustedRootKey, _ := generateRoot(anHourAgo, tenYearsFromNow, "untrustedRoot")
+	writeKey(path.Join(basePath, "trustedRoot.key"), untrustedRootKey)
+	// Do not write the DER to driver/*.crt folder, that would install it as trusted!
 
 	// untrustedRoot_server1
 	// Different root, otherwise same as trustedRoot_server1
-
-	// untrustedRoot_server2
-	// Different root, otherwise same as trustedRoot_server2
+	untrustedRoot_server1Key, untrustedRoot_server1Der := generateServer(untrustedRootCert, untrustedRootKey, anHourAgo, tenYearsFromNow, "untrustedRoot_thehost", "thehost")
+	writeKey(path.Join(basePath, "server", "untrustedRoot_thehost.key"), untrustedRoot_server1Key)
+	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
 }

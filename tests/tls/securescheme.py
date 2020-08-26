@@ -3,8 +3,8 @@ from tests.shared import *
 from tests.tls.shared import *
 
 
-class TestCASigned(unittest.TestCase):
-    """ Tests URL scheme neo4j+s where server is assumed to present a server certificate
+class TestSecureScheme(unittest.TestCase):
+    """ Tests URL scheme neo4j+s/bolt+s where server is assumed to present a server certificate
     signed by a certificate authority recognized by the driver.
     """
     def setUp(self):
@@ -56,4 +56,13 @@ class TestCASigned(unittest.TestCase):
 
     """ should not connect """
     def test_untrusted_ca_correct_hostname(self):
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
+
+        self._server = TlsServer("untrustedRoot_thehost_expired")
+        self.assertFalse(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
+
+    """ Should not connect """
+    def test_unencrypted(self):
         self.skipTest("Test not implemented")
+

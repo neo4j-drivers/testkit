@@ -3,7 +3,7 @@ from tests.shared import *
 from tests.tls.shared import *
 
 
-class TestSelfSigned(unittest.TestCase):
+class TestSelfSignedScheme(unittest.TestCase):
     """ Tests URL scheme neo4j+ssc where server is assumed to present a signed server certificate
     but not necessarily signed by an authority recognized by the driver.
     """
@@ -57,10 +57,21 @@ class TestSelfSigned(unittest.TestCase):
 
     """ Should connect """
     def test_untrusted_ca_correct_hostname(self):
-        self.skipTest("Test not implemented")
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
+
+        self._server = TlsServer("untrustedRoot_thehost")
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
 
     """ Should connect """
     def test_untrusted_ca_wrong_hostname(self):
-        self.skipTest("Test not implemented")
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
 
+        self._server = TlsServer("untrustedRoot_thehost")
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehostbutwrong"))
+
+    """ Should not connect """
+    def test_unencrypted(self):
+        self.skipTest("Test not implemented")
 
