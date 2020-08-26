@@ -7,7 +7,7 @@ def wait_for_port(address, port):
         try:
             with socket.create_connection((address, port), timeout):
                 return
-        except OSError:
+        except OSError or ConnectionRefusedError:
             time.sleep(0.1)
             if time.perf_counter() - start > timeout:
                 raise
