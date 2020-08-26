@@ -2,6 +2,7 @@ import unittest
 from tests.shared import *
 from tests.tls.shared import *
 
+schemes = ["neo4j+s", "bolt+s"]
 
 class TestSecureScheme(unittest.TestCase):
     """ Tests URL scheme neo4j+s/bolt+s where server is assumed to present a server certificate
@@ -27,8 +28,10 @@ class TestSecureScheme(unittest.TestCase):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("trustedRoot_thehost")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost")
+                self.assertTrue(try_connect(self._backend, self._server, scheme, "thehost"))
 
     """ The certificate authority is ok, hostname is ok but the server certificate has expired.
     Should not connect on expired certificate.
@@ -37,8 +40,10 @@ class TestSecureScheme(unittest.TestCase):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("trustedRoot_thehost_expired")
-        self.assertFalse(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost_expired")
+                self.assertFalse(try_connect(self._backend, self._server, scheme, "thehost"))
 
     """ Verifies that driver rejects connect if hostnames doesn't match
     """
@@ -51,16 +56,20 @@ class TestSecureScheme(unittest.TestCase):
         # map this hostname to same IP as 'thehost', if this hasn't been done we won't
         # connect (expected) but get a timeout instead since the TLS server hasn't received
         # any connect attempt at all.
-        self._server = TlsServer("trustedRoot_thehost")
-        self.assertFalse(try_connect(self._backend, self._server, "neo4j+s", "thehostbutwrong"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost")
+                self.assertFalse(try_connect(self._backend, self._server, scheme, "thehostbutwrong"))
 
     """ should not connect """
     def test_untrusted_ca_correct_hostname(self):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("untrustedRoot_thehost_expired")
-        self.assertFalse(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("untrustedRoot_thehost_expired")
+                self.assertFalse(try_connect(self._backend, self._server, scheme, "thehost"))
 
     """ Should not connect """
     def test_unencrypted(self):

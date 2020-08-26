@@ -2,6 +2,7 @@ import unittest
 from tests.shared import *
 from tests.tls.shared import *
 
+schemes = ["neo4j", "bolt"]
 
 class TestUnsecureScheme(unittest.TestCase):
     """ Tests URL scheme neo4j/bolt where TLS is not used. The fact that driver can not connect
@@ -22,6 +23,8 @@ class TestUnsecureScheme(unittest.TestCase):
         self._backend.close()
 
     def test_secure_server(self):
-        self._server = TlsServer("trustedRoot_thehost")
-        self.assertFalse(try_connect(self._backend, self._server, "neo4j", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost")
+                self.assertFalse(try_connect(self._backend, self._server, scheme, "thehost"))
 

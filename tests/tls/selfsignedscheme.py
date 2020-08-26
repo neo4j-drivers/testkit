@@ -2,9 +2,10 @@ import unittest
 from tests.shared import *
 from tests.tls.shared import *
 
+schemes = ["neo4j+ssc", "bolt+ssc"]
 
 class TestSelfSignedScheme(unittest.TestCase):
-    """ Tests URL scheme neo4j+ssc where server is assumed to present a signed server certificate
+    """ Tests URL scheme neo4j+ssc/bolt+ssc where server is assumed to present a signed server certificate
     but not necessarily signed by an authority recognized by the driver.
     """
     def setUp(self):
@@ -27,8 +28,10 @@ class TestSelfSignedScheme(unittest.TestCase):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("trustedRoot_thehost")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost")
+                self.assertTrue(try_connect(self._backend, self._server, scheme, "thehost"))
 
     """ A server certificate signed by a trusted CA but the certificate has expired.
     Go driver happily connects when InsecureSkipVerify is enabled, same for all drivers ?
@@ -37,8 +40,10 @@ class TestSelfSignedScheme(unittest.TestCase):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("trustedRoot_thehost_expired")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost_expired")
+                self.assertTrue(try_connect(self._backend, self._server, scheme, "thehost"))
 
     """ A server certificate signed by a trusted CA but with wrong hostname will still be
     accepted.
@@ -52,24 +57,30 @@ class TestSelfSignedScheme(unittest.TestCase):
         # map this hostname to same IP as 'thehost', if this hasn't been done we won't
         # connect (expected) but get a timeout instead since the TLS server hasn't received
         # any connect attempt at all.
-        self._server = TlsServer("trustedRoot_thehost")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehostbutwrong"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost")
+                self.assertTrue(try_connect(self._backend, self._server, scheme, "thehostbutwrong"))
 
     """ Should connect """
     def test_untrusted_ca_correct_hostname(self):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("untrustedRoot_thehost")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehost"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("untrustedRoot_thehost")
+                self.assertTrue(try_connect(self._backend, self._server, scheme, "thehost"))
 
     """ Should connect """
     def test_untrusted_ca_wrong_hostname(self):
         if self._driver in ["dotnet"]:
             self.skipTest("No support for installing CAs in docker image")
 
-        self._server = TlsServer("untrustedRoot_thehost")
-        self.assertTrue(try_connect(self._backend, self._server, "neo4j+ssc", "thehostbutwrong"))
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("untrustedRoot_thehost")
+                self.assertTrue(try_connect(self._backend, self._server, scheme, "thehostbutwrong"))
 
     """ Should not connect """
     def test_unencrypted(self):
