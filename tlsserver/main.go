@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/tls"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -17,21 +18,32 @@ var expectedHandshake = []byte{0x60, 0x60, 0xb0, 0x17}
 
 // Do not print anything on stdout until listening!
 func main() {
-	// Address that server binds to
-	address := os.Args[1]
-	// Server certificate and private key paths
-	certPath := os.Args[2]
-	keyPath := os.Args[3]
+	var (
+		address        string
+		certPath       string
+		keyPath        string
+		minTlsMinorVer int
+		maxTlsMinorVer int
+	)
+	flag.StringVar(&address, "bind", "0.0.0.0:6666", "Address to bind to")
+	flag.StringVar(&certPath, "cert", "", "Path to server certificate")
+	flag.StringVar(&keyPath, "key", "", "Path to server private key")
+	flag.IntVar(&minTlsMinorVer, "minTls", 0, "Minimum TLS version, minor part")
+	flag.IntVar(&maxTlsMinorVer, "maxTls", 2, "Maximum TLS version, minor part")
+	flag.Parse()
+
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		exitWithError(err)
 	}
 
 	config := tls.Config{
-		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+		GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 			// TODO: Set cert.OCSPStaple
 			return &cert, nil
 		},
+		MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
+		MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
 	}
 	listener, err := tls.Listen("tcp", address, &config)
 	if err != nil {

@@ -10,21 +10,28 @@ env_host_address = "TEST_TLSSERVER_ADDRESS"
 
 
 class TlsServer:
-    def __init__(self, server_cert):
+    def __init__(self, server_cert, minTls="0", maxTls="2"):
         """ Name of server certificate, corresponds to a .pem and .key file.
         """
 
         # Determine which address that server should bind to
         addr = os.environ.get(env_host_address, "127.0.0.1")
 
-        scriptPath = os.path.join(thisPath, "..", "..", "tlsserver", "tlsserver")
+        serverPath = os.path.join(thisPath, "..", "..", "tlsserver", "tlsserver")
         certPath = os.path.join(thisPath, "certs", "server", "%s.pem" % server_cert)
         keyPath = os.path.join(thisPath, "certs", "server", "%s.key" % server_cert)
-        self._process = subprocess.Popen([scriptPath, addr+":6666", certPath, keyPath],
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         close_fds=True,
-                                         encoding='utf-8')
+        self._process = subprocess.Popen([
+                serverPath,
+                "-bind", addr+":6666",
+                "-cert", certPath,
+                "-key", keyPath,
+                "-minTls", minTls,
+                "-maxTls", maxTls
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            encoding='utf-8')
         # Wait until something is written to know it started
         line = self._process.stdout.readline()
         print(line)
