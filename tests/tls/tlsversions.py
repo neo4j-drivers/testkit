@@ -19,8 +19,16 @@ class TestTlsVersions(unittest.TestCase):
         self._backend.close()
 
     def test_1_1(self):
-        self.skipTest("Test not implemented")
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
+
+        self._server = TlsServer("trustedRoot_thehost", minTls="1", maxTls="1")
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
 
     def test_1_2(self):
-        self.skipTest("Test not implemented")
+        if self._driver in ["dotnet"]:
+            self.skipTest("No support for installing CAs in docker image")
+
+        self._server = TlsServer("trustedRoot_thehost", minTls="2", maxTls="2")
+        self.assertTrue(try_connect(self._backend, self._server, "neo4j+s", "thehost"))
 
