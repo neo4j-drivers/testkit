@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 func exitWithError(err error) {
@@ -56,6 +57,9 @@ func main() {
 	if err != nil {
 		exitWithError(err)
 	}
+	// Deadline needed for dotnet, seems to stick to the socket even when TLS handshake failed.
+	// Deadline is a good thing anyway...
+	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 	fmt.Printf("TLS, client connected from %s, waiting for Bolt handshake\n", conn.RemoteAddr())
 
 	handshake := make([]byte, 4*5)

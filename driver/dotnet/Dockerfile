@@ -12,4 +12,7 @@ RUN apt update \
 
 ENV PYTHON=python3
 
-
+# Install our own CAs on the image.
+# Assumes Linux Debian based image.
+COPY CAs/* /usr/local/share/ca-certificates/
+RUN update-ca-certificates

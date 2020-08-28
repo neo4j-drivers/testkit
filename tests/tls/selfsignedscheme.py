@@ -25,9 +25,6 @@ class TestSelfSignedScheme(unittest.TestCase):
     for self signed.
     """
     def test_trusted_ca_correct_hostname(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("No support for installing CAs in docker image")
-
         for scheme in schemes:
             with self.subTest(scheme):
                 self._server = TlsServer("trustedRoot_thehost")
@@ -37,8 +34,6 @@ class TestSelfSignedScheme(unittest.TestCase):
     Go driver happily connects when InsecureSkipVerify is enabled, same for all drivers ?
     """
     def test_trusted_ca_expired_server_correct_hostname(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("No support for installing CAs in docker image")
 
         for scheme in schemes:
             with self.subTest(scheme):
@@ -49,9 +44,6 @@ class TestSelfSignedScheme(unittest.TestCase):
     accepted.
     """
     def test_trusted_ca_wrong_hostname(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("No support for installing CAs in docker image")
-
         # TLS server is setup to serve under the name 'thehost' but driver will connect
         # to this server using 'thehostbutwrong'. Note that the docker container must
         # map this hostname to same IP as 'thehost', if this hasn't been done we won't
@@ -64,8 +56,6 @@ class TestSelfSignedScheme(unittest.TestCase):
 
     """ Should connect """
     def test_untrusted_ca_correct_hostname(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("No support for installing CAs in docker image")
 
         for scheme in schemes:
             with self.subTest(scheme):
@@ -74,9 +64,6 @@ class TestSelfSignedScheme(unittest.TestCase):
 
     """ Should connect """
     def test_untrusted_ca_wrong_hostname(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("No support for installing CAs in docker image")
-
         for scheme in schemes:
             with self.subTest(scheme):
                 self._server = TlsServer("untrustedRoot_thehost")

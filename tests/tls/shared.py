@@ -56,6 +56,7 @@ class TlsServer:
                 self._close_pipes()
                 self._process = None
                 return connected
+        self._kill()
         raise Exception("Timeout")
 
     def _dump(self):
