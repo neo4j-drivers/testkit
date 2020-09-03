@@ -13,6 +13,7 @@ TODO: ensure bolt URI connects to instance in cluster
 
 # Datatypes
 TODO: path, relationsship, spatial, temporal
+TODO: boundaries of strings, arrays, maps
 
 * Verification that datatypes can be passed through the driver without losing any data, both
   from user code to the database and from the database to user code.

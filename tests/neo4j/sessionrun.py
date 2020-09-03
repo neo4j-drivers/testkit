@@ -49,8 +49,12 @@ class TestSessionRun(unittest.TestCase):
         # Verifies that an error is returned on an invalid query and that the session
         # can function with a valid query afterwards.
         with self.assertRaises(types.DriverError) as e:
+            # DEVIATION
+            # Go   - error trigger upon run
+            # Java - error trigger upon iteration
             result = self._session.run("INVALID QUERY")
-        # TODO: Further inspection of the type of error? Should be a database error
+            result.next()
+            # TODO: Further inspection of the type of error? Should be a client error
 
         # This one should function properly
         result = self._session.run("RETURN 1 as n")
@@ -66,5 +70,4 @@ class TestSessionRun(unittest.TestCase):
         # This one should function properly
         result = self._session.run("RETURN 1 as n")
         self.assertEqual(result.next(), types.Record(values=[1]))
-
 
