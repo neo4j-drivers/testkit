@@ -48,12 +48,10 @@ class TestSessionRun(unittest.TestCase):
     def test_recover_from_invalid_query(self):
         # Verifies that an error is returned on an invalid query and that the session
         # can function with a valid query afterwards.
-        try:
+        with self.assertRaises(types.DriverError) as e:
             result = self._session.run("INVALID QUERY")
-            self.assertFail("Should have gotten error due to invalid query")
-        except types.DriverError as e:
-            # TODO: Further inspection of the type of error? Should be a database error
-            pass
+        # TODO: Further inspection of the type of error? Should be a database error
+
         # This one should function properly
         result = self._session.run("RETURN 1 as n")
         self.assertEqual(result.next(), types.Record(values=[1]))
@@ -61,12 +59,10 @@ class TestSessionRun(unittest.TestCase):
     def test_recover_from_fail_on_streaming(self):
         result = self._session.run("UNWIND [1, 0, 2] AS x RETURN 10 / x")
         self.assertEqual(result.next(), types.Record(values=[10]))
-        try:
+        with self.assertRaises(types.DriverError) as e:
             result.next()
-            self.assertFail("Should have gotten error due to division by zero")
-        except types.DriverError as e:
-            # TODO: Further inspection of the type of error? Should be a database error
-            pass
+        # TODO: Further inspection of the type of error? Should be a database error
+
         # This one should function properly
         result = self._session.run("RETURN 1 as n")
         self.assertEqual(result.next(), types.Record(values=[1]))
