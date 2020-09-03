@@ -76,12 +76,36 @@ class Record:
         """
         self.values = values
 
+    def __eq__(self, other):
+        if not isinstance(other, Record):
+            return False
+
+        return other.values == self.values
+
+    def __str__(self):
+        v = []
+        for x in self.values:
+            v.append(str(x))
+        return "Record, values {}".format(v)
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class NullRecord:
     """ Represents end of records when iterating through records with Next.
     """
     def __init__(self):
         pass
+
+    def __str__(self):
+        return "NullRecord"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __eq__(self, other):
+        return isinstance(other, NullRecord)
 
 
 class RetryableTry:
