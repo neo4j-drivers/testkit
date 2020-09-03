@@ -1,5 +1,5 @@
 """
-Define TLS suites
+Define TLS suite
 """
 
 import unittest
@@ -10,8 +10,8 @@ import tests.tls.tlsversions as tlsversions
 
 loader = unittest.TestLoader()
 
-protocol4x0 = unittest.TestSuite()
-protocol4x0.addTests(loader.loadTestsFromModule(securescheme))
-protocol4x0.addTests(loader.loadTestsFromModule(selfsignedscheme))
-protocol4x0.addTests(loader.loadTestsFromModule(unsecurescheme))
-protocol4x0.addTests(loader.loadTestsFromModule(tlsversions))
+tls_suite = unittest.TestSuite()
+tls_suite.addTests(loader.loadTestsFromModule(securescheme))
+tls_suite.addTests(loader.loadTestsFromModule(selfsignedscheme))
+tls_suite.addTests(loader.loadTestsFromModule(unsecurescheme))
+tls_suite.addTests(loader.loadTestsFromModule(tlsversions))

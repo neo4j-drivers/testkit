@@ -10,8 +10,8 @@ from datetime import datetime
 from testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
 
 import tests.neo4j.suites as suites
-import tests.stub.suites as stub_suites
-import tests.tls.suites as tls_suites
+from tests.stub.suites import stub_suite
+from tests.tls.suites import tls_suite
 
 
 # Environment variables
@@ -210,7 +210,7 @@ if __name__ == "__main__":
     suiteName = "Stub tests, protocol 4"
     begin_test_suite(suiteName)
     runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
-    result = runner.run(stub_suites.protocol4x0)
+    result = runner.run(stub_suite)
     if result.errors or result.failures:
         failed = True
     end_test_suite(suiteName)
@@ -303,7 +303,7 @@ if __name__ == "__main__":
     suiteName = "TLS tests"
     begin_test_suite(suiteName)
     runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
-    result = runner.run(tls_suites.protocol4x0)
+    result = runner.run(tls_suite)
     if result.errors or result.failures:
         failed = True
     end_test_suite(suiteName)
