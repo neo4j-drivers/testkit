@@ -19,8 +19,6 @@ class TestRetry(unittest.TestCase):
         self._server.reset()
 
     def test_read(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("Transactional functions not implemented in backend")
 
         script = "retry_read.script"
         if self._driver in ["go"]:
@@ -49,8 +47,6 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
     def test_read_twice(self):
-        if self._driver in ["dotnet"]:
-            self.skipTest("Transactional functions not implemented in backend")
 
         script = "retry_read_twice.script"
         if self._driver in ["go"]:
