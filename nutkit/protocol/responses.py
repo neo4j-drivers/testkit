@@ -145,17 +145,21 @@ class DriverError(BaseError):
     Over time there will be more specific driver errors if/when the generic test framework
     needs to check detailed error handling.
     """
-    def __init__(self, id):
+    def __init__(self, id, msg=''):
         self.id = id
+        self.msg = msg
 
 
-class ClientError(BaseError):
+class FrontendError(BaseError):
     """ Represents an error originating from client code.
 
     As in cases where the driver invokes client code and that code returns/raises an error.
     """
     def __init__(self, msg):
         self.msg = msg
+
+# For backward compatibility
+ClientError = FrontendError
 
 
 class BackendError(BaseError):
