@@ -53,6 +53,10 @@ class TestRetry(unittest.TestCase):
             # Until Go is updated to use PULL with n
             # Lean version has fewer resets
             script = "retry_read_twice_lean_v3.script"
+        if self._driver in ["java"]:
+            # Java requires an extra reset
+            script = "retry_read_twice_java.script"
+
         self._server.start(os.path.join(scripts_path, script))
 
         num_retries = 0
