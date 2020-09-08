@@ -10,7 +10,7 @@ env_host_address = "TEST_TLSSERVER_ADDRESS"
 
 
 class TlsServer:
-    def __init__(self, server_cert, minTls="0", maxTls="2"):
+    def __init__(self, server_cert, minTls="0", maxTls="2", disableTls=False):
         """ Name of server certificate, corresponds to a .pem and .key file.
         """
 
@@ -20,14 +20,17 @@ class TlsServer:
         serverPath = os.path.join(thisPath, "..", "..", "tlsserver", "tlsserver")
         certPath = os.path.join(thisPath, "certs", "server", "%s.pem" % server_cert)
         keyPath = os.path.join(thisPath, "certs", "server", "%s.key" % server_cert)
-        self._process = subprocess.Popen([
-                serverPath,
-                "-bind", addr+":6666",
-                "-cert", certPath,
-                "-key", keyPath,
-                "-minTls", minTls,
-                "-maxTls", maxTls
-            ],
+        params = [
+            serverPath,
+            "-bind", addr+":6666",
+            "-cert", certPath,
+            "-key", keyPath,
+            "-minTls", minTls,
+            "-maxTls", maxTls
+        ]
+        if disableTls:
+            params.append("--disableTls")
+        self._process = subprocess.Popen(params,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
