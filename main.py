@@ -275,6 +275,14 @@ if __name__ == "__main__":
         if failed:
             sys.exit(1)
 
+        # Check that all connections to Neo4j has been closed.
+        # Each test suite should close drivers, sessions properly so any pending connections
+        # detected here should indicate connection leakage in the driver.
+        subprocess.run([
+            "docker", "exec", "driver",
+            "python3", "/nutkit/driver/assert_conns_closed.py", neo4jserver, "%d" % 7687
+        ], check=True)
+
         subprocess.run([
             "docker", "stop", "neo4jserver"])
 
