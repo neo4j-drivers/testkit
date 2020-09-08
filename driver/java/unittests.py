@@ -11,4 +11,4 @@ def run(args):
         args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
 
 if __name__ == "__main__":
-    run(["mvn", "test"])
+    run(["mvn", "test", "-Dmaven.gitcommitid.skip"])
