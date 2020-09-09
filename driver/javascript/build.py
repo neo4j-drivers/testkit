@@ -10,5 +10,6 @@ def run(args, env=None):
         args, universal_newlines=True, stderr=subprocess.STDOUT, check=True, env=env)
 
 if __name__ == "__main__":
+    run(["npm", "install"])
     run(["gulp", "nodejs"])
 
