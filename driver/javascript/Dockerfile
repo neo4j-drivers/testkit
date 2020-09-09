@@ -10,4 +10,6 @@ RUN apt-get update && \
         npm \
     && rm -rf /var/lib/apt/lists/*
 
+RUN npm install -g npm \
+    && /bin/bash -c 'hash -d npm'
 RUN npm install -g gulp
