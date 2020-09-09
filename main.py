@@ -198,9 +198,14 @@ if __name__ == "__main__":
         "driver",
         "python3", "/nutkit/driver/%s/backend.py" % driverName
     ], check=True)
-    print("Started test backend")
     # Wait until backend started
-    time.sleep(1)
+    # Use driver container to check for backend availability
+    subprocess.run([
+        "docker", "exec",
+        "driver",
+        "python3", "/nutkit/driver/wait_for_port.py", "localhost", "%d" % 9876
+    ], check=True)
+    print("Started test backend")
 
     failed = False
 
