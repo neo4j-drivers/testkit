@@ -145,8 +145,16 @@ class DriverError(BaseError):
     Over time there will be more specific driver errors if/when the generic test framework
     needs to check detailed error handling.
     """
-    def __init__(self, id):
-        self.id = id
+    def __init__(self, id=None, errorType=None, msg=None, ):
+        if id is not None:
+            self.id = id
+        if type is not None:
+            self.errorType = errorType
+        if msg is not None:
+            self.msg = msg
+
+    def __str__(self):
+        return "DriverError : " + self.errorType + " : " + self.msg
 
 
 class ClientError(BaseError):
@@ -156,6 +164,9 @@ class ClientError(BaseError):
     """
     def __init__(self, msg):
         self.msg = msg
+
+    def __str__(self):
+        return "DriverError : " + self.msg
 
 
 class BackendError(BaseError):
@@ -169,5 +180,5 @@ class BackendError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return self.msg
+        return "DriverError : " + self.msg
 
