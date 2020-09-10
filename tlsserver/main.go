@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"time"
 )
@@ -25,7 +26,11 @@ func main() {
 		keyPath        string
 		minTlsMinorVer int
 		maxTlsMinorVer int
+		disableTls     bool
+		listener       net.Listener
+		err            error
 	)
+	flag.BoolVar(&disableTls, "disableTls", false, "Disable TLS")
 	flag.StringVar(&address, "bind", "0.0.0.0:6666", "Address to bind to")
 	flag.StringVar(&certPath, "cert", "", "Path to server certificate")
 	flag.StringVar(&keyPath, "key", "", "Path to server private key")
@@ -33,24 +38,32 @@ func main() {
 	flag.IntVar(&maxTlsMinorVer, "maxTls", 2, "Maximum TLS version, minor part")
 	flag.Parse()
 
-	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
-	if err != nil {
-		exitWithError(err)
-	}
+	if !disableTls {
+		cert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		if err != nil {
+			exitWithError(err)
+		}
 
-	config := tls.Config{
-		GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-			// TODO: Set cert.OCSPStaple
-			return &cert, nil
-		},
-		MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
-		MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
+		config := tls.Config{
+			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				// TODO: Set cert.OCSPStaple
+				return &cert, nil
+			},
+			MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
+			MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
+		}
+		listener, err = tls.Listen("tcp", address, &config)
+		if err != nil {
+			exitWithError(err)
+		}
+		fmt.Printf("TLS, listening on %s with cert %s\n", address, certPath)
+	} else {
+		listener, err = net.Listen("tcp", address)
+		if err != nil {
+			exitWithError(err)
+		}
+		fmt.Printf("Listening on non-TLS %s\n", address)
 	}
-	listener, err := tls.Listen("tcp", address, &config)
-	if err != nil {
-		exitWithError(err)
-	}
-	fmt.Printf("TLS, listening on %s with cert %s\n", address, certPath)
 	defer listener.Close()
 
 	conn, err := listener.Accept()

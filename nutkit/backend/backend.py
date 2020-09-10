@@ -3,10 +3,12 @@ import sys
 import inspect
 import threading
 import socket
+import os
 
 import nutkit.protocol as protocol
 
 protocolClasses = dict([m for m in inspect.getmembers(protocol, inspect.isclass)])
+debug = os.environ.get('TEST_DEBUG_REQRES', 0)
 
 class Encoder(json.JSONEncoder):
     def default(self, o):
@@ -52,7 +54,8 @@ class Backend:
 
     def send(self, req):
         reqJson = self._encoder.encode(req)
-        print("Request: %s" % reqJson)
+        if debug:
+            print("Request: %s" % reqJson)
         self._writer.write("#request begin\n")
         self._writer.write(reqJson+"\n")
         self._writer.write("#request end\n")
@@ -70,7 +73,8 @@ class Backend:
                     raise "already in response"
                 in_response = True
             elif line == "#response end":
-                print("Response: %s" % response)
+                if debug:
+                    print("Response: %s" % response)
                 try:
                     res = json.loads(response, object_hook=decode_hook)
                 except json.decoder.JSONDecodeError as e:

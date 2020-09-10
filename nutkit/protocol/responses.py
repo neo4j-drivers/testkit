@@ -157,7 +157,7 @@ class DriverError(BaseError):
         return "DriverError : " + self.errorType + " : " + self.msg
 
 
-class ClientError(BaseError):
+class FrontendError(BaseError):
     """ Represents an error originating from client code.
 
     As in cases where the driver invokes client code and that code returns/raises an error.
@@ -166,7 +166,10 @@ class ClientError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return "DriverError : " + self.msg
+        return "FrontendError : " + self.msg
+
+# For backward compatibility
+ClientError = FrontendError
 
 
 class BackendError(BaseError):

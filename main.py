@@ -198,9 +198,14 @@ if __name__ == "__main__":
         "driver",
         "python3", "/nutkit/driver/%s/backend.py" % driverName
     ], check=True)
-    print("Started test backend")
     # Wait until backend started
-    time.sleep(1)
+    # Use driver container to check for backend availability
+    subprocess.run([
+        "docker", "exec",
+        "driver",
+        "python3", "/nutkit/driver/wait_for_port.py", "localhost", "%d" % 9876
+    ], check=True)
+    print("Started test backend")
 
     failed = False
 
@@ -274,6 +279,14 @@ if __name__ == "__main__":
         end_test_suite(suiteName)
         if failed:
             sys.exit(1)
+
+        # Check that all connections to Neo4j has been closed.
+        # Each test suite should close drivers, sessions properly so any pending connections
+        # detected here should indicate connection leakage in the driver.
+        subprocess.run([
+            "docker", "exec", "driver",
+            "python3", "/nutkit/driver/assert_conns_closed.py", neo4jserver, "%d" % 7687
+        ], check=True)
 
         subprocess.run([
             "docker", "stop", "neo4jserver"])

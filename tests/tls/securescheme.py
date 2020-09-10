@@ -52,14 +52,21 @@ class TestSecureScheme(unittest.TestCase):
                 self._server = TlsServer("trustedRoot_thehost")
                 self.assertFalse(try_connect(self._backend, self._server, scheme, "thehostbutwrong"))
 
-    """ should not connect """
+    """ Verifies that driver rejects connect if hostnames match but CA isn't trusted"""
     def test_untrusted_ca_correct_hostname(self):
         for scheme in schemes:
             with self.subTest(scheme):
-                self._server = TlsServer("untrustedRoot_thehost_expired")
+                self._server = TlsServer("untrustedRoot_thehost")
                 self.assertFalse(try_connect(self._backend, self._server, scheme, "thehost"))
 
-    """ Should not connect """
+    """ Verifies that driver doesn't connect when it has been configured for TLS connections
+    but the server doesn't speak TLS
+    """
     def test_unencrypted(self):
-        self.skipTest("Test not implemented")
+        for scheme in schemes:
+            with self.subTest(scheme):
+                # The server cert doesn't really matter but set it to the one that would work
+                # if TLS happens to be on.
+                self._server = TlsServer("trustedRoot_thehost", disableTls=True)
+                self.assertFalse(try_connect(self._backend, self._server, scheme, "thehost"))
 

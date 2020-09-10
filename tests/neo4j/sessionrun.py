@@ -18,7 +18,7 @@ class TestSessionRun(unittest.TestCase):
         self._driver.close()
         self._backend.close()
 
-    def test_iteration(self):
+    def test_iteration_smaller_than_fetch_size(self):
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can handle that.
         result = self._session.run("UNWIND [1, 2, 3, 4, 5] AS x RETURN x")
@@ -35,9 +35,11 @@ class TestSessionRun(unittest.TestCase):
             rec = result.next()
             self.assertEqual(rec, exp)
 
-    def test_iteration_parameterized_long(self):
+    def test_iteration_larger_than_fetch_size(self):
         # Verifies that correct number of records are retrieved and that the parameter
         # is respected. Uses parameter to generate a long list of records.
+        # Typical fetch size is 1000, selected value should be a bit larger than fetch size,
+        # if driver allows this as a parameter we should set it to a known value.
         n = 1007
         result = self._session.run("UNWIND RANGE(0, $n) AS x RETURN x", params={"n":types.CypherInt(n)})
         for x in range(0, n):
