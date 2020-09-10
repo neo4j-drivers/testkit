@@ -38,7 +38,6 @@ class TlsServer:
         # Wait until something is written to know it started
         line = self._process.stdout.readline()
         print(line)
-        print("TLS server started")
 
     def _close_pipes(self):
         self._process.stdout.close()
@@ -92,7 +91,7 @@ def try_connect(backend, server, scheme, host):
     driver = Driver(backend, url, auth)
     session = driver.session("r")
     try:
-        session.run("RETURN 1")
+        result = session.run("RETURN 1 as n")
     except:
         pass
     session.close()

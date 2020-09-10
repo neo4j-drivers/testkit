@@ -13,3 +13,8 @@ RUN apt-get update && \
 RUN npm install -g npm \
     && /bin/bash -c 'hash -d npm'
 RUN npm install -g gulp
+
+# Install our own CAs on the image.
+# Assumes Linux Debian based image.
+COPY CAs/* /usr/local/share/ca-certificates/
+RUN update-ca-certificates
