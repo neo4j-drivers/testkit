@@ -94,7 +94,9 @@ class Backend:
                         num_blanks += 1
                         if num_blanks > 50:
                             raise Exception("Detected possible crash in backend")
-                    print("[BACKEND]: %s" % line)
+                    # The backend can send it's own logs outside of response blocks
+                    elif debug:
+                        print("[BACKEND]: %s" % line)
 
     def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)
