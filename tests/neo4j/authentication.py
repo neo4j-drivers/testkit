@@ -7,7 +7,7 @@ from tests.neo4j.shared import *
 from tests.shared import *
 
 
-class TestAuthentication(unittest.TestCase):
+class TestAuthenticationBasic(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._host, self._port = get_neo4j_host_and_port()
