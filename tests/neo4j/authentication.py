@@ -29,9 +29,8 @@ class TestAuthentication(unittest.TestCase):
 
     def test_error_on_incorrect_credentials(self):
         auth_token = AuthorizationToken(scheme="basic", principal="fake", credentials="fake")
-        self.createDriverAndSession(auth_token)
         with self.assertRaises(types.DriverError) as e:     # TODO: We will want to expand this to check errorType is AuthenticationError.
-            self._session.run("RETURN 1")
+            self.verifyConnectivity(auth_token)
 
     # Tests both basic with realm specified and also custom auth token. All
     def test_success_on_provide_realm_with_basic_token(self):
