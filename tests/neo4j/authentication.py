@@ -27,21 +27,27 @@ class TestAuthenticationBasic(unittest.TestCase):
         result = self._session.run("RETURN 2 as Number")
         self.assertEqual(result.next(), types.Record(values=[2]))
 
-    def test_error_on_incorrect_credentials(self):
-        auth_token = AuthorizationToken(scheme="basic", principal="fake", credentials="fake")
-        with self.assertRaises(types.DriverError) as e:     # TODO: We will want to expand this to check errorType is AuthenticationError.
+    def testErrorOnIncorrectCredentials(self):
+        auth_token = AuthorizationToken(scheme="basic",
+                                        principal="fake",
+                                        credentials="fake")
+        with self.assertRaises(types.DriverError) as e:   # TODO: Expand this to check errorType is AuthenticationError
             self.verifyConnectivity(auth_token)
 
     # Tests both basic with realm specified and also custom auth token. All
-    def test_success_on_provide_realm_with_basic_token(self):
-        auth_token = AuthorizationToken(scheme="basic", realm="native", principal=os.environ.get(env_neo4j_user, "neo4j"), credentials=os.environ.get(env_neo4j_pass, "pass"))
+    def testSuccessOnProvideRealmWithBasicToken(self):
+        auth_token = AuthorizationToken(scheme="basic",
+                                        realm="native",
+                                        principal=os.environ.get(env_neo4j_user, "neo4j"),
+                                        credentials=os.environ.get(env_neo4j_pass, "pass"))
         self.verifyConnectivity(auth_token)
 
-    # Work in progress.
-    # def test_succes_on_custom_auth_with_parameters(self):
-    # params = types.CypherMap([[types.CypherString("Key1"), types.CypherInt(1)], [types.CypherString("Key2"), types.CypherInt(2)]])
-    # auth_token = AuthorizationToken(scheme="basic", realm="native", principal=os.environ.get(env_neo4j_user, "neo4j"), credentials=os.environ.get(env_neo4j_pass, "pass"), ticket=params)
-    # self.verifyConnectivity(auth_token)
+    def testSuccessOnBasicToken(self):
+        auth_token = AuthorizationToken(scheme="basic",
+                                        principal=os.environ.get(env_neo4j_user, "neo4j"),
+                                        credentials=os.environ.get(env_neo4j_pass, "pass"))
+        self.verifyConnectivity(auth_token)
+
 
 
 
