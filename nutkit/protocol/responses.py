@@ -145,7 +145,7 @@ class DriverError(BaseError):
     Over time there will be more specific driver errors if/when the generic test framework
     needs to check detailed error handling.
     """
-    def __init__(self, id=None, errorType=None, msg=None):
+    def __init__(self, id=None, errorType="", msg=""):
         self.id = id
         self.errorType = errorType
         self.msg = msg
