@@ -50,7 +50,31 @@ class TestBoltTypes(unittest.TestCase):
         self.createDriverAndSession()
 
         for key, value in test_map.items():
-            self.verifyCanEcho(key, value)
+            self.verifyCanEchoKeyValue(key, value)
+
+    def testShouldEchoVeryLongList(self):
+        test_map = {None:                  types.CypherNull,
+                    1:                     types.CypherInt,
+                    1.1:                   types.CypherFloat,
+                    "hello":               types.CypherString,
+                    True:                  types.CypherBool}
+
+        self.createDriverAndSession()
+
+        long_list = []
+        for key, value in test_map.items():
+            long_list.clear()
+            for i in range(1000):
+                long_list.append(value(key))
+            self.verifyCanEcho(long_list, types.CypherList)
+
+    def testShouldEchoVeryLongString(self):
+        self.createDriverAndSession()
+        long_string = "*" * 10000
+        self.verifyCanEcho(long_string, types.CypherString)
+
+    def testShouldEchoVeryLongMap(self):
+        # todo: need to implement the cypher map type to do this test.
 
     def verifyCanEcho(self, key, value):
         result = self._session.run("RETURN $x as y", params={"x": value(key)})
