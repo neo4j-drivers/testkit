@@ -25,6 +25,10 @@ class TestBoltTypes(unittest.TestCase):
         self._driver = Driver(self._backend, self._scheme, auth_token)
         self._session = self._driver.session("r")
 
+    def verifyCanEcho(self, key, value):
+        result = self._session.run("RETURN $x as y", params={"x": value(key)})
+        self.assertEqual(result.next(), types.Record(values=[key]))
+
     def testShouldEchoBack(self):
         test_map = {True:                   types.CypherBool,
                     False:                  types.CypherBool,
@@ -73,9 +77,6 @@ class TestBoltTypes(unittest.TestCase):
         long_string = "*" * 10000
         self.verifyCanEcho(long_string, types.CypherString)
 
-    # def testShouldEchoVeryLongMap(self):
-        # todo: need to implement the cypher map type to do this test.
-
     def testShouldEchoNestedLst(self):
         test_lists = [
                         types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
@@ -89,9 +90,41 @@ class TestBoltTypes(unittest.TestCase):
         self.createDriverAndSession()
         self.verifyCanEcho(test_lists, types.CypherList)
 
-    # def testShouldEchoNestedMap(self):
-        # todo: need to implement the cypher map type to do this test.
+    def test_combined_primitives(self):
+        self.createDriverAndSession()
 
-    def verifyCanEcho(self, key, value):
-        result = self._session.run("RETURN $x as y", params={"x": value(key)})
-        self.assertEqual(result.next(), types.Record(values=[key]))
+        result = self._session.run("RETURN NULL, 1, true, 'string', [1, 'a'], 1.23456")
+        record = result.next()
+        self.assertNotIsInstance(record, types.NullRecord)
+
+        values = record.values
+        self.assertIsInstance(values[0], types.CypherNull)
+        self.assertIsInstance(values[1], types.CypherInt)
+        self.assertIsInstance(values[2], types.CypherBool)
+        self.assertIsInstance(values[3], types.CypherString)
+        self.assertIsInstance(values[4], types.CypherList)
+        self.assertIsInstance(values[5], types.CypherFloat)
+        self.assertEqual(values[2], 1)
+        self.assertEqual(values[3], 'string')
+        self.assertEqual(values[4].value, [types.CypherInt(1), types.CypherString('a')])
+
+    def test_graph_node(self):
+        self.createDriverAndSession()
+
+        result = self._session.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
+        record = result.next()
+        self.assertNotIsInstance(record, types.NullRecord)
+
+        node = record.values[0]
+        self.assertIsInstance(node, types.CypherNode)
+        self.assertEqual(node.labels, ['TestLabel'])
+        self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
+
+    # def testShouldEchoVeryLongMap(self):
+    # todo: need to implement the cypher map type to do this test.
+
+    # def testShouldEchoNestedMap(self):
+    # todo: need to implement the cypher map type to do this test.
+
+    # def test_path(self):
+        # todo: need to implement the cypher path type to do this test.
