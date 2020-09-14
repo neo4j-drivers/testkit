@@ -27,7 +27,8 @@ class TestBoltTypes(unittest.TestCase):
 
     def verifyCanEcho(self, key, value):
         result = self._session.run("RETURN $x as y", params={"x": value(key)})
-        self.assertEqual(result.next(), types.Record(values=[key]))
+        records = result.next()
+        self.assertEqual(records, types.Record(values=[key]))
 
     def testShouldEchoBack(self):
         test_map = {True:                   types.CypherBool,
@@ -120,8 +121,23 @@ class TestBoltTypes(unittest.TestCase):
         self.assertEqual(node.labels, ['TestLabel'])
         self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
 
-    # def testShouldEchoVeryLongMap(self):
-    # todo: need to implement the cypher map type to do this test.
+    def testShouldEchoVeryLongMap(self):
+        test_map = {
+                    # None: types.CypherNull,
+                    # 1: types.CypherInt,
+                    # 1.1: types.CypherFloat,
+                    "hello": types.CypherString
+                    # True: types.CypherBool
+                    }
+
+        self.createDriverAndSession()
+
+        long_map = {}
+        for key, value in test_map.items():
+            long_map.clear()
+            for i in range(1000):
+                long_map[i+1] = value(key)
+            self.verifyCanEcho(long_map, types.CypherMap)
 
     # def testShouldEchoNestedMap(self):
     # todo: need to implement the cypher map type to do this test.
