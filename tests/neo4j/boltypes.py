@@ -73,7 +73,23 @@ class TestBoltTypes(unittest.TestCase):
         long_string = "*" * 10000
         self.verifyCanEcho(long_string, types.CypherString)
 
-    def testShouldEchoVeryLongMap(self):
+    # def testShouldEchoVeryLongMap(self):
+        # todo: need to implement the cypher map type to do this test.
+
+    def testShouldEchoNestedLst(self):
+        test_lists = [
+                        types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
+                        types.CypherList([types.CypherString("a"), types.CypherString("b"), types.CypherString("c"), types.CypherString("˚C")]),
+                        types.CypherList([types.CypherBool(True), types.CypherBool(False)]),
+                        types.CypherList([types.CypherFloat(1.1), types.CypherFloat(2.2), types.CypherFloat(3.3), types.CypherFloat(4.4)]),
+                        types.CypherList([types.CypherNull(None), types.CypherNull(None)]),
+                        types.CypherList([types.CypherNull(None), types.CypherBool(True), types.CypherString("Hello world"), types.CypherInt(-1234567890), types.CypherFloat(1.7976931348623157E+308)])
+                     ]
+
+        self.createDriverAndSession()
+        self.verifyCanEcho(test_lists, types.CypherList)
+
+    # def testShouldEchoNestedMap(self):
         # todo: need to implement the cypher map type to do this test.
 
     def verifyCanEcho(self, key, value):
