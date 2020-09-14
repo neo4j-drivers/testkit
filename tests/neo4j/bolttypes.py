@@ -54,7 +54,7 @@ class TestBoltTypes(unittest.TestCase):
         self.createDriverAndSession()
 
         for key, value in test_map.items():
-            self.verifyCanEchoKeyValue(key, value)
+            self.verifyCanEcho(key, value)
 
     def testShouldEchoVeryLongList(self):
         test_map = {None:                  types.CypherNull,
