@@ -81,7 +81,7 @@ class CypherBool:
         return str(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, CypherInt):
+        if isinstance(other, CypherBool):
             return other.value == self.value
         return other == self.value
 
@@ -94,7 +94,7 @@ class CypherFloat:
         return str(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, CypherInt):
+        if isinstance(other, CypherFloat):
             return other.value == self.value
         return other == self.value
 
