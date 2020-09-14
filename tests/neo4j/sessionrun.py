@@ -41,7 +41,7 @@ class TestSessionRun(unittest.TestCase):
         # Typical fetch size is 1000, selected value should be a bit larger than fetch size,
         # if driver allows this as a parameter we should set it to a known value.
         n = 1007
-        result = self._session.run("UNWIND RANGE(0, $n) AS x RETURN x", params={"n":types.CypherInt(n)})
+        result = self._session.run("UNWIND RANGE(0, $n) AS x RETURN x", params={"n": types.CypherInt(n)})
         for x in range(0, n):
             exp = types.Record(values=[x])
             rec = result.next()

@@ -12,14 +12,20 @@ All cypher types are sent from backend as:
     }
 """
 
+
 class CypherNull:
     """ Represents null/nil as sent/received to/from the database
     """
     def __init__(self, value=None):
-        pass
+        self.value = None
 
     def __str__(self):
         return "<null>"
+
+    def __eq__(self, other):
+        if isinstance(other, CypherList):
+            return other.value == self.value
+        return other == self.value
 
 
 class CypherList:
@@ -37,6 +43,7 @@ class CypherList:
             return other.value == self.value
         return other == self.value
 
+
 class CypherMap:
     def __init__(self, value):
         self.value = value
@@ -52,7 +59,34 @@ class CypherMap:
             return other.value == self.value
         return other == self.value
 
+
 class CypherInt:
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, CypherInt):
+            return other.value == self.value
+        return other == self.value
+
+
+class CypherBool:
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return str(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, CypherInt):
+            return other.value == self.value
+        return other == self.value
+
+
+class CypherFloat:
     def __init__(self, value):
         self.value = value
 
