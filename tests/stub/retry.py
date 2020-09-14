@@ -19,8 +19,6 @@ class TestRetry(unittest.TestCase):
         self._server.reset()
 
     def test_read(self):
-        if self._driver in ["javascript"]:
-            self.skipTest("Transactional functions not implemented in testkit backend")
 
         script = "retry_read.script"
         if self._driver in ["go"]:
@@ -49,15 +47,13 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
     def test_read_twice(self):
-        if self._driver in ["javascript"]:
-            self.skipTest("Transactional functions not implemented in testkit backend")
 
         script = "retry_read_twice.script"
         if self._driver in ["go"]:
             # Until Go is updated to use PULL with n
             # Lean version has fewer resets
             script = "retry_read_twice_lean_v3.script"
-        if self._driver in ["java"]:
+        if self._driver in ["java", "javascript"]:
             # Java requires an extra reset
             script = "retry_read_twice_java.script"
 
