@@ -1,0 +1,4 @@
+!: BOLT 4
+
+C: HELLO {"user_agent": "Go Driver/4.0", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+S: <EXIT>

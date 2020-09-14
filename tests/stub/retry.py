@@ -52,7 +52,7 @@ class TestRetry(unittest.TestCase):
         if self._driver in ["go"]:
             # Until Go is updated to use PULL with n
             # Lean version has fewer resets
-            script = "retry_read_twice_lean_v3.script"
+            script = "retry_read_twice_lean_pull_all.script"
         if self._driver in ["java", "javascript"]:
             # Java requires an extra reset
             script = "retry_read_twice_java.script"

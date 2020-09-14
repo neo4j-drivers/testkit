@@ -1,6 +1,7 @@
 # Connectivity
 TODO: error handling when no server available
 TODO: ensure bolt URI connects to instance in cluster
+TODO: Handling of lost connection during transaction
 
 * Verification of URI schemes in regards to TLS expecations
   bolt, neo4j, bolt+s, neo4j+s, bolt+ssc, neo4j+ssc
@@ -9,6 +10,14 @@ TODO: ensure bolt URI connects to instance in cluster
 * TLS version support
   TLS 1.1 1.2 1.3
   tls/tlsversions.py
+
+* Handling of lost connections during session.Run operations
+  disconnect, session, error handling,
+  stub/sessiondisconnected.py
+
+* Invocation of retry function one or more times
+  retry, transaction, error handling,
+  stub/retry.py
 
 
 # Datatypes
