@@ -25,12 +25,15 @@ class TestBoltTypes(unittest.TestCase):
         self._driver = Driver(self._backend, self._scheme, auth_token)
         self._session = self._driver.session("r")
 
-    def verifyCanEcho(self, key, value):
-        result = self._session.run("RETURN $x as y", params={"x": value(key)})
+    def verifyCanEcho(self, pythonValue, cypherType):
+        result = self._session.run("RETURN $x as y", params={"x": cypherType(pythonValue)})
         records = result.next()
-        self.assertEqual(records, types.Record(values=[key]))
+        self.assertEqual(records, types.Record(values=[pythonValue]))
 
     def testShouldEchoBack(self):
+        if get_driver_name() in ['javascript', 'java']:
+            self.skipTest("Not implemented in backend")
+
         test_map = {True:                   types.CypherBool,
                     False:                  types.CypherBool,
                     None:                   types.CypherNull,
@@ -54,10 +57,13 @@ class TestBoltTypes(unittest.TestCase):
 
         self.createDriverAndSession()
 
-        for key, value in test_map.items():
-            self.verifyCanEcho(key, value)
+        for pythonValue, cypherType in test_map.items():
+            self.verifyCanEcho(pythonValue, cypherType)
 
     def testShouldEchoVeryLongList(self):
+        if get_driver_name() in ['java']:
+            self.skipTest("Not implemented in backend")
+
         test_map = {None:                  types.CypherNull,
                     1:                     types.CypherInt,
                     1.1:                   types.CypherFloat,
@@ -74,18 +80,24 @@ class TestBoltTypes(unittest.TestCase):
             self.verifyCanEcho(long_list, types.CypherList)
 
     def testShouldEchoVeryLongString(self):
+        if get_driver_name() in ['java']:
+            self.skipTest("Not implemented in backend")
+
         self.createDriverAndSession()
         long_string = "*" * 10000
         self.verifyCanEcho(long_string, types.CypherString)
 
     def testShouldEchoNestedLst(self):
+        if get_driver_name() in ['java']:
+            self.skipTest("Not implemented in backend")
+
         test_lists = [
-                        types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
-                        types.CypherList([types.CypherString("a"), types.CypherString("b"), types.CypherString("c"), types.CypherString("˚C")]),
-                        types.CypherList([types.CypherBool(True), types.CypherBool(False)]),
-                        types.CypherList([types.CypherFloat(1.1), types.CypherFloat(2.2), types.CypherFloat(3.3), types.CypherFloat(4.4)]),
-                        types.CypherList([types.CypherNull(None), types.CypherNull(None)]),
-                        types.CypherList([types.CypherNull(None), types.CypherBool(True), types.CypherString("Hello world"), types.CypherInt(-1234567890), types.CypherFloat(1.7976931348623157E+308)])
+            types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
+            types.CypherList([types.CypherString("a"), types.CypherString("b"), types.CypherString("c"), types.CypherString("˚C")]),
+            types.CypherList([types.CypherBool(True), types.CypherBool(False)]),
+            types.CypherList([types.CypherFloat(1.1), types.CypherFloat(2.2), types.CypherFloat(3.3), types.CypherFloat(4.4)]),
+            types.CypherList([types.CypherNull(None), types.CypherNull(None)]),
+            types.CypherList([types.CypherNull(None), types.CypherBool(True), types.CypherString("Hello world"), types.CypherInt(-1234567890), types.CypherFloat(1.7976931348623157E+308)])
                      ]
 
         self.createDriverAndSession()
