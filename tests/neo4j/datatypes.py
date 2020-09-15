@@ -123,6 +123,9 @@ class TestDataTypes(unittest.TestCase):
 
     # Work in progress
     def testShouldEchoVeryLongMap(self):
+        if get_driver_name() not in ['dotnet']:
+            self.skipTest("Not implemented in backend")
+            
         test_list = [
                        types.CypherNull(None),
                        types.CypherInt(1),
@@ -141,6 +144,9 @@ class TestDataTypes(unittest.TestCase):
             self.verifyCanEcho(types.CypherMap(long_map))
 
     def testShouldEchoNestedMap(self):
+        if get_driver_name() not in ['dotnet']:
+            self.skipTest("Not implemented in backend")
+
         test_maps = {
             "a": types.CypherMap({"a": types.CypherInt(1),
                                   "b": types.CypherInt(2),
