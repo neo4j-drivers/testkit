@@ -94,7 +94,7 @@ class TestDataTypes(unittest.TestCase):
         self.verifyCanEcho(types.CypherString(long_string))
 
     def testShouldEchoNestedLists(self):
-        if get_driver_name() in ['java', 'javascript']:
+        if get_driver_name() in ['java']:
             self.skipTest("Not implemented in backend")
 
         test_lists = [
@@ -103,7 +103,7 @@ class TestDataTypes(unittest.TestCase):
             types.CypherList([types.CypherBool(True), types.CypherBool(False)]),
             types.CypherList([types.CypherFloat(1.1), types.CypherFloat(2.2), types.CypherFloat(3.3), types.CypherFloat(4.4)]),
             types.CypherList([types.CypherNull(None), types.CypherNull(None)]),
-            types.CypherList([types.CypherNull(None), types.CypherBool(True), types.CypherString("Hello world"), types.CypherInt(-1234567890), types.CypherFloat(1.7976931348623157E+308)])
+            types.CypherList([types.CypherNull(None), types.CypherBool(True), types.CypherString("Hello world"), types.CypherInt(-1234567890), types.CypherFloat(123.456)])
                      ]
 
         self.createDriverAndSession()
