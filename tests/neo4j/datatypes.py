@@ -48,7 +48,7 @@ class TestDataTypes(unittest.TestCase):
             types.CypherInt(129),
             types.CypherInt(2147483647),
             types.CypherInt(-2147483647),
-            #types.CypherFloat(9223372036854775807),        TODO: Investigate
+            #types.CypherFloat(9223372036854775807),       # TODO: Investigate
             #types.CypherFloat(-9223372036854775807),
             #types.CypherFloat(1.7976931348623157E+308),
             #types.CypherFloat(2.2250738585072014e-308),
@@ -64,7 +64,6 @@ class TestDataTypes(unittest.TestCase):
         self.createDriverAndSession()
         for val in vals:
             self.verifyCanEcho(val)
-
 
     def testShouldEchoVeryLongList(self):
         if get_driver_name() in ['java']:
@@ -123,26 +122,50 @@ class TestDataTypes(unittest.TestCase):
         self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
 
     # Work in progress
-    # def testShouldEchoVeryLongMap(self):
-    #    test_map = {
-    #                # None: types.CypherNull,
-    #                # 1: types.CypherInt,
-    #                # 1.1: types.CypherFloat,
-    #                "hello": types.CypherString
-    #                # True: types.CypherBool
-    #                }
+    def testShouldEchoVeryLongMap(self):
+        test_list = [
+                       types.CypherNull(None),
+                       types.CypherInt(1),
+                       types.CypherFloat(1.1),
+                       types.CypherString("Hello World"),
+                       types.CypherBool(True)
+                    ]
 
-    #    self.createDriverAndSession()
+        self.createDriverAndSession()
 
-    #    long_map = {}
-    #    for key, value in test_map.items():
-    #        long_map.clear()
-    #        for i in range(1000):
-    #            long_map[i+1] = value(key)
-    #        self.verifyCanEcho(long_map, types.CypherMap)
+        long_map = {}
+        for cypherType in test_list:
+            long_map.clear()
+            for i in range(1000):
+                long_map[i.__str__()] = cypherType
+            self.verifyCanEcho(types.CypherMap(long_map))
 
-    # def testShouldEchoNestedMap(self):
-    # todo: need to implement the cypher map type to do this test.
+    def testShouldEchoNestedMap(self):
+        test_maps = {
+            "a": types.CypherMap({"a": types.CypherInt(1),
+                                  "b": types.CypherInt(2),
+                                  "c": types.CypherInt(3),
+                                  "d": types.CypherInt(4)}),
+            "b": types.CypherMap({"a": types.CypherBool(True),
+                                  "b": types.CypherBool(False)}),
+            "c": types.CypherMap({"a": types.CypherFloat(1.1),
+                                  "b": types.CypherFloat(2.2),
+                                  "c": types.CypherFloat(3.3)}),
+            "d": types.CypherMap({"a": types.CypherString("a"),
+                                  "b": types.CypherString("b"),
+                                  "c": types.CypherString("c"),
+                                  "temp": types.CypherString("˚C")}),
+            "e": types.CypherMap({"a": types.CypherNull(None)}),
+            "f": types.CypherMap({"a": types.CypherInt(1),
+                                  "b": types.CypherBool(True),
+                                  "c": types.CypherFloat(3.3),
+                                  "d": types.CypherString("Hello World"),
+                                  "e": types.CypherNull(None)}),
+
+        }
+
+        self.createDriverAndSession()
+        self.verifyCanEcho(types.CypherMap(test_maps))
 
     # def test_path(self):
         # todo: need to implement the cypher path type to do this test.
