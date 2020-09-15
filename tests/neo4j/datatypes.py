@@ -7,15 +7,19 @@ from tests.neo4j.shared import *
 from tests.shared import *
 
 
-class TestBoltTypes(unittest.TestCase):
+class TestDataTypes(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._host, self._port = get_neo4j_host_and_port()
         self._scheme = "bolt://%s:%d" % (self._host, self._port)
+        self._session = None
+        self._driver = None
 
     def tearDown(self):
-        self._session.close()
-        self._driver.close()
+        if self._session:
+            self._session.close()
+        if self._driver:
+            self._driver.close()
         self._backend.close()
 
     def createDriverAndSession(self):
@@ -63,7 +67,7 @@ class TestBoltTypes(unittest.TestCase):
 
 
     def testShouldEchoVeryLongList(self):
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ['java', 'javascript']:
             self.skipTest("Not implemented in backend")
 
         vals = [
@@ -91,7 +95,7 @@ class TestBoltTypes(unittest.TestCase):
         self.verifyCanEcho(types.CypherString(long_string))
 
     def testShouldEchoNestedLists(self):
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ['java', 'javascript']:
             self.skipTest("Not implemented in backend")
 
         test_lists = [
