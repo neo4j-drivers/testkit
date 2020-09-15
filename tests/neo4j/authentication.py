@@ -25,7 +25,7 @@ class TestAuthenticationBasic(unittest.TestCase):
     def verifyConnectivity(self, auth_token):
         self.createDriverAndSession(auth_token)
         result = self._session.run("RETURN 2 as Number")
-        self.assertEqual(result.next(), types.Record(values=[2]))
+        self.assertEqual(result.next(), types.Record(values=[types.CypherInt(2)]))
 
     def testErrorOnIncorrectCredentials(self):
         auth_token = AuthorizationToken(scheme="basic",

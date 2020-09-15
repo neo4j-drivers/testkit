@@ -23,11 +23,11 @@ class TestSessionRun(unittest.TestCase):
         # Retrieve one extra record after last one the make sure driver can handle that.
         result = self._session.run("UNWIND [1, 2, 3, 4, 5] AS x RETURN x")
         expects = [
-            types.Record(values=[1]),
-            types.Record(values=[2]),
-            types.Record(values=[3]),
-            types.Record(values=[4]),
-            types.Record(values=[5]),
+            types.Record(values=[types.CypherInt(1)]),
+            types.Record(values=[types.CypherInt(2)]),
+            types.Record(values=[types.CypherInt(3)]),
+            types.Record(values=[types.CypherInt(4)]),
+            types.Record(values=[types.CypherInt(5)]),
             types.NullRecord(),
             types.NullRecord()
         ]
@@ -43,7 +43,7 @@ class TestSessionRun(unittest.TestCase):
         n = 1007
         result = self._session.run("UNWIND RANGE(0, $n) AS x RETURN x", params={"n": types.CypherInt(n)})
         for x in range(0, n):
-            exp = types.Record(values=[x])
+            exp = types.Record(values=[types.CypherInt(x)])
             rec = result.next()
             self.assertEqual(rec, exp)
 
@@ -60,16 +60,16 @@ class TestSessionRun(unittest.TestCase):
 
         # This one should function properly
         result = self._session.run("RETURN 1 as n")
-        self.assertEqual(result.next(), types.Record(values=[1]))
+        self.assertEqual(result.next(), types.Record(values=[types.CypherInt(1)]))
 
     def test_recover_from_fail_on_streaming(self):
         result = self._session.run("UNWIND [1, 0, 2] AS x RETURN 10 / x")
-        self.assertEqual(result.next(), types.Record(values=[10]))
+        self.assertEqual(result.next(), types.Record(values=[types.CypherInt(10)]))
         with self.assertRaises(types.DriverError) as e:
             result.next()
         # TODO: Further inspection of the type of error? Should be a database error
 
         # This one should function properly
         result = self._session.run("RETURN 1 as n")
-        self.assertEqual(result.next(), types.Record(values=[1]))
+        self.assertEqual(result.next(), types.Record(values=[types.CypherInt(1)]))
 

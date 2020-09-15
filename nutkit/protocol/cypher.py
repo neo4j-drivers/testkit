@@ -37,9 +37,7 @@ class CypherList:
         return "List {}".format(v)
 
     def __eq__(self, other):
-        if isinstance(other, CypherList):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherList) and other.value == self.value
 
 
 class CypherMap:
@@ -53,9 +51,7 @@ class CypherMap:
         return "Map {}".format(v)
 
     def __eq__(self, other):
-        if isinstance(other, CypherMap):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherMap) and other.value == self.value
 
 
 class CypherInt:
@@ -66,9 +62,7 @@ class CypherInt:
         return str(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, CypherInt):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherInt) and other.value == self.value
 
 
 class CypherBool:
@@ -79,9 +73,7 @@ class CypherBool:
         return str(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, CypherBool):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherBool) and other.value == self.value
 
 
 class CypherFloat:
@@ -92,9 +84,7 @@ class CypherFloat:
         return str(self.value)
 
     def __eq__(self, other):
-        if isinstance(other, CypherFloat):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherFloat) and other.value == self.value
 
 
 class CypherString:
@@ -105,9 +95,7 @@ class CypherString:
         return self.value
 
     def __eq__(self, other):
-        if isinstance(other, CypherString):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherString) and other.value == self.value
 
 
 class Node:
@@ -119,6 +107,13 @@ class Node:
     def __str__(self):
         return "Node (id={}, labels={}), props={}".format(
             self.id, self.labels, self.props)
+
+    def __eq__(self):
+        if not isinstance(other, Node):
+            return False
+
+        return self.id == other.id and self.labels == other.labels and self.props == other.props
+
 
 # More in line with other naming
 CypherNode = Node
