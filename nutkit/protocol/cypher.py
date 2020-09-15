@@ -23,9 +23,7 @@ class CypherNull:
         return "<null>"
 
     def __eq__(self, other):
-        if isinstance(other, CypherList):
-            return other.value == self.value
-        return other == self.value
+        return isinstance(other, CypherNull)
 
 
 class CypherList:
