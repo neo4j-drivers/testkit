@@ -67,7 +67,7 @@ class TestDataTypes(unittest.TestCase):
 
 
     def testShouldEchoVeryLongList(self):
-        if get_driver_name() in ['java', 'javascript']:
+        if get_driver_name() in ['java']:
             self.skipTest("Not implemented in backend")
 
         vals = [
