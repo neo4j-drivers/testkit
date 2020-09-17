@@ -8,4 +8,6 @@ import os, subprocess
 if __name__ == "__main__":
     goPath = "/home/build"
     backendPath = os.path.join(goPath, "bin", "testkit-backend")
-    subprocess.check_call([backendPath])
+    err = open("/artifacts/backenderr.dump", "w")
+    out = open("/artifacts/backendout.dump", "w")
+    subprocess.check_call([backendPath], stdout=out, stderr=err)

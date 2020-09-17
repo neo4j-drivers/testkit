@@ -12,4 +12,5 @@ def run(args, env=None):
 if __name__ == "__main__":
     run(["npm", "ci"])
     run(["gulp", "nodejs"])
+    run(["gulp", "testkit-backend"])
 
