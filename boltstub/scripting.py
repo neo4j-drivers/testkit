@@ -506,10 +506,6 @@ class ServerSleepLine(ServerLine):
 
 class ServerNoOpLine(ServerLine):
 
-    @classmethod
-    def is_compatible(cls, protocol_version):
-        return protocol_version >= (4, 1)
-
     def __init__(self):
         pass
 
