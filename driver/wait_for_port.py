@@ -2,7 +2,7 @@ import sys, time, socket
 
 def wait_for_port(address, port):
     start = time.perf_counter()
-    timeout = 30
+    timeout = 60
     while True:
         try:
             with socket.create_connection((address, port), timeout):

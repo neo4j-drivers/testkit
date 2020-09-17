@@ -255,7 +255,7 @@ if __name__ == "__main__":
             "--env", "NEO4J_AUTH=%s/%s" % ("neo4j", "pass"),
             # Image
             ix["image_name"],
-        ])
+        ], check=True)
         print("Neo4j container server started, waiting for port to be available")
 
         # Wait until server is listening before running tests
