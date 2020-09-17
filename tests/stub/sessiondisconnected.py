@@ -6,13 +6,19 @@ from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
+# Should match user-agent of disconnect_on_hello.script
+# Indirectly tests implementation of custom user-agent
+customUserAgent = "Modesty"
+
+
 class SessionRunDisconnected(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
         auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        self._driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        uri = "bolt://%s" % self._server.address
+        self._driver = Driver(self._backend, uri, auth, userAgent=customUserAgent)
         self._session = self._driver.session("r")
 
     def tearDown(self):
@@ -47,7 +53,7 @@ class SessionRunDisconnected(unittest.TestCase):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # hello message.
         if not self._driverName in ["go"]:
-            self.skipTest("Need support for specifying user agent in stub server")
+            self.skipTest("No support for custom user-agent in testkit backend")
         self._server.start(os.path.join(scripts_path, "disconnect_on_hello.script"))
         step = self._run()
         self._server.done()

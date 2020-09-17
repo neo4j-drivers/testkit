@@ -4,9 +4,9 @@ from .session import Session
 
 
 class Driver:
-    def __init__(self, backend, uri, authToken):
+    def __init__(self, backend, uri, authToken, userAgent=None):
         self._backend = backend
-        req = protocol.NewDriver(uri, authToken)
+        req = protocol.NewDriver(uri, authToken, userAgent=userAgent)
         res = backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
             raise "Should be driver"

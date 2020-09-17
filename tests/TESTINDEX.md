@@ -12,7 +12,7 @@ TODO: Handling of lost connection during transaction
   tls/tlsversions.py
 
 * Handling of lost connections during session.Run operations
-  disconnect, session, error handling,
+  disconnect, session, error handling, custom user-agent
   stub/sessiondisconnected.py
 
 * Invocation of retry function one or more times

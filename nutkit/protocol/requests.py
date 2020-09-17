@@ -18,11 +18,13 @@ class NewDriver:
     """ Request to create a new driver instance on the backend.
     Backend should respond with a Driver response or an Error response.
     """
-    def __init__(self, uri, authToken):
+    def __init__(self, uri, authToken, userAgent=None):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
         self.authorizationToken = authToken
+        # Optional custom user agent string
+        self.userAgent = userAgent
 
 
 """ Not a request but used in NewDriver request
