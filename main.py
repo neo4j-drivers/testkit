@@ -99,11 +99,10 @@ if __name__ == "__main__":
     if not driverImage:
         sys.exit(1)
 
-    # Prepare collecting of artifacts, collected to ./artifcats/now
+    # Prepare collecting of artifacts, collected to ./artifcats/
     artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
-    if os.path.exists(artifactsPath):
-        shutil.rmtree(artifactsPath)
-    os.makedirs(artifactsPath)
+    if not os.path.exists(artifactsPath):
+        os.makedirs(artifactsPath)
     print("Putting artifacts in %s" % artifactsPath)
 
 
