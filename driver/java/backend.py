@@ -7,8 +7,8 @@ import os, subprocess
 
 
 if __name__ == "__main__":
-    err = open("/artifacts/backenderr.dump", "w")
-    out = open("/artifacts/backendout.dump", "w")
+    err = open("/artifacts/backenderr.log", "w")
+    out = open("/artifacts/backendout.log", "w")
     subprocess.check_call(
-        ["java", "-jar", "testkit-backend/target/testkit-backend-4.1-SNAPSHOT.jar"], stdout=out, stderr=err)
+        ["java", "-jar", "testkit-backend/target/testkit-backend-4.2-SNAPSHOT.jar"], stdout=out, stderr=err)
 

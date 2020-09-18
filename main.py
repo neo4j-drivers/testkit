@@ -100,10 +100,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Prepare collecting of artifacts, collected to ./artifcats/now
-    # Use a subfolder of current time to make it easier to run on host and not losing logs
-    artifactsPath = os.path.abspath(os.path.join(".", "artifacts",datetime.now().strftime("%Y%m%d_%H%M")))
-    if not os.path.exists(artifactsPath):
-        os.makedirs(artifactsPath)
+    artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
+    if os.path.exists(artifactsPath):
+        shutil.rmtree(artifactsPath)
+    os.makedirs(artifactsPath)
     print("Putting artifacts in %s" % artifactsPath)
 
 
