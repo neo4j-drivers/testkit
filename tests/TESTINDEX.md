@@ -19,6 +19,11 @@ TODO: Handling of lost connection during transaction
   retry, transaction, error handling,
   stub/retry.py
 
+# Protocol
+* No-op sent from server to keep alive connections
+  noop, chunking, transport, keep alive
+  stub/transport.py
+
 
 # Datatypes
 TODO: path, relationsship, spatial, temporal
