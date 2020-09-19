@@ -6,7 +6,7 @@ from nutkit.frontend import Driver, AuthorizationToken
 # Use this path as base for locating a whole bunch of other stuff.
 thisPath = os.path.dirname(os.path.abspath(__file__))
 
-env_host_address = "TEST_TLSSERVER_ADDRESS"
+#env_host_address = "TEST_TLSSERVER_ADDRESS"
 
 
 class TlsServer:
@@ -15,7 +15,7 @@ class TlsServer:
         """
 
         # Determine which address that server should bind to
-        addr = os.environ.get(env_host_address, "127.0.0.1")
+        addr = "127.0.0.1" #os.environ.get(env_host_address, "127.0.0.1")
 
         serverPath = os.path.join(thisPath, "..", "..", "tlsserver", "tlsserver")
         certPath = os.path.join(thisPath, "certs", "server", "%s.pem" % server_cert)

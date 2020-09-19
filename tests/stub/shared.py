@@ -7,11 +7,11 @@ TEST_STUB_ADDRESS   Address that stub server should be listenig on (no port)
 """
 import subprocess, os, time, io, platform
 
-env_host_address = "TEST_STUB_ADDRESS"
+#env_host_address = "TEST_STUB_ADDRESS"
 
 class StubServer:
     def __init__(self, port):
-        address = os.environ.get(env_host_address, '127.0.0.1')
+        address = "127.0.0.1" #os.environ.get(env_host_address, '127.0.0.1')
         self._process = None
         self.address = "%s:%d" % (address, port)
         self.port = port
