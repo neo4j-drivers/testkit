@@ -2,16 +2,13 @@
 Shared utilities for writing stub tests
 
 Uses environment variables for configuration:
-
-TEST_STUB_ADDRESS   Address that stub server should be listenig on (no port)
 """
 import subprocess, os, time, io, platform
 
-#env_host_address = "TEST_STUB_ADDRESS"
 
 class StubServer:
     def __init__(self, port):
-        address = "127.0.0.1" #os.environ.get(env_host_address, '127.0.0.1')
+        address = os.environ.get("TEST_STUB_HOST", "127.0.0.1")
         self._process = None
         self.address = "%s:%d" % (address, port)
         self.port = port
@@ -30,7 +27,7 @@ class StubServer:
                                           "-m",
                                           "boltstub",
                                           "-l",
-                                          self.address,
+                                          "0.0.0.0:%d" % self.port,
                                           "-v",
                                           script],
                                          stdout=subprocess.PIPE,

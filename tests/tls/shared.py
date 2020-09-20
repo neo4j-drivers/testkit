@@ -6,23 +6,17 @@ from nutkit.frontend import Driver, AuthorizationToken
 # Use this path as base for locating a whole bunch of other stuff.
 thisPath = os.path.dirname(os.path.abspath(__file__))
 
-#env_host_address = "TEST_TLSSERVER_ADDRESS"
-
 
 class TlsServer:
     def __init__(self, server_cert, minTls="0", maxTls="2", disableTls=False):
         """ Name of server certificate, corresponds to a .pem and .key file.
         """
-
-        # Determine which address that server should bind to
-        addr = "127.0.0.1" #os.environ.get(env_host_address, "127.0.0.1")
-
         serverPath = os.path.join(thisPath, "..", "..", "tlsserver", "tlsserver")
         certPath = os.path.join(thisPath, "certs", "server", "%s.pem" % server_cert)
         keyPath = os.path.join(thisPath, "certs", "server", "%s.key" % server_cert)
         params = [
             serverPath,
-            "-bind", addr+":6666",
+            "-bind", "0.0.0.0:6666",
             "-cert", certPath,
             "-key", keyPath,
             "-minTls", minTls,

@@ -12,7 +12,7 @@ import os
 from nutkit.backend import Backend
 
 def get_backend_host_and_port():
-    host = os.environ.get('TEST_BACKEND_HOST', 'localhost')
+    host = os.environ.get('TEST_BACKEND_HOST', '127.0.0.1')
     port = os.environ.get('TEST_BACKEND_PORT', 9876)
     return (host, port)
 

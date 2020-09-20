@@ -7,12 +7,10 @@ is executed in each context.
 
 import os, sys, atexit, subprocess, time, unittest, json, shutil
 from datetime import datetime
-from testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
+from tests.testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
 import docker
 
 import tests.neo4j.suites as suites
-#from tests.stub.suites import stub_suite
-#from tests.tls.suites import tls_suite
 
 
 # Environment variables
@@ -20,7 +18,7 @@ env_driver_name    = 'TEST_DRIVER_NAME'
 env_driver_repo    = 'TEST_DRIVER_REPO'
 env_testkit_branch = 'TEST_BRANCH'
 
-containers = ["driver", "neo4jserver", "gobuilder"]
+containers = ["driver", "neo4jserver", "runner"]
 networks = ["the-bridge"]
 
 
@@ -122,29 +120,29 @@ if __name__ == "__main__":
 
     # Bootstrap the driver docker image by running a bootstrap script in the image.
     # The driver docker image only contains the tools needed to build, not the built driver.
-    tlsserverAddress = "127.0.0.1"
     driverContainer = docker.run(driverImage, "driver",
-        command=["python3", "/nutkit/driver/bootstrap.py"],
-        mountMap={thisPath: "/nutkit", driverRepo: "/driver", artifactsPath: "/artifacts"},
-        portMap={9876: 9876},
-        hostMap={"thehost": tlsserverAddress, "thehostbutwrong": tlsserverAddress},
-        envMap={"PYTHONPATH": "/nutkit", env_driver_name: driverName},
+        command=["python3", "/testkit/driver/bootstrap.py"],
+        mountMap={
+            thisPath: "/testkit", 
+            driverRepo: "/driver", 
+            artifactsPath: "/artifacts"
+        },
         network="the-bridge",
         workingFolder="/driver")
 
     # Clean up artifacts
-    driverContainer.exec(["python3", "/nutkit/driver/clean_artifacts.py"])
+    driverContainer.exec(["python3", "/testkit/driver/clean_artifacts.py"])
 
-    # Build the driver and it's nutkit backend
+    # Build the driver and it's testkit backend
     print("Build driver and test backend in driver container")
-    driverContainer.exec(["python3", "/nutkit/driver/%s/build.py" % driverName])
+    driverContainer.exec(["python3", "/testkit/driver/%s/build.py" % driverName])
     print("Finished building driver and test backend")
 
     """
     Unit tests
     """
     begin_test_suite('Unit tests')
-    driverContainer.exec(["python3", "/nutkit/driver/%s/unittests.py" % driverName])
+    driverContainer.exec(["python3", "/testkit/driver/%s/unittests.py" % driverName])
     end_test_suite('Unit tests')
 
     # Start the test backend in the driver Docker instance.
@@ -155,23 +153,33 @@ if __name__ == "__main__":
     # issues like 'detected possible backend crash', make sure that this
     # works simply by commenting detach and see that the backend starts.
     print("Start test backend in driver container")
-    driverContainer.exec_detached(["python3", "/nutkit/driver/%s/backend.py" % driverName])
+    driverContainer.exec_detached(["python3", "/testkit/driver/%s/backend.py" % driverName])
     # Wait until backend started
     # Use driver container to check for backend availability
-    driverContainer.exec(["python3", "/nutkit/driver/wait_for_port.py", "localhost", "%d" % 9876])
+    driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", "localhost", "%d" % 9876])
     print("Started test backend")
 
-    failed = False
+    # Start runner container, responsible for running the unit tests
+    # Use Go driver image for this since we need to build TLS server and use that in the runner.
+    runnerImage  = ensure_driver_image(thisPath, testkitBranch, "go")
+    runnerContainer = docker.run(runnerImage, "runner",
+        command=["python3", "/testkit/driver/bootstrap.py"],
+        mountMap={ thisPath: "/testkit" },
+        envMap={
+            "PYTHONPATH":        "/testkit",     # To use modules
+            env_driver_name:     driverName,     # To skip tests based on driver
+            "TEST_NEO4J_HOST":   "neo4jserver",  # Hostname of Docker container runnng db
+            "TEST_NEO4J_USER":   "neo4j",
+            "TEST_NEO4J_PASS":   "pass",
+            "TEST_BACKEND_HOST": "driver",       # Runner connects to backend in driver container
+            "TEST_STUB_HOST":    "runner",       # Driver connects to me
+        },
+        network="the-bridge",
+        aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
 
     """
-    Stub tests
+    Neo4j server tests
     """
-    driverContainer.exec(["python3", "-m", "stubrunner"])
-
-    """
-    Neo4j 4.0 server tests
-    """
-    # TODO: Write suite name to TeamCity
     # Make an artifacts folder where the database can place it's logs, each time
     # we start a database server we should use a different folder.
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
@@ -179,8 +187,8 @@ if __name__ == "__main__":
     neo4jserver = "neo4jserver"
 
     neo4jservers = [
-        { "image_name": "neo4j:4.0", "suite": suites.single_community_neo4j4x0 },
-        { "image_name": "neo4j:4.1", "suite": suites.single_enterprise_neo4j4x1 },
+        { "image_name": "neo4j:4.0", "suite_name": "4.0" },
+        { "image_name": "neo4j:4.1", "suite_name": "4.1" },
     ]
     for ix in neo4jservers:
         # Start a Neo4j server
@@ -193,39 +201,30 @@ if __name__ == "__main__":
 
         # Wait until server is listening before running tests
         # Use driver container to check for Neo4j availability since connect will be done from there
-        driverContainer.exec(["python3", "/nutkit/driver/wait_for_port.py", neo4jserver, "%d" % 7687])
+        driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", neo4jserver, "%d" % 7687])
         print("Neo4j in container listens")
 
-        # Make sure that the tests instruct the driver to connect to neo4jserver docker container
-        os.environ['TEST_NEO4J_HOST'] = neo4jserver
-
-        suiteName = "Integration tests, %s" % ix["image_name"]
-        begin_test_suite(suiteName)
-        runner = unittest.TextTestRunner(resultclass=get_test_result_class(), verbosity=100)
-        result = runner.run(ix["suite"])
-        if result.errors or result.failures:
-            failed = True
-        end_test_suite(suiteName)
-        if failed:
-            sys.exit(1)
+        # Run the actual test suite within the runner container. The tests will connect to driver
+        # backend and configure drivers to connect to the neo4j instance.
+        runnerContainer.exec(["python3", "-m", "tests.neo4j.suites", ix["suite_name"]])
 
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any pending connections
         # detected here should indicate connection leakage in the driver.
-        driverContainer.exec(["python3", "/nutkit/driver/assert_conns_closed.py", neo4jserver, "%d" % 7687])
+        driverContainer.exec(["python3", "/testkit/driver/assert_conns_closed.py", neo4jserver, "%d" % 7687])
 
         subprocess.run([
             "docker", "stop", "neo4jserver"])
 
     """
+    Stub tests
+    """
+    runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
+
+    """
     TLS tests
     """
-    print("Building TLS server in Go image to be used for TLS tests")
-    goBuilderImage = ensure_driver_image(thisPath, testkitBranch, "go")
-    docker.run(goBuilderImage, "gobuilder",
-        mountMap={thisPath: "/testkit"},
-        workingFolder="/testkit/tlsserver",
-        command=["go", "build", "-v", "."])
-    print("Finished building TLS server, ready for use")
-    driverContainer.exec(["python3", "-m", "tlsrunner"])
+    # Build TLS server
+    runnerContainer.exec(["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+    runnerContainer.exec(["python3", "-m", "tests.tls.suites"])
 

@@ -4,17 +4,20 @@ class Container:
     def __init__(self, name):
         self.name = name
 
-    def exec(self, command):
-        cmd  = ["docker", "exec", self.name]
-        cmd .extend(command)
-        subprocess.run(cmd , check=True)
+    def exec(self, command, workdir=None):
+        cmd  = ["docker", "exec"]
+        if workdir:
+            cmd.extend(["-w", workdir])
+        cmd.append(self.name)
+        cmd.extend(command)
+        subprocess.run(cmd, check=True)
 
     def exec_detached(self, command):
         cmd  = ["docker", "exec", "--detach", self.name]
-        cmd .extend(command)
-        subprocess.run(cmd , check=True)
+        cmd.extend(command)
+        subprocess.run(cmd, check=True)
 
-def run(image, name, command=None, mountMap={}, hostMap={}, portMap={}, envMap={}, workingFolder=None, network=None):
+def run(image, name, command=None, mountMap={}, hostMap={}, portMap={}, envMap={}, workingFolder=None, network=None, aliases=[]):
     # Bootstrap the driver docker image by running a bootstrap script in the image.
     # The driver docker image only contains the tools needed to build, not the built driver.
     cmd = [ "docker", "run", "--name", name, "--rm", "--detach"]
@@ -30,6 +33,8 @@ def run(image, name, command=None, mountMap={}, hostMap={}, portMap={}, envMap={
         cmd.append("--net=%s" % network)
     if workingFolder:
         cmd.extend(["-w", workingFolder])
+    for a in aliases:
+        cmd.append("--network-alias="+a)
     cmd.append(image)
     if command:
         cmd.extend(command)
