@@ -16,7 +16,7 @@ TODO: Handling of lost connection during transaction
   stub/sessiondisconnected.py
 
 * Invocation of retry function one or more times
-  retry, transaction, error handling,
+  retry, transaction, error handling, disconnect on commit
   stub/retry.py
 
 # Protocol
