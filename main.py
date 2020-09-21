@@ -161,7 +161,8 @@ if __name__ == "__main__":
 
     # Start runner container, responsible for running the unit tests
     # Use Go driver image for this since we need to build TLS server and use that in the runner.
-    runnerImage  = ensure_driver_image(thisPath, testkitBranch, "go")
+    runnerImage = ensure_driver_image(thisPath, testkitBranch, "go")
+    inTeamCity = os.environ.get("TEST_IN_TEAMCITY")
     runnerContainer = docker.run(runnerImage, "runner",
         command=["python3", "/testkit/driver/bootstrap.py"],
         mountMap={ thisPath: "/testkit" },
@@ -173,6 +174,7 @@ if __name__ == "__main__":
             "TEST_NEO4J_PASS":   "pass",
             "TEST_BACKEND_HOST": "driver",       # Runner connects to backend in driver container
             "TEST_STUB_HOST":    "runner",       # Driver connects to me
+            "TEST_IN_TEAMCITY":  inTeamCity,     # To configure test runner properly
         },
         network="the-bridge",
         aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
