@@ -18,8 +18,9 @@ class Driver:
         if not isinstance(res, protocol.Driver):
             raise "Should be driver"
 
-    def session(self, accessMode, bookmarks=None):
-        req = protocol.NewSession(self._driver.id, accessMode, bookmarks)
+    def session(self, accessMode, bookmarks=None, database=None, fetchSize=None):
+        req = protocol.NewSession(self._driver.id, accessMode,
+            bookmarks=bookmarks, database=database, fetchSize=fetchSize)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Session):
             raise "Should be session"

@@ -14,8 +14,8 @@ class Session:
         if not isinstance(res, protocol.Session):
             raise "Should be session"
 
-    def run(self, cypher, params=None):
-        req = protocol.SessionRun(self._session.id, cypher, params)
+    def run(self, cypher, params=None, txMeta=None, timeout=None):
+        req = protocol.SessionRun(self._session.id, cypher, params, txMeta=txMeta, timeout=timeout)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Result):
             raise "Should be result"

@@ -53,13 +53,15 @@ class NewSession:
     corresponding to the specified driver id.
     Backend should respond with a Session response or an Error response.
     """
-    def __init__(self, driverId, accessMode, bookmarks):
+    def __init__(self, driverId, accessMode, bookmarks=None, database=None, fetchSize=None):
         # Id of driver on backend that sessio should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
         self.accessMode = accessMode
         # Array of boookmarks in the form of list of strings.
         self.bookmarks = bookmarks
+        self.database = database
+        self.fetchSize = fetchSize
 
 
 class SessionClose:
@@ -75,10 +77,12 @@ class SessionRun:
     """ Request to run a query on a specified session.
     Backend should respond with a Result response or an Error response.
     """
-    def __init__(self, sessionId, cypher, params):
+    def __init__(self, sessionId, cypher, params, txMeta=None, timeout=None):
         self.sessionId = sessionId
         self.cypher = cypher
         self.params = params
+        self.txMeta = txMeta
+        self.timeout = timeout
 
 
 class TransactionRun:

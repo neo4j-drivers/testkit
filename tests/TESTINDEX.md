@@ -54,7 +54,9 @@ TODO: bookmark chaining
 * Verification that results can be iterated correctly.
   result, records, invalid query, error while streaming
   neo4j/sessionrun.py
-
+* Verification that session.Run optional parameters are sent on the wire
+  tx metadata, timeout, bookmarks
+  stub/sessionparamaters.py
 
 # Run in transaction
 TODO: nested results
