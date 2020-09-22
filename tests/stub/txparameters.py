@@ -1,4 +1,3 @@
-
 import unittest, os
 
 from tests.shared import *
@@ -7,7 +6,7 @@ from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
-# Verifies that session.Run parameters are sent as expected on the wire.
+# Verifies that session.beginTransaction parameters are sent as expected on the wire.
 # These are the different cases tests:
 #   Read mode
 #   Write mode
@@ -20,7 +19,6 @@ class TxBeginParameters(unittest.TestCase):
         self._backend = new_backend()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = AuthorizationToken()
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
 
