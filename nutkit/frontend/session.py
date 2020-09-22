@@ -61,10 +61,10 @@ class Session:
         return self.processTransaction(req, fn)
 
     def beginTransaction(self, txMeta=None, timeout=None):
-        req = protocol.SessionBeginTransaction(self._session.id)
+        req = protocol.SessionBeginTransaction(self._session.id, txMeta=txMeta, timeout=timeout)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
             raise "Should be transaction"
-        return Result(self._backend, res)
+        return Transaction(self._backend, res.id)
 
 

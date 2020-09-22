@@ -19,11 +19,9 @@ class Transaction:
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
             raise "Should be transaction"
-        return Result(self._backend, res)
 
     def rollback(self):
         req = protocol.TransactionRollback(self._id)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
             raise "Should be transaction"
-        return Result(self._backend, res)

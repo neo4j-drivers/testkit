@@ -99,7 +99,7 @@ class TransactionCommit:
     """ Request to run a query in a specified transaction.
     Backend should respond with a Result response or an Error response.
     """
-    def __init__(self, txId, cypher, params):
+    def __init__(self, txId):
         self.txId = txId
 
 

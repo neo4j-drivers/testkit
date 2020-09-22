@@ -38,6 +38,9 @@ TODO: boundaries of strings, arrays, maps
 # Transactions (explicit)
 TODO: commit (persists)
 TODO: rollback (does not persist)
+* Verification that transaction optional parameters are sent on the wire
+  tx metadata, timeout, bookmarks
+  stub/txparamaters.py
 
 
 # Transactional functions
