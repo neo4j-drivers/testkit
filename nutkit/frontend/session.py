@@ -50,17 +50,17 @@ class Session:
             elif isinstance(res, protocol.RetryableDone):
                 return x
 
-    def readTransaction(self, fn, config=None):
+    def readTransaction(self, fn, txMeta=None, timeout=None):
         # Send request to enter transactional read function
-        req = protocol.SessionReadTransaction(self._session.id)
+        req = protocol.SessionReadTransaction(self._session.id, txMeta=txMeta, timeout=timeout)
         return self.processTransaction(req, fn)
 
-    def writeTransaction(self, fn, config=None):
+    def writeTransaction(self, fn, txMeta=None, timeout=None):
         # Send request to enter transactional read function
-        req = protocol.SessionWriteTransaction(self._session.id)
+        req = protocol.SessionWriteTransaction(self._session.id, txMeta=txMeta, timeout=timeout)
         return self.processTransaction(req, fn)
 
-    def beginTransaction(self, cypher, params=None):
+    def beginTransaction(self, txMeta=None, timeout=None):
         req = protocol.SessionBeginTransaction(self._session.id)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):

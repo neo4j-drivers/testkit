@@ -115,24 +115,30 @@ class SessionReadTransaction:
     """ Request to run a retryable read transaction.
     Backend should respond with a RetryableTry response or an Error response.
     """
-    def __init__(self, sessionId):
+    def __init__(self, sessionId, txMeta=None, timeout=None):
         self.sessionId = sessionId
+        self.txMeta = txMeta
+        self.timeout = timeout
 
 
 class SessionWriteTransaction:
     """ Request to run a retryable write transaction.
     Backend should respond with a RetryableTry response or an Error response.
     """
-    def __init__(self, sessionId):
+    def __init__(self, sessionId, txMeta=None, timeout=None):
         self.sessionId = sessionId
+        self.txMeta = txMeta
+        self.timeout = timeout
 
 
 class SessionBeginTransaction:
     """ Request to Begin a transaction.
     Backend should respond with a Transaction response or an Error response.
     """
-    def __init__(self, sessionId):
+    def __init__(self, sessionId, txMeta=None, timeout=None):
         self.sessionId = sessionId
+        self.txMeta = txMeta
+        self.timeout = timeout
 
 
 class ResultNext:
