@@ -19,7 +19,7 @@ class SessionRunDisconnected(unittest.TestCase):
         auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth, userAgent=customUserAgent)
-        self._session = self._driver.session("r")
+        self._session = self._driver.session("w")
 
     def tearDown(self):
         self._session.close()
@@ -71,9 +71,6 @@ class SessionRunDisconnected(unittest.TestCase):
         # Until Go is updated to use PULL with n
         if self._driverName in ["go"]:
             script = "disconnect_on_run_pull_all.script"
-        # Java (and Go) doesn't rely on default access mode
-        if self._driverName in ["java"]:
-            script = "disconnect_on_run_explicit_mode.script"
 
         self._server.start(os.path.join(scripts_path, script))
         step = self._run()
@@ -92,9 +89,6 @@ class SessionRunDisconnected(unittest.TestCase):
         # Until Go is updated to use PULL with n
         if self._driverName in ["go"]:
             script = "disconnect_on_pull_pull_all.script"
-        # Java (and Go) doesn't rely on default access mode
-        if self._driverName in ["java"]:
-            script = "disconnect_on_pull_explicit_mode.script"
 
         self._server.start(os.path.join(scripts_path, script))
         step = self._run()
