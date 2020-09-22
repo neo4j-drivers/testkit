@@ -18,7 +18,7 @@ class StubServer:
         if self._process:
             raise Exception("Stub server in use")
 
-        if platform.system() is 'Windows':
+        if platform.system() == "Windows":
             pythonCommand = "python"
         else:
             pythonCommand = "python3"

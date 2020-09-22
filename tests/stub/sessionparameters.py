@@ -40,7 +40,7 @@ class SessionRunParameters(unittest.TestCase):
 
     def test_accessmode_read(self):
         script = "sessionrun_accessmode_read.script"
-        if self._driverName in ["go"]:
+        if self._driverName in ["go", "dotnet"]:
             script = "sessionrun_accessmode_read_pull_all.script"
         elif not self._driverName in ["java"]:
             self.skipTest("Session accessmode not implemented in backend")
@@ -60,7 +60,7 @@ class SessionRunParameters(unittest.TestCase):
 
     def test_bookmarks(self):
         script = "sessionrun_bookmarks.script"
-        if self._driverName in ["go"]:
+        if self._driverName in ["go", "dotnet"]:
             script = "sessionrun_bookmarks_pull_all.script"
         else: # not self._driverName in ["java"]:
             self.skipTest("Session bookmarks not implemented in backend")
