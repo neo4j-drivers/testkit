@@ -1,3 +1,4 @@
+
 import unittest, os
 
 from tests.shared import *
@@ -14,7 +15,7 @@ import nutkit.protocol as types
 #   Transaction meta data + write mode
 #   Transaction timeout + write mode
 #   Read mode + transaction meta data + transaction timeout + bookmarks
-class SessionRunParameters(unittest.TestCase):
+class TxBeginParameters(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._server = StubServer(9001)
@@ -39,62 +40,44 @@ class SessionRunParameters(unittest.TestCase):
             session.close()
 
     def test_accessmode_read(self):
-        script = "sessionrun_accessmode_read.script"
-        if self._driverName in ["go"]:
-            script = "sessionrun_accessmode_read_pull_all.script"
-        elif not self._driverName in ["java"]:
+        if not self._driverName in ["go", "java"]:
             self.skipTest("Session accessmode not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(os.path.join(scripts_path, "sessionrun_accessmode_read.script"))
         self._run("r")
         self._server.done()
 
     def test_accessmode_write(self):
-        script = "sessionrun_accessmode_write.script"
-        if self._driverName in ["go"]:
-            script = "sessionrun_accessmode_write_pull_all.script"
-        #elif not self._driverName in ["java"]:
-        #    self.skipTest("Session accessmode not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        if not self._driverName in ["go", "java"]:
+            self.skipTest("Session accessmode not implemented in backend")
+        self._server.start(os.path.join(scripts_path, "sessionrun_accessmode_write.script"))
         self._run("w")
         self._server.done()
 
     def test_bookmarks(self):
-        script = "sessionrun_bookmarks.script"
-        if self._driverName in ["go"]:
-            script = "sessionrun_bookmarks_pull_all.script"
-        else: # not self._driverName in ["java"]:
+        if not self._driverName in ["go"]:
             self.skipTest("Session bookmarks not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(os.path.join(scripts_path, "sessionrun_bookmarks.script"))
         self._run("w", bookmarks=["b1", "b2"])
         self._server.done()
 
     def test_txmeta(self):
-        script = "sessionrun_txmeta.script"
-        if self._driverName in ["go"]:
-            script = "sessionrun_txmeta_pull_all.script"
-        else: # not self._driverName in ["java"]:
-            self.skipTest("Session txmeta not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        if not self._driverName in ["go"]:
+            self.skipTest("Session tx metadata not implemented in backend")
+        self._server.start(os.path.join(scripts_path, "sessionrun_txmeta.script"))
         self._run("w", txMeta={"akey": "aval"})
         self._server.done()
 
     def test_timeout(self):
-        script = "sessionrun_timeout.script"
-        if self._driverName in ["go"]:
-            script = "sessionrun_timeout_pull_all.script"
-        else: # not self._driverName in ["java"]:
+        if not self._driverName in ["go"]:
             self.skipTest("Session timeout not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(os.path.join(scripts_path, "sessionrun_timeout.script"))
         self._run("w", timeout=17)
         self._server.done()
 
     def test_combined(self):
-        script = "sessionrun_combined_params.script"
-        if self._driverName in ["go"]:
-            script = "sessionrun_combined_params_pull_all.script"
-        else: # not self._driverName in ["java"]:
-            self.skipTest("Session parameters not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        if not self._driverName in ["go"]:
+            self.skipTest("Session params not implemented in backend")
+        self._server.start(os.path.join(scripts_path, "sessionrun_combined_params.script"))
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)
         self._server.done()
 

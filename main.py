@@ -127,6 +127,7 @@ if __name__ == "__main__":
             driverRepo: "/driver", 
             artifactsPath: "/artifacts"
         },
+        portMap={ 9876: 9876, }, # For convenience when debugging
         network="the-bridge",
         workingFolder="/driver")
 

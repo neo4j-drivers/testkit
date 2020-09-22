@@ -16,7 +16,7 @@ class Transport(unittest.TestCase):
         auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth)
-        self._session = self._driver.session("r")
+        self._session = self._driver.session("w")
 
     def test_noop(self):
         # Verifies that no op messages sent on bolt chunking layer are ignored. The no op messages
@@ -25,8 +25,6 @@ class Transport(unittest.TestCase):
         script = "noop.script"
         if self._driverName in ["go"]:
             script = "noop_pull_all.script"
-        if self._driverName in ["java"]:
-            script = "noop_explicit_mode.script"
         self._server.start(os.path.join(scripts_path, script))
         result = self._session.run("RETURN 1 as n")
         record = result.next()

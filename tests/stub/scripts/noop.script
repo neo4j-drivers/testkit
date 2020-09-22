@@ -12,5 +12,5 @@ S: SUCCESS {"fields": ["n"]}
    <NOOP>
    <NOOP>
    <NOOP>
-   SUCCESS {"type": "r"}
+   SUCCESS {"type": "w"}
    <EXIT>

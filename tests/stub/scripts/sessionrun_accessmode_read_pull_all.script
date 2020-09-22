@@ -3,10 +3,9 @@
 !: AUTO GOODBYE
 !: AUTO RESET
 
-C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
+C: RUN "RETURN 1 as n" {} {"mode": "r"}
+   PULL {"n": -1}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
-   SUCCESS {"type": "w"}
+   SUCCESS {"type": "r"}
    <EXIT>
-

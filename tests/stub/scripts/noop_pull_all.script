@@ -1,7 +1,7 @@
 !: BOLT 4.0
 !: AUTO HELLO
 
-C: RUN "RETURN 1 as n" {} {"mode": "r"}
+C: RUN "RETURN 1 as n" {} {}
 C: PULL {"n": -1}
 S: SUCCESS {"fields": ["n"]}
    <NOOP>
@@ -10,5 +10,5 @@ S: SUCCESS {"fields": ["n"]}
    <NOOP>
    <NOOP>
    <NOOP>
-   SUCCESS {"type": "r"}
+   SUCCESS {"type": "w"}
    <EXIT>
