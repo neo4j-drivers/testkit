@@ -70,7 +70,7 @@ class SessionRunParameters(unittest.TestCase):
         script = "sessionrun_txmeta.script"
         if self._driverName in ["go"]:
             script = "sessionrun_txmeta_pull_all.script"
-        else: # not self._driverName in ["java"]:
+        elif self._driverName not in ["dotnet"]:
             self.skipTest("Session txmeta not implemented in backend")
         self._server.start(os.path.join(scripts_path, script))
         self._run("w", txMeta={"akey": "aval"})
@@ -80,7 +80,7 @@ class SessionRunParameters(unittest.TestCase):
         script = "sessionrun_timeout.script"
         if self._driverName in ["go"]:
             script = "sessionrun_timeout_pull_all.script"
-        else: # not self._driverName in ["java"]:
+        elif self._driverName not in ["dotnet"]:
             self.skipTest("Session timeout not implemented in backend")
         self._server.start(os.path.join(scripts_path, script))
         self._run("w", timeout=17)
@@ -90,7 +90,7 @@ class SessionRunParameters(unittest.TestCase):
         script = "sessionrun_combined_params.script"
         if self._driverName in ["go"]:
             script = "sessionrun_combined_params_pull_all.script"
-        else: # not self._driverName in ["java"]:
+        elif self._driverName not in ["dotnet"]:
             self.skipTest("Session parameters not implemented in backend")
         self._server.start(os.path.join(scripts_path, script))
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)
