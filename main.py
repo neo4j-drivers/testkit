@@ -163,20 +163,23 @@ if __name__ == "__main__":
     # Start runner container, responsible for running the unit tests
     # Use Go driver image for this since we need to build TLS server and use that in the runner.
     runnerImage = ensure_driver_image(thisPath, testkitBranch, "go")
-    inTeamCity = os.environ.get("TEST_IN_TEAMCITY")
+    runnerEnv = {"PYTHONPATH": "/testkit" } # To use modules
+    # Copy TEST_ variables that might have been set explicit
+    for varName in os.environ:
+        if varName.startswith("TEST_"):
+            runnerEnv[varName] = os.environ[varName]
+    # Override with settings that must have a known value
+    runnerEnv.update({
+        "TEST_NEO4J_HOST":   "neo4jserver",  # Hostname of Docker container runnng db
+        "TEST_NEO4J_USER":   "neo4j",
+        "TEST_NEO4J_PASS":   "pass",
+        "TEST_BACKEND_HOST": "driver",       # Runner connects to backend in driver container
+        "TEST_STUB_HOST":    "runner",       # Driver connects to me
+    })
     runnerContainer = docker.run(runnerImage, "runner",
         command=["python3", "/testkit/driver/bootstrap.py"],
         mountMap={ thisPath: "/testkit" },
-        envMap={
-            "PYTHONPATH":        "/testkit",     # To use modules
-            env_driver_name:     driverName,     # To skip tests based on driver
-            "TEST_NEO4J_HOST":   "neo4jserver",  # Hostname of Docker container runnng db
-            "TEST_NEO4J_USER":   "neo4j",
-            "TEST_NEO4J_PASS":   "pass",
-            "TEST_BACKEND_HOST": "driver",       # Runner connects to backend in driver container
-            "TEST_STUB_HOST":    "runner",       # Driver connects to me
-            "TEST_IN_TEAMCITY":  inTeamCity,     # To configure test runner properly
-        },
+        envMap=runnerEnv,
         network="the-bridge",
         aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
 

@@ -74,7 +74,10 @@ class Backend:
                 in_response = True
             elif line == "#response end":
                 if debug:
-                    print("Response: %s" % response)
+                    try:
+                        print("Response: %s" % response)
+                    except UnicodeEncodeError:
+                        print("Response: <invalid unicode>")
                 try:
                     res = json.loads(response, object_hook=decode_hook)
                 except json.decoder.JSONDecodeError as e:
