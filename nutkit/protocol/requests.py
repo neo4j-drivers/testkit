@@ -85,32 +85,6 @@ class SessionRun:
         self.timeout = timeout
 
 
-class TransactionRun:
-    """ Request to run a query in a specified transaction.
-    Backend should respond with a Result response or an Error response.
-    """
-    def __init__(self, txId, cypher, params):
-        self.txId = txId
-        self.cypher = cypher
-        self.params = params
-
-
-class TransactionCommit:
-    """ Request to run a query in a specified transaction.
-    Backend should respond with a Result response or an Error response.
-    """
-    def __init__(self, txId):
-        self.txId = txId
-
-
-class TransactionRollback:
-    """ Request to run a query in a specified transaction.
-    Backend should respond with a Result response or an Error response.
-    """
-    def __init__(self, txId, cypher, params):
-        self.txId = txId
-
-
 class SessionReadTransaction:
     """ Request to run a retryable read transaction.
     Backend should respond with a RetryableTry response or an Error response.
@@ -139,6 +113,42 @@ class SessionBeginTransaction:
         self.sessionId = sessionId
         self.txMeta = txMeta
         self.timeout = timeout
+
+
+class SessionLastBookmarks:
+    """ Request for last bookmarks on a session.
+    Backend should respond with a Bookmarks response or an Error response.
+    If there are no bookmarks in the session, the backend should return a Bookmark with
+    empty array.
+    """
+    def __init__(self, sessionId):
+        self.sessionId = sessionId
+
+
+class TransactionRun:
+    """ Request to run a query in a specified transaction.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
+        self.cypher = cypher
+        self.params = params
+
+
+class TransactionCommit:
+    """ Request to run a query in a specified transaction.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, txId):
+        self.txId = txId
+
+
+class TransactionRollback:
+    """ Request to run a query in a specified transaction.
+    Backend should respond with a Result response or an Error response.
+    """
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
 
 
 class ResultNext:

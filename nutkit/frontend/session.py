@@ -64,7 +64,13 @@ class Session:
         req = protocol.SessionBeginTransaction(self._session.id, txMeta=txMeta, timeout=timeout)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
-            raise "Should be transaction"
+            raise "Should be Transaction"
         return Transaction(self._backend, res.id)
 
+    def lastBookmarks(self):
+        req = protocol.SessionLastBookmarks(self._session.id)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Bookmarks):
+            raise "Should be Bookmarks"
+        return res.bookmarks
 

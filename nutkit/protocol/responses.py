@@ -108,6 +108,13 @@ class NullRecord:
         return isinstance(other, NullRecord)
 
 
+class Bookmarks:
+    """ Represents an array of bookmarks.
+    """
+    def __init__(self, bookmarks):
+        self.bookmarks = bookmarks
+
+
 class RetryableTry:
     """ Represents a retryable transaction on the backend. The backend has created a transaction
     and will enter retryable function on the backend, all further requests will be applied through
