@@ -42,7 +42,7 @@ class SessionRunParameters(unittest.TestCase):
         script = "sessionrun_accessmode_read.script"
         if self._driverName in ["go"]:
             script = "sessionrun_accessmode_read_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        elif self._driverName not in ["java", "dotnet"]:
             self.skipTest("Session accessmode not implemented in backend")
         self._server.start(os.path.join(scripts_path, script))
         self._run("r")
