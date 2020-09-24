@@ -17,7 +17,6 @@ Environment variables:
 ```console
 export TEST_DRIVER_NAME=go
 export TEST_DRIVER_REPO=/home/clones/neo4j/neo4j-go-driver
-export TEST_DRIVER_IMAGE=go-driver:latest
 python3 main.py
 ```
 
