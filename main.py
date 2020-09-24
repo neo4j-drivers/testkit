@@ -196,28 +196,38 @@ if __name__ == "__main__":
         { "image_name": "neo4j:4.0", "suite_name": "4.0" },
         { "image_name": "neo4j:4.1", "suite_name": "4.1" },
     ]
+    username = "neo4j"
+    password = "pass"
+    port = 7687
     for ix in neo4jservers:
         # Start a Neo4j server
         print("Starting neo4j server")
         neo4jContainer = docker.run(ix["image_name"], neo4jserver,
             mountMap={os.path.join(neo4jArtifactsPath, "logs"): "/logs"},
-            envMap={"NEO4J_dbms_connector_bolt_advertised__address": "%s:7687" % neo4jserver, "NEO4J_AUTH": "%s/%s" % ("neo4j", "pass")},
+            envMap={"NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (neo4jserver, port), "NEO4J_AUTH": "%s/%s" % (username, password)},
             network="the-bridge")
         print("Neo4j container server started, waiting for port to be available")
 
         # Wait until server is listening before running tests
         # Use driver container to check for Neo4j availability since connect will be done from there
-        driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", neo4jserver, "%d" % 7687])
+        driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", neo4jserver, "%d" % port])
         print("Neo4j in container listens")
 
         # Run the actual test suite within the runner container. The tests will connect to driver
         # backend and configure drivers to connect to the neo4j instance.
         runnerContainer.exec(["python3", "-m", "tests.neo4j.suites", ix["suite_name"]])
 
+        # Run the stress test suire within the driver container.
+        # The stress test suite uses threading and put a bigger load on the driver than the
+        # integration tests do and are therefore written in the driver language.
+        print("Building and running stress tests...")
+        driverContainer.exec(["python3", "/testkit/driver/%s/stress.py" % driverName, "neo4j://%s:%d" % (neo4jserver, port), username, password])
+
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any pending connections
         # detected here should indicate connection leakage in the driver.
-        driverContainer.exec(["python3", "/testkit/driver/assert_conns_closed.py", neo4jserver, "%d" % 7687])
+        print("Checking that connections are closed to the database")
+        driverContainer.exec(["python3", "/testkit/driver/assert_conns_closed.py", neo4jserver, "%d" % port])
 
         subprocess.run([
             "docker", "stop", "neo4jserver"])
