@@ -190,47 +190,55 @@ if __name__ == "__main__":
     # we start a database server we should use a different folder.
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
     os.makedirs(neo4jArtifactsPath)
-    neo4jserver = "neo4jserver"
+    neo4jServerHostname = "neo4jserver"
 
-    neo4jservers = [
-        { "image_name": "neo4j:4.0", "suite_name": "4.0" },
-        { "image_name": "neo4j:4.1", "suite_name": "4.1" },
+    neo4jServers = [
+        { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0" },
+        { "version": "4.1", "edition": "community", "cluster": False, "suite": "4.1" },
     ]
     username = "neo4j"
     password = "pass"
     port = 7687
-    for ix in neo4jservers:
+    for neo4jServer in neo4jServers:
+        # Construct Docker image name
+        imageName = "neo4j:%s" % (neo4jServer["version"])
+        if neo4jServer["edition"] != "community":
+            imageName = imageName + "-" + neo4jServer["edition"]
+
         # Start a Neo4j server
         print("Starting neo4j server")
-        neo4jContainer = docker.run(ix["image_name"], neo4jserver,
+        neo4jContainer = docker.run(imageName, neo4jServerHostname,
             mountMap={os.path.join(neo4jArtifactsPath, "logs"): "/logs"},
-            envMap={"NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (neo4jserver, port), "NEO4J_AUTH": "%s/%s" % (username, password)},
+            envMap={"NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (neo4jServerHostname, port), "NEO4J_AUTH": "%s/%s" % (username, password)},
             network="the-bridge")
         print("Neo4j container server started, waiting for port to be available")
 
         # Wait until server is listening before running tests
         # Use driver container to check for Neo4j availability since connect will be done from there
-        driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", neo4jserver, "%d" % port])
+        driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", neo4jServerHostname, "%d" % port])
         print("Neo4j in container listens")
 
         # Run the actual test suite within the runner container. The tests will connect to driver
         # backend and configure drivers to connect to the neo4j instance.
-        runnerContainer.exec(["python3", "-m", "tests.neo4j.suites", ix["suite_name"]])
+        runnerContainer.exec(["python3", "-m", "tests.neo4j.suites", neo4jServer["suite"]])
 
-        # Run the stress test suire within the driver container.
+        # Run the stress test suite within the driver container.
         # The stress test suite uses threading and put a bigger load on the driver than the
         # integration tests do and are therefore written in the driver language.
         print("Building and running stress tests...")
-        driverContainer.exec(["python3", "/testkit/driver/%s/stress.py" % driverName, "neo4j://%s:%d" % (neo4jserver, port), username, password])
+        driverContainer.exec(["python3", "/testkit/driver/%s/stress.py" % driverName, "neo4j://%s:%d" % (neo4jServerHostname, port), username, password])
+
+        # Run driver native integration tests within the driver container.
+        driverContainer.exec(["python3", "/testkit/driver/%s/integration.py" % driverName, "neo4j://%s:%d" % (neo4jServerHostname, port), username, password])
 
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any pending connections
         # detected here should indicate connection leakage in the driver.
         print("Checking that connections are closed to the database")
-        driverContainer.exec(["python3", "/testkit/driver/assert_conns_closed.py", neo4jserver, "%d" % port])
+        driverContainer.exec(["python3", "/testkit/driver/assert_conns_closed.py", neo4jServerHostname, "%d" % port])
 
         subprocess.run([
-            "docker", "stop", "neo4jserver"])
+            "docker", "stop", neo4jServerHostname])
 
     """
     Stub tests
