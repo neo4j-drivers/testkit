@@ -197,19 +197,25 @@ if __name__ == "__main__":
 
     neo4jServers = [
         { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0" },
-        { "version": "4.1", "edition": "community", "cluster": False, "suite": "4.1" },
+        { "version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1" },
     ]
     for neo4jServer in neo4jServers:
         # Construct Docker image name
         imageName = "neo4j:%s" % (neo4jServer["version"])
+        # Environment variables passed to the Neo4j docker container
+        envMap={
+            "NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (neo4jServerHostname, port),
+            "NEO4J_AUTH": "%s/%s" % (username, password),
+        }
         if neo4jServer["edition"] != "community":
             imageName = imageName + "-" + neo4jServer["edition"]
+            envMap["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
 
         # Start a Neo4j server
         print("Starting neo4j server")
         neo4jContainer = docker.run(imageName, neo4jServerHostname,
             mountMap={os.path.join(neo4jArtifactsPath, "logs"): "/logs"},
-            envMap={"NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (neo4jServerHostname, port), "NEO4J_AUTH": "%s/%s" % (username, password)},
+            envMap=envMap,
             network="the-bridge")
         print("Neo4j container server started, waiting for port to be available")
 
@@ -230,6 +236,7 @@ if __name__ == "__main__":
             "TEST_NEO4J_SCHEME":  "neo4j",
             "TEST_NEO4J_PORT":    port,
             "TEST_NEO4J_EDITION": neo4jServer["edition"],
+            "TEST_NEO4J_VERSION": neo4jServer["version"],
         }
         if neo4jServer["cluster"]:
             driverEnv["TEST_NEO4J_ISCLUSTER"] = 1
