@@ -45,7 +45,7 @@ class SessionRunParameters(unittest.TestCase):
         elif self._driverName not in ["java", "dotnet"]:
             self.skipTest("Session accessmode not implemented in backend")
 
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("r")
         self._server.done()
 
@@ -53,7 +53,7 @@ class SessionRunParameters(unittest.TestCase):
         script = "sessionrun_accessmode_write.script"
         if self._driverName in ["go"]:
             script = "sessionrun_accessmode_write_pull_all.script"
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w")
         self._server.done()
 
@@ -63,7 +63,7 @@ class SessionRunParameters(unittest.TestCase):
             script = "sessionrun_bookmarks_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Session bookmarks not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w", bookmarks=["b1", "b2"])
         self._server.done()
 
@@ -73,7 +73,7 @@ class SessionRunParameters(unittest.TestCase):
             script = "sessionrun_txmeta_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Session txmeta not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w", txMeta={"akey": "aval"})
         self._server.done()
 
@@ -83,7 +83,7 @@ class SessionRunParameters(unittest.TestCase):
             script = "sessionrun_timeout_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Session timeout not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w", timeout=17)
         self._server.done()
 
@@ -93,7 +93,7 @@ class SessionRunParameters(unittest.TestCase):
             script = "sessionrun_combined_params_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Session parameters not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)
         self._server.done()
 

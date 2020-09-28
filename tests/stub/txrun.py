@@ -29,7 +29,7 @@ class TxRun(unittest.TestCase):
         elif self._driverName not in ["dotnet"]:
             self.skipTest("session.lastBookmark not implemented in backend")
 
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         session = self._driver.session("w")
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")

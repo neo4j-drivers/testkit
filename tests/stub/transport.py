@@ -6,6 +6,24 @@ from tests.stub.shared import *
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
+script = """
+!: BOLT $bolt_version
+!: AUTO RESET
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: RUN "RETURN 1 as n" {} {}
+   PULL { "n": $fetch_size }
+S: SUCCESS {"fields": ["n"]}
+   <NOOP>
+   <NOOP>
+   RECORD [1]
+   <NOOP>
+   <NOOP>
+   <NOOP>
+   SUCCESS {"type": "w"}
+   <EXIT>
+"""
 
 # Low-level network transport tests
 class Transport(unittest.TestCase):
@@ -22,10 +40,11 @@ class Transport(unittest.TestCase):
         # Verifies that no op messages sent on bolt chunking layer are ignored. The no op messages
         # are sent from server as a way to notify that the connection is still up.
         # Bolt 4.1 >
-        script = "noop.script"
+        fetch_size = 1000
+        bolt_version = "4.1"
         if self._driverName in ["go"]:
-            script = "noop_pull_all.script"
-        self._server.start(os.path.join(scripts_path, script))
+            fetch_size = -1
+        self._server.start(script=script, vars = {"$bolt_version": bolt_version, "$fetch_size": fetch_size})
         result = self._session.run("RETURN 1 as n")
         record = result.next()
         nilrec = result.next()

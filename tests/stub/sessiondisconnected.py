@@ -54,7 +54,7 @@ class SessionRunDisconnected(unittest.TestCase):
         # hello message.
         if not self._driverName in ["go"]:
             self.skipTest("No support for custom user-agent in testkit backend")
-        self._server.start(os.path.join(scripts_path, "disconnect_on_hello.script"))
+        self._server.start(path=os.path.join(scripts_path, "disconnect_on_hello.script"))
         step = self._run()
         self._server.done()
 
@@ -72,7 +72,7 @@ class SessionRunDisconnected(unittest.TestCase):
         if self._driverName in ["go"]:
             script = "disconnect_on_run_pull_all.script"
 
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         step = self._run()
         self._server.done()
 
@@ -90,7 +90,7 @@ class SessionRunDisconnected(unittest.TestCase):
         if self._driverName in ["go"]:
             script = "disconnect_on_pull_pull_all.script"
 
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         step = self._run()
         self._server.done()
 

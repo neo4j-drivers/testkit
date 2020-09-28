@@ -11,7 +11,7 @@ class Routing(unittest.TestCase):
         self._backend = new_backend()
         self._driverName = get_driver_name()
         self._routingServer = StubServer(9001)
-        self._routingServer.start(os.path.join(scripts_path, "router.script"))
+        self._routingServer.start(path=os.path.join(scripts_path, "router.script"))
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
         uri = "neo4j://%s" % self._routingServer.address
@@ -31,7 +31,7 @@ class Routing(unittest.TestCase):
         script = "sessionrun_accessmode_read.script"
         if self._driverName in ["go"]:
             script = "sessionrun_accessmode_read_pull_all.script"
-        self._readServer.start(os.path.join(scripts_path, script))
+        self._readServer.start(path=os.path.join(scripts_path, script))
         session = self._driver.session('r')
         session.run("RETURN 1 as n")
         session.close()
@@ -41,7 +41,7 @@ class Routing(unittest.TestCase):
         script = "txbegin_accessmode_read.script"
         if self._driverName in ["go"]:
             script = "txbegin_accessmode_read_pull_all.script"
-        self._readServer.start(os.path.join(scripts_path, script))
+        self._readServer.start(path=os.path.join(scripts_path, script))
         session = self._driver.session('r')
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
@@ -53,7 +53,7 @@ class Routing(unittest.TestCase):
         script = "sessionrun_accessmode_write.script"
         if self._driverName in ["go"]:
             script = "sessionrun_accessmode_write_pull_all.script"
-        self._writeServer.start(os.path.join(scripts_path, script))
+        self._writeServer.start(path=os.path.join(scripts_path, script))
         session = self._driver.session('w')
         session.run("RETURN 1 as n")
         session.close()
@@ -63,7 +63,7 @@ class Routing(unittest.TestCase):
         script = "txbegin_accessmode_write.script"
         if self._driverName in ["go"]:
             script = "txbegin_accessmode_write_pull_all.script"
-        self._writeServer.start(os.path.join(scripts_path, script))
+        self._writeServer.start(path=os.path.join(scripts_path, script))
         session = self._driver.session('w')
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")

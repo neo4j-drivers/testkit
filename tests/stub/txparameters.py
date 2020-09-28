@@ -45,7 +45,7 @@ class TxBeginParameters(unittest.TestCase):
             script = "txbegin_accessmode_read_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin accessmode not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("r")
         self._server.done()
 
@@ -55,7 +55,7 @@ class TxBeginParameters(unittest.TestCase):
             script = "txbegin_accessmode_write_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin accessmode not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w")
         self._server.done()
 
@@ -65,7 +65,7 @@ class TxBeginParameters(unittest.TestCase):
             script = "txbegin_bookmarks_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin bookmarks not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w", bookmarks=["b1", "b2"])
         self._server.done()
 
@@ -75,7 +75,7 @@ class TxBeginParameters(unittest.TestCase):
             script = "txbegin_txmeta_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin meta not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w", txMeta={"akey": "aval"})
         self._server.done()
 
@@ -85,7 +85,7 @@ class TxBeginParameters(unittest.TestCase):
             script = "txbegin_timeout_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin timeout not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("w", timeout=17)
         self._server.done()
 
@@ -95,7 +95,7 @@ class TxBeginParameters(unittest.TestCase):
             script = "txbegin_combined_params_pull_all.script"
         elif self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin params not implemented in backend")
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)
         self._server.done()
 

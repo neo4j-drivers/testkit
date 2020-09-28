@@ -23,7 +23,7 @@ class TestRetry(unittest.TestCase):
         if self._driverName in ["go"]:
             # Until Go is updated to use PULL with n
             script = "retry_read_v3.script"
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
 
         num_retries = 0
         def once(tx):
@@ -55,7 +55,7 @@ class TestRetry(unittest.TestCase):
             # Java requires an extra reset
             script = "retry_read_twice_java.script"
 
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
 
         num_retries = 0
         def twice(tx):
@@ -84,7 +84,7 @@ class TestRetry(unittest.TestCase):
         if not self._driverName in ["go"]:
             self.skipTest("Backend missing support for SessionWriteTransaction")
         script = "retry_commit_disconnect.script"
-        self._server.start(os.path.join(scripts_path, script))
+        self._server.start(path=os.path.join(scripts_path, script))
         num_retries = 0
         def once(tx):
             nonlocal num_retries

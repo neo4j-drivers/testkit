@@ -3,7 +3,7 @@ Shared utilities for writing stub tests
 
 Uses environment variables for configuration:
 """
-import subprocess, os, time, io, platform
+import subprocess, os, time, io, platform, tempfile
 
 
 class StubServer:
@@ -13,8 +13,7 @@ class StubServer:
         self.address = "%s:%d" % (address, port)
         self.port = port
 
-    def start(self, script):
-        print("Starting stubserver on %s with script %s" % (self.address, script))
+    def start(self, path=None, script=None, vars={}):
         if self._process:
             raise Exception("Stub server in use")
 
@@ -23,17 +22,28 @@ class StubServer:
         else:
             pythonCommand = "python3"
 
-        self._process = subprocess.Popen([pythonCommand,
-                                          "-m",
-                                          "boltstub",
-                                          "-l",
-                                          "0.0.0.0:%d" % self.port,
-                                          "-v",
-                                          script],
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         close_fds=True,
-                                         encoding='utf-8')
+        if script:
+            tempdir = tempfile.gettempdir()
+            path = os.path.join(tempdir, "temp.script")
+            print("Generating script file in %s", path)
+            for v in vars:
+                script = script.replace(v, str(vars[v]))
+            with open(path, "w") as f:
+                f.write(script)
+
+        if path:
+            print("Starting stubserver on %s with script %s" % (self.address, path))
+            self._process = subprocess.Popen([pythonCommand,
+                                              "-m",
+                                              "boltstub",
+                                              "-l",
+                                              "0.0.0.0:%d" % self.port,
+                                              "-v",
+                                              path],
+                                             stdout=subprocess.PIPE,
+                                             stderr=subprocess.PIPE,
+                                             close_fds=True,
+                                             encoding='utf-8')
 
         # Wait until something is written to know it started, requires -v
         self._process.stdout.readline()
