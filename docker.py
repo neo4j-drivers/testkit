@@ -4,10 +4,12 @@ class Container:
     def __init__(self, name):
         self.name = name
 
-    def exec(self, command, workdir=None):
+    def exec(self, command, workdir=None, envMap={}):
         cmd  = ["docker", "exec"]
         if workdir:
             cmd.extend(["-w", workdir])
+        for k in envMap:
+            cmd.extend(["-e", "%s=%s" % (k, envMap[k])])
         cmd.append(self.name)
         cmd.extend(command)
         subprocess.run(cmd, check=True)
