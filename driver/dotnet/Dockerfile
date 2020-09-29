@@ -11,6 +11,7 @@ RUN apt update \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV PYTHON=python3
+ENV DOTNET_DRIVER_USING_LOCAL_SERVER=true
 
 # Install our own CAs on the image.
 # Assumes Linux Debian based image.
