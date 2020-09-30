@@ -23,11 +23,11 @@ if __name__ == "__main__":
     # environment flag...(but needs to be passed to the container somehow)
     os.environ.update({"TEAMCITY_PROJECT_NAME": "integrationtests"})
 
-    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~Examples"])
-    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Direct"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "(DisplayName~IntegrationTests.Direct) & (DisplayName\!~Certifictate"])
     run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Internals"])
     run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Reactive"])
     run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Routing"])
     run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Types"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~Examples"])
 
     os.chdir(wd)
