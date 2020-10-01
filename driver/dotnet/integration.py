@@ -39,7 +39,7 @@ if __name__ == "__main__":
     except Exception as e:
         print("Failed 1 or more tests in IntegrationTests.Reactive")
 
-    """try:
+    try:
         run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Routing"])
     except Exception as e:
         print("Failed 1 or more tests in IntegrationTests.Routing")
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     try:
         run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~Examples"])
     except Exception as e:
-        print("Failed 1 or more tests in IntegationTests.Examples")"""
+        print("Failed 1 or more tests in IntegationTests.Examples")
 
     os.chdir(wd)
