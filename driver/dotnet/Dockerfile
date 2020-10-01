@@ -12,6 +12,7 @@ RUN apt update \
 
 ENV PYTHON=python3
 ENV DOTNET_DRIVER_USING_LOCAL_SERVER=true
+ENV TEST_NEO4J_USING_TESTKIT=true
 
 # Install our own CAs on the image.
 # Assumes Linux Debian based image.

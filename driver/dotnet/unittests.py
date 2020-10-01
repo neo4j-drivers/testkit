@@ -1,12 +1,11 @@
 
 """
-Executed in Go driver container.
+Executed in dotnet driver container.
 Responsible for running unit tests.
 Assumes driver has been setup by build script prior to this.
 """
 import os, subprocess
 
-root_package = "github.com/neo4j/neo4j-dotnet-driver/neo4j"
 
 def run(args):
     subprocess.run(
@@ -22,3 +21,4 @@ if __name__ == "__main__":
     os.environ.update({"TEAMCITY_PROJECT_NAME":"unittests"})
     run(["dotnet", "test", "Neo4j.Driver.Tests.csproj"])
     os.chdir(wd)
+
