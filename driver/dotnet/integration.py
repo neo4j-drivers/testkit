@@ -11,7 +11,7 @@ global failFlag
 def run(args):
     try:
         subprocess.run(args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
-    except Exception e:
+    except Exception :
         failedFlag = True
 
 
