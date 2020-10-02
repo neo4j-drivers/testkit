@@ -9,7 +9,7 @@ import os, subprocess
 global failFlag
 
 def run(args):
-    try
+    try:
         subprocess.run(args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
     except Exception e:
         failedFlag = True
