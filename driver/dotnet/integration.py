@@ -6,10 +6,14 @@ Assumes driver has been setup by build script prior to this.
 """
 import os, subprocess
 
+global failFlag
 
 def run(args):
-    subprocess.run(
-        args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
+    try
+        subprocess.run(args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
+    except Exception e:
+        failedFlag = True
+
 
 
 if __name__ == "__main__":
@@ -23,35 +27,15 @@ if __name__ == "__main__":
     # environment flag...(but needs to be passed to the container somehow)
     os.environ.update({"TEAMCITY_PROJECT_NAME": "integrationtests"})
 
-    try:
-        run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter",
-             "DisplayName~IntegrationTests.Internals"])
-    except Exception as e:
-        print("Failed 1 or more tests in IntegrationTests.Internals")
-
-    try:
-        run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Direct"])
-    except Exception as e:
-        print("Failed 1 or more tests in IntegrationTests.Direct")
-
-    try:
-        run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Reactive"])
-    except Exception as e:
-        print("Failed 1 or more tests in IntegrationTests.Reactive")
-
-    try:
-        run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Routing"])
-    except Exception as e:
-        print("Failed 1 or more tests in IntegrationTests.Routing")
-
-    try:
-        run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Types"])
-    except Exception as e:
-        print("Failed 1 or more tests in IntegrationTests.Types")
-
-    try:
-        run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~Examples"])
-    except Exception as e:
-        print("Failed 1 or more tests in IntegationTests.Examples")
+    failFlag = False
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Internals"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Direct"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Reactive"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Routing"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~IntegrationTests.Types"])
+    run(["dotnet", "test", "Neo4j.Driver.Tests.Integration.csproj", "--filter", "DisplayName~Examples"])
 
     os.chdir(wd)
+
+    if failFlag:
+        os.exit(1)
