@@ -11,6 +11,14 @@ from tests.testenv import get_test_result_class, begin_test_suite, end_test_suit
 loader = unittest.TestLoader()
 
 """
+Suite for Neo4j 3.5 single instance enterprise edition
+"""
+single_enterprise_neo4j3x5 = unittest.TestSuite()
+single_enterprise_neo4j3x5.addTests(loader.loadTestsFromModule(datatypes))
+single_enterprise_neo4j3x5.addTests(loader.loadTestsFromModule(sessionrun))
+single_enterprise_neo4j3x5.addTests(loader.loadTestsFromModule(authentication))
+
+"""
 Suite for Neo4j 4.0 single instance community edition
 """
 single_community_neo4j4x0 = unittest.TestSuite()
@@ -33,6 +41,8 @@ if __name__ == "__main__":
         sys.exit(-10)
     name = sys.argv[1]
     suite = None
+    if   name == "3.5":
+        suite = single_enterprise_neo4j3x5
     if   name == "4.0":
         suite = single_community_neo4j4x0
     elif name == "4.1":

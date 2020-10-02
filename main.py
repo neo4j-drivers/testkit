@@ -196,8 +196,9 @@ if __name__ == "__main__":
     os.makedirs(neo4jArtifactsPath)
 
     neo4jServers = [
-        { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0" },
-        { "version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1" },
+        { "version": "3.5", "edition": "enterprise", "cluster": False, "suite": "3.5", "scheme": "bolt" },
+        { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0", "scheme": "neo4j" },
+        { "version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1", "scheme": "neo4j" },
     ]
     for neo4jServer in neo4jServers:
         # Construct Docker image name
@@ -233,7 +234,7 @@ if __name__ == "__main__":
             "TEST_NEO4J_HOST":    neo4jServerHostname,
             "TEST_NEO4J_USER":    username,
             "TEST_NEO4J_PASS":    password,
-            "TEST_NEO4J_SCHEME":  "neo4j",
+            "TEST_NEO4J_SCHEME":  neo4jServer["scheme"],
             "TEST_NEO4J_PORT":    port,
             "TEST_NEO4J_EDITION": neo4jServer["edition"],
             "TEST_NEO4J_VERSION": neo4jServer["version"],
