@@ -238,12 +238,16 @@ if __name__ == "__main__":
             "TEST_NEO4J_PORT":    port,
             "TEST_NEO4J_EDITION": neo4jServer["edition"],
             "TEST_NEO4J_VERSION": neo4jServer["version"],
-
-            # To support the legacy .net integration tests
-            "NEOCTRL_ARGS": "-e " + neo4jServer["version"],
         }
         if neo4jServer["cluster"]:
             driverEnv["TEST_NEO4J_ISCLUSTER"] = 1
+
+        # To support the legacy .net integration tests
+        envString = ""
+        if neo4jServer["edition"] == "enterprise":
+            envString += "-e "         
+        envString += neo4jServer["version"]
+        driverEnv["NEOCTRL_ARGS"] = envString
 
         # Run the stress test suite within the driver container.
         # The stress test suite uses threading and put a bigger load on the driver than the
