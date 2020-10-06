@@ -6,6 +6,23 @@ from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
+script_commit = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "w"}
+C: COMMIT
+S: SUCCESS {"bookmark": "bm"}
+   <EXIT>
+"""
+
 class TxRun(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
@@ -23,13 +40,10 @@ class TxRun(unittest.TestCase):
 
     # Tests that a committed transaction can return the last bookmark
     def test_last_bookmark(self):
-        script = "txrun_commit.script"
-        if self._driverName in ["go"]:
-            script = "txrun_commit_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["go", "dotnet"]:
             self.skipTest("session.lastBookmark not implemented in backend")
 
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_commit)
         session = self._driver.session("w")
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")

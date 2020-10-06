@@ -10,6 +10,32 @@ import nutkit.protocol as types
 # Indirectly tests implementation of custom user-agent
 customUserAgent = "Modesty"
 
+# Scripts that disconnects on different parts of a session
+script_on_hello = """
+!: BOLT 4
+
+C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+S: <EXIT>
+"""
+script_on_run = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO RESET
+
+C: RUN "RETURN 1 as n" {} {}
+S: <EXIT>
+C: PULL {"n": 1000}
+"""
+script_on_pull = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO RESET
+
+C: RUN "RETURN 1 as n" {} {}
+C: PULL {"n": 1000}
+S: <EXIT>
+"""
+
 
 class SessionRunDisconnected(unittest.TestCase):
     def setUp(self):
@@ -54,7 +80,7 @@ class SessionRunDisconnected(unittest.TestCase):
         # hello message.
         if not self._driverName in ["go"]:
             self.skipTest("No support for custom user-agent in testkit backend")
-        self._server.start(path=os.path.join(scripts_path, "disconnect_on_hello.script"))
+        self._server.start(script=script_on_hello)
         step = self._run()
         self._server.done()
 
@@ -67,12 +93,7 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_run(self):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # run message.
-        script = "disconnect_on_run.script"
-        # Until Go is updated to use PULL with n
-        if self._driverName in ["go"]:
-            script = "disconnect_on_run_pull_all.script"
-
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_on_run)
         step = self._run()
         self._server.done()
 
@@ -85,12 +106,7 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_pull(self):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # pull message.
-        script = "disconnect_on_pull.script"
-        # Until Go is updated to use PULL with n
-        if self._driverName in ["go"]:
-            script = "disconnect_on_pull_pull_all.script"
-
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_on_pull)
         step = self._run()
         self._server.done()
 

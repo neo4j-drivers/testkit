@@ -8,10 +8,10 @@ import subprocess, os, time, io, platform, tempfile
 
 class StubServer:
     def __init__(self, port):
-        address = os.environ.get("TEST_STUB_HOST", "127.0.0.1")
-        self._process = None
-        self.address = "%s:%d" % (address, port)
+        self.host = os.environ.get("TEST_STUB_HOST", "127.0.0.1")
+        self.address = "%s:%d" % (self.host, port)
         self.port = port
+        self._process = None
 
     def start(self, path=None, script=None, vars={}):
         if self._process:
@@ -25,7 +25,7 @@ class StubServer:
         if script:
             tempdir = tempfile.gettempdir()
             path = os.path.join(tempdir, "temp.script")
-            print("Generating script file in %s", path)
+            print("Generating script file in %s" % path)
             for v in vars:
                 script = script.replace(v, str(vars[v]))
             with open(path, "w") as f:

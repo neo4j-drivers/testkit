@@ -6,6 +6,67 @@ from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
+script_read = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO RESET
+!: AUTO GOODBYE
+
+C: BEGIN {"mode": "r"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+"""
+
+script_retry = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {"mode": "r"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+C: RESET
+S: SUCCESS {}
+$extra_reset_1
+C: BEGIN {"mode": "r"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+$extra_reset_2
+"""
+
+script_commit_disconnect = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "w"}
+C: COMMIT
+S: <EXIT>
+"""
+
 class TestRetry(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
@@ -19,12 +80,7 @@ class TestRetry(unittest.TestCase):
         self._server.reset()
 
     def test_read(self):
-        script = "retry_read.script"
-        if self._driverName in ["go"]:
-            # Until Go is updated to use PULL with n
-            script = "retry_read_v3.script"
-        self._server.start(path=os.path.join(scripts_path, script))
-
+        self._server.start(script=script_read)
         num_retries = 0
         def once(tx):
             nonlocal num_retries
@@ -46,17 +102,18 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
     def test_read_twice(self):
-        script = "retry_read_twice.script"
-        if self._driverName in ["go"]:
-            # Until Go is updated to use PULL with n
-            # Lean version has fewer resets
-            script = "retry_read_twice_lean_pull_all.script"
+        # We could probably use AUTO RESET in the script but this makes the diffs more
+        # obvious.
+        vars = {
+            "$extra_reset_1": "",
+            "$extra_reset_2": "",
+        }
+        if self._driverName not in ["go"]:
+            vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
         if self._driverName in ["java", "javascript"]:
-            # Java requires an extra reset
-            script = "retry_read_twice_java.script"
+            vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
 
-        self._server.start(path=os.path.join(scripts_path, script))
-
+        self._server.start(script=script_retry, vars=vars)
         num_retries = 0
         def twice(tx):
             nonlocal num_retries
@@ -83,8 +140,7 @@ class TestRetry(unittest.TestCase):
         # An error should be raised to indicate the failure
         if not self._driverName in ["go"]:
             self.skipTest("Backend missing support for SessionWriteTransaction")
-        script = "retry_commit_disconnect.script"
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_commit_disconnect)
         num_retries = 0
         def once(tx):
             nonlocal num_retries

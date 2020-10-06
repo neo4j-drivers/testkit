@@ -1,8 +1,0 @@
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
-
-C: RUN "RETURN 1 as n" {} {}
-S: <EXIT>
-C: PULL {"n": 1000}
-

@@ -5,6 +5,104 @@ from tests.stub.shared import *
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
+script_accessmode_read = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"mode": "r"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+   <EXIT>
+"""
+script_accessmode_write = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+   <EXIT>
+"""
+script_bookmarks = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"bookmarks": ["b1", "b2"]}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+   <EXIT>
+"""
+script_txmeta = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"tx_metadata": {"akey": "aval"}}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+   <EXIT>
+
+"""
+script_timeout = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"tx_timeout": 17}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+   <EXIT>
+"""
+script_combined = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"bookmarks": ["b0"], "tx_metadata": {"k": "v"}, "mode": "r", "tx_timeout": 11}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+   <EXIT>
+"""
+
 
 # Verifies that session.beginTransaction parameters are sent as expected on the wire.
 # These are the different cases tests:
@@ -40,62 +138,44 @@ class TxBeginParameters(unittest.TestCase):
             session.close()
 
     def test_accessmode_read(self):
-        script = "txbegin_accessmode_read.script"
-        if self._driverName in ["go"]:
-            script = "txbegin_accessmode_read_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet", "go"]:
             self.skipTest("Tx begin accessmode not implemented in backend")
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_accessmode_read)
         self._run("r")
         self._server.done()
 
     def test_accessmode_write(self):
-        script = "txbegin_accessmode_write.script"
-        if self._driverName in ["go"]:
-            script = "txbegin_accessmode_write_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet", "go"]:
             self.skipTest("Tx begin accessmode not implemented in backend")
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_accessmode_write)
         self._run("w")
         self._server.done()
 
     def test_bookmarks(self):
-        script = "txbegin_bookmarks.script"
-        if self._driverName in ["go"]:
-            script = "txbegin_bookmarks_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet", "go"]:
             self.skipTest("Tx begin bookmarks not implemented in backend")
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_bookmarks)
         self._run("w", bookmarks=["b1", "b2"])
         self._server.done()
 
     def test_txmeta(self):
-        script = "txbegin_txmeta.script"
-        if self._driverName in ["go"]:
-            script = "txbegin_txmeta_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet"]:
             self.skipTest("Tx begin meta not implemented in backend")
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_txmeta)
         self._run("w", txMeta={"akey": "aval"})
         self._server.done()
 
     def test_timeout(self):
-        script = "txbegin_timeout.script"
-        if self._driverName in ["go"]:
-            script = "txbegin_timeout_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet", "go"]:
             self.skipTest("Tx begin timeout not implemented in backend")
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_timeout)
         self._run("w", timeout=17)
         self._server.done()
 
     def test_combined(self):
-        script = "txbegin_combined_params.script"
-        if self._driverName in ["go"]:
-            script = "txbegin_combined_params_pull_all.script"
-        elif self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet", "go"]:
             self.skipTest("Tx begin params not implemented in backend")
-        self._server.start(path=os.path.join(scripts_path, script))
+        self._server.start(script=script_combined)
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)
         self._server.done()
 

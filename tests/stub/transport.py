@@ -13,7 +13,7 @@ script = """
 !: AUTO GOODBYE
 
 C: RUN "RETURN 1 as n" {} {}
-   PULL { "n": $fetch_size }
+   PULL { "n": 1000}
 S: SUCCESS {"fields": ["n"]}
    <NOOP>
    <NOOP>
@@ -40,11 +40,8 @@ class Transport(unittest.TestCase):
         # Verifies that no op messages sent on bolt chunking layer are ignored. The no op messages
         # are sent from server as a way to notify that the connection is still up.
         # Bolt 4.1 >
-        fetch_size = 1000
         bolt_version = "4.1"
-        if self._driverName in ["go"]:
-            fetch_size = -1
-        self._server.start(script=script, vars = {"$bolt_version": bolt_version, "$fetch_size": fetch_size})
+        self._server.start(script=script, vars = {"$bolt_version": bolt_version})
         result = self._session.run("RETURN 1 as n")
         record = result.next()
         nilrec = result.next()
