@@ -159,7 +159,7 @@ class TxBeginParameters(unittest.TestCase):
         self._server.done()
 
     def test_txmeta(self):
-        if self._driverName not in ["dotnet"]:
+        if self._driverName not in ["dotnet", "go"]:
             self.skipTest("Tx begin meta not implemented in backend")
         self._server.start(script=script_txmeta)
         self._run("w", txMeta={"akey": "aval"})
