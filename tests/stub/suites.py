@@ -21,8 +21,7 @@ stub_suite.addTests(loader.loadTestsFromModule(sessiondisconnected))
 stub_suite.addTests(loader.loadTestsFromModule(sessionparameters))
 stub_suite.addTests(loader.loadTestsFromModule(txparameters))
 stub_suite.addTests(loader.loadTestsFromModule(txrun))
-# Disable until variable support in stub server
-#stub_suite.addTests(loader.loadTestsFromModule(routing))
+stub_suite.addTests(loader.loadTestsFromModule(routing))
 
 if __name__ == "__main__":
     suiteName = "Stub tests"
