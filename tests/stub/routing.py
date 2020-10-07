@@ -1,4 +1,4 @@
-import unittest, os
+import unittest
 
 from tests.shared import *
 from tests.stub.shared import *
