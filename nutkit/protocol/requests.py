@@ -160,6 +160,28 @@ class ResultNext:
         self.resultId = resultId
 
 
+class ResultList:
+    """ Request to close the result and to get all remaining records back in the response.
+    Backend should respond with ClosedResult or an Error if an error occured.
+    If an error occures on the backend while iterating the result for serialization this
+    error should be set in ClosedResult.error and iteration stopped, the ClosedResult should
+    be returned.
+    """
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
+class ResultConsume:
+    """ Request to close the result and to discard all remaining records back in the response.
+    Backend should respond with ClosedResult or an Error if an error occured.
+    If an error occures on the backend while iterating the result for serialization this
+    error should be set in ClosedResult.error and iteration stopped, the ClosedResult should
+    be returned.
+    """
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
 class RetryablePositive:
     """ Request to commit the retryable transaction.
     Backend responds with either a RetryableTry response (if it failed to commit and wants to

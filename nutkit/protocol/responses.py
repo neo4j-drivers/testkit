@@ -108,6 +108,16 @@ class NullRecord:
         return isinstance(other, NullRecord)
 
 
+class ClosedResult:
+    """ Represents a result closed by either sending a ResultList or ResultConsume
+    request. When ResultConsume has been sent, records will be None.
+    """
+    def __init__(self, bookmark=None, error=None, records=None):
+        self.bookmark = bookmark
+        self.records = records
+        self.error = error
+
+
 class Bookmarks:
     """ Represents an array of bookmarks.
     """
