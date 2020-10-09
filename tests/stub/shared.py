@@ -25,7 +25,7 @@ class StubServer:
         if script:
             tempdir = tempfile.gettempdir()
             path = os.path.join(tempdir, "temp.script")
-            print("Generating script file in %s" % path)
+            # print("Generating script file in %s" % path)
             for v in vars:
                 script = script.replace(v, str(vars[v]))
             with open(path, "w") as f:
@@ -56,15 +56,17 @@ class StubServer:
 
 
     def _dump(self):
-        print("")
+        # print("")
         print(">>>> Captured stub server %s stdout" % self.address)
         for line in self._process.stdout:
             print(line)
         print("<<<< Captured stub server %s stdout" % self.address)
+
         print(">>>> Captured stub server %s stderr" % self.address)
         for line in self._process.stderr:
             print(line)
         print("<<<< Captured stub server %s stderr" % self.address)
+
         self._close_pipes()
 
     def _close_pipes(self):

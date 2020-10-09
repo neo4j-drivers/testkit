@@ -22,7 +22,7 @@ class TeamCityTestResult(unittest.TextTestResult):
         return super().startTest(test)
 
     def stopTest(self, test):
-        print("##teamcity[testFinished name='%s']" % _tc_escape(str(test)))
+        print("##teamcity[testFinished name='%s']\n" % _tc_escape(str(test)))
         return super().stopTest(test)
 
     def addError(self, test, err):
