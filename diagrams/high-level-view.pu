@@ -1,6 +1,7 @@
 @startuml
 participant "TeamCity\nResponsible for repo cloning and triggering" as TeamCity
 participant "Agent\nTeamCity agent or other host\nRequires: Python >= 3.6 + Docker >= 19.03\nRepositories: testkit + driver + stub server" as Agent
+participant "Runner\nDocker container\nImage container: Python >= 3.6 + Go + TLS binaries" as Runner
 participant "Driver\nDocker container\nImage contains: Python >= 3.6 + driver SDK\nMounts: repositories on Agent" as Driver
 participant "Neo4j\nDocker container\nDifferent versions\nSingle instance or cluster\nCommunity or enterprise" as Neo4j
 hide footbox
@@ -12,7 +13,7 @@ All repositories should follow the same branches.
 Driver branch: 4.1 -> Test kit branch: 4.1
 end note
 
-TeamCity -> Agent: Invoke main entry point in test kit repository in build step
+TeamCity -> Agent: Invoke main entry point in testkit repository in build step
 note right of TeamCity
 Environment variables needs to be set before invoking script to
 specify location of the cloned repositories and name of driver
@@ -30,37 +31,44 @@ end note
 Agent -> Driver: Start docker container
 Agent -> Driver: Build driver & test backend
 
+Agent -> Runner: Start docker container
+Agent -> Runner: Build tools needed
+
 ||50||
 == Unit tests  == 
 Agent -> Driver: Run unit tests
+note left of Driver
+Unit tests are written in driver native language.
+end note
 
 ||50||
-== Stub tests: protocol 4.0  == 
+== Stub tests  == 
 Agent -> Driver: Start test backend
+Agent -> Runner: Run stub test suite
 loop for each test in suite
-Agent -> Agent: Start stub server(s)
-Agent -> Driver: { Test specific requests to test backend}
-Driver -> Agent: { Test specific interaction with stub server}
+Runner -> Runner: Start stub server(s)
+Runner -> Driver: { Test specific requests to test backend}
+Driver -> Runner: { Bolt protocol }
 end
 
-||50||
-== Stub tests: protocol 4.1  == 
-note right of Agent
-Same as above but with a different test suite
-end note
 
 ||50||
 == Integration tests: Server 4.0, single instance, enterprise  ==
 Agent -> Driver: Start test backend
-Agent -> Neo4j: Start docker container
+Agent -> Neo4j: Start docker container with specified version
+Agent -> Runner: Run test suite matching Neo4j instance
 loop for each test in suite
-Agent -> Driver: { Test specific requests to test backend}
-Driver -> Neo4j: { Test specific backend interaction}
+Runner -> Driver: { Test specific requests to test backend}
+Driver -> Neo4j: { Bolt protocol }
 end
-alt stress tests
+Agent -> Driver: Run legacy integration tests
+note left of Driver
+Environment variables are set to specify Neo4j URI,
+username, password, edition
+end note
+Driver -> Neo4j: { Bolt protocol }
 Agent -> Driver: Run stress tests
-Driver -> Neo4j: { Stress test interaction }
-end
+Driver -> Neo4j: { Bolt protocol }
 Agent -> Neo4j: Stop docker container
 
 ||50||
@@ -76,10 +84,9 @@ loop for each test in suite
 note right of Agent
 Build different kinds of Docker networks like IpV6, modify CAs on driver image, Kerberos...
 end note
-Agent -> Driver: Start docker container
-Agent -> Neo4j: Start docker container
-Agent -> Driver: { Test specific requests to test backend}
-Driver -> Neo4j: { Test specific backend interaction}
+Agent -> Runner: Run connectivity suite
+Runner -> Driver: { Test specific requests to test backend}
+Driver -> Runner: { Bolt protocol }
 end note
 
 
