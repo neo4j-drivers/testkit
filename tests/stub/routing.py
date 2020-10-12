@@ -3,6 +3,7 @@ import unittest
 from tests.shared import *
 from tests.stub.shared import *
 from nutkit.frontend import Driver, AuthorizationToken
+from collections import OrderedDict
 import nutkit.protocol as types
 
 script_router = """
@@ -76,7 +77,7 @@ S: SUCCESS {}
 """
 
 
-vars_v3 = {
+"""vars_v3 = {
     "#VERSION#":           '3',
     "#GET_ROUTING_TABLE#": 'RUN \"CALL dbms.cluster.routing.getRoutingTable($context)\" {\"context\": {\"address\": \"#ADDRESS_STR\"}} {#MODE_STR}',
     "#PULL#":              'PULL_ALL',
@@ -88,12 +89,12 @@ vars_v3 = {
     # Variables for language specifics
     "#ADDRESS_STR": '',
     "#MODE_STR": '"mode": "r", "db": "system"',
-}
+}"""
 
 
 
-# Bolt version 4 and later needs named databases when querying for routing table.
-dbname = "adb"
+
+"""dbname = "adb"
 vars_v4 = {
     "#VERSION#":           '4.0',
     "#GET_ROUTING_TABLE#": 'RUN \"CALL dbms.routing.getRoutingTable($context, $#DATABASE_STR)\" {\"context\": {\"address\": \"#ADDRESS_STR\"}, \"#DATABASE_STR\": \"%s\"} {#MODE_STR}' % (dbname),
@@ -107,13 +108,33 @@ vars_v4 = {
     "#DATABASE_STR": 'db',
     "#ADDRESS_STR": '',
     "#MODE_STR": '"mode": "r", "db": "system"',
-}
-
+}"""
 
 
 # Current version of the protocol. Older protocol version should be subclasses to make
 # it easier to remove when no longer supported.
 class Routing(unittest.TestCase):
+    def setUpVariables(self):
+
+        # Bolt version 4 and later needs named databases when querying for routing table.
+        self._dbname = "adb"
+
+        self._vars_v4 = OrderedDict()
+        self._vars_v4["#VERSION#"] = '4.0'
+        self._vars_v4["#GET_ROUTING_TABLE#"] = 'RUN \"CALL dbms.routing.getRoutingTable($context, $#DATABASE_STR)\" ' \
+                                               '{\"context\": {\"address\": \"#ADDRESS_STR\"},' \
+                                               ' \"#DATABASE_STR\": \"%s\"} {#MODE_STR}' % (self._dbname)
+        self._vars_v4["#PULL#"] = 'PULL {"n": 1000}'
+        self._vars_v4["#RUN_READ#"] = 'RUN "RETURN 1 as n" {} {"mode"] = "r", "db"] = "%s"}' % (self._dbname)
+        self._vars_v4["#RUN_WRITE#"] = 'RUN "RETURN 1 as n" {} {"db"] = "%s"}' % (self._dbname)
+        self._vars_v4["#BEGIN_READ#"] = 'BEGIN {"mode"] = "r", "db"] = "%s"}' % (self._dbname)
+        self._vars_v4["#BEGIN_WRITE#"] = 'BEGIN {"db"] = "%s"}' % (self._dbname)
+
+        # Variables for language specifics
+        self._vars_v4["#DATABASE_STR"] = 'db'
+        self._vars_v4["#ADDRESS_STR"] = ''
+        self._vars_v4["#MODE_STR"] = '"mode": "r", "db": "system"'
+
     def setUp(self):
         self._backend = new_backend()
         self._driverName = get_driver_name()
@@ -122,6 +143,7 @@ class Routing(unittest.TestCase):
         self._writeServer = StubServer(9003)
 
         # Bolt version hook
+        self.setUpVariables()
         self.setupVersion()
 
         self._vars["#HOST#"] = self._routingServer.host
@@ -133,8 +155,8 @@ class Routing(unittest.TestCase):
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
 
     def setupVersion(self):
-        self._database = dbname
-        self._vars = vars_v4
+        self._database = self._dbname
+        self._vars = self._vars_v4
 
         # Now append language specific variables.
         if self._driverName in ['dotnet']:
@@ -200,9 +222,23 @@ class Routing(unittest.TestCase):
 
 
 class RoutingV3(Routing):
+    def setupVariables(self):
+        self._vars_v3 = OrderedDict()
+        self._vars_v3["#VERSION#"] = '3'
+        self._vars_v3["#GET_ROUTING_TABLE#"] = 'RUN \"CALL dbms.cluster.routing.getRoutingTable($context)\" {\"context\": {\"address\": \"#ADDRESS_STR\"}} {#MODE_STR}'
+        self._vars_v3["#PULL#"] = 'PULL_ALL'
+        self._vars_v3["#RUN_READ#"] = 'RUN "RETURN 1 as n" {} {"mode": "r"}'
+        self._vars_v3["#RUN_WRITE#"] = 'RUN "RETURN 1 as n" {} {}'
+        self._vars_v3["#BEGIN_READ#"] = 'BEGIN {"mode": "r"}'
+        self._vars_v3["#BEGIN_WRITE#"] = 'BEGIN {}'
+
+        # Variables for language specifics
+        self._vars_v3["#ADDRESS_STR"] = ''
+        self._vars_v3["#MODE_STR"] = '"mode": "r", "db": "system"'
+
     def setupVersion(self):
         self._database = None
-        self._vars = vars_v3
+        self._vars = self._vars_v3
 
         # Now append language specific variables.
         if self._driverName in ['dotnet']:
