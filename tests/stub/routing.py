@@ -115,7 +115,6 @@ vars_v4 = {
 # it easier to remove when no longer supported.
 class Routing(unittest.TestCase):
     def setUpVariables(self):
-
         # Bolt version 4 and later needs named databases when querying for routing table.
         self._dbname = "adb"
 
@@ -222,7 +221,7 @@ class Routing(unittest.TestCase):
 
 
 class RoutingV3(Routing):
-    def setupVariables(self):
+    def setUpVariables(self):
         self._vars_v3 = OrderedDict()
         self._vars_v3["#VERSION#"] = '3'
         self._vars_v3["#GET_ROUTING_TABLE#"] = 'RUN \"CALL dbms.cluster.routing.getRoutingTable($context)\" {\"context\": {\"address\": \"#ADDRESS_STR\"}} {#MODE_STR}'
