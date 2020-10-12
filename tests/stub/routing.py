@@ -121,7 +121,7 @@ class Routing(unittest.TestCase):
         self._vars_v4 = OrderedDict()
         self._vars_v4["#VERSION#"] = '4.0'
         self._vars_v4["#GET_ROUTING_TABLE#"] = 'RUN \"CALL dbms.routing.getRoutingTable($context, $#DATABASE_STR)\" ' \
-                                               '{\"context\": {\"address\": \"#ADDRESS_STR\"},' \
+                                               '{\"context\": {\"#ADDRESS_STR\"},' \
                                                ' \"#DATABASE_STR\": \"%s\"} {#MODE_STR}' % (self._dbname)
         self._vars_v4["#PULL#"] = 'PULL {"n": 1000}'
         self._vars_v4["#RUN_READ#"] = 'RUN "RETURN 1 as n" {} {"mode"] = "r", "db"] = "%s"}' % (self._dbname)
@@ -159,7 +159,7 @@ class Routing(unittest.TestCase):
 
         # Now append language specific variables.
         if self._driverName in ['dotnet']:
-            self._vars["#ADDRESS_STR"] = os.environ.get("TEST_STUB_HOST") + ":#PORT"
+            self._vars["#ADDRESS_STR"] = "address: " + os.environ.get("TEST_STUB_HOST") + ":#PORT"
             self._vars["#DATABASE_STR"] = 'database'
             self._vars["#PORT"] = ''
 
@@ -241,7 +241,7 @@ class RoutingV3(Routing):
 
         # Now append language specific variables.
         if self._driverName in ['dotnet']:
-            self._vars["#ADDRESS_STR"] = os.environ.get("TEST_STUB_HOST") + ":#PORT"
+            self._vars["#ADDRESS_STR"] = "address: " + os.environ.get("TEST_STUB_HOST") + ":#PORT"
             self._vars["#MODE_STR"] = ''
             self._vars["#PORT"] = ''
 
