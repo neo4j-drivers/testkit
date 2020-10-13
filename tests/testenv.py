@@ -1,8 +1,8 @@
 import os, unittest
 
-env_teamcity = 'TEST_IN_TEAMCITY'
 
-in_teamcity = os.environ.get(env_teamcity)
+in_teamcity = os.environ.get('TEST_IN_TEAMCITY', False)
+
 
 def _tc_escape(s):
     s = s.replace("|", "||")

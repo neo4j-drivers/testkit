@@ -63,7 +63,8 @@ def ensure_driver_image(root_path, branch_name, driver_name):
     ], encoding="utf-8").splitlines()
     if len(images):
         print("Cleaning up images: %s" % images)
-        subprocess.check_call(["docker", "rmi", " ".join(images)])
+        # Sometimes fails, do not fail build due to that
+        subprocess.run(["docker", "rmi", " ".join(images)])
 
     return image_name
 
