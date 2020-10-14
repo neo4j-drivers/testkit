@@ -11,16 +11,19 @@ class TestSessionRun(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._driver = get_driver(self._backend)
-        self._session = self._driver.session("r")
 
     def tearDown(self):
-        self._session.close()
+        if self._session:
+            self._session.close()
         self._driver.close()
         self._backend.close()
 
     def test_iteration_smaller_than_fetch_size(self):
+        if get_driver_name() not in ['go', 'dotnet']:
+            self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can handle that.
+        self._session = self._driver.session("r", fetchSize=1000)
         result = self._session.run("UNWIND [1, 2, 3, 4, 5] AS x RETURN x")
         expects = [
             types.Record(values=[types.CypherInt(1)]),
@@ -36,11 +39,15 @@ class TestSessionRun(unittest.TestCase):
             self.assertEqual(rec, exp)
 
     def test_iteration_larger_than_fetch_size(self):
+        if get_driver_name() not in ['go', 'dotnet']:
+            self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved and that the parameter
         # is respected. Uses parameter to generate a long list of records.
         # Typical fetch size is 1000, selected value should be a bit larger than fetch size,
         # if driver allows this as a parameter we should set it to a known value.
-        n = 1007
+        n = 1000
+        self._session = self._driver.session("r", fetchSize=n)
+        n = n + 7
         result = self._session.run("UNWIND RANGE(0, $n) AS x RETURN x", params={"n": types.CypherInt(n)})
         for x in range(0, n):
             exp = types.Record(values=[types.CypherInt(x)])
@@ -50,6 +57,7 @@ class TestSessionRun(unittest.TestCase):
     def test_recover_from_invalid_query(self):
         # Verifies that an error is returned on an invalid query and that the session
         # can function with a valid query afterwards.
+        self._session = self._driver.session("r")
         with self.assertRaises(types.DriverError) as e:
             # DEVIATION
             # Go   - error trigger upon run
@@ -63,6 +71,7 @@ class TestSessionRun(unittest.TestCase):
         self.assertEqual(result.next(), types.Record(values=[types.CypherInt(1)]))
 
     def test_recover_from_fail_on_streaming(self):
+        self._session = self._driver.session("r")
         result = self._session.run("UNWIND [1, 0, 2] AS x RETURN 10 / x")
         self.assertEqual(result.next(), types.Record(values=[types.CypherInt(10)]))
         with self.assertRaises(types.DriverError) as e:
