@@ -22,11 +22,10 @@
 from sys import exit
 
 from argparse import ArgumentParser
-from asyncio import get_event_loop
 from logging import getLogger, INFO
 
 from boltstub import BoltStubService
-from boltstub.scripting import BoltScript, ScriptMismatch
+from boltstub.scripting import BoltScript
 from boltstub.watcher import watch
 
 
@@ -63,30 +62,19 @@ useful for Bolt client integration testing.
     if parsed.verbose:
         watch("boltstub", INFO)
 
-    async def a():
-        scripts = map(BoltScript.load, parsed.script)
-        service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
-        try:
-            service.start()
-            await service.wait_started()
-        finally:
-            try:
-                await service.wait_stopped()
-            except ScriptMismatch as error:
+    scripts = map(BoltScript.load, parsed.script)
+    service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
+    try:
+        service.start()
+        if service.exceptions:
+            for error in service.exceptions:
                 extra = ""
                 if error.script.filename:
                     extra += " in {!r}".format(error.script.filename)
                 if error.line_no:
                     extra += " at line {}".format(error.line_no)
                 print("Script mismatch{}:\n{}".format(extra, error))
-                exit(1)
-            except TimeoutError as error:
-                print(error)
-                exit(2)
-
-    try:
-        loop = get_event_loop()
-        loop.run_until_complete(a())
+            exit(1)
     except KeyboardInterrupt:
         exit(130)
     except Exception as e:
@@ -94,7 +82,11 @@ useful for Bolt client integration testing.
         log.error("\r\n")
         exit(99)
     else:
-        exit(0)
+        if service.timed_out:
+            print("Timed out")
+            exit(2)
+        else:
+            exit(0)
 
 
 if __name__ == "__main__":
