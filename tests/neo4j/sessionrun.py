@@ -55,6 +55,37 @@ class TestSessionRun(unittest.TestCase):
             rec = result.next()
             self.assertEqual(rec, exp)
 
+    def test_iteration_nested(self):
+        if get_driver_name() not in ['go', 'dotnet']:
+            self.skipTest("Fetchsize not implemented in backend")
+        # Verifies that it is possible to nest results with small fetch sizes.
+        # Auto-commit results does not (as of 4.x) support multiple results on
+        # the same connection but that isn't visible when testing at this level.
+        self._session = self._driver.session("r", fetchSize=2)
+        def run(i, n):
+            return self._session.run("UNWIND RANGE ($i, $n) AS x RETURN x", {"i": types.CypherInt(i), "n": types.CypherInt(n)})
+        i0 = 0
+        n0 = 6
+        res0 = run(i0, n0)
+        for r0 in range(i0, n0+1):
+            rec = res0.next()
+            self.assertEqual(rec, types.Record(values=[types.CypherInt(r0)]))
+            i1 = 7
+            n1 = 11
+            res1 = run(i1, n1)
+            for r1 in range(i1, n1+1):
+                rec = res1.next()
+                self.assertEqual(rec, types.Record(values=[types.CypherInt(r1)]))
+                i2 = 999
+                n2 = 1001
+                res2 = run(i2, n2)
+                for r2 in range(i2, n2+1):
+                    rec = res2.next()
+                    self.assertEqual(rec, types.Record(values=[types.CypherInt(r2)]))
+                self.assertEqual(res2.next(), types.NullRecord())
+            self.assertEqual(res1.next(), types.NullRecord())
+        self.assertEqual(res0.next(), types.NullRecord())
+
     def test_recover_from_invalid_query(self):
         # Verifies that an error is returned on an invalid query and that the session
         # can function with a valid query afterwards.

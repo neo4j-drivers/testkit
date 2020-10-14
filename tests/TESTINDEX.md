@@ -49,13 +49,13 @@ TODO: rollback (does not persist)
 
 
 # Run in auto-commit
-TODO: nested results
 TODO: consume
 TODO: summary
 TODO: bookmark chaining
 
-* Verification that results can be iterated correctly.
-  result, records, invalid query, error while streaming
+* Verification that results can be iterated correctly, with regards to
+  nested results and fetch sizes.
+  result, records, invalid query, error while streaming, nested, fetchsize
   neo4j/sessionrun.py
 * Verification that session.Run optional parameters are sent on the wire
   tx metadata, timeout, bookmarks
