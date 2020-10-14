@@ -610,15 +610,14 @@ class UnpackableBuffer:
 
 
 class PackStream:
-    """ Asynchronous chunked message reader/writer for PackStream
+    """ Chunked message reader/writer for PackStream
     messaging.
     """
 
-    def __init__(self, reader, writer):
-        self._reader = reader
-        self._writer = writer
+    def __init__(self, wire):
+        self.wire = wire
 
-    async def read_message(self):
+    def read_message(self):
         """ Read a chunked message.
 
         :return:
@@ -626,10 +625,10 @@ class PackStream:
         data = []
         more = True
         while more:
-            chunk_header = await self._reader.readexactly(2)
+            chunk_header = self.wire.read(2)
             chunk_size, = struct_unpack(">H", chunk_header)
             if chunk_size:
-                chunk_data = await self._reader.readexactly(chunk_size)
+                chunk_data = self.wire.read(chunk_size)
                 data.append(chunk_data)
             else:
                 more = False
@@ -651,20 +650,18 @@ class PackStream:
         data = b.getvalue()
         # TODO: multi-chunk messages
         header = bytearray(divmod(len(data), 0x100))
-        self._writer.write(header + data + b"\x00\x00")
+        self.wire.write(header + data + b"\x00\x00")
 
-    async def drain(self):
+    def drain(self):
         """ Flush the writer.
 
         :return:
         """
-        await self._writer.drain()
+        self.wire.send()
 
-    async def close(self):
+    def close(self):
         """ Close.
 
         :return:
         """
-        self._writer.write_eof()
-        self._writer.close()
-        await self._writer.wait_closed()  # TODO: fix for < Python 3.7
+        self.wire.close()

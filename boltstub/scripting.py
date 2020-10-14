@@ -155,7 +155,7 @@ class BoltScript:
                 out[-1].line_no = line_no
             elif role == "S":
                 if tag.startswith("<") and tag.endswith(">"):
-                    if tag == "<EXIT>":
+                    if tag == "<BREAK>":
                         out.append(ServerExitLine())
                         out[-1].line_no = line_no
                     elif tag == "<RAW>":
@@ -383,7 +383,7 @@ class Line:
 
     line_no = None
 
-    async def action(self, actor):
+    def action(self, actor):
         pass
 
     @classmethod
@@ -410,19 +410,18 @@ class ClientMessageLine(ClientLine):
     def __str__(self):
         return "C: %s %s" % (self.tag_name, " ".join(map(repr, self.fields)))
 
-    async def action(self, actor):
-        await self.default_action(actor, self)
+    def action(self, actor):
+        self.default_action(actor, self)
 
     @classmethod
-    async def default_action(cls, actor, line=None):
+    def default_action(cls, actor, line=None):
         # TODO: improve the flow of logic here
         script = actor.script
         request = None
         c_msg = None
-        more = True
-        while more:
+        while not actor.wire.closed and not actor.wire.broken:
             try:
-                request = await actor.stream.read_message()
+                request = actor.stream.read_message()
             except IncompleteReadError as error:
                 if not line and error.expected == 2 and error.partial == b"":
                     # Likely failed reading a new chunk header, and we're not
@@ -442,9 +441,9 @@ class ClientMessageLine(ClientLine):
                     s_msg.script = script
                     actor.log("(AUTO) %s", s_msg)
                     actor.stream.write_message(response)
-                await actor.stream.drain()
+                actor.stream.drain()
             else:
-                more = False
+                break
         if line and line.match(request):
             actor.log("%s", c_msg)
         else:
@@ -473,11 +472,11 @@ class ServerMessageLine(ServerLine):
     def __str__(self):
         return "S: %s %s" % (self.tag_name, " ".join(map(repr, self.fields)))
 
-    async def action(self, actor):
+    def action(self, actor):
         actor.log("%s", self)
         tag = self.script.tag("S", self.tag_name)
         actor.stream.write_message(Structure(tag, *self.fields))
-        await actor.stream.drain()
+        actor.stream.drain()
 
 
 class ServerRawBytesLine(ServerLine):
@@ -488,10 +487,10 @@ class ServerRawBytesLine(ServerLine):
     def __str__(self):
         return "S: <RAW> %r" % (self.data,)
 
-    async def action(self, actor):
+    def action(self, actor):
         actor.log("%s", self)
-        actor.writer.write(self.data)
-        await actor.writer.drain()
+        actor.wire.write(self.data)
+        actor.wire.send()
 
 
 class ServerSleepLine(ServerLine):
@@ -502,9 +501,9 @@ class ServerSleepLine(ServerLine):
     def __str__(self):
         return "S: <SLEEP> %r" % (self.delay,)
 
-    async def action(self, actor):
+    def action(self, actor):
         actor.log("%s", self)
-        await sleep(self.delay)
+        sleep(self.delay)
 
 
 class ServerNoOpLine(ServerLine):
@@ -515,10 +514,10 @@ class ServerNoOpLine(ServerLine):
     def __str__(self):
         return "S: <NOOP>"
 
-    async def action(self, actor):
+    def action(self, actor):
         actor.log("%s", self)
-        actor.writer.write(b"\x00\x00")
-        await actor.writer.drain()
+        actor.wire.write(b"\x00\x00")
+        actor.wire.send()
 
 
 class ServerExitLine(ServerLine):
@@ -527,9 +526,9 @@ class ServerExitLine(ServerLine):
         pass
 
     def __str__(self):
-        return "S: <EXIT>"
+        return "S: <BREAK>"
 
-    async def action(self, actor):
+    def action(self, actor):
         actor.log("%s", self)
         raise ServerExit()
 
