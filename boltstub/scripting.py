@@ -155,7 +155,7 @@ class BoltScript:
                 out[-1].line_no = line_no
             elif role == "S":
                 if tag.startswith("<") and tag.endswith(">"):
-                    if tag == "<BREAK>":
+                    if tag == "<EXIT>":
                         out.append(ServerExitLine())
                         out[-1].line_no = line_no
                     elif tag == "<RAW>":
@@ -526,7 +526,7 @@ class ServerExitLine(ServerLine):
         pass
 
     def __str__(self):
-        return "S: <BREAK>"
+        return "S: <EXIT>"
 
     def action(self, actor):
         actor.log("%s", self)
