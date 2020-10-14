@@ -10,5 +10,8 @@ if __name__ == "__main__":
     os.environ["GOPATH"] = "/home/build"
     package = root_package + "/test-integration/..."
     run(["go", "get", "-v", "-t", package])
-    run(["go", "test", "-v", "-json", package])
+    cmd = ["go", "test"]
+    if os.environ.get("TEST_IN_TEAMCITY", False):
+        cmd = cmd + ["-v", "-json"]
+    run(cmd + [package])
 

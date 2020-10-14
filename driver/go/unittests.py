@@ -20,7 +20,9 @@ if __name__ == "__main__":
     # Specify -v -json to make TeamCity pickup the tests
     # When check is True when we will fail fast and probable not continue
     # running any other test suites either (like integration and stubs)
-    run([
-        "go", "test", "-v", "-json", root_package, "--race"])
-    run([
-        "go", "test", "-v", "-json", root_package + "/internal/...", "--race"])
+    cmd = ["go", "test"]
+    if os.environ.get("TEST_IN_TEAMCITY", ""):
+        cmd = cmd + ["-v", "-json"]
+
+    run(cmd + [root_package, "--race"])
+    run(cmd + [root_package + "/internal/...", "--race"])

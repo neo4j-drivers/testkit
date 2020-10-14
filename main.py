@@ -5,7 +5,7 @@ responsibility of this script to setup these contexts and orchestrate which suit
 is executed in each context.
 """
 
-import os, sys, atexit, subprocess, time, unittest, json, shutil
+import os, sys, atexit, subprocess, time, json, shutil
 from datetime import datetime
 from tests.testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
 import docker
@@ -132,19 +132,26 @@ if __name__ == "__main__":
         network="the-bridge",
         workingFolder="/driver")
 
+    # Setup environment variables for driver container
+    driverEnv = {}
+    # Copy TEST_ variables that might have been set explicit
+    for varName in os.environ:
+        if varName.startswith("TEST_"):
+            driverEnv[varName] = os.environ[varName]
+
     # Clean up artifacts
-    driverContainer.exec(["python3", "/testkit/driver/clean_artifacts.py"])
+    driverContainer.exec(["python3", "/testkit/driver/clean_artifacts.py"], envMap=driverEnv)
 
     # Build the driver and it's testkit backend
     print("Build driver and test backend in driver container")
-    driverContainer.exec(["python3", "/testkit/driver/%s/build.py" % driverName])
+    driverContainer.exec(["python3", "/testkit/driver/%s/build.py" % driverName], envMap=driverEnv)
     print("Finished building driver and test backend")
 
     """
     Unit tests
     """
     begin_test_suite('Unit tests')
-    driverContainer.exec(["python3", "/testkit/driver/%s/unittests.py" % driverName])
+    driverContainer.exec(["python3", "/testkit/driver/%s/unittests.py" % driverName], envMap=driverEnv)
     end_test_suite('Unit tests')
 
     # Start the test backend in the driver Docker instance.
@@ -155,16 +162,18 @@ if __name__ == "__main__":
     # issues like 'detected possible backend crash', make sure that this
     # works simply by commenting detach and see that the backend starts.
     print("Start test backend in driver container")
-    driverContainer.exec_detached(["python3", "/testkit/driver/%s/backend.py" % driverName])
+    driverContainer.exec_detached(["python3", "/testkit/driver/%s/backend.py" % driverName], envMap=driverEnv)
     # Wait until backend started
     # Use driver container to check for backend availability
-    driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", "localhost", "%d" % 9876])
+    driverContainer.exec(["python3", "/testkit/driver/wait_for_port.py", "localhost", "%d" % 9876], envMap=driverEnv)
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests
     # Use Go driver image for this since we need to build TLS server and use that in the runner.
     runnerImage = ensure_driver_image(thisPath, testkitBranch, "go")
-    runnerEnv = {"PYTHONPATH": "/testkit" } # To use modules
+    runnerEnv = {
+        "PYTHONPATH": "/testkit", # To use modules
+    }
     # Copy TEST_ variables that might have been set explicit
     for varName in os.environ:
         if varName.startswith("TEST_"):
@@ -231,17 +240,16 @@ if __name__ == "__main__":
         runnerContainer.exec(["python3", "-m", "tests.neo4j.suites", neo4jServer["suite"]])
 
         # Parameters that might be used by native stress/integration tests suites
-        driverEnv = {
-            "TEST_NEO4J_HOST":    neo4jServerHostname,
-            "TEST_NEO4J_USER":    username,
-            "TEST_NEO4J_PASS":    password,
-            "TEST_NEO4J_SCHEME":  neo4jServer["scheme"],
-            "TEST_NEO4J_PORT":    port,
-            "TEST_NEO4J_EDITION": neo4jServer["edition"],
-            "TEST_NEO4J_VERSION": neo4jServer["version"],
-        }
-        if neo4jServer["cluster"]:
-            driverEnv["TEST_NEO4J_ISCLUSTER"] = 1
+        driverEnv.update({
+            "TEST_NEO4J_HOST":       neo4jServerHostname,
+            "TEST_NEO4J_USER":       username,
+            "TEST_NEO4J_PASS":       password,
+            "TEST_NEO4J_SCHEME":     neo4jServer["scheme"],
+            "TEST_NEO4J_PORT":       port,
+            "TEST_NEO4J_EDITION":    neo4jServer["edition"],
+            "TEST_NEO4J_VERSION":    neo4jServer["version"],
+            "TEST_NEO4J_IS_CLUSTER": neo4jServer["cluster"],
+        })
 
         # To support the legacy .net integration tests
         envString = ""

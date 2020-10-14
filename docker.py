@@ -4,18 +4,23 @@ class Container:
     def __init__(self, name):
         self.name = name
 
-    def exec(self, command, workdir=None, envMap={}):
-        cmd  = ["docker", "exec"]
+    def _add(self, cmd, workdir, envMap):
         if workdir:
             cmd.extend(["-w", workdir])
         for k in envMap:
             cmd.extend(["-e", "%s=%s" % (k, envMap[k])])
+
+    def exec(self, command, workdir=None, envMap={}):
+        cmd  = ["docker", "exec"]
+        self._add(cmd, workdir, envMap)
         cmd.append(self.name)
         cmd.extend(command)
         subprocess.run(cmd, check=True)
 
-    def exec_detached(self, command):
-        cmd  = ["docker", "exec", "--detach", self.name]
+    def exec_detached(self, command, workdir=None, envMap={}):
+        cmd  = ["docker", "exec", "--detach"]
+        self._add(cmd, workdir, envMap)
+        cmd.append(self.name)
         cmd.extend(command)
         subprocess.run(cmd, check=True)
 
