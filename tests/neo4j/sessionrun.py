@@ -11,6 +11,7 @@ class TestSessionRun(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._driver = get_driver(self._backend)
+        self._session = None
 
     def tearDown(self):
         if self._session:
