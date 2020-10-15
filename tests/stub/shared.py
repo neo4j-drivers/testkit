@@ -1,5 +1,4 @@
-"""
-Shared utilities for writing stub tests
+""" Shared utilities for writing stub tests
 
 Uses environment variables for configuration:
 """
