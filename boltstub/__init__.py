@@ -21,6 +21,7 @@
 
 from logging import getLogger
 from socketserver import TCPServer, BaseRequestHandler
+from sys import stdout
 
 from boltstub.addressing import Address
 from boltstub.packstream import PackStream
@@ -43,6 +44,12 @@ class BoltStubServer(TCPServer):
 
     def handle_timeout(self):
         self.timed_out = True
+
+    def server_bind(self):
+        super(BoltStubServer, self).server_bind()
+        # Must be here, testkit waits for something to be written on stdout to know when the server is listening.
+        print("Listening")
+        stdout.flush()
 
 
 class BoltStubService:
