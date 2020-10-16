@@ -153,6 +153,7 @@ class BoltActor:
                     error.script = self.script
                     error.line_no = line.line_no
                     raise
+            ClientMessageLine.default_action(self)
         except (ConnectionError, OSError):
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no

@@ -44,6 +44,7 @@ class Transport(unittest.TestCase):
         result = self._session.run("RETURN 1 as n")
         record = result.next()
         nilrec = result.next()
+        self._driver.close()
         self._server.done()
 
         # Verify the result

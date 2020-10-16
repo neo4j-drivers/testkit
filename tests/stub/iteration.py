@@ -65,25 +65,17 @@ class IteratePullN(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
-        auth = AuthorizationToken()
-        uri = "bolt://%s" % self._server.address
-        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
-        self._session = None
 
     def tearDown(self):
-        if self._session:
-            self._session.close()
-        self._driver.close()
         self._backend.close()
-        # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
         self._server.reset()
 
     def _run(self, n, script, end, expectedSequence, expectedError=False):
+        uri = "bolt://%s" % self._server.address
+        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
         self._server.start(script=script, vars={"#END#": end, "#VERSION#": "4"})
-        self._session = self._driver.session("w", fetchSize=n)
-        result = self._session.run("RETURN 1 AS n")
+        session = driver.session("w", fetchSize=n)
+        result = session.run("RETURN 1 AS n")
         gotError = False
         sequence = []
         while True:
@@ -95,6 +87,7 @@ class IteratePullN(unittest.TestCase):
             if isinstance(next, types.NullRecord):
                 break
             sequence.append(next.values[0].value)
+        driver.close()
         self._server.done()
         self.assertEqual(expectedSequence, sequence)
         self.assertEqual(expectedError, gotError)
@@ -102,31 +95,31 @@ class IteratePullN(unittest.TestCase):
 
     # Last fetched batch is a full batch
     def test_full_batch(self):
-        if self._driverName not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, script_pull_n, end_full_batch, ["1", "2", "3", "4", "5", "6"])
 
     # Last fetched batch is half full (or more important not full)
     def test_half_batch(self):
-        if self._driverName not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, script_pull_n, end_half_batch, ["1", "2", "3", "4", "5"])
 
     # Last fetched batch is empty
     def test_empty_batch(self):
-        if self._driverName not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, script_pull_n, end_empty_batch, ["1", "2", "3", "4"])
 
     # Last batch returns an error
     def test_error(self):
-        if self._driverName not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, script_pull_n, end_error, ["1", "2", "3", "4", "5"], expectedError=True)
 
     # Support -1, not batched at all
     def test_all(self):
-        if self._driverName not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(-1, script_pull_all, "", ["1", "2", "3", "4", "5", "6"])
 

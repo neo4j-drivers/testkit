@@ -64,6 +64,7 @@ C: RUN "RETURN 1" {} {}
 S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "w"}
 C: COMMIT
+S: <EXIT>
 """
 
 class TestRetry(unittest.TestCase):

@@ -114,7 +114,6 @@ class TxBeginParameters(unittest.TestCase):
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
 
     def tearDown(self):
-        self._driver.close()
         self._backend.close()
         # If test raised an exception this will make sure that the stub server
         # is killed and it's output is dumped for analys.
@@ -135,6 +134,7 @@ class TxBeginParameters(unittest.TestCase):
             self.skipTest("Tx begin accessmode not implemented in backend")
         self._server.start(script=script_accessmode_read)
         self._run("r")
+        self._driver.close()
         self._server.done()
 
     def test_accessmode_write(self):
@@ -142,6 +142,7 @@ class TxBeginParameters(unittest.TestCase):
             self.skipTest("Tx begin accessmode not implemented in backend")
         self._server.start(script=script_accessmode_write)
         self._run("w")
+        self._driver.close()
         self._server.done()
 
     def test_bookmarks(self):
@@ -149,6 +150,7 @@ class TxBeginParameters(unittest.TestCase):
             self.skipTest("Tx begin bookmarks not implemented in backend")
         self._server.start(script=script_bookmarks)
         self._run("w", bookmarks=["b1", "b2"])
+        self._driver.close()
         self._server.done()
 
     def test_txmeta(self):
@@ -156,6 +158,7 @@ class TxBeginParameters(unittest.TestCase):
             self.skipTest("Tx begin meta not implemented in backend")
         self._server.start(script=script_txmeta)
         self._run("w", txMeta={"akey": "aval"})
+        self._driver.close()
         self._server.done()
 
     def test_timeout(self):
@@ -163,6 +166,7 @@ class TxBeginParameters(unittest.TestCase):
             self.skipTest("Tx begin timeout not implemented in backend")
         self._server.start(script=script_timeout)
         self._run("w", timeout=17)
+        self._driver.close()
         self._server.done()
 
     def test_combined(self):
@@ -170,6 +174,6 @@ class TxBeginParameters(unittest.TestCase):
             self.skipTest("Tx begin params not implemented in backend")
         self._server.start(script=script_combined)
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)
+        self._driver.close()
         self._server.done()
-
 

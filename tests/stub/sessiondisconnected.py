@@ -47,8 +47,6 @@ class SessionRunDisconnected(unittest.TestCase):
         self._session = self._driver.session("w")
 
     def tearDown(self):
-        self._session.close()
-        self._driver.close()
         self._backend.close()
         # If test raised an exception this will make sure that the stub server
         # is killed and it's output is dumped for analys.
@@ -81,6 +79,8 @@ class SessionRunDisconnected(unittest.TestCase):
             self.skipTest("No support for custom user-agent in testkit backend")
         self._server.start(script=script_on_hello)
         step = self._run()
+        self._session.close()
+        self._driver.close()
         self._server.done()
 
         expectedStep = "after first next"
@@ -94,6 +94,8 @@ class SessionRunDisconnected(unittest.TestCase):
         # run message.
         self._server.start(script=script_on_run)
         step = self._run()
+        self._session.close()
+        self._driver.close()
         self._server.done()
 
         expectedStep = "after first next"
@@ -107,6 +109,8 @@ class SessionRunDisconnected(unittest.TestCase):
         # pull message.
         self._server.start(script=script_on_pull)
         step = self._run()
+        self._session.close()
+        self._driver.close()
         self._server.done()
 
         expectedStep = "after first next"

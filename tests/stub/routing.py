@@ -129,7 +129,6 @@ class Routing(unittest.TestCase):
                       "#HOST#": self._routingServer.host}
 
     def tearDown(self):
-        self._driver.close()
         self._backend.close()
         self._routingServer.reset()
         self._readServer.reset()
@@ -145,6 +144,7 @@ class Routing(unittest.TestCase):
         session = self._driver.session('r', database=self._database)
         session.run("RETURN 1 as n")
         session.close()
+        self._driver.close()
         self._routingServer.done()
         self._readServer.done()
 
@@ -159,6 +159,7 @@ class Routing(unittest.TestCase):
         tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
+        self._driver.close()
         self._routingServer.done()
         self._readServer.done()
 
@@ -171,6 +172,7 @@ class Routing(unittest.TestCase):
         session = self._driver.session('w', database=self._database)
         session.run("RETURN 1 as n")
         session.close()
+        self._driver.close()
         self._routingServer.done()
         self._writeServer.done()
 
@@ -185,6 +187,7 @@ class Routing(unittest.TestCase):
         tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
+        self._driver.close()
         self._routingServer.done()
         self._writeServer.done()
 

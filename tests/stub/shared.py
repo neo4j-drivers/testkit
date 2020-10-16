@@ -24,14 +24,12 @@ class StubServer:
         if script:
             tempdir = tempfile.gettempdir()
             path = os.path.join(tempdir, "temp.script")
-            # print("Generating script file in %s" % path)
             for v in vars:
                 script = script.replace(v, str(vars[v]))
             with open(path, "w") as f:
                 f.write(script)
 
         if path:
-            print("Starting stubserver on %s with script %s" % (self.address, path))
             self._process = subprocess.Popen([pythonCommand,
                                               "-m",
                                               "boltstub",

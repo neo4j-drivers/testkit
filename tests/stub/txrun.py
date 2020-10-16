@@ -31,7 +31,6 @@ class TxRun(unittest.TestCase):
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
 
     def tearDown(self):
-        self._driver.close()
         self._backend.close()
         # If test raised an exception this will make sure that the stub server
         # is killed and it's output is dumped for analys.
@@ -49,6 +48,7 @@ class TxRun(unittest.TestCase):
         tx.commit()
         bookmarks = session.lastBookmarks()
         session.close()
+        self._driver.close()
         self._server.done()
 
         self.assertEqual(bookmarks, ["bm"])
