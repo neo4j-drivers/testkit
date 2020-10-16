@@ -22,7 +22,6 @@ S: SUCCESS {"fields": ["n"]}
    <NOOP>
    <NOOP>
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 
 # Low-level network transport tests

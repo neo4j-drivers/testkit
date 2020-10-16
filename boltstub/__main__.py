@@ -66,27 +66,26 @@ useful for Bolt client integration testing.
     service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
     try:
         service.start()
-        if service.exceptions:
-            for error in service.exceptions:
-                extra = ""
-                if error.script.filename:
-                    extra += " in {!r}".format(error.script.filename)
-                if error.line_no:
-                    extra += " at line {}".format(error.line_no)
-                print("Script mismatch{}:\n{}".format(extra, error))
-            exit(1)
     except KeyboardInterrupt:
         exit(130)
     except Exception as e:
         log.error(" ".join(map(str, e.args)))
         log.error("\r\n")
         exit(99)
-    else:
-        if service.timed_out:
-            print("Timed out")
-            exit(2)
-        else:
-            exit(0)
+
+    if service.exceptions:
+        for error in service.exceptions:
+            extra = ""
+            if error.script.filename:
+                extra += " in {!r}".format(error.script.filename)
+            if error.line_no:
+                extra += " at line {}".format(error.line_no)
+            print("Script mismatch{}:\n{}".format(extra, error))
+        exit(1)
+
+    if service.timed_out:
+        print("Timed out")
+        exit(2)
 
 
 if __name__ == "__main__":

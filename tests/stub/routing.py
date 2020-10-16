@@ -28,7 +28,6 @@ C: #PULL#
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
-   <EXIT>
 """
 script_write = """
 !: BOLT #VERSION#
@@ -41,7 +40,6 @@ C: #PULL#
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 script_tx_read = """
 !: BOLT #VERSION#
@@ -57,7 +55,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
 """
 script_tx_write = """
 !: BOLT #VERSION#
@@ -148,6 +145,8 @@ class Routing(unittest.TestCase):
         session = self._driver.session('r', database=self._database)
         session.run("RETURN 1 as n")
         session.close()
+        self._routingServer.done()
+        self._readServer.done()
 
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
@@ -160,6 +159,8 @@ class Routing(unittest.TestCase):
         tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
+        self._routingServer.done()
+        self._readServer.done()
 
     # Checks that write server is used
     def test_session_run_write(self):
@@ -170,6 +171,8 @@ class Routing(unittest.TestCase):
         session = self._driver.session('w', database=self._database)
         session.run("RETURN 1 as n")
         session.close()
+        self._routingServer.done()
+        self._writeServer.done()
 
     # Checks that write server is used
     def test_tx_run_write(self):
@@ -182,6 +185,8 @@ class Routing(unittest.TestCase):
         tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
+        self._routingServer.done()
+        self._writeServer.done()
 
 
 class RoutingV3(Routing):

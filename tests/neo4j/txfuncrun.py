@@ -34,6 +34,9 @@ class TestTxFuncRun(unittest.TestCase):
 
         self._session = self._driver.session("r", fetchSize=2)
 
+        # Todo: stash away the results for each level and test the behaviour
+        #       of the driver when using them outside of the transaction.
+        #       separate test?
         lasts = {}
         def nested(tx):
             i0 = 0

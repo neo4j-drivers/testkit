@@ -95,6 +95,7 @@ class IteratePullN(unittest.TestCase):
             if isinstance(next, types.NullRecord):
                 break
             sequence.append(next.values[0].value)
+        self._server.done()
         self.assertEqual(expectedSequence, sequence)
         self.assertEqual(expectedError, gotError)
 

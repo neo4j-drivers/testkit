@@ -16,7 +16,6 @@ C: RUN "RETURN 1 as n" {} {"mode": "r"}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
-   <EXIT>
 """
 
 script_accessmode_write = """
@@ -30,7 +29,6 @@ C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 
 script_bookmarks = """
@@ -44,7 +42,6 @@ C: RUN "RETURN 1 as n" {} {"bookmarks": ["b1", "b2"]}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 
 script_txmeta = """
@@ -58,7 +55,6 @@ C: RUN "RETURN 1 as n" {} {"tx_metadata": {"akey": "aval"}}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 
 script_timeout = """
@@ -72,7 +68,6 @@ C: RUN "RETURN 1 as n" {} {"tx_timeout": 17}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 
 script_combined = """
@@ -86,7 +81,6 @@ C: RUN "RETURN 1 as n" {"p": 1} {"bookmarks": ["b0"], "tx_metadata": {"k": "v"},
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-   <EXIT>
 """
 
 

@@ -24,7 +24,6 @@ script_on_run = """
 
 C: RUN "RETURN 1 as n" {} {}
 S: <EXIT>
-C: PULL {"n": 1000}
 """
 script_on_pull = """
 !: BOLT 4

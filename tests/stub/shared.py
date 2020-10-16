@@ -84,7 +84,7 @@ class StubServer:
         If the server process is running it will be polled until timeout and proceed as above.
         If the server process is still running after polling it will be killed and an exception will be raised.
         """
-        polls = 100
+        polls = 200
         while polls:
             self._process.poll()
             if self._process.returncode is None:

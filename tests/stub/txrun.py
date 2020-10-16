@@ -20,7 +20,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "w"}
 C: COMMIT
 S: SUCCESS {"bookmark": "bm"}
-   <EXIT>
 """
 
 class TxRun(unittest.TestCase):
@@ -50,5 +49,6 @@ class TxRun(unittest.TestCase):
         tx.commit()
         bookmarks = session.lastBookmarks()
         session.close()
+        self._server.done()
 
         self.assertEqual(bookmarks, ["bm"])

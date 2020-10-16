@@ -19,7 +19,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
 """
 script_accessmode_write = """
 !: BOLT 4
@@ -35,7 +34,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
 """
 script_bookmarks = """
 !: BOLT 4
@@ -51,7 +49,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
 """
 script_txmeta = """
 !: BOLT 4
@@ -67,8 +64,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
-
 """
 script_timeout = """
 !: BOLT 4
@@ -84,7 +79,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
 """
 script_combined = """
 !: BOLT 4
@@ -100,7 +94,6 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-   <EXIT>
 """
 
 

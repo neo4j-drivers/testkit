@@ -66,6 +66,11 @@ TODO: nested results
 TODO: summary
 TODO: bookmark chaining
 
+* Verification that results can be iterated correctly, with regards to
+  nested results and fetch sizes.
+  result, records, nested, fetchsize
+  neo4j/txfuncrun.py
+
 # Routing
 * Verification that routing tables are retrieved (v3, v4) and that reader or writer
   is used.
