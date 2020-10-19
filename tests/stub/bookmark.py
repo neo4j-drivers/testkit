@@ -6,6 +6,7 @@ from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
+# TODO: Tests for 3.5 (no support for PULL n)
 script_commit = """
 !: BOLT 4
 !: AUTO HELLO
@@ -22,11 +23,11 @@ C: COMMIT
 S: SUCCESS {"bookmark": "bm"}
 """
 
-class TxRun(unittest.TestCase):
+# Tests bookmarks from transaction
+class Tx(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
 
@@ -38,7 +39,7 @@ class TxRun(unittest.TestCase):
 
     # Tests that a committed transaction can return the last bookmark
     def test_last_bookmark(self):
-        if self._driverName not in ["go", "dotnet"]:
+        if get_driver_name() not in ["go", "dotnet"]:
             self.skipTest("session.lastBookmark not implemented in backend")
 
         self._server.start(script=script_commit)
