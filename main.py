@@ -274,7 +274,7 @@ if __name__ == "__main__":
         driverContainer.exec(["python3", "/testkit/driver/assert_conns_closed.py", neo4jServerHostname, "%d" % port])
 
         subprocess.run([
-            "docker", "stop", neo4jServerHostname])
+            "docker", "rm", "-f", "-v", neo4jServerHostname], check=False)
 
     """
     Stub tests
