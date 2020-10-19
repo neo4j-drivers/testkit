@@ -29,7 +29,10 @@ class StubServer:
             with open(path, "w") as f:
                 f.write(script)
 
-        if path:
+        # Retry starting stub to handle case on unclean exists and the port
+        # is still in use (linger).
+        starts = 10
+        while not self._process:
             self._process = subprocess.Popen([pythonCommand,
                                               "-m",
                                               "boltstub",
@@ -42,15 +45,24 @@ class StubServer:
                                              close_fds=True,
                                              encoding='utf-8')
 
-        # Wait until something is written to know it started, requires -v
-        self._process.stdout.readline()
+            # Wait until something is written to know it started, requires
+            polls = 100
+            while polls > 0:
+                x = self._process.stdout.readline()
+                if x.strip() == "Listening":
+                    break
+                time.sleep(0.1)
+                polls -= 1
 
-        # Double check that the process started, a missing script would exit process immediately
-        if self._process.poll():
-            self._dump()
-            self._process = None
-            raise Exception("Stub server didn't start")
 
+            # Double check that the process started, a missing script would exit process immediately
+            if self._process.poll():
+                self._dump()
+                self._process = None
+                starts -= 1
+                if starts <= 0:
+                    raise Exception("Stub server didn't start")
+                time.sleep(2)
 
     def _dump(self):
         # print("")
