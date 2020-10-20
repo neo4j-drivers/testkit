@@ -170,6 +170,9 @@ class DriverError(BaseError):
     def __str__(self):
         return "DriverError : " + self.errorType + " : " + self.msg
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class FrontendError(BaseError):
     """ Represents an error originating from client code.
