@@ -104,16 +104,14 @@ class Routing(unittest.TestCase):
             'config': '{"mode": "r", "db": "system"}',
             # In >= 4.1 an address was added to context to solve issues when setting up routing tables running in docker.
             # This has been backported to 4.0 in both driver and server since it isn't breaking.
-            'context': '{}',
-            'routes_pull_n': 1000,
+            'context': '{{"address":"{host}"}}'.format(host=self._routingServer.address),
+            'routes_pull_n': -1,
         }
 
 
         # Now append/update language specific variables.
         if self._driverName in ['dotnet']:
             vars['dbParamName'] = 'database'
-            vars['context'] = '{{"address":"{host}:9001"}}'.format(host=os.environ.get("TEST_STUB_HOST"))
-            vars['routes_pull_n'] = -1
 
         routing = 'RUN "CALL dbms.routing.getRoutingTable($context, ${dbParamName})" {{"context": {context}, "{dbParamName}":"{dbName}"}} {config}'
         routing = routing.format(**vars)
@@ -200,13 +198,12 @@ class RoutingV3(Routing):
         vars = {
             # In >= 4.1 an address was added to context to solve issues when setting up routing tables running in docker.
             # This has been backported to all prior protocol versions by some drivers since it is ignored by the database.
-            'context': '{}',
+            'context': '{{"address":"{host}"}}'.format(host=self._routingServer.address),
             'config': '{"mode": "r"}',
         }
 
         if self._driverName in ['dotnet']:
             # Actually a 4.1 feature
-            vars['context'] = '{{"address":"{host}:9001"}}'.format(host=os.environ.get("TEST_STUB_HOST"))
             # Request writer when fetching routing table
             vars['config'] = '{}'
 
