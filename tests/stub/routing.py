@@ -15,6 +15,12 @@ class Routing(unittest.TestCase):
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
+        self._driver = None
+
+    # When we know that the test will run
+    # Java verifies connectivity upon driver creation so we cannot create the
+    # driver if the test is to be skipped.
+    def testSetup(self):
         # Driver is configured to talk to "routing" stub server
         uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
@@ -105,14 +111,15 @@ class Routing(unittest.TestCase):
     def get_vars(self):
         host = self._routingServer.host
         dbparam = "db"
-        if get_driver_name() in ['dotnet']:
-            dbparam = "database"
-        return {
+        v = {
             "#VERSION#": "4.1",
-            "#DBPARAM#": dbparam,
+            "#DBPARAM#": "db",
             "#HOST#": host,
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
         }
+        if get_driver_name() in ['dotnet']:
+            v["#DBPARAM#"] = "database"
+        return v
 
     def get_db(self):
         return "adb"
@@ -123,6 +130,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
+        self.testSetup()
         self._readServer.start(script=self.read_script(), vars=self.get_vars())
         session = self._driver.session('r', database=self.get_db())
         session.run("RETURN 1 as n")
@@ -136,6 +144,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
+        self.testSetup()
         self._readServer.start(script=self.read_tx_script(), vars=self.get_vars())
         session = self._driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
@@ -151,6 +160,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
+        self.testSetup()
         self._writeServer.start(script=self.write_script(), vars=self.get_vars())
         session = self._driver.session('w', database=self.get_db())
         session.run("RETURN 1 as n")
@@ -164,6 +174,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
+        self.testSetup()
         self._writeServer.start(script=self.write_tx_script(), vars=self.get_vars())
         session = self._driver.session('w', database=self.get_db())
         tx = session.beginTransaction()
@@ -255,15 +266,67 @@ class RoutingV3(Routing):
 
     def get_vars(self):
         host = self._routingServer.host
-        routingMode = ""
-        if get_driver_name() in ['go']:
-            routingMode = '"mode": "r"'
-        return {
+        v = {
             "#VERSION#": 3,
             "#HOST#": host,
-            "#ROUTINGMODE#": routingMode,
+            "#ROUTINGMODE#": "",
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
         }
+        routingMode = ""
+        if get_driver_name() in ['go']:
+            v["#ROUTINGMODE#"] = '"mode": "r"'
+        return v
 
     def get_db(self):
         return None
+
+
+class NoRouting(unittest.TestCase):
+    def setUp(self):
+        self._backend = new_backend()
+        self._server = StubServer(9001)
+
+    # When we know that the test will run
+    def testSetup(self):
+        # Driver is configured to talk to "routing" stub server
+        uri = "bolt://%s" % self._server.address
+        self._server.start(script=self.script(), vars=self.get_vars())
+        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
+
+    def tearDown(self):
+        self._server.reset()
+
+    def script(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": null}
+        S: SUCCESS {"server": "Neo4j/4.1.0", "connection_id": "bolt-123456789"}
+        C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r"}
+        """
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "4.1",
+        }
+
+    # Checks that routing is disabled when URI is bolt, no routing in HELLO and
+    # no call to retrieve routing table. From bolt >= 4.1 the routing context is
+    # used to disable/enable server side routing.
+    def test_session_run_read(self):
+        if get_driver_name() not in ['go', 'dotnet']:
+            self.skipTest("Session with named database not implemented in backend")
+
+        self.testSetup()
+        session = self._driver.session('r', database="adb")
+        session.run("RETURN 1 as n")
+        session.close()
+        self._driver.close()
+        self._server.done()
+

@@ -73,7 +73,7 @@ TODO: bookmark chaining
 
 # Routing
 * Verification that routing tables are retrieved (v3, v4) and that reader or writer
-  is used.
+  are used. Checks enable/disable routing in hello message.
   routing, reader, writer, router
   stub/routing.py
 
