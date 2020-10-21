@@ -198,6 +198,18 @@ if __name__ == "__main__":
         aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
 
     """
+    Stub tests
+    """
+    runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
+
+    """
+    TLS tests
+    """
+    # Build TLS server
+    runnerContainer.exec(["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+    runnerContainer.exec(["python3", "-m", "tests.tls.suites"])
+
+    """
     Neo4j server tests
     """
     # Make an artifacts folder where the database can place it's logs, each time
@@ -276,15 +288,4 @@ if __name__ == "__main__":
         subprocess.run([
             "docker", "rm", "-f", "-v", neo4jServerHostname], check=False)
 
-    """
-    Stub tests
-    """
-    runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
-
-    """
-    TLS tests
-    """
-    # Build TLS server
-    runnerContainer.exec(["go", "build", "-v", "."], workdir="/testkit/tlsserver")
-    runnerContainer.exec(["python3", "-m", "tests.tls.suites"])
 
