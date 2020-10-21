@@ -15,16 +15,9 @@ class Routing(unittest.TestCase):
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
-        self._driver = None
-
-    # When we know that the test will run
-    # Java verifies connectivity upon driver creation so we cannot create the
-    # driver if the test is to be skipped.
-    def testSetup(self):
-        # Driver is configured to talk to "routing" stub server
-        uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
-        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
+        self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
+        self._auth = AuthorizationToken(scheme="basic", principal="p", credentials="c")
+        self._userAgent = "007"
 
     def tearDown(self):
         self._routingServer.reset()
@@ -130,12 +123,13 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
-        self.testSetup()
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
         self._readServer.start(script=self.read_script(), vars=self.get_vars())
-        session = self._driver.session('r', database=self.get_db())
+        session = driver.session('r', database=self.get_db())
         session.run("RETURN 1 as n")
         session.close()
-        self._driver.close()
+        driver.close()
         self._routingServer.done()
         self._readServer.done()
 
@@ -144,14 +138,15 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
-        self.testSetup()
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
         self._readServer.start(script=self.read_tx_script(), vars=self.get_vars())
-        session = self._driver.session('r', database=self.get_db())
+        session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
-        self._driver.close()
+        driver.close()
         self._routingServer.done()
         self._readServer.done()
 
@@ -160,12 +155,13 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
-        self.testSetup()
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer.start(script=self.write_script(), vars=self.get_vars())
-        session = self._driver.session('w', database=self.get_db())
+        session = driver.session('w', database=self.get_db())
         session.run("RETURN 1 as n")
         session.close()
-        self._driver.close()
+        driver.close()
         self._routingServer.done()
         self._writeServer.done()
 
@@ -174,14 +170,15 @@ class Routing(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
-        self.testSetup()
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer.start(script=self.write_tx_script(), vars=self.get_vars())
-        session = self._driver.session('w', database=self.get_db())
+        session = driver.session('w', database=self.get_db())
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
-        self._driver.close()
+        driver.close()
         self._routingServer.done()
         self._writeServer.done()
 
@@ -286,13 +283,6 @@ class NoRouting(unittest.TestCase):
         self._backend = new_backend()
         self._server = StubServer(9001)
 
-    # When we know that the test will run
-    def testSetup(self):
-        # Driver is configured to talk to "routing" stub server
-        uri = "bolt://%s" % self._server.address
-        self._server.start(script=self.script(), vars=self.get_vars())
-        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
-
     def tearDown(self):
         self._server.reset()
 
@@ -323,10 +313,13 @@ class NoRouting(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Session with named database not implemented in backend")
 
-        self.testSetup()
-        session = self._driver.session('r', database="adb")
+        # Driver is configured to talk to "routing" stub server
+        uri = "bolt://%s" % self._server.address
+        self._server.start(script=self.script(), vars=self.get_vars())
+        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
+        session = driver.session('r', database="adb")
         session.run("RETURN 1 as n")
         session.close()
-        self._driver.close()
+        driver.close()
         self._server.done()
 
