@@ -2,7 +2,11 @@
 
 Uses environment variables for configuration:
 """
-import subprocess, os, time, io, platform, tempfile
+import subprocess
+import os
+import tempfile
+import platform
+import time
 
 
 class StubServer:
@@ -29,40 +33,29 @@ class StubServer:
             with open(path, "w") as f:
                 f.write(script)
 
-        # Retry starting stub to handle case on unclean exists and the port
-        # is still in use (linger).
-        starts = 10
-        while not self._process:
-            self._process = subprocess.Popen([pythonCommand,
-                                              "-m",
-                                              "boltstub",
-                                              "-l",
-                                              "0.0.0.0:%d" % self.port,
-                                              "-v",
-                                              path],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.PIPE,
-                                             close_fds=True,
-                                             encoding='utf-8')
+        self._process = subprocess.Popen([pythonCommand,
+                                          "-m",
+                                          "boltstub",
+                                          "-l",
+                                          "0.0.0.0:%d" % self.port,
+                                          "-v",
+                                          path],
+                                         stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,
+                                         close_fds=True,
+                                         encoding='utf-8')
 
-            # Wait until something is written to know it started, requires
-            polls = 100
-            while polls > 0:
-                x = self._process.stdout.readline()
-                if x.strip() == "Listening":
-                    break
-                time.sleep(0.1)
-                polls -= 1
+        # Wait until something is written to know it started, requires
+        polls = 100
+        while polls and self._process.stdout.readline().strip() != "Listening":
+            time.sleep(0.1)
+            polls -= 1
 
-
-            # Double check that the process started, a missing script would exit process immediately
-            if self._process.poll():
-                self._dump()
-                self._process = None
-                starts -= 1
-                if starts <= 0:
-                    raise Exception("Stub server didn't start")
-                time.sleep(2)
+        # Double check that the process started, a missing script would exit
+        # process immediately
+        if self._process.poll():
+            self._dump()
+            self._process = None
 
     def _dump(self):
         # print("")
@@ -89,10 +82,13 @@ class StubServer:
         self._process = None
 
     def done(self):
-        """ Checks if the server stopped nicely (processes exited with 0), if so this method is done.
+        """ Checks if the server stopped nicely (processes exited with 0),
+        if so this method is done.
         If the server process exited with non 0, an exception will be raised.
-        If the server process is running it will be polled until timeout and proceed as above.
-        If the server process is still running after polling it will be killed and an exception will be raised.
+        If the server process is running it will be polled until timeout and
+          proceed as above.
+        If the server process is still running after polling it will be killed
+          and an exception will be raised.
         """
         polls = 200
         while polls:
@@ -116,4 +112,6 @@ class StubServer:
         if self._process:
             self._kill()
 
-scripts_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts")
+
+scripts_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "scripts")

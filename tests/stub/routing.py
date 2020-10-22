@@ -269,7 +269,6 @@ class RoutingV3(Routing):
             "#ROUTINGMODE#": "",
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
         }
-        routingMode = ""
         if get_driver_name() in ['go']:
             v["#ROUTINGMODE#"] = '"mode": "r"'
         return v
