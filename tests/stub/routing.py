@@ -18,6 +18,8 @@ def get_extra_hello_props():
 # to handle variations.
 class Routing(unittest.TestCase):
     def setUp(self):
+        if type(self) is Routing and get_driver_name() not in ['java']:
+            self.skipTest('Routing message not implemented in driver')
         self._backend = new_backend()
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
@@ -25,7 +27,7 @@ class Routing(unittest.TestCase):
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
         self._auth = AuthorizationToken(scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
-
+        
     def tearDown(self):
         self._backend.close()
         self._routingServer.reset()
@@ -40,11 +42,8 @@ class Routing(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"mode": "r", "db": "system"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
+        C: ROUTE #ROUTINGCTX# "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 
     def read_script(self):
@@ -112,10 +111,12 @@ class Routing(unittest.TestCase):
     def get_vars(self):
         host = self._routingServer.host
         dbparam = "db"
+        extra = ', "realm": ""' if get_driver_name() in ["java"] else ""
         v = {
-            "#VERSION#": "4.1",
-            "#DBPARAM#": "db",
+            "#VERSION#": "4.3",
+            "#DBPARAM#": dbparam,
             "#HOST#": host,
+            "#EXTRA_HELLO_PROPS#": extra,
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
@@ -138,6 +139,7 @@ class Routing(unittest.TestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer.start(script=self.router_script(), vars=self.get_vars())
         self._readServer.start(script=self.read_script(), vars=self.get_vars())
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session('r', database=self.get_db())
         session.run("RETURN 1 as n")
         session.close()
@@ -185,13 +187,46 @@ class Routing(unittest.TestCase):
         self._routingServer.done()
         self._writeServer.done()
 
+class RoutingV4(Routing):
+    def router_script(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"mode": "r", "db": "system"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def get_vars(self):
+        host = self._routingServer.host
+        dbparam = "db"
+        extra = ', "realm": ""' if get_driver_name() in ["java"] else ""
+        v = {
+            "#VERSION#": 4.1,
+            "#HOST#": host,
+            "#DBPARAM#": dbparam,
+            "#EXTRA_HELLO_PROPS#": extra,
+            "#ROUTINGMODE#": "",
+            "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
+        }
+        
+        if get_driver_name() in ['dotnet', 'java']:
+            v["#DBPARAM#"] = "database"
+
+        return v
+
 class RoutingV3(Routing):
     def router_script(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
@@ -207,7 +242,6 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-
         C: RUN "RETURN 1 as n" {} {"mode": "r"}
         C: PULL_ALL
         S: SUCCESS {"fields": ["n"]}
@@ -221,7 +255,6 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-
         C: BEGIN {"mode": "r"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -238,7 +271,6 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-
         C: RUN "RETURN 1 as n" {} {}
         C: PULL_ALL
         S: SUCCESS {"fields": ["n"]}
@@ -252,7 +284,6 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-
         C: BEGIN {}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -287,7 +318,6 @@ class RoutingV3(Routing):
 
     def get_db(self):
         return None
-
 
 class NoRouting(unittest.TestCase):
     def setUp(self):

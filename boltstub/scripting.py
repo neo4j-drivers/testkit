@@ -54,6 +54,8 @@ class BoltScript:
             return super().__new__(Bolt4x0Script)
         elif version in {(4, 1)}:
             return super().__new__(Bolt4x1Script)
+        elif version in {(4, 3)}:
+            return super().__new__(Bolt4x3Script)
         else:
             raise BoltScriptError("Unsupported version {}".format(version))
 
@@ -360,6 +362,43 @@ class Bolt4x1Script(BoltScript):
     }
 
     server_agent = "Neo4j/4.1.0"
+
+    def on_auto_match(self, request):
+        if request.tag == b"\x01":
+            yield Structure(b"\x70", {
+                "connection_id": "bolt-0",
+                "server": self.server_agent,
+                "routing": None,
+            })
+        else:
+            yield Structure(b"\x70", {})
+
+class Bolt4x3Script(BoltScript):
+
+    protocol_version = (4, 3)
+
+    messages = {
+        "C": {
+            b"\x01": "HELLO",
+            b"\x02": "GOODBYE",
+            b"\x0F": "RESET",
+            b"\x10": "RUN",
+            b"\x11": "BEGIN",
+            b"\x12": "COMMIT",
+            b"\x13": "ROLLBACK",
+            b"\x2F": "DISCARD",
+            b"\x3F": "PULL",
+            b"\x66": "ROUTE"
+        },
+        "S": {
+            b"\x70": "SUCCESS",
+            b"\x71": "RECORD",
+            b"\x7E": "IGNORED",
+            b"\x7F": "FAILURE",
+        },
+    }
+
+    server_agent = "Neo4j/4.3.0"
 
     def on_auto_match(self, request):
         if request.tag == b"\x01":
