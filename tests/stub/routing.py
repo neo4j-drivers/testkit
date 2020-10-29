@@ -6,6 +6,9 @@ from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
+def get_extra_hello_props():
+    return ', "realm": ""' if get_driver_name() in ["java"] else ""
+
 # This should be the latest/current version of the protocol.
 # Older protocol that needs to be tested inherits from this and override
 # to handle variations.
@@ -20,6 +23,7 @@ class Routing(unittest.TestCase):
         self._userAgent = "007"
 
     def tearDown(self):
+        self._backend.close()
         self._routingServer.reset()
         self._readServer.reset()
         self._writeServer.reset()
@@ -30,7 +34,7 @@ class Routing(unittest.TestCase):
         !: AUTO RESET
         !: AUTO GOODBYE
 
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#}
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"mode": "r", "db": "system"}
         C: PULL {"n": -1}
@@ -109,8 +113,9 @@ class Routing(unittest.TestCase):
             "#DBPARAM#": "db",
             "#HOST#": host,
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
+            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
-        if get_driver_name() in ['dotnet']:
+        if get_driver_name() in ['dotnet', 'java']:
             v["#DBPARAM#"] = "database"
         return v
 
@@ -120,7 +125,7 @@ class Routing(unittest.TestCase):
     # Checks that routing is used to connect to correct server and that parameters for
     # session run is passed on to the target server (not the router).
     def test_session_run_read(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'java']:
             self.skipTest("Session with named database not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -135,7 +140,7 @@ class Routing(unittest.TestCase):
 
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'java']:
             self.skipTest("Session with named database not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -152,7 +157,7 @@ class Routing(unittest.TestCase):
 
     # Checks that write server is used
     def test_session_run_write(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'java']:
             self.skipTest("Session with named database not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -167,7 +172,7 @@ class Routing(unittest.TestCase):
 
     # Checks that write server is used
     def test_tx_run_write(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'java']:
             self.skipTest("Session with named database not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -182,7 +187,6 @@ class Routing(unittest.TestCase):
         self._routingServer.done()
         self._writeServer.done()
 
-
 class RoutingV3(Routing):
     def router_script(self):
         return """
@@ -190,7 +194,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
 
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007"}
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
@@ -268,9 +272,12 @@ class RoutingV3(Routing):
             "#HOST#": host,
             "#ROUTINGMODE#": "",
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
+            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
         if get_driver_name() in ['go']:
             v["#ROUTINGMODE#"] = '"mode": "r"'
+        if get_driver_name() in ['java']:
+            v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#'] 
         return v
 
     def get_db(self):
@@ -283,6 +290,7 @@ class NoRouting(unittest.TestCase):
         self._server = StubServer(9001)
 
     def tearDown(self):
+        self._backend.close()
         self._server.reset()
 
     def script(self):
@@ -291,7 +299,7 @@ class NoRouting(unittest.TestCase):
         !: AUTO RESET
         !: AUTO GOODBYE
 
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": null}
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": null #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.1.0", "connection_id": "bolt-123456789"}
         C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
         C: PULL {"n": 1000}
@@ -303,13 +311,15 @@ class NoRouting(unittest.TestCase):
     def get_vars(self):
         return {
             "#VERSION#": "4.1",
+            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
+
 
     # Checks that routing is disabled when URI is bolt, no routing in HELLO and
     # no call to retrieve routing table. From bolt >= 4.1 the routing context is
     # used to disable/enable server side routing.
     def test_session_run_read(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'java']:
             self.skipTest("Session with named database not implemented in backend")
 
         # Driver is configured to talk to "routing" stub server

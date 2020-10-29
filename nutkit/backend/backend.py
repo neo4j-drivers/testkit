@@ -26,7 +26,7 @@ def decode_hook(x):
     if not name in protocolClasses:
         return x
 
-    data = x['data']
+    data = x.get('data', {})
     if not data:
         data = {}
 
