@@ -273,6 +273,7 @@ class RoutingV3(Routing):
             "#ROUTINGMODE#": "",
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
+            "#EXTR_HELLO_ROUTING_PROPS#": "",
         }
         if get_driver_name() in ['go']:
             v["#ROUTINGMODE#"] = '"mode": "r"'
