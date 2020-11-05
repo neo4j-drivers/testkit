@@ -217,10 +217,13 @@ if __name__ == "__main__":
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
     os.makedirs(neo4jArtifactsPath)
 
+    # Until expanded protocol is implemented then we will only support current version + previous 2 + last minor
+    # version of last major version.
     neo4jServers = [
-        { "version": "3.5", "edition": "enterprise", "cluster": False, "suite": "3.5", "scheme": "bolt" },
-        { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0", "scheme": "neo4j" },
-        { "version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1", "scheme": "neo4j" },
+        {"version": "3.5", "edition": "enterprise", "cluster": False, "suite": "3.5", "scheme": "bolt"},
+        # { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0", "scheme": "neo4j" },
+        {"version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1", "scheme": "neo4j"},
+        {"version": "4.2", "edition": "community", "cluster": False, "suite": "4.2", "scheme": "neo4j"},
     ]
     for neo4jServer in neo4jServers:
         # Construct Docker image name
