@@ -317,7 +317,7 @@ class NoRouting(unittest.TestCase):
         return {
             "#VERSION#": "4.1",
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#ROUTING#": '", routing": null' if get_driver_name() not in ['javascript'] else ''
+            "#ROUTING#": ', "routing": null' if get_driver_name() not in ['javascript'] else ''
         }
 
 
