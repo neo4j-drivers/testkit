@@ -11,29 +11,45 @@ from tests.testenv import get_test_result_class, begin_test_suite, end_test_suit
 loader = unittest.TestLoader()
 
 """
-Suite for Neo4j 3.5 single instance enterprise edition
+Suite for Neo4j 3.5
 """
-single_enterprise_neo4j3x5 = unittest.TestSuite()
-single_enterprise_neo4j3x5.addTests(loader.loadTestsFromModule(datatypes))
-single_enterprise_neo4j3x5.addTests(loader.loadTestsFromModule(sessionrun))
-single_enterprise_neo4j3x5.addTests(loader.loadTestsFromModule(authentication))
+suite_3x5 = unittest.TestSuite()
+suite_3x5.addTests(loader.loadTestsFromModule(datatypes))
+suite_3x5.addTests(loader.loadTestsFromModule(sessionrun))
+suite_3x5.addTests(loader.loadTestsFromModule(authentication))
 
 """
-Suite for Neo4j 4.0 single instance community edition
+Suite for Neo4j 4.0
 """
-single_community_neo4j4x0 = unittest.TestSuite()
-single_community_neo4j4x0.addTests(loader.loadTestsFromModule(datatypes))
-single_community_neo4j4x0.addTests(loader.loadTestsFromModule(sessionrun))
-single_community_neo4j4x0.addTests(loader.loadTestsFromModule(authentication))
+suite_4x0 = unittest.TestSuite()
+suite_4x0.addTests(loader.loadTestsFromModule(datatypes))
+suite_4x0.addTests(loader.loadTestsFromModule(sessionrun))
+suite_4x0.addTests(loader.loadTestsFromModule(authentication))
 
 
 """
-Suite for Neo4j 4.1 single instance enterprise edition
+Suite for Neo4j 4.1
 """
-single_enterprise_neo4j4x1 = unittest.TestSuite()
-single_enterprise_neo4j4x1.addTests(loader.loadTestsFromModule(datatypes))
-single_enterprise_neo4j4x1.addTests(loader.loadTestsFromModule(sessionrun))
-single_enterprise_neo4j4x1.addTests(loader.loadTestsFromModule(authentication))
+suite_4x1 = unittest.TestSuite()
+suite_4x1.addTests(loader.loadTestsFromModule(datatypes))
+suite_4x1.addTests(loader.loadTestsFromModule(sessionrun))
+suite_4x1.addTests(loader.loadTestsFromModule(authentication))
+
+"""
+Suite for Neo4j 4.2
+"""
+suite_4x2 = unittest.TestSuite()
+suite_4x2.addTests(loader.loadTestsFromModule(datatypes))
+suite_4x2.addTests(loader.loadTestsFromModule(sessionrun))
+suite_4x2.addTests(loader.loadTestsFromModule(authentication))
+
+"""
+Suite for Neo4j 4.3
+"""
+suite_4x3 = unittest.TestSuite()
+suite_4x3.addTests(loader.loadTestsFromModule(datatypes))
+suite_4x3.addTests(loader.loadTestsFromModule(sessionrun))
+suite_4x3.addTests(loader.loadTestsFromModule(authentication))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -42,11 +58,15 @@ if __name__ == "__main__":
     name = sys.argv[1]
     suite = None
     if   name == "3.5":
-        suite = single_enterprise_neo4j3x5
+        suite = suite_3x5
     if   name == "4.0":
-        suite = single_community_neo4j4x0
+        suite = suite_4x0
     elif name == "4.1":
-        suite = single_enterprise_neo4j4x1
+        suite = suite_4x1
+    elif name == "4.2":
+        suite = suite_4x2
+    elif name == "4.3":
+        suite = suite_4x3
 
     if not suite:
         print("Unknown suite name: " + name)

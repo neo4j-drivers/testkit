@@ -48,3 +48,15 @@ def run(image, name, command=None, mountMap={}, hostMap={}, portMap={}, envMap={
     subprocess.run(cmd, check=True)
 
     return Container(name)
+
+def load(readable):
+    cmd = ["docker", "load"]
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    outs, errs = p.communicate(input=readable.read())
+    if outs:
+        print(str(outs))
+    if errs:
+        print(str(errs))
+    if p.returncode != 0:
+        raise Exception("Failed to load docker image")
+
