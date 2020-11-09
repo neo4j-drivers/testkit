@@ -8,7 +8,7 @@ is executed in each context.
 import os, sys, atexit, subprocess, time, json, shutil
 from datetime import datetime
 from tests.testenv import get_test_result_class, begin_test_suite, end_test_suite, in_teamcity
-import docker
+import docker, teamcity
 
 import tests.neo4j.suites as suites
 
@@ -218,25 +218,43 @@ if __name__ == "__main__":
     os.makedirs(neo4jArtifactsPath)
 
     neo4jServers = [
-        { "version": "3.5", "edition": "enterprise", "cluster": False, "suite": "3.5", "scheme": "bolt" },
-        { "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0", "scheme": "neo4j" },
-        { "version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1", "scheme": "neo4j" },
+        { "image": "neo4j:3.5-enterprise", "version": "3.5", "edition": "enterprise", "cluster": False, "suite": "3.5", "scheme": "bolt" },
+        { "image": "neo4j:4.0", "version": "4.0", "edition": "community", "cluster": False, "suite": "4.0", "scheme": "neo4j" },
+        { "image": "neo4j:4.1-enterprise", "version": "4.1", "edition": "enterprise", "cluster": False, "suite": "4.1", "scheme": "neo4j" },
     ]
+    if in_teamcity:
+        # Use last successful build of 4.2.0. Need to update this when a new patch is in the baking.
+        # When there is an official 4.2 build there should be a Docker hub based image above (or added
+        # when not in teamcity).
+        s = {
+                "image": "neo4j:4.2.0-enterprise",
+                "version": "4.2",
+                "edition": "enterprise",
+                "cluster": False,
+                "suite": "4.2",
+                "scheme": "neo4j",
+                "download": teamcity.DockerImage("neo4j-enterprise-4.2.0-docker-loadable.tar")
+        }
+        neo4jServers.append(s)
+
+
     for neo4jServer in neo4jServers:
-        # Construct Docker image name
-        imageName = "neo4j:%s" % (neo4jServer["version"])
         # Environment variables passed to the Neo4j docker container
         envMap={
             "NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (neo4jServerHostname, port),
             "NEO4J_AUTH": "%s/%s" % (username, password),
         }
         if neo4jServer["edition"] != "community":
-            imageName = imageName + "-" + neo4jServer["edition"]
             envMap["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
+
+        download = neo4jServer.get('download', None)
+        if download:
+            print("Downloading Neo4j docker image")
+            docker.load(download.get())
 
         # Start a Neo4j server
         print("Starting neo4j server")
-        neo4jContainer = docker.run(imageName, neo4jServerHostname,
+        neo4jContainer = docker.run(neo4jServer["image"], neo4jServerHostname,
             mountMap={os.path.join(neo4jArtifactsPath, "logs"): "/logs"},
             envMap=envMap,
             network="the-bridge")
@@ -266,7 +284,7 @@ if __name__ == "__main__":
         # To support the legacy .net integration tests
         envString = ""
         if neo4jServer["edition"] == "enterprise":
-            envString += "-e "         
+            envString += "-e "
         envString += neo4jServer["version"]
         driverEnv["NEOCTRL_ARGS"] = envString
 
