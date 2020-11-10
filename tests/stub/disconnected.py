@@ -14,7 +14,7 @@ customUserAgent = "Modesty"
 script_on_hello = """
 !: BOLT 4
 
-C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass" #EXTRA_HELLO_PARAMS# }
 S: <EXIT>
 """
 script_on_run = """
@@ -75,9 +75,9 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_hello(self):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # hello message.
-        if not self._driverName in ["go"]:
+        if not self._driverName in ["go", "javascript"]:
             self.skipTest("No support for custom user-agent in testkit backend")
-        self._server.start(script=script_on_hello)
+        self._server.start(script=script_on_hello, vars=self.get_vars())
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -119,3 +119,10 @@ class SessionRunDisconnected(unittest.TestCase):
             expectedStep = "after run"
         self.assertEqual(step, expectedStep)
 
+    def get_vars(self):
+        return {
+            "#EXTRA_HELLO_PARAMS#": self.get_extra_hello_props()
+        }
+
+    def get_extra_hello_props(self):
+        return ', "realm": "", "ticket": ""' if self._driverName in ["javascript"] else ""
