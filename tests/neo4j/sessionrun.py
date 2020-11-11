@@ -20,7 +20,7 @@ class TestSessionRun(unittest.TestCase):
         self._backend.close()
 
     def test_iteration_smaller_than_fetch_size(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can handle that.
@@ -40,7 +40,7 @@ class TestSessionRun(unittest.TestCase):
             self.assertEqual(rec, exp)
 
     def test_iteration_larger_than_fetch_size(self):
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved and that the parameter
         # is respected. Uses parameter to generate a long list of records.
@@ -58,7 +58,7 @@ class TestSessionRun(unittest.TestCase):
     def test_iteration_nested(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Nested results not working in 4.2 and earlier. FIX AND ENABLE in 4.3")
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Fetchsize not implemented in backend")
         # Verifies that it is possible to nest results with small fetch sizes.
         # Auto-commit results does not (as of 4.x) support multiple results on
