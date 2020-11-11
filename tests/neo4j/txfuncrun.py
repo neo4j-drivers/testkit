@@ -26,7 +26,7 @@ class TestTxFuncRun(unittest.TestCase):
         # view it is not possible to see that those streams are actually used.
         # (see stub tests for this verification).
 
-        if get_driver_name() not in ['go', 'dotnet']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Fetchsize not implemented in backend")
 
         def run(tx, i, n):
