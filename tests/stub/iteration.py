@@ -95,31 +95,31 @@ class SessionRun(unittest.TestCase):
 
     # Last fetched batch is a full batch
     def test_full_batch(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, SessionRun.script_pull_n, SessionRun.end_full_batch, ["1", "2", "3", "4", "5", "6"])
 
     # Last fetched batch is half full (or more important not full)
     def test_half_batch(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, SessionRun.script_pull_n, SessionRun.end_half_batch, ["1", "2", "3", "4", "5"])
 
     # Last fetched batch is empty
     def test_empty_batch(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, SessionRun.script_pull_n, SessionRun.end_empty_batch, ["1", "2", "3", "4"])
 
     # Last batch returns an error
     def test_error(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(2, SessionRun.script_pull_n, SessionRun.end_error, ["1", "2", "3", "4", "5"], expectedError=True)
 
     # Support -1, not batched at all
     def test_all(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._run(-1, SessionRun.script_pull_all, "", ["1", "2", "3", "4", "5", "6"])
 
@@ -180,7 +180,7 @@ class TxRun(unittest.TestCase):
         self.assertEqual(expectedError, gotError)
 
     def test_all(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         self._iterate(2, TxRun.script_n, [1, 2, 3])
 
@@ -218,6 +218,7 @@ class TxRun(unittest.TestCase):
     """
 
     def test_nested(self):
+        # ex JAVA - java completely pulls the first query before running the second
         if get_driver_name() not in ['go', 'dotnet']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         uri = "bolt://%s" % self._server.address

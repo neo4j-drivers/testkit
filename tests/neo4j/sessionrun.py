@@ -18,7 +18,7 @@ class TestSessionRun(unittest.TestCase):
         self._backend.close()
 
     def test_iteration_smaller_than_fetch_size(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can
@@ -39,7 +39,7 @@ class TestSessionRun(unittest.TestCase):
             self.assertEqual(rec, exp)
 
     def test_iteration_larger_than_fetch_size(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
+        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
             self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved and that the
         # parameter is respected. Uses parameter to generate a long list of
