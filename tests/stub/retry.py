@@ -138,6 +138,7 @@ class TestRetry(unittest.TestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on writeTransaction.
         # An error should be raised to indicate the failure
+        # ex JAVA - Keeps retrying on commit despite connection being dropped.
         if not self._driverName in ["go"]:
             self.skipTest("Backend missing support for SessionWriteTransaction")
         self._server.start(script=script_commit_disconnect)

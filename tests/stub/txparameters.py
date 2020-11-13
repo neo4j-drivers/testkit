@@ -130,7 +130,7 @@ class TxBeginParameters(unittest.TestCase):
             session.close()
 
     def test_accessmode_read(self):
-        if self._driverName not in ["dotnet", "go", "javascript"]:
+        if self._driverName not in ["dotnet", "go", "javascript", "java"]:
             self.skipTest("Tx begin accessmode not implemented in backend")
         self._server.start(script=script_accessmode_read)
         self._run("r")
@@ -138,7 +138,7 @@ class TxBeginParameters(unittest.TestCase):
         self._server.done()
 
     def test_accessmode_write(self):
-        if self._driverName not in ["dotnet", "go", "javascript"]:
+        if self._driverName not in ["dotnet", "go", "javascript", "java"]:
             self.skipTest("Tx begin accessmode not implemented in backend")
         self._server.start(script=script_accessmode_write)
         self._run("w")
@@ -146,7 +146,7 @@ class TxBeginParameters(unittest.TestCase):
         self._server.done()
 
     def test_bookmarks(self):
-        if self._driverName not in ["dotnet", "go", "javascript"]:
+        if self._driverName not in ["dotnet", "go", "javascript","java"]:
             self.skipTest("Tx begin bookmarks not implemented in backend")
         self._server.start(script=script_bookmarks)
         self._run("w", bookmarks=["b1", "b2"])
@@ -154,7 +154,7 @@ class TxBeginParameters(unittest.TestCase):
         self._server.done()
 
     def test_txmeta(self):
-        if self._driverName not in ["dotnet", "go", "javascript"]:
+        if self._driverName not in ["dotnet", "go", "javascript", "java"]:
             self.skipTest("Tx begin meta not implemented in backend")
         self._server.start(script=script_txmeta)
         self._run("w", txMeta={"akey": "aval"})
@@ -162,7 +162,7 @@ class TxBeginParameters(unittest.TestCase):
         self._server.done()
 
     def test_timeout(self):
-        if self._driverName not in ["dotnet", "go", "javascript"]:
+        if self._driverName not in ["dotnet", "go", "javascript", "java"]:
             self.skipTest("Tx begin timeout not implemented in backend")
         self._server.start(script=script_timeout)
         self._run("w", timeout=17)
@@ -170,7 +170,7 @@ class TxBeginParameters(unittest.TestCase):
         self._server.done()
 
     def test_combined(self):
-        if self._driverName not in ["dotnet", "go", "javascript"]:
+        if self._driverName not in ["dotnet", "go", "javascript", "java"]:
             self.skipTest("Tx begin params not implemented in backend")
         self._server.start(script=script_combined)
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)

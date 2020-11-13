@@ -131,7 +131,7 @@ class SessionRunParameters(unittest.TestCase):
         self._server.done()
 
     def test_bookmarks(self):
-        if self._driverName not in ["go", "dotnet", "javascript"]:
+        if self._driverName not in ["go", "dotnet", "javascript","java"]:
             self.skipTest("Session bookmarks not implemented in backend")
         self._server.start(script=script_bookmarks)
         self._run("w", bookmarks=["b1", "b2"])
@@ -139,7 +139,7 @@ class SessionRunParameters(unittest.TestCase):
         self._server.done()
 
     def test_txmeta(self):
-        if self._driverName not in ["go", "dotnet", "javascript"]:
+        if self._driverName not in ["go", "dotnet", "javascript","java"]:
             self.skipTest("Session txmeta not implemented in backend")
         self._server.start(script=script_txmeta)
         self._run("w", txMeta={"akey": "aval"})
@@ -147,7 +147,7 @@ class SessionRunParameters(unittest.TestCase):
         self._server.done()
 
     def test_timeout(self):
-        if self._driverName not in ["go", "dotnet", "javascript"]:
+        if self._driverName not in ["go", "dotnet", "javascript","java"]:
             self.skipTest("Session timeout not implemented in backend")
         self._server.start(script=script_timeout)
         self._run("w", timeout=17)
@@ -155,7 +155,7 @@ class SessionRunParameters(unittest.TestCase):
         self._server.done()
 
     def test_combined(self):
-        if self._driverName not in ["go", "dotnet", "javascript"]:
+        if self._driverName not in ["go", "dotnet", "javascript", "java"]:
             self.skipTest("Session parameters not implemented in backend")
         self._server.start(script=script_combined)
         self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"], txMeta={"k": "v"}, timeout=11)

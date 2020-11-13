@@ -35,9 +35,6 @@ class TestDataTypes(unittest.TestCase):
         self.assertEqual(record, types.Record(values=[val]))
 
     def testShouldEchoBack(self):
-        if get_driver_name() in [ 'java']:
-            self.skipTest("Not implemented in backend")
-
         vals = [
             types.CypherBool(True),
             types.CypherBool(False),
@@ -66,9 +63,6 @@ class TestDataTypes(unittest.TestCase):
             self.verifyCanEcho(val)
 
     def testShouldEchoVeryLongList(self):
-        if get_driver_name() in ['java']:
-            self.skipTest("Not implemented in backend")
-
         vals = [
             types.CypherNull(),
             types.CypherInt(1),
@@ -86,16 +80,12 @@ class TestDataTypes(unittest.TestCase):
             self.verifyCanEcho(types.CypherList(long_list))
 
     def testShouldEchoVeryLongString(self):
-        if get_driver_name() in ['java']:
-            self.skipTest("Not implemented in backend")
 
         self.createDriverAndSession()
         long_string = "*" * 10000
         self.verifyCanEcho(types.CypherString(long_string))
 
     def testShouldEchoNestedLists(self):
-        if get_driver_name() in ['java']:
-            self.skipTest("Not implemented in backend")
 
         test_lists = [
             types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
@@ -123,7 +113,7 @@ class TestDataTypes(unittest.TestCase):
 
     # Work in progress
     def testShouldEchoVeryLongMap(self):
-        if get_driver_name() not in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() not in ['dotnet', 'go', 'javascript', 'java']:
             self.skipTest("Not implemented in backend")
 
         test_list = [
@@ -144,7 +134,7 @@ class TestDataTypes(unittest.TestCase):
             self.verifyCanEcho(types.CypherMap(long_map))
 
     def testShouldEchoNestedMap(self):
-        if get_driver_name() not in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() not in ['dotnet', 'go', 'javascript', 'java']:
             self.skipTest("Not implemented in backend")
 
         test_maps = {

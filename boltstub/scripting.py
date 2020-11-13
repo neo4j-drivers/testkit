@@ -460,8 +460,25 @@ class ClientMessageLine(ClientLine):
 
     def match(self, message):
         tag = self.script.tag("C", self.tag_name)
-        return tag == message.tag and tuple(self.fields) == tuple(message.fields)
+        return tag == message.tag and self.compare(tuple(self.fields), tuple(message.fields))
 
+    def compare(self, script_fields, message_fields):
+        for i in range(len(script_fields)):
+            return self.compare_value(script_fields[i], message_fields[i])
+        return True
+
+    def compare_value(self, val_a, val_b):
+        if not isinstance(val_a, type(val_b)):
+            return False
+        if isinstance(val_a, list):
+            return set(val_a) == set(val_b)
+        elif isinstance(val_a, dict):
+            if set(val_a.keys()) != set(val_b.keys()):
+                return False
+            else:
+                for key in val_a.keys():
+                    return self.compare_value(val_a[key], val_b[key])
+        return val_a == val_b
 
 class ServerMessageLine(ServerLine):
 
