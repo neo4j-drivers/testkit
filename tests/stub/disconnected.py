@@ -75,7 +75,7 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_hello(self):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # hello message.
-        if not self._driverName in ["go", "javascript"]:
+        if not self._driverName in ["go", "javascript","java"]:
             self.skipTest("No support for custom user-agent in testkit backend")
         self._server.start(script=script_on_hello, vars=self.get_vars())
         step = self._run()
@@ -84,8 +84,8 @@ class SessionRunDisconnected(unittest.TestCase):
         self._server.done()
 
         expectedStep = "after first next"
-        if self._driverName in ["go"]:
-            # Go reports this error earlier
+        if self._driverName in ["go","java"]:
+            # Go and java report this error earlier
             expectedStep = "after run"
         self.assertEqual(step, expectedStep)
 
@@ -125,4 +125,9 @@ class SessionRunDisconnected(unittest.TestCase):
         }
 
     def get_extra_hello_props(self):
-        return ', "realm": "", "ticket": ""' if self._driverName in ["javascript"] else ""
+        if self._driverName == "javascript":
+            return ', "realm": "", "ticket": ""'
+        elif self._driverName == "java":
+            return ', "realm": "", "routing": null'
+        else:
+            return "";
