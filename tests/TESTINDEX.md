@@ -23,7 +23,9 @@ TODO: Handling of lost connection during transaction
 * No-op sent from server to keep alive connections
   noop, chunking, transport, keep alive
   stub/transport.py
-
+* Bolt versions
+  protocol, bolt, version
+  stub/versions.py
 
 # Datatypes
 TODO: path, relationsship, spatial, temporal

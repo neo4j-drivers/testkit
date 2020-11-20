@@ -107,6 +107,7 @@ class BoltStubService:
                 except ServerExit:
                     pass
                 except Exception as e:
+                    print(e)
                     service.exceptions.append(e)
 
             def finish(self):
