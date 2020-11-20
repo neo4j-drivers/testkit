@@ -42,9 +42,10 @@ class BoltScript:
         "S": {},
     }
 
-    def __new__(cls, *lines, auto=None, filename=None, handshake_data=None,
-                port=None, version=None):
-        if version is None or version in {(1,), (3, 0), (3, 1), (3, 2), (3, 3)}:
+    def __new__(cls, *lines, auto=None, filename=None,
+                port=None, version=None, handshake_data=None):
+        if version is None or version in {
+                (1,), (3, 0), (3, 1), (3, 2), (3, 3)}:
             return super().__new__(Bolt1Script)
         elif version in {(2,), (3, 4)}:
             return super().__new__(Bolt2Script)
@@ -57,8 +58,8 @@ class BoltScript:
         else:
             raise BoltScriptError("Unsupported version {}".format(version))
 
-    def __init__(self, *lines, auto=None, filename=None, handshake_data=None,
-                 port=None, **_):
+    def __init__(self, *lines, auto=None, filename=None, port=None,
+                 handshake_data=None, **_):
         self._lines = []
         for line in lines:
             self.append(line)
@@ -81,15 +82,30 @@ class BoltScript:
     def on_auto_match(self, request):
         raise NotImplementedError
 
+    def _get_version(self, request, n):
+        versions_offset = 4  # Skip past magic header
+        version_size = 4  # Number of bytes reserved per version
+        minor_offset = 2  # Minor version offset relative to start of version
+        major_offset = 3  # Major version offset relative to start of version
+        versionindex = versions_offset + (n * version_size)
+        return (request[versionindex + major_offset],
+                request[versionindex + minor_offset])
+
     def on_handshake(self, request):
-        handshake_data = self.handshake_data
-        if handshake_data is None:
-            handshake_data = bytearray()
-            for value in self.protocol_version:
-                handshake_data.insert(0, value)
-            while len(handshake_data) < 4:
-                handshake_data.insert(0, 0)
-        return bytes(handshake_data)
+        if self.handshake_data:
+            # Handshake response is overriden in script
+            return bytes(self.handshake_data)
+
+        # Check that the server protocol version is among the ones supported
+        # by the driver.
+        for n in range(0, 4):
+            version = self._get_version(request, n)
+            if version == self.protocol_version:
+                return bytes((0, 0,
+                              self.protocol_version[1],
+                              self.protocol_version[0]))
+        raise ValueError("Failed handshake, stub server talks protocol {}. "
+                         "Driver sent handshake: {}".format(self.protocol_version, request))
 
     @classmethod
     def tag(cls, role, name):
@@ -97,8 +113,9 @@ class BoltScript:
         if tags:
             return tags[0]
         else:
+            version = ".".join(map(str, cls.protocol_version))
             raise ValueError("Message %r not available for protocol "
-                             "version %s" % (name, ".".join(map(str, cls.protocol_version))))
+                             "version %s" % (name, version))
 
     @classmethod
     def tag_name(cls, role, tag):
