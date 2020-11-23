@@ -1,5 +1,5 @@
 import unittest
-from tests.shared import new_backend
+from tests.shared import new_backend, get_driver_name
 from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 
@@ -45,6 +45,8 @@ class ProtocolVersions(unittest.TestCase):
         self._run("4.1")
 
     def test_supports_bolt_4x3(self):
+        if get_driver_name() in ['java']:
+            self.skipTest("4.3 protocol not implemented")
         self._run("4.3")
 
     def test_supports_bolt_3x0(self):
