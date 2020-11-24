@@ -244,14 +244,14 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # should be a Docker hub based image above (or added when not in
         # Teamcity).
         s = {
-            "image": "neo4j:4.2.0-enterprise",
+            "image": "neo4j:4.2.1-enterprise",
             "version": "4.2",
             "edition": "enterprise",
             "cluster": False,
             "suite": "4.2",
             "scheme": "neo4j",
             "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.2.0-docker-loadable.tar")
+                "neo4j-enterprise-4.2.1-docker-loadable.tar")
         }
         neo4jServers.append(s)
         # Use last succesful build of 4.3.0, update when new drop available
