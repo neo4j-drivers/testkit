@@ -1,5 +1,6 @@
 import subprocess
 
+
 class Container:
     def __init__(self, name):
         self.name = name
@@ -11,23 +12,26 @@ class Container:
             cmd.extend(["-e", "%s=%s" % (k, envMap[k])])
 
     def exec(self, command, workdir=None, envMap={}):
-        cmd  = ["docker", "exec"]
+        cmd = ["docker", "exec"]
         self._add(cmd, workdir, envMap)
         cmd.append(self.name)
         cmd.extend(command)
         subprocess.run(cmd, check=True)
 
     def exec_detached(self, command, workdir=None, envMap={}):
-        cmd  = ["docker", "exec", "--detach"]
+        cmd = ["docker", "exec", "--detach"]
         self._add(cmd, workdir, envMap)
         cmd.append(self.name)
         cmd.extend(command)
         subprocess.run(cmd, check=True)
 
-def run(image, name, command=None, mountMap={}, hostMap={}, portMap={}, envMap={}, workingFolder=None, network=None, aliases=[]):
-    # Bootstrap the driver docker image by running a bootstrap script in the image.
-    # The driver docker image only contains the tools needed to build, not the built driver.
-    cmd = [ "docker", "run", "--name", name, "--rm", "--detach"]
+
+def run(image, name, command=None, mountMap={}, hostMap={}, portMap={},
+        envMap={}, workingFolder=None, network=None, aliases=[]):
+    # Bootstrap the driver docker image by running a bootstrap script in
+    # the image. The driver docker image only contains the tools needed to
+    # build, not the built driver.
+    cmd = ["docker", "run", "--name", name, "--rm", "--detach"]
     for k in mountMap:
         cmd.extend(["-v", "%s:%s" % (k, mountMap[k])])
     for k in hostMap:
@@ -46,8 +50,8 @@ def run(image, name, command=None, mountMap={}, hostMap={}, portMap={}, envMap={
     if command:
         cmd.extend(command)
     subprocess.run(cmd, check=True)
-
     return Container(name)
+
 
 def load(readable):
     cmd = ["docker", "load"]
@@ -59,4 +63,3 @@ def load(readable):
         print(str(errs))
     if p.returncode != 0:
         raise Exception("Failed to load docker image")
-
