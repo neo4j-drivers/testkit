@@ -249,7 +249,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "suite": "4.2",
             "scheme": "neo4j",
             "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.2.0-docker-loadable.tar")
+                "neo4j-enterprise-4.2.1-docker-loadable.tar")
         }
         neo4jServers.append(s)
 
