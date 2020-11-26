@@ -194,7 +194,7 @@ class RoutingV4(Routing):
         !: AUTO RESET
 
         !: AUTO GOODBYE
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"mode": "r", "db": "system"}
         C: PULL {"n": -1}
@@ -206,18 +206,22 @@ class RoutingV4(Routing):
     def get_vars(self):
         host = self._routingServer.host
         dbparam = "db"
-        extra = ', "realm": ""' if get_driver_name() in ["java"] else ""
         v = {
             "#VERSION#": 4.1,
             "#HOST#": host,
             "#DBPARAM#": dbparam,
-            "#EXTRA_HELLO_PROPS#": extra,
+            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#ROUTINGMODE#": "",
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
         }
+
+        v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
         
-        if get_driver_name() in ['dotnet', 'java']:
+        if get_driver_name() in ['dotnet', 'java', 'javascript']:
             v["#DBPARAM#"] = "database"
+
+        if get_driver_name() in ['javascript']:
+            v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
 
         return v
 
