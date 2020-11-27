@@ -1,10 +1,8 @@
 import unittest
 
-from nutkit.backend import Backend
-from nutkit.frontend import Driver, AuthorizationToken, NullRecord
 import nutkit.protocol as types
-from tests.neo4j.shared import *
-from tests.shared import *
+from tests.neo4j.shared import get_driver
+from tests.shared import new_backend, get_driver_name
 
 
 class TestTxFuncRun(unittest.TestCase):
@@ -30,7 +28,8 @@ class TestTxFuncRun(unittest.TestCase):
             self.skipTest("Fetchsize not implemented in backend")
 
         def run(tx, i, n):
-            return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x", {"i": types.CypherInt(i), "n": types.CypherInt(n)})
+            return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x",
+                          {"i": types.CypherInt(i), "n": types.CypherInt(n)})
 
         self._session = self._driver.session("r", fetchSize=2)
 
@@ -38,27 +37,31 @@ class TestTxFuncRun(unittest.TestCase):
         #       of the driver when using them outside of the transaction.
         #       separate test?
         lasts = {}
+
         def nested(tx):
             i0 = 0
             n0 = 6
             res0 = run(tx, i0, n0)
             for r0 in range(i0, n0+1):
                 rec = res0.next()
-                self.assertEqual(rec, types.Record(values=[types.CypherInt(r0)]))
+                self.assertEqual(
+                    rec, types.Record(values=[types.CypherInt(r0)]))
                 lasts[0] = rec.values[0].value
                 i1 = 7
                 n1 = 11
                 res1 = run(tx, i1, n1)
                 for r1 in range(i1, n1+1):
                     rec = res1.next()
-                    self.assertEqual(rec, types.Record(values=[types.CypherInt(r1)]))
+                    self.assertEqual(
+                        rec, types.Record(values=[types.CypherInt(r1)]))
                     lasts[1] = rec.values[0].value
                     i2 = 999
                     n2 = 1001
                     res2 = run(tx, i2, n2)
                     for r2 in range(i2, n2+1):
                         rec = res2.next()
-                        self.assertEqual(rec, types.Record(values=[types.CypherInt(r2)]))
+                        self.assertEqual(
+                            rec, types.Record(values=[types.CypherInt(r2)]))
                         lasts[2] = rec.values[0].value
                     self.assertEqual(res2.next(), types.NullRecord())
                 self.assertEqual(res1.next(), types.NullRecord())
