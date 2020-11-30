@@ -251,7 +251,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "suite": "4.2",
             "scheme": "neo4j",
             "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.2.1-docker-loadable.tar")
+                "neo4j-enterprise-4.2.2-docker-loadable.tar")
         }
         neo4jServers.append(s)
         # Use last succesful build of 4.3.0, update when new drop available
