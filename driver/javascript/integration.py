@@ -1,4 +1,11 @@
+import subprocess, os
+
+def run(args):
+    subprocess.run(
+        args, universal_newlines=True, stderr=subprocess.STDOUT, check=True)
 
 if __name__ == "__main__":
-    print("Integration tests not ported to testkit")
+    os.environ["TEST_NEO4J_IPV6_ENABLED"] = "False"
+    run(["gulp", "test-browser"])
+    run(["gulp", "test-nodejs-integration"])
 
