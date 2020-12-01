@@ -12,4 +12,4 @@ def run(args):
 
 if __name__ == "__main__":
     run(["gulp", "test-nodejs-unit"])
-    #run(["gulp", "test-browser"])
+    run(["gulp", "run-ts-declaration-tests"])
