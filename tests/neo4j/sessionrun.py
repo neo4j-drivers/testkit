@@ -129,3 +129,13 @@ class TestSessionRun(unittest.TestCase):
         result = self._session.run("RETURN 1 as n")
         self.assertEqual(
             result.next(), types.Record(values=[types.CypherInt(1)]))
+
+    def test_updates_last_bookmark(self):
+        if not get_driver_name() in ['go']:
+            self.skipTest("result.consume not implemented in backend")
+        self._session = self._driver.session("w")
+        result = self._session.run("CREATE (n:SessionNode) RETURN n")
+        result.consume()
+        bookmarks = self._session.lastBookmarks()
+        self.assertEqual(len(bookmarks), 1)
+        self.assertGreater(len(bookmarks[0]), 3)

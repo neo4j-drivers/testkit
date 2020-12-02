@@ -71,3 +71,32 @@ class TestTxFuncRun(unittest.TestCase):
         x = self._session.readTransaction(nested)
         self.assertEqual(lasts, {0: 6, 1: 11, 2: 1001})
         self.assertEqual(x, "done")
+
+    def test_updates_last_bookmark_on_commit(self):
+        # Verifies that last bookmark is set on the session upon succesful
+        # commit using transactional function.
+
+        def run(tx):
+            tx.run("CREATE (n:SessionNode) RETURN n")
+
+        self._session = self._driver.session("w")
+        self._session.writeTransaction(run)
+        bookmarks = self._session.lastBookmarks()
+        self.assertEqual(len(bookmarks), 1)
+        self.assertGreater(len(bookmarks[0]), 3)
+
+    def test_does_not_update_last_bookmark_on_rollback(self):
+        # Verifies that last bookmarks still is empty when transactional
+        # function rolls back transaction.
+        def run(tx):
+            tx.run("CREATE (n:SessionNode) RETURN n")
+            raise Exception("No thanks")
+
+        self._session = self._driver.session("w")
+        try:
+            self._session.writeTransaction(run)
+        except Exception:
+            throwed = True
+        self.assertTrue(throwed)
+        bookmarks = self._session.lastBookmarks()
+        self.assertEqual(len(bookmarks), 0)
