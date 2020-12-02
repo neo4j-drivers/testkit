@@ -1,5 +1,6 @@
 import nutkit.protocol as protocol
 
+
 class Result:
     def __init__(self, backend, result):
         self._backend = backend
@@ -11,15 +12,8 @@ class Result:
         req = protocol.ResultNext(self._result.id)
         return self._backend.sendAndReceive(req)
 
-    def list(self):
-        """ Fetches all records in result and returns
-        a list of records.
-        """
-        req = protocol.ResultList(self._result.id)
-        return self._backend.sendAndReceive(req)
-
     def consume(self):
-        """ Discards all records in result.
+        """ Discards all records in result and returns summary.
         """
         req = protocol.ResultConsume(self._result.id)
         return self._backend.sendAndReceive(req)
