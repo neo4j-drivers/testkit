@@ -115,16 +115,12 @@ class NullRecord:
         return isinstance(other, NullRecord)
 
 
-class ClosedResult:
-    """ Represents a result closed by either sending a ResultList or
-    ResultConsume request. When ResultConsume has been sent, records will
-    be None.
+class Summary:
+    """ Represents summary returned from a ResultConsume request.
     """
 
-    def __init__(self, bookmark=None, error=None, records=None):
-        self.bookmark = bookmark
-        self.records = records
-        self.error = error
+    def __init__(self):
+        pass
 
 
 class Bookmarks:
