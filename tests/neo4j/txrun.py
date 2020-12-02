@@ -1,6 +1,6 @@
 import unittest
 
-from tests.neo4j.shared import get_driver
+from tests.neo4j.shared import get_driver, get_driver_name
 from tests.shared import new_backend
 
 
@@ -28,6 +28,9 @@ class TestTxRun(unittest.TestCase):
         self.assertGreater(len(bookmarks[0]), 3)
 
     def test_does_not_update_last_bookmark_on_rollback(self):
+        if get_driver_name() in ["dotnet", "javascript", "java"]:
+            self.skipTest("Rollback not implemented in backend")
+
         # Verifies that last bookmark is set on the session upon
         # succesful commit.
         self._session = self._driver.session("w")
