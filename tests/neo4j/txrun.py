@@ -1,7 +1,7 @@
 import unittest
 
-from tests.neo4j.shared import get_driver, get_driver_name
-from tests.shared import new_backend
+from tests.neo4j.shared import get_driver
+from tests.shared import new_backend, get_driver_name
 
 
 class TestTxRun(unittest.TestCase):
