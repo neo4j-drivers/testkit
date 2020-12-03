@@ -18,7 +18,7 @@ def get_extra_hello_props():
 # to handle variations.
 class Routing(unittest.TestCase):
     def setUp(self):
-        if type(self) is Routing and get_driver_name() not in ['java', 'dotnet']:
+        if type(self) is Routing and get_driver_name() not in ['java', 'dotnet', 'javascript']:
             self.skipTest('Routing message not implemented in driver')
         self._backend = new_backend()
         self._routingServer = StubServer(9001)
