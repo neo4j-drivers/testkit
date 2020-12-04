@@ -18,7 +18,7 @@ def get_extra_hello_props():
 # to handle variations.
 class Routing(unittest.TestCase):
     def setUp(self):
-        if type(self) is Routing and get_driver_name() not in ['java']:
+        if type(self) is Routing and get_driver_name() not in ['java', 'dotnet']:
             self.skipTest('Routing message not implemented in driver')
         self._backend = new_backend()
         self._routingServer = StubServer(9001)
@@ -196,7 +196,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"mode": "r", "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
