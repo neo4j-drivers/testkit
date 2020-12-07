@@ -1,9 +1,8 @@
 import unittest
 
-from tests.shared import *
-from tests.stub.shared import *
+from tests.shared import get_driver_name, new_backend
+from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
-import nutkit.protocol as types
 
 
 def get_extra_hello_props():
@@ -12,6 +11,7 @@ def get_extra_hello_props():
     elif get_driver_name() in ["javascript"]:
         return ', "realm": "", "ticket": ""'
     return ""
+
 
 # This should be the latest/current version of the protocol.
 # Older protocol that needs to be tested inherits from this and override
@@ -27,7 +27,7 @@ class Routing(unittest.TestCase):
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
         self._auth = AuthorizationToken(scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
-        
+
     def tearDown(self):
         self._backend.close()
         self._routingServer.reset()
@@ -111,12 +111,10 @@ class Routing(unittest.TestCase):
     def get_vars(self):
         host = self._routingServer.host
         dbparam = "db"
-        extra = ', "realm": ""' if get_driver_name() in ["java"] else ""
         v = {
             "#VERSION#": "4.3",
             "#DBPARAM#": dbparam,
             "#HOST#": host,
-            "#EXTRA_HELLO_PROPS#": extra,
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
@@ -187,6 +185,7 @@ class Routing(unittest.TestCase):
         self._routingServer.done()
         self._writeServer.done()
 
+
 class RoutingV4(Routing):
     def router_script(self):
         return """
@@ -196,7 +195,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {"db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
@@ -211,19 +210,23 @@ class RoutingV4(Routing):
             "#HOST#": host,
             "#DBPARAM#": dbparam,
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#ROUTINGMODE#": "",
+            "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
         }
 
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
-        
+
         if get_driver_name() in ['dotnet', 'java', 'javascript']:
             v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
             v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
 
+        if get_driver_name() in ['dotnet']:
+            v["#ROUTINGMODE#"] = ""
+
         return v
+
 
 class RoutingV3(Routing):
     def router_script(self):
@@ -308,13 +311,13 @@ class RoutingV3(Routing):
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#EXTR_HELLO_ROUTING_PROPS#": "",
         }
-        
+
         if get_driver_name() in ['go']:
             v["#ROUTINGMODE#"] = '"mode": "r"'
-        
+
         if get_driver_name() in ['java']:
-            v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#'] 
-        
+            v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#']
+
         if get_driver_name() in ['javascript']:
             v["#ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
 
@@ -322,6 +325,7 @@ class RoutingV3(Routing):
 
     def get_db(self):
         return None
+
 
 class NoRouting(unittest.TestCase):
     def setUp(self):
@@ -354,7 +358,6 @@ class NoRouting(unittest.TestCase):
             "#ROUTING#": ', "routing": null' if get_driver_name() not in ['javascript'] else ''
         }
 
-
     # Checks that routing is disabled when URI is bolt, no routing in HELLO and
     # no call to retrieve routing table. From bolt >= 4.1 the routing context is
     # used to disable/enable server side routing.
@@ -368,4 +371,3 @@ class NoRouting(unittest.TestCase):
         session.close()
         driver.close()
         self._server.done()
-
