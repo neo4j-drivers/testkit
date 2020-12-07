@@ -16,15 +16,11 @@ import docker
 import teamcity
 
 
-containers = ["driver", "neo4jserver", "runner"]
 networks = ["the-bridge"]
 
 
 def cleanup():
-    for c in containers:
-        subprocess.run(["docker", "rm", "-f", "-v", c],
-                       check=False, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+    docker.cleanup()
     for n in networks:
         subprocess.run(["docker", "network", "rm", n],
                        check=False, stdout=subprocess.DEVNULL,
@@ -270,7 +266,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
         # Start a Neo4j server
         print("Starting neo4j server")
-        docker.run(
+        neo4jContainer = docker.run(
                 neo4jServer["image"], neo4jServerHostname,
                 mountMap={os.path.join(neo4jArtifactsPath, "logs"): "/logs"},
                 envMap=envMap,
@@ -335,8 +331,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "python3", "/testkit/driver/assert_conns_closed.py",
             neo4jServerHostname, "%d" % port])
 
-        subprocess.run([
-            "docker", "rm", "-f", "-v", neo4jServerHostname], check=False)
+        neo4jContainer.rm()
 
 
 if __name__ == "__main__":
