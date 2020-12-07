@@ -1,5 +1,7 @@
 import subprocess
 
+_running = {}
+
 
 class Container:
     def __init__(self, name):
@@ -24,6 +26,12 @@ class Container:
         cmd.append(self.name)
         cmd.extend(command)
         subprocess.run(cmd, check=True)
+
+    def rm(self):
+        cmd = ["docker", "rm", "-f", "-v", self.name]
+        subprocess.run(cmd, check=False,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        del _running[self.name]
 
 
 def run(image, name, command=None, mountMap={}, hostMap={}, portMap={},
@@ -50,7 +58,9 @@ def run(image, name, command=None, mountMap={}, hostMap={}, portMap={},
     if command:
         cmd.extend(command)
     subprocess.run(cmd, check=True)
-    return Container(name)
+    container = Container(name)
+    _running[name] = container
+    return container
 
 
 def load(readable):
@@ -63,3 +73,8 @@ def load(readable):
         print(str(errs))
     if p.returncode != 0:
         raise Exception("Failed to load docker image")
+
+
+def cleanup():
+    for c in list(_running.values()):
+        c.rm()
