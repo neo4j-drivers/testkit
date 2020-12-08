@@ -210,6 +210,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # version + previous 2 minors + last minor version of last major version.
     neo4jServers = [
         {
+            "name": "3.5-enterprise",
             "image": "neo4j:3.5-enterprise",
             "version": "3.5",
             "edition": "enterprise",
@@ -218,6 +219,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "scheme": "bolt"
         },
         {
+            "name": "4.0-community",
             "image": "neo4j:4.0",
             "version": "4.0",
             "edition": "community",
@@ -226,6 +228,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "scheme": "neo4j"
         },
         {
+            "name": "4.1-enterprise",
             "image": "neo4j:4.1-enterprise",
             "version": "4.1",
             "edition": "enterprise",
@@ -240,6 +243,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # should be a Docker hub based image above (or added when not in
         # Teamcity).
         s = {
+            "name": "4.2-tc-enterprise",
             "image": "neo4j:4.2.2-enterprise",
             "version": "4.2",
             "edition": "enterprise",
@@ -264,6 +268,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         neo4jServers.append(s)
 
     for neo4jServer in neo4jServers:
+        # Logs path
+        logsPath = os.path.join(neo4jArtifactsPath, neo4jServer["name"],
+                                "logs")
         # Environment variables passed to the Neo4j docker container
         envMap = {
             "NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (
@@ -282,7 +289,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         print("Starting neo4j server")
         neo4jContainer = docker.run(
                 neo4jServer["image"], neo4jServerHostname,
-                mountMap={os.path.join(neo4jArtifactsPath, "logs"): "/logs"},
+                mountMap={logsPath: "/logs"},
                 envMap=envMap,
                 network="the-bridge")
         print("Neo4j container server started, waiting for port to "
