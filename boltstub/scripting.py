@@ -53,8 +53,10 @@ class BoltScript:
             return super().__new__(Bolt3Script)
         elif version in {(4,), (4, 0)}:
             return super().__new__(Bolt4x0Script)
-        elif version in {(4, 1), (4, 2)}:
+        elif version in {(4, 1)}:
             return super().__new__(Bolt4x1Script)
+        elif version in {(4, 2)}:
+            return super().__new__(Bolt4x2Script)
         elif version in {(4, 3)}:
             return super().__new__(Bolt4x3Script)
         else:
@@ -84,14 +86,22 @@ class BoltScript:
     def on_auto_match(self, request):
         raise NotImplementedError
 
-    def _get_version(self, request, n):
+    def _get_version_range_defintion(self, request, n):
         versions_offset = 4  # Skip past magic header
         version_size = 4  # Number of bytes reserved per version
+        minor_version_difference_offset = 1  # Minor version difference offset relative to start index of the version
         minor_offset = 2  # Minor version offset relative to start of version
         major_offset = 3  # Major version offset relative to start of version
         versionindex = versions_offset + (n * version_size)
         return (request[versionindex + major_offset],
-                request[versionindex + minor_offset])
+                request[versionindex + minor_offset],
+                request[versionindex + minor_version_difference_offset])
+
+    def _get_versions(self, request): 
+        for n in range(0, 4):
+            (major, max_minor, minor_difference) = self._get_version_range_defintion(request, n)
+            for minor in range(max_minor, max_minor - minor_difference - 1 , -1):
+                yield (major, minor)
 
     def on_handshake(self, request):
         if self.handshake_data:
@@ -100,8 +110,7 @@ class BoltScript:
 
         # Check that the server protocol version is among the ones supported
         # by the driver.
-        for n in range(0, 4):
-            version = self._get_version(request, n)
+        for version in self._get_versions(request):
             if version == self.protocol_version:
                 return bytes((0, 0,
                               self.protocol_version[1],
@@ -379,6 +388,42 @@ class Bolt4x1Script(BoltScript):
     }
 
     server_agent = "Neo4j/4.1.0"
+
+    def on_auto_match(self, request):
+        if request.tag == b"\x01":
+            yield Structure(b"\x70", {
+                "connection_id": "bolt-0",
+                "server": self.server_agent,
+                "routing": None,
+            })
+        else:
+            yield Structure(b"\x70", {})
+
+class Bolt4x2Script(BoltScript):
+
+    protocol_version = (4, 2)
+
+    messages = {
+        "C": {
+            b"\x01": "HELLO",
+            b"\x02": "GOODBYE",
+            b"\x0F": "RESET",
+            b"\x10": "RUN",
+            b"\x11": "BEGIN",
+            b"\x12": "COMMIT",
+            b"\x13": "ROLLBACK",
+            b"\x2F": "DISCARD",
+            b"\x3F": "PULL",
+        },
+        "S": {
+            b"\x70": "SUCCESS",
+            b"\x71": "RECORD",
+            b"\x7E": "IGNORED",
+            b"\x7F": "FAILURE",
+        },
+    }
+
+    server_agent = "Neo4j/4.2.0"
 
     def on_auto_match(self, request):
         if request.tag == b"\x01":

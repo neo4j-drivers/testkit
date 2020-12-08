@@ -76,9 +76,9 @@ useful for Bolt client integration testing.
     if service.exceptions:
         for error in service.exceptions:
             extra = ""
-            if error.script.filename:
+            if hasattr(error, 'script') and error.script.filename:
                 extra += " in {!r}".format(error.script.filename)
-            if error.line_no:
+            if hasattr(error, 'line_no') and error.line_no:
                 extra += " at line {}".format(error.line_no)
             print("Script mismatch{}:\n{}".format(extra, error))
         exit(1)
