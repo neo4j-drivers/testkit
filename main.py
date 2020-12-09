@@ -14,6 +14,7 @@ from tests.testenv import (
         begin_test_suite, end_test_suite, in_teamcity)
 import docker
 import teamcity
+import neo4j
 
 
 networks = ["the-bridge"]
@@ -254,18 +255,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         neo4jServers.append(s)
 
     for neo4jServer in neo4jServers:
-        # Logs path
-        logsPath = os.path.join(neo4jArtifactsPath, neo4jServer["name"],
-                                "logs")
-        # Environment variables passed to the Neo4j docker container
-        envMap = {
-            "NEO4J_dbms_connector_bolt_advertised__address": "%s:%d" % (
-                neo4jServerHostname, port),
-            "NEO4J_AUTH": "%s/%s" % (username, password),
-        }
-        if neo4jServer["edition"] != "community":
-            envMap["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
-
         download = neo4jServer.get('download', None)
         if download:
             print("Downloading Neo4j docker image")
@@ -273,11 +262,10 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
         # Start a Neo4j server
         print("Starting neo4j server")
-        neo4jContainer = docker.run(
-                neo4jServer["image"], neo4jServerHostname,
-                mountMap={logsPath: "/logs"},
-                envMap=envMap,
-                network="the-bridge")
+        server = neo4j.Server(neo4jServer["image"], neo4jServer["name"],
+                              neo4jArtifactsPath)
+        server.start(neo4jServerHostname, port, username,
+                     password, neo4jServer["edition"])
         print("Neo4j container server started, waiting for port to "
               "be available")
 
@@ -338,7 +326,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "python3", "/testkit/driver/assert_conns_closed.py",
             neo4jServerHostname, "%d" % port])
 
-        neo4jContainer.rm()
+        server.stop()
 
 
 if __name__ == "__main__":
