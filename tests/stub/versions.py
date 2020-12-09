@@ -34,7 +34,8 @@ class ProtocolVersions(unittest.TestCase):
         self._server.start(script=script,
                            vars={"#VERSION#": version, "#PULL#": pull})
         session = driver.session("w", fetchSize=1000)
-        session.run("RETURN 1 AS n")
+        result = session.run("RETURN 1 AS n")
+        record = result.next() # otherwise the script will not fail when the protocol is not present
         session.close()
         driver.close()
 
@@ -43,6 +44,11 @@ class ProtocolVersions(unittest.TestCase):
 
     def test_supports_bolt_4x1(self):
         self._run("4.1")
+
+    def test_supports_bolt_4x2(self):
+        if get_driver_name() not in ['javascript']:
+            self.skipTest("Does not supports extended handshake")
+        self._run("4.2")
 
     def test_supports_bolt_4x3(self):
         if get_driver_name() in ['java']:
