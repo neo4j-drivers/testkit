@@ -352,7 +352,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # driver than the integration tests do and are therefore written in
         # the driver language.
         # None of the drivers will work properly in cluster.
-        if not cluster or driverName in []:
+        if not cluster or driverName in ['go']:
             print("Building and running stress tests...")
             driverContainer.exec([
                 "python3", "/testkit/driver/%s/stress.py" % driverName],
