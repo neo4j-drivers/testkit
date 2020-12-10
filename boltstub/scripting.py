@@ -463,9 +463,12 @@ class ClientMessageLine(ClientLine):
         return tag == message.tag and self.compare(tuple(self.fields), tuple(message.fields))
 
     def compare(self, script_fields, message_fields):
-        for i in range(len(script_fields)):
-            return self.compare_value(script_fields[i], message_fields[i])
-        return True
+        if len(script_fields) == len(message_fields):
+            for i in range(len(script_fields)):
+                return self.compare_value(script_fields[i], message_fields[i])
+            return True
+        else:
+            return False
 
     def compare_value(self, val_a, val_b):
         if not isinstance(val_a, type(val_b)):
