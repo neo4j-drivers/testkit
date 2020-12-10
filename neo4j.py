@@ -1,59 +1,76 @@
 import docker
-import time
-import atexit
-from os.path import join, abspath
+from os.path import join
 
 
-class Server:
+username = "neo4j"
+password = "pass"
+
+
+class Standalone:
     """ Single instance Neo4j server
     """
 
-    def __init__(self, image, name, artifacts_path):
+    def __init__(self, image, name, artifacts_path, hostname, port, edition):
         self.name = name
         self._image = image
         self._artifacts_path = join(artifacts_path, name)
         self._container = None
+        self._hostname = hostname
+        self._port = port
+        self._edition = edition
 
-    def start(self, hostname, port, username, password, edition):
+    def start(self):
         # Environment variables passed to the Neo4j docker container
         envMap = {
             "NEO4J_dbms_connector_bolt_advertised__address":
-                "%s:%d" % (hostname, port),
+                "%s:%d" % (self._hostname, self._port),
             "NEO4J_AUTH":
                 "%s/%s" % (username, password),
         }
-        if edition != "community":
+        if self._edition != "community":
             envMap["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
         logs_path = join(self._artifacts_path, "logs")
         self._container = docker.run(
-            self._image, hostname,
+            self._image, self._hostname,
             mountMap={logs_path: "/logs"},
             envMap=envMap,
             network="the-bridge")
 
+    def address(self):
+        return (self._hostname, self._port)
+
     def stop(self):
         self._container.rm()
+        self._container = None
 
 
 class Cluster:
     """ Cluster of Neo4j servers
     """
 
-    def __init__(self, image, name, artifacts_path):
+    def __init__(self, image, name, artifacts_path, num_cores=3):
         self.name = name
         self._image = image
         self._artifacts_path = join(artifacts_path, name)
+        self._num_cores = num_cores
+        self._cores = []
 
-    def start(self, num_cores, num_repl):
-        cores = []
-        for i in range(num_cores):
+    def start(self):
+        for i in range(self._num_cores):
             core = Core(i, self._artifacts_path)
-            cores.append(core)
+            self._cores.append(core)
 
-        initial_members = ",".join([c.discover for c in cores])
+        initial_members = ",".join([c.discover for c in self._cores])
 
-        for core in cores:
+        for core in self._cores:
             core.start(self._image, initial_members, "the-bridge")
+
+    def address(self):
+        return ("core0", 7687)
+
+    def stop(self):
+        for core in self._cores:
+            core.stop()
 
 
 class Core:
@@ -75,6 +92,8 @@ class Core:
 
     def start(self, image, initial_members, network):
         envMap = {
+            "NEO4J_dbms_connector_bolt_advertised__address":
+                "%s:%d" % (self.name, 7687),
             "NEO4J_dbms_mode":
                 "CORE",
             "NEO4J_causal__clustering_discovery__type":
@@ -94,16 +113,14 @@ class Core:
             "NEO4J_causal__clustering_transaction__listen__address":
                 "0.0.0.0:%d" % (Core.TRANSACTION_PORT + self._index),
             "NEO4J_ACCEPT_LICENSE_AGREEMENT": "yes",
+            "NEO4J_AUTH":
+                "%s/%s" % (username, password),
         }
         logs_path = join(self._artifacts_path, "logs")
         self._container = docker.run(image, self.name,
                                      envMap=envMap, network=network,
                                      mountMap={logs_path: "/logs"})
 
-
-if __name__ == "__main__":
-    atexit.register(docker.cleanup)
-    cluster = Cluster(
-            "neo4j:4.1-enterprise", "cluster", abspath("./artifacts/neo4j"))
-    cluster.start(3, 0)
-    time.sleep(10)
+    def stop(self):
+        self._container.rm()
+        self._container = None
