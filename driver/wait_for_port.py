@@ -1,8 +1,11 @@
-import sys, time, socket
+import sys
+import time
+import socket
+
 
 def wait_for_port(address, port):
     start = time.perf_counter()
-    timeout = 60
+    timeout = 120
     while True:
         try:
             with socket.create_connection((address, port), timeout):
@@ -12,6 +15,7 @@ def wait_for_port(address, port):
             if time.perf_counter() - start > timeout:
                 print("ERROR: Timeout while waiting for port %s on %s" % (port, address))
                 return False
+
 
 if __name__ == "__main__":
     if not wait_for_port(sys.argv[1], sys.argv[2]):
