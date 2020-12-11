@@ -18,14 +18,13 @@ def get_extra_hello_props():
 # to handle variations.
 class Routing(unittest.TestCase):
     def setUp(self):
-        if type(self) is Routing and get_driver_name() not in ['java', 'dotnet', 'javascript']:
-            self.skipTest('Routing message not implemented in driver')
         self._backend = new_backend()
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
-        self._auth = AuthorizationToken(scheme="basic", principal="p", credentials="c")
+        self._auth = AuthorizationToken(
+                scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
 
     def tearDown(self):
