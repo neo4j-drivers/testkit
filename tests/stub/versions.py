@@ -35,7 +35,9 @@ class ProtocolVersions(unittest.TestCase):
                            vars={"#VERSION#": version, "#PULL#": pull})
         session = driver.session("w", fetchSize=1000)
         result = session.run("RETURN 1 AS n")
-        record = result.next() # otherwise the script will not fail when the protocol is not present
+        # Otherwise the script will not fail when the protocol is not present
+        # (on backends where run is lazily evaluated)
+        result.next()
         session.close()
         driver.close()
 
@@ -46,7 +48,7 @@ class ProtocolVersions(unittest.TestCase):
         self._run("4.1")
 
     def test_supports_bolt_4x2(self):
-        if get_driver_name() not in ['javascript']:
+        if get_driver_name() not in ['javascript', 'go']:
             self.skipTest("Does not supports extended handshake")
         self._run("4.2")
 
