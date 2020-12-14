@@ -226,21 +226,6 @@ class RoutingV4(Routing):
         S: SUCCESS {"type": "r"}
         """
 
-    def router_script_default_db(self):
-        return """
-        !: BOLT #VERSION#
-        !: AUTO RESET
-
-        !: AUTO GOODBYE
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE# "db": "system"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
-        """
-
     def get_vars(self):
         host = self._routingServer.host
         dbparam = "db"
@@ -265,6 +250,10 @@ class RoutingV4(Routing):
             v["#ROUTINGMODE#"] = ""
 
         return v
+
+    # Ignore this on older protocol versions than 4.3
+    def test_default_db(self):
+        pass
 
 
 class RoutingV3(Routing):
