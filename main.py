@@ -258,6 +258,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         neo4jServers.append(s)
         # Use last succesful build of 4.3.0, update when new drop available
         s = {
+            "name": "4.3-tc-enterprise",
             "image": "neo4j:4.3.0-drop02.0-enterprise",
             "version": "4.3",
             "edition": "enterprise",
