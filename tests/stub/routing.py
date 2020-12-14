@@ -45,6 +45,18 @@ class Routing(unittest.TestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 
+    def router_script_default_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        """
+
     def read_script(self):
         return """
         !: BOLT #VERSION#
@@ -142,7 +154,20 @@ class Routing(unittest.TestCase):
         session.close()
         driver.close()
         self._routingServer.done()
-        self._readServer.done() 
+        self._readServer.done()
+
+    def test_default_db(self):
+        vars = self.get_vars()
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer.start(script=self.router_script_default_db(), vars=vars)
+        self._readServer.start(script=self.read_script(), vars=vars)
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        session = driver.session('r')
+        session.run("RETURN 1 as n")
+        session.close()
+        driver.close()
+        self._routingServer.done()
+        self._readServer.done()
 
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
@@ -201,6 +226,21 @@ class RoutingV4(Routing):
         S: SUCCESS {"type": "r"}
         """
 
+    def router_script_default_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE# "db": "system"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
     def get_vars(self):
         host = self._routingServer.host
         dbparam = "db"
@@ -241,6 +281,9 @@ class RoutingV3(Routing):
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
+
+    def router_script_default_db(self):
+        return self.router_script()
 
     def read_script(self):
         return """
