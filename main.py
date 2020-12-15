@@ -16,8 +16,29 @@ import docker
 import teamcity
 import neo4j
 
+TestFlags = {
+    "TESTKIT_TESTS": False,
+    "UNIT_TESTS": False,
+    "INTEGRATION_TESTS": False,
+    "STUB_TESTS": False,
+    "STRESS_TESTS": False,
+    "TLS_TESTS": False,
+
+    "USING_4_2_CLUSTERS": False,
+    "USING_3_5": False,
+    "USING_4_0": False,
+    "USING_4_1": False
+}
 
 networks = ["the-bridge"]
+
+
+def set_test_flags(argv):
+    # Parse arguments to enable select tests
+    enable_all = len(argv) == 1
+    for flag in TestFlags:
+        if flag in argv or enable_all:
+            TestFlags[flag] = True
 
 
 def cleanup():
@@ -126,11 +147,12 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     """
     Unit tests
     """
-    begin_test_suite('Unit tests')
-    driverContainer.exec(
-            ["python3", "/testkit/driver/%s/unittests.py" % driverName],
-            envMap=driverEnv)
-    end_test_suite('Unit tests')
+    if TestFlags["UNIT_TESTS"]:
+        begin_test_suite('Unit tests')
+        driverContainer.exec(
+                ["python3", "/testkit/driver/%s/unittests.py" % driverName],
+                envMap=driverEnv)
+        end_test_suite('Unit tests')
 
     # Start the test backend in the driver Docker instance.
     # Note that this is done detached which means that we don't know for
@@ -180,16 +202,18 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     """
     Stub tests
     """
-    runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
+    if TestFlags["STUB_TESTS"]:
+        runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
 
     """
     TLS tests
     """
     # Build TLS server
-    runnerContainer.exec(
-            ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
-    runnerContainer.exec(
-            ["python3", "-m", "tests.tls.suites"])
+    if TestFlags["TLS_TESTS"]:
+        runnerContainer.exec(
+                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+        runnerContainer.exec(
+                ["python3", "-m", "tests.tls.suites"])
 
     """
     Neo4j server tests
@@ -201,8 +225,10 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
     # Until expanded protocol is implemented then we will only support current
     # version + previous 2 minors + last minor version of last major version.
-    neo4jServers = [
-        {
+    neo4jServers = []
+
+    if TestFlags["USING_4_2_CLUSTERS"]:
+        sv = {
             "name": "4.2-cluster",
             "image": "neo4j:4.2-enterprise",
             "version": "4.2",
@@ -210,8 +236,11 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "cluster": True,
             "suite": "",  # TODO: Define cluster suite
             "scheme": "neo4j"
-        },
-        {
+        }
+        neo4jServers.append(sv)
+
+    if TestFlags["USING_3_5"]:
+        sv = {
             "name": "3.5-enterprise",
             "image": "neo4j:3.5-enterprise",
             "version": "3.5",
@@ -219,8 +248,11 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "cluster": False,
             "suite": "3.5",
             "scheme": "bolt"
-        },
-        {
+        }
+        neo4jServers.append(sv)
+
+    if TestFlags["USING_4_0"]:
+        sv = {
             "name": "4.0-community",
             "image": "neo4j:4.0",
             "version": "4.0",
@@ -228,8 +260,11 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "cluster": False,
             "suite": "4.0",
             "scheme": "neo4j"
-        },
-        {
+        }
+        neo4jServers.append(sv)
+
+    if TestFlags["USING_4_1"]:
+        sv = {
             "name": "4.1-enterprise",
             "image": "neo4j:4.1-enterprise",
             "version": "4.1",
@@ -237,8 +272,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "cluster": False,
             "suite": "4.1",
             "scheme": "neo4j"
-        },
-    ]
+        }
+        neo4jServers.append(sv)
+
     if in_teamcity:
         # Use last successful build of 4.2.0. Need to update this when a new
         # patch is in the baking.  When there is an official 4.2 build there
@@ -314,15 +350,16 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "TEST_NEO4J_PASS":   neo4j.password,
         })
 
-        # Generic integration tests, requires a backend
-        suite = neo4jServer["suite"]
-        if suite:
-            print("Running test suite %s" % suite)
-            runnerContainer.exec([
-                "python3", "-m", "tests.neo4j.suites", suite],
-                envMap=runnerEnv)
-        else:
-            print("No test suite specified for %s" % serverName)
+        if TestFlags["TESTKIT_TESTS"]:
+            # Generic integration tests, requires a backend
+            suite = neo4jServer["suite"]
+            if suite:
+                print("Running test suite %s" % suite)
+                runnerContainer.exec([
+                    "python3", "-m", "tests.neo4j.suites", suite],
+                    envMap=runnerEnv)
+            else:
+                print("No test suite specified for %s" % serverName)
 
         # Parameters that might be used by native stress/integration
         # tests suites
@@ -353,25 +390,27 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # driver than the integration tests do and are therefore written in
         # the driver language.
         # None of the drivers will work properly in cluster.
-        if not cluster or driverName in ['go', 'javascript']:
-            print("Building and running stress tests...")
-            driverContainer.exec([
-                "python3", "/testkit/driver/%s/stress.py" % driverName],
-                envMap=driverEnv)
-        else:
-            print("Skipping stress tests for %s" % serverName)
+        if TestFlags["STRESS_TESTS"]:
+            if not cluster or driverName in ['go', 'javascript']:
+                print("Building and running stress tests...")
+                driverContainer.exec([
+                    "python3", "/testkit/driver/%s/stress.py" % driverName],
+                    envMap=driverEnv)
+            else:
+                print("Skipping stress tests for %s" % serverName)
 
         # Run driver native integration tests within the driver container.
         # Driver integration tests should check env variable to skip tests
         # depending on if running in cluster or not, this is not properly done
         # in any (?) driver right now so skip the suite...
-        if not cluster or driverName in []:
-            print("Building and running integration tests...")
-            driverContainer.exec([
-                "python3", "/testkit/driver/%s/integration.py" % driverName],
-                envMap=driverEnv)
-        else:
-            print("Skipping integration tests for %s" % serverName)
+        if TestFlags["INTEGRATION_TESTS"]:
+            if not cluster or driverName in []:
+                print("Building and running integration tests...")
+                driverContainer.exec([
+                    "python3", "/testkit/driver/%s/integration.py" % driverName],
+                    envMap=driverEnv)
+            else:
+                print("Skipping integration tests for %s" % serverName)
 
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any
@@ -386,6 +425,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
 
 if __name__ == "__main__":
+
+    set_test_flags(sys.argv)
+
     driverName = os.environ.get("TEST_DRIVER_NAME")
     if not driverName:
         print("Missing environment variable TEST_DRIVER_NAME that contains "
