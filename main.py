@@ -15,6 +15,7 @@ from tests.testenv import (
 import docker
 import teamcity
 import neo4j
+import argparse
 
 TestFlags = {
     "TESTKIT_TESTS": False,
@@ -22,8 +23,10 @@ TestFlags = {
     "INTEGRATION_TESTS": False,
     "STUB_TESTS": False,
     "STRESS_TESTS": False,
-    "TLS_TESTS": False,
+    "TLS_TESTS": False
+}
 
+ServerFlags = {
     "USING_4_2_CLUSTERS": False,
     "USING_3_5": False,
     "USING_4_0": False,
@@ -33,12 +36,55 @@ TestFlags = {
 networks = ["the-bridge"]
 
 
+def parse_command_line(argv):
+    # create parser
+    parser = argparse.ArgumentParser()
+
+    test_help_string = "Select from (no selection runs all): " + converttostr(TestFlags.keys(), ", ")
+    server_help_string = "Select from (no selection runs against all): " + converttostr(ServerFlags.keys(), ", ")
+
+    # add arguments
+    parser.add_argument("-tests", required=False, help=test_help_string)
+    parser.add_argument("-servers", required=False, help=server_help_string)
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    set_test_flags(args.tests)
+    set_server_flags(args.servers)
+
+    print("Tests that will be run:", TestFlags)
+    print("Servers to be tested:", ServerFlags)
+
+
 def set_test_flags(argv):
-    # Parse arguments to enable select tests
-    enable_all = len(argv) == 1
+    enable_all = True
+    tests = []
+    if argv:
+        tests = argv.split(" ")
+        enable_all = False
+
     for flag in TestFlags:
-        if flag in argv or enable_all:
+        if flag in tests or enable_all:
             TestFlags[flag] = True
+
+
+def set_server_flags(argv):
+    enable_all = True
+    servers = []
+    if argv:
+        servers = argv.split(" ")
+        enable_all = False
+
+    for server in ServerFlags:
+        if server in servers or enable_all:
+            ServerFlags[server] = True
+
+
+def converttostr(input_seq, seperator):
+    # Join all the strings in list
+    final_str = seperator.join(input_seq)
+    return final_str
 
 
 def cleanup():
@@ -227,7 +273,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # version + previous 2 minors + last minor version of last major version.
     neo4jServers = []
 
-    if TestFlags["USING_4_2_CLUSTERS"]:
+    if ServerFlags["USING_4_2_CLUSTERS"]:
         sv = {
             "name": "4.2-cluster",
             "image": "neo4j:4.2-enterprise",
@@ -239,7 +285,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         }
         neo4jServers.append(sv)
 
-    if TestFlags["USING_3_5"]:
+    if ServerFlags["USING_3_5"]:
         sv = {
             "name": "3.5-enterprise",
             "image": "neo4j:3.5-enterprise",
@@ -251,7 +297,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         }
         neo4jServers.append(sv)
 
-    if TestFlags["USING_4_0"]:
+    if ServerFlags["USING_4_0"]:
         sv = {
             "name": "4.0-community",
             "image": "neo4j:4.0",
@@ -263,7 +309,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         }
         neo4jServers.append(sv)
 
-    if TestFlags["USING_4_1"]:
+    if ServerFlags["USING_4_1"]:
         sv = {
             "name": "4.1-enterprise",
             "image": "neo4j:4.1-enterprise",
@@ -426,7 +472,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
 if __name__ == "__main__":
 
-    set_test_flags(sys.argv)
+    parse_command_line(sys.argv)
 
     driverName = os.environ.get("TEST_DRIVER_NAME")
     if not driverName:
