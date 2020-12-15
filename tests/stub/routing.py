@@ -18,14 +18,13 @@ def get_extra_hello_props():
 # to handle variations.
 class Routing(unittest.TestCase):
     def setUp(self):
-        if type(self) is Routing and get_driver_name() not in ['java', 'dotnet', 'javascript']:
-            self.skipTest('Routing message not implemented in driver')
         self._backend = new_backend()
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
-        self._auth = AuthorizationToken(scheme="basic", principal="p", credentials="c")
+        self._auth = AuthorizationToken(
+                scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
 
     def tearDown(self):
@@ -43,6 +42,18 @@ class Routing(unittest.TestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        """
+
+    def router_script_default_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 
@@ -143,7 +154,20 @@ class Routing(unittest.TestCase):
         session.close()
         driver.close()
         self._routingServer.done()
-        self._readServer.done() 
+        self._readServer.done()
+
+    def test_default_db(self):
+        vars = self.get_vars()
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer.start(script=self.router_script_default_db(), vars=vars)
+        self._readServer.start(script=self.read_script(), vars=vars)
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        session = driver.session('r')
+        session.run("RETURN 1 as n")
+        session.close()
+        driver.close()
+        self._routingServer.done()
+        self._readServer.done()
 
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
@@ -227,6 +251,10 @@ class RoutingV4(Routing):
 
         return v
 
+    # Ignore this on older protocol versions than 4.3
+    def test_default_db(self):
+        pass
+
 
 class RoutingV3(Routing):
     def router_script(self):
@@ -242,6 +270,9 @@ class RoutingV3(Routing):
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
+
+    def router_script_default_db(self):
+        return self.router_script()
 
     def read_script(self):
         return """

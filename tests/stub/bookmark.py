@@ -39,8 +39,6 @@ class Tx(unittest.TestCase):
 
     # Tests that a committed transaction can return the last bookmark
     def test_last_bookmark(self):
-        if get_driver_name() not in ["go", "dotnet", "javascript"]:
-            self.skipTest("session.lastBookmark not implemented in backend")
 
         self._server.start(script=script_commit)
         session = self._driver.session("w")
