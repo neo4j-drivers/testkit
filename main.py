@@ -18,21 +18,21 @@ import neo4j
 import argparse
 
 TestFlags = {
-    "TESTKIT_TESTS": False,
-    "UNIT_TESTS": False,
-    "INTEGRATION_TESTS": False,
-    "STUB_TESTS": False,
-    "STRESS_TESTS": False,
-    "TLS_TESTS": False
+    "TESTKIT_TESTS": True,
+    "UNIT_TESTS": True,
+    "INTEGRATION_TESTS": True,
+    "STUB_TESTS": True,
+    "STRESS_TESTS": True,
+    "TLS_TESTS": True
 }
 
 ServerFlags = {
-    "USING_3_5": False,
-    "USING_4_0": False,
-    "USING_4_1": False,
-    "USING_4_2": False,
-    "USING_4_2_CLUSTERS": False,
-    "USING_4_3": False
+    "USING_3_5": True,
+    "USING_4_0": True,
+    "USING_4_1": True,
+    "USING_4_2": True,
+    "USING_4_2_CLUSTERS": True,
+    "USING_4_3": True
 }
 
 networks = ["the-bridge"]
@@ -60,15 +60,13 @@ def parse_command_line(argv):
 
 
 def set_flags(argv, target):
-    enable_all = True
     source = []
     if argv:
         source = argv.split(" ")
-        enable_all = False
 
     for item in target:
-        if item in source or enable_all:
-            target[item] = True
+        if item not in source:
+            target[item] = False
 
 
 def convert_to_str(input_seq, seperator):
