@@ -27,10 +27,12 @@ TestFlags = {
 }
 
 ServerFlags = {
-    "USING_4_2_CLUSTERS": False,
     "USING_3_5": False,
     "USING_4_0": False,
-    "USING_4_1": False
+    "USING_4_1": False,
+    "USING_4_2": False,
+    "USING_4_2_CLUSTERS": False,
+    "USING_4_3": False
 }
 
 networks = ["the-bridge"]
@@ -40,8 +42,8 @@ def parse_command_line(argv):
     # create parser
     parser = argparse.ArgumentParser()
 
-    test_help_string = "Select from (no selection runs all): " + converttostr(TestFlags.keys(), ", ")
-    server_help_string = "Select from (no selection runs against all): " + converttostr(ServerFlags.keys(), ", ")
+    test_help_string = "Optional space separated list selected from: " + convert_to_str(TestFlags.keys(), ", ")
+    server_help_string = "Optional space separated list selected from: " + convert_to_str(ServerFlags.keys(), ", ")
 
     # add arguments
     parser.add_argument("-tests", required=False, help=test_help_string)
@@ -69,7 +71,7 @@ def set_flags(argv, target):
             target[item] = True
 
 
-def converttostr(input_seq, seperator):
+def convert_to_str(input_seq, seperator):
     # Join all the strings in list
     final_str = seperator.join(input_seq)
     return final_str
@@ -314,31 +316,34 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # patch is in the baking.  When there is an official 4.2 build there
         # should be a Docker hub based image above (or added when not in
         # Teamcity).
-        s = {
-            "name": "4.2-tc-enterprise",
-            "image": "neo4j:4.2.2-enterprise",
-            "version": "4.2",
-            "edition": "enterprise",
-            "cluster": False,
-            "suite": "4.2",
-            "scheme": "neo4j",
-            "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.2.2-docker-loadable.tar")
-        }
-        neo4jServers.append(s)
-        # Use last succesful build of 4.3.0, update when new drop available
-        s = {
-            "name": "4.3-tc-enterprise",
-            "image": "neo4j:4.3.0-drop02.0-enterprise",
-            "version": "4.3",
-            "edition": "enterprise",
-            "cluster": False,
-            "suite": "4.3",
-            "scheme": "neo4j",
-            "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")
-        }
-        neo4jServers.append(s)
+        if ServerFlags["USING_4_2"]:
+            s = {
+                "name": "4.2-tc-enterprise",
+                "image": "neo4j:4.2.2-enterprise",
+                "version": "4.2",
+                "edition": "enterprise",
+                "cluster": False,
+                "suite": "4.2",
+                "scheme": "neo4j",
+                "download": teamcity.DockerImage(
+                    "neo4j-enterprise-4.2.2-docker-loadable.tar")
+            }
+            neo4jServers.append(s)
+
+        if ServerFlags["USING_4_3"]:
+            # Use last succesful build of 4.3.0, update when new drop available
+            s = {
+                "name": "4.3-tc-enterprise",
+                "image": "neo4j:4.3.0-drop02.0-enterprise",
+                "version": "4.3",
+                "edition": "enterprise",
+                "cluster": False,
+                "suite": "4.3",
+                "scheme": "neo4j",
+                "download": teamcity.DockerImage(
+                    "neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")
+            }
+            neo4jServers.append(s)
 
     for neo4jServer in neo4jServers:
         download = neo4jServer.get('download', None)
