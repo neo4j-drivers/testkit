@@ -50,35 +50,23 @@ def parse_command_line(argv):
     # parse the arguments
     args = parser.parse_args()
 
-    set_test_flags(args.tests)
-    set_server_flags(args.servers)
+    set_flags(args.tests, TestFlags)
+    set_flags(args.servers, ServerFlags)
 
     print("Tests that will be run:", TestFlags)
     print("Servers to be tested:", ServerFlags)
 
 
-def set_test_flags(argv):
+def set_flags(argv, target):
     enable_all = True
-    tests = []
+    source = []
     if argv:
-        tests = argv.split(" ")
+        source = argv.split(" ")
         enable_all = False
 
-    for flag in TestFlags:
-        if flag in tests or enable_all:
-            TestFlags[flag] = True
-
-
-def set_server_flags(argv):
-    enable_all = True
-    servers = []
-    if argv:
-        servers = argv.split(" ")
-        enable_all = False
-
-    for server in ServerFlags:
-        if server in servers or enable_all:
-            ServerFlags[server] = True
+    for item in target:
+        if item in source or enable_all:
+            target[item] = True
 
 
 def converttostr(input_seq, seperator):
