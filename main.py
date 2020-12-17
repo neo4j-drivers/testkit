@@ -29,51 +29,60 @@ test_flags = {
 }
 
 configurations_to_run = []
+configurations = []
 
-configurations = [{"name": "4.2-cluster",
-                   "image": "neo4j:4.2-enterprise",
-                   "version": "4.2",
-                   "edition": "enterprise",
-                   "cluster": True,
-                   "suite": "",  # TODO: Define cluster suite
-                   "scheme": "neo4j"},
-                  {"name": "3.5-enterprise",
-                   "image": "neo4j:3.5-enterprise",
-                   "version": "3.5",
-                   "edition": "enterprise",
-                   "cluster": False,
-                   "suite": "3.5",
-                   "scheme": "bolt"},
-                  {"name": "4.0-community",
-                   "image": "neo4j:4.0",
-                   "version": "4.0",
-                   "edition": "community",
-                   "cluster": False,
-                   "suite": "4.0",
-                   "scheme": "neo4j"},
-                  {"name": "4.1-enterprise",
-                   "image": "neo4j:4.1-enterprise",
-                   "version": "4.1",
-                   "edition": "enterprise",
-                   "cluster": False,
-                   "suite": "4.1",
-                   "scheme": "neo4j"},
-                  {"name": "4.2-tc-enterprise",
-                   "image": "neo4j:4.2.2-enterprise",
-                   "version": "4.2",
-                   "edition": "enterprise",
-                   "cluster": False,
-                   "suite": "4.2",
-                   "scheme": "neo4j",
-                   "download": teamcity.DockerImage("neo4j-enterprise-4.2.2-docker-loadable.tar")},
-                  {"name": "4.3-tc-enterprise",
-                   "image": "neo4j:4.3.0-drop02.0-enterprise",
-                   "version": "4.3",
-                   "edition": "enterprise",
-                   "cluster": False,
-                   "suite": "4.3",
-                   "scheme": "neo4j",
-                   "download": teamcity.DockerImage("neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")}]
+
+def initialise_configurations():
+    configurations.append({"name": "4.2-cluster",
+                           "image": "neo4j:4.2-enterprise",
+                           "version": "4.2",
+                           "edition": "enterprise",
+                           "cluster": True,
+                           "suite": "",  # TODO: Define cluster suite
+                           "scheme": "neo4j"})
+
+    configurations.append({"name": "3.5-enterprise",
+                           "image": "neo4j:3.5-enterprise",
+                           "version": "3.5",
+                           "edition": "enterprise",
+                           "cluster": False,
+                           "suite": "3.5",
+                           "scheme": "bolt"})
+
+    configurations.append({"name": "4.0-community",
+                           "version": "4.0",
+                           "image": "neo4j:4.0",
+                           "edition": "community",
+                           "cluster": False,
+                           "suite": "4.0",
+                           "scheme": "neo4j"})
+
+    configurations.append({"name": "4.1-enterprise",
+                           "image": "neo4j:4.1-enterprise",
+                           "version": "4.1",
+                           "edition": "enterprise",
+                           "cluster": False,
+                           "suite": "4.1",
+                           "scheme": "neo4j"})
+
+    if in_teamcity:
+        configurations.append({"name": "4.2-tc-enterprise",
+                               "image": "neo4j:4.2.2-enterprise",
+                               "version": "4.2",
+                               "edition": "enterprise",
+                               "cluster": False,
+                               "suite": "4.2",
+                               "scheme": "neo4j",
+                               "download": teamcity.DockerImage("neo4j-enterprise-4.2.2-docker-loadable.tar")})
+
+        configurations.append({"name": "4.3-tc-enterprise",
+                               "image": "neo4j:4.3.0-drop02.0-enterprise",
+                               "version": "4.3",
+                               "edition": "enterprise",
+                               "cluster": False,
+                               "suite": "4.3",
+                               "scheme": "neo4j",
+                               "download": teamcity.DockerImage("neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")})
 
 
 def set_test_flags(requested_list):
@@ -98,7 +107,6 @@ def convert_to_str(input_seq, separator):
 
 
 def construct_configuration_list(requested_list):
-
     # if no configs were requested we will default to adding them all
     if not requested_list:
         requested_list = []
@@ -108,11 +116,7 @@ def construct_configuration_list(requested_list):
     # Now try to find the requested configs and check they are available with current teamcity status
     for config in configurations:
         if config["name"] in requested_list:
-            if "download" in config:
-                if in_teamcity:
-                    configurations_to_run.append(config)
-            else:
-                configurations_to_run.append(config)
+            configurations_to_run.append(config)
 
     print("Accepted configurations:")
     for item in configurations_to_run:
@@ -120,15 +124,15 @@ def construct_configuration_list(requested_list):
 
 
 def parse_command_line(argv):
+    # setup the configurations that are available
+    initialise_configurations()
+
     # create parser
     parser = argparse.ArgumentParser()
 
     test_help_string = "Optional space separated list selected from: " + convert_to_str(test_flags.keys(), ",  ")
     server_help_string = "Optional space separated list selected from: "
     for config in configurations:
-        if "download" in config:
-            if not in_teamcity:
-                continue
         server_help_string += config["name"] + ", "
 
     # add arguments
