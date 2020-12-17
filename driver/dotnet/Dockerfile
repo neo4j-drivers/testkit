@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:2.1
+FROM mcr.microsoft.com/dotnet/sdk:5.0
 
 RUN apt update \
 	&& ln -fs /usr/share/zoneinfo/Europe/London /etc/localtime \

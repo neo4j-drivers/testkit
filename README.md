@@ -56,3 +56,17 @@ To run a single named test using a local Neo4j database:
 export TEST_NEO4J_HOST=localhost
 python3 -m unittest -v tests.neo4j.datatypes.TestDatatypes.test_graph_node
 ```
+
+## Command Line Usage
+
+When running testkit locally from the command line you can specify which test types you want to run and what
+configurations you want to run against. For example:
+```console
+python3 main.py --tests TESTKIT_TESTS UNIT_TESTS --configs 4.0-community 4.1-enterprise
+```
+
+To see a list of available test types and configurations use:
+
+```
+python3 main.py --help
+```

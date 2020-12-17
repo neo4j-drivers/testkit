@@ -15,9 +15,135 @@ from tests.testenv import (
 import docker
 import teamcity
 import neo4j
-
+import argparse
 
 networks = ["the-bridge"]
+
+test_flags = {
+    "TESTKIT_TESTS": True,
+    "UNIT_TESTS": True,
+    "INTEGRATION_TESTS": True,
+    "STUB_TESTS": True,
+    "STRESS_TESTS": True,
+    "TLS_TESTS": True
+}
+
+configurations_to_run = []
+configurations = []
+
+
+def initialise_configurations():
+    configurations.append({"name": "4.2-cluster",
+                           "image": "neo4j:4.2-enterprise",
+                           "version": "4.2",
+                           "edition": "enterprise",
+                           "cluster": True,
+                           "suite": "",  # TODO: Define cluster suite
+                           "scheme": "neo4j"})
+
+    configurations.append({"name": "3.5-enterprise",
+                           "image": "neo4j:3.5-enterprise",
+                           "version": "3.5",
+                           "edition": "enterprise",
+                           "cluster": False,
+                           "suite": "3.5",
+                           "scheme": "bolt"})
+
+    configurations.append({"name": "4.0-community",
+                           "version": "4.0",
+                           "image": "neo4j:4.0",
+                           "edition": "community",
+                           "cluster": False,
+                           "suite": "4.0",
+                           "scheme": "neo4j"})
+
+    configurations.append({"name": "4.1-enterprise",
+                           "image": "neo4j:4.1-enterprise",
+                           "version": "4.1",
+                           "edition": "enterprise",
+                           "cluster": False,
+                           "suite": "4.1",
+                           "scheme": "neo4j"})
+
+    if in_teamcity:
+        configurations.append({"name": "4.2-tc-enterprise",
+                               "image": "neo4j:4.2.2-enterprise",
+                               "version": "4.2",
+                               "edition": "enterprise",
+                               "cluster": False,
+                               "suite": "4.2",
+                               "scheme": "neo4j",
+                               "download": teamcity.DockerImage("neo4j-enterprise-4.2.2-docker-loadable.tar")})
+
+        configurations.append({"name": "4.3-tc-enterprise",
+                               "image": "neo4j:4.3.0-drop02.0-enterprise",
+                               "version": "4.3",
+                               "edition": "enterprise",
+                               "cluster": False,
+                               "suite": "4.3",
+                               "scheme": "neo4j",
+                               "download": teamcity.DockerImage("neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")})
+
+
+def set_test_flags(requested_list):
+    source = []
+    if not requested_list:
+        requested_list = test_flags
+
+    for item in test_flags:
+        if item not in requested_list:
+            test_flags[item] = False
+
+    print("Tests that will be run:")
+    for item in test_flags:
+        if test_flags[item]:
+            print("     ", item)
+
+
+def convert_to_str(input_seq, separator):
+    # Join all the strings in list
+    final_str = separator.join(input_seq)
+    return final_str
+
+
+def construct_configuration_list(requested_list):
+    # if no configs were requested we will default to adding them all
+    if not requested_list:
+        requested_list = []
+        for config in configurations:
+            requested_list.append(config["name"])
+
+    # Now try to find the requested configs and check they are available with current teamcity status
+    for config in configurations:
+        if config["name"] in requested_list:
+            configurations_to_run.append(config)
+
+    print("Accepted configurations:")
+    for item in configurations_to_run:
+        print("     ", item["name"])
+
+
+def parse_command_line(argv):
+    # setup the configurations that are available
+    initialise_configurations()
+
+    # create parser
+    parser = argparse.ArgumentParser()
+
+    test_help_string = "Optional space separated list selected from: " + convert_to_str(test_flags.keys(), ",  ")
+    server_help_string = "Optional space separated list selected from: "
+    for config in configurations:
+        server_help_string += config["name"] + ", "
+
+    # add arguments
+    parser.add_argument("--tests", nargs='*', required=False, help=test_help_string)
+    parser.add_argument("--configs", nargs='*', required=False, help=server_help_string)
+
+    # parse the arguments
+    args = parser.parse_args()
+
+    set_test_flags(args.tests)
+    construct_configuration_list(args.configs)
 
 
 def cleanup():
@@ -126,11 +252,12 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     """
     Unit tests
     """
-    begin_test_suite('Unit tests')
-    driverContainer.exec(
-            ["python3", "/testkit/driver/%s/unittests.py" % driverName],
-            envMap=driverEnv)
-    end_test_suite('Unit tests')
+    if test_flags["UNIT_TESTS"]:
+        begin_test_suite('Unit tests')
+        driverContainer.exec(
+                ["python3", "/testkit/driver/%s/unittests.py" % driverName],
+                envMap=driverEnv)
+        end_test_suite('Unit tests')
 
     # Start the test backend in the driver Docker instance.
     # Note that this is done detached which means that we don't know for
@@ -180,16 +307,18 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     """
     Stub tests
     """
-    runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
+    if test_flags["STUB_TESTS"]:
+        runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
 
     """
     TLS tests
     """
     # Build TLS server
-    runnerContainer.exec(
-            ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
-    runnerContainer.exec(
-            ["python3", "-m", "tests.tls.suites"])
+    if test_flags["TLS_TESTS"]:
+        runnerContainer.exec(
+                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+        runnerContainer.exec(
+                ["python3", "-m", "tests.tls.suites"])
 
     """
     Neo4j server tests
@@ -201,97 +330,29 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
     # Until expanded protocol is implemented then we will only support current
     # version + previous 2 minors + last minor version of last major version.
-    neo4jServers = [
-        {
-            "name": "4.2-cluster",
-            "image": "neo4j:4.2-enterprise",
-            "version": "4.2",
-            "edition": "enterprise",
-            "cluster": True,
-            "suite": "",  # TODO: Define cluster suite
-            "scheme": "neo4j"
-        },
-        {
-            "name": "3.5-enterprise",
-            "image": "neo4j:3.5-enterprise",
-            "version": "3.5",
-            "edition": "enterprise",
-            "cluster": False,
-            "suite": "3.5",
-            "scheme": "bolt"
-        },
-        {
-            "name": "4.0-community",
-            "image": "neo4j:4.0",
-            "version": "4.0",
-            "edition": "community",
-            "cluster": False,
-            "suite": "4.0",
-            "scheme": "neo4j"
-        },
-        {
-            "name": "4.1-enterprise",
-            "image": "neo4j:4.1-enterprise",
-            "version": "4.1",
-            "edition": "enterprise",
-            "cluster": False,
-            "suite": "4.1",
-            "scheme": "neo4j"
-        },
-    ]
-    if in_teamcity:
-        # Use last successful build of 4.2.0. Need to update this when a new
-        # patch is in the baking.  When there is an official 4.2 build there
-        # should be a Docker hub based image above (or added when not in
-        # Teamcity).
-        s = {
-            "name": "4.2-tc-enterprise",
-            "image": "neo4j:4.2.2-enterprise",
-            "version": "4.2",
-            "edition": "enterprise",
-            "cluster": False,
-            "suite": "4.2",
-            "scheme": "neo4j",
-            "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.2.2-docker-loadable.tar")
-        }
-        neo4jServers.append(s)
-        # Use last succesful build of 4.3.0, update when new drop available
-        s = {
-            "name": "4.3-tc-enterprise",
-            "image": "neo4j:4.3.0-drop02.0-enterprise",
-            "version": "4.3",
-            "edition": "enterprise",
-            "cluster": False,
-            "suite": "4.3",
-            "scheme": "neo4j",
-            "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")
-        }
-        neo4jServers.append(s)
 
-    for neo4jServer in neo4jServers:
-        download = neo4jServer.get('download', None)
+    for neo4j_config in configurations_to_run:
+        download = neo4j_config.get('download', None)
         if download:
             print("Downloading Neo4j docker image")
             docker.load(download.get())
 
-        cluster = neo4jServer["cluster"]
-        serverName = neo4jServer["name"]
+        cluster = neo4j_config["cluster"]
+        serverName = neo4j_config["name"]
 
         # Start a Neo4j server
         if cluster:
             print("Starting neo4j cluster (%s)" % serverName)
-            server = neo4j.Cluster(neo4jServer["image"],
+            server = neo4j.Cluster(neo4j_config["image"],
                                    serverName,
                                    neo4jArtifactsPath)
         else:
             print("Starting neo4j standalone server (%s)" % serverName)
-            server = neo4j.Standalone(neo4jServer["image"],
+            server = neo4j.Standalone(neo4j_config["image"],
                                       serverName,
                                       neo4jArtifactsPath,
                                       "neo4jserver", 7687,
-                                      neo4jServer["edition"])
+                                      neo4j_config["edition"])
         server.start()
         hostname, port = server.address()
 
@@ -308,21 +369,22 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # will connect to driver backend and configure drivers to connect to
         # the neo4j instance.
         runnerEnv.update({
-            # Hostname of Docker container runnng db
+            # Hostname of Docker container running db
             "TEST_NEO4J_HOST":   hostname,
             "TEST_NEO4J_USER":   neo4j.username,
             "TEST_NEO4J_PASS":   neo4j.password,
         })
 
-        # Generic integration tests, requires a backend
-        suite = neo4jServer["suite"]
-        if suite:
-            print("Running test suite %s" % suite)
-            runnerContainer.exec([
-                "python3", "-m", "tests.neo4j.suites", suite],
-                envMap=runnerEnv)
-        else:
-            print("No test suite specified for %s" % serverName)
+        if test_flags["TESTKIT_TESTS"]:
+            # Generic integration tests, requires a backend
+            suite = neo4j_config["suite"]
+            if suite:
+                print("Running test suite %s" % suite)
+                runnerContainer.exec([
+                    "python3", "-m", "tests.neo4j.suites", suite],
+                    envMap=runnerEnv)
+            else:
+                print("No test suite specified for %s" % serverName)
 
         # Parameters that might be used by native stress/integration
         # tests suites
@@ -330,10 +392,10 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "TEST_NEO4J_HOST":       hostname,
             "TEST_NEO4J_USER":       neo4j.username,
             "TEST_NEO4J_PASS":       neo4j.password,
-            "TEST_NEO4J_SCHEME":     neo4jServer["scheme"],
+            "TEST_NEO4J_SCHEME":     neo4j_config["scheme"],
             "TEST_NEO4J_PORT":       port,
-            "TEST_NEO4J_EDITION":    neo4jServer["edition"],
-            "TEST_NEO4J_VERSION":    neo4jServer["version"],
+            "TEST_NEO4J_EDITION":    neo4j_config["edition"],
+            "TEST_NEO4J_VERSION":    neo4j_config["version"],
         })
         if cluster:
             driverEnv["TEST_NEO4J_IS_CLUSTER"] = "1"
@@ -343,9 +405,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # To support the legacy .net integration tests
         # TODO: Move this to testkit/driver/dotnet/*.py
         envString = ""
-        if neo4jServer["edition"] == "enterprise":
+        if neo4j_config["edition"] == "enterprise":
             envString += "-e "
-        envString += neo4jServer["version"]
+        envString += neo4j_config["version"]
         driverEnv["NEOCTRL_ARGS"] = envString
 
         # Run the stress test suite within the driver container.
@@ -353,25 +415,27 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # driver than the integration tests do and are therefore written in
         # the driver language.
         # None of the drivers will work properly in cluster.
-        if not cluster or driverName in ['go', 'javascript']:
-            print("Building and running stress tests...")
-            driverContainer.exec([
-                "python3", "/testkit/driver/%s/stress.py" % driverName],
-                envMap=driverEnv)
-        else:
-            print("Skipping stress tests for %s" % serverName)
+        if test_flags["STRESS_TESTS"]:
+            if not cluster or driverName in ['go', 'javascript']:
+                print("Building and running stress tests...")
+                driverContainer.exec([
+                    "python3", "/testkit/driver/%s/stress.py" % driverName],
+                    envMap=driverEnv)
+            else:
+                print("Skipping stress tests for %s" % serverName)
 
         # Run driver native integration tests within the driver container.
         # Driver integration tests should check env variable to skip tests
         # depending on if running in cluster or not, this is not properly done
         # in any (?) driver right now so skip the suite...
-        if not cluster or driverName in []:
-            print("Building and running integration tests...")
-            driverContainer.exec([
-                "python3", "/testkit/driver/%s/integration.py" % driverName],
-                envMap=driverEnv)
-        else:
-            print("Skipping integration tests for %s" % serverName)
+        if test_flags["INTEGRATION_TESTS"]:
+            if not cluster or driverName in []:
+                print("Building and running integration tests...")
+                driverContainer.exec([
+                    "python3", "/testkit/driver/%s/integration.py" % driverName],
+                    envMap=driverEnv)
+            else:
+                print("Skipping integration tests for %s" % serverName)
 
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any
@@ -386,6 +450,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
 
 if __name__ == "__main__":
+
+    parse_command_line(sys.argv)
+
     driverName = os.environ.get("TEST_DRIVER_NAME")
     if not driverName:
         print("Missing environment variable TEST_DRIVER_NAME that contains "
