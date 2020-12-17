@@ -19,7 +19,7 @@ import argparse
 
 networks = ["the-bridge"]
 
-TestFlags = {
+test_flags = {
     "TESTKIT_TESTS": True,
     "UNIT_TESTS": True,
     "INTEGRATION_TESTS": True,
@@ -28,9 +28,9 @@ TestFlags = {
     "TLS_TESTS": True
 }
 
-ConfigurationsToRun = []
+configurations_to_run = []
 
-Configurations = [{"name": "4.2-cluster",
+configurations = [{"name": "4.2-cluster",
                    "image": "neo4j:4.2-enterprise",
                    "version": "4.2",
                    "edition": "enterprise",
@@ -79,15 +79,15 @@ Configurations = [{"name": "4.2-cluster",
 def set_test_flags(requested_list):
     source = []
     if not requested_list:
-        requested_list = TestFlags
+        requested_list = test_flags
 
-    for item in TestFlags:
+    for item in test_flags:
         if item not in requested_list:
-            TestFlags[item] = False
+            test_flags[item] = False
 
     print("Tests that will be run:")
-    for item in TestFlags:
-        if TestFlags[item]:
+    for item in test_flags:
+        if test_flags[item]:
             print("     ", item)
 
 
@@ -98,23 +98,24 @@ def convert_to_str(input_seq, separator):
 
 
 def construct_configuration_list(requested_list):
+
     # if no configs were requested we will default to adding them all
     if not requested_list:
         requested_list = []
-        for config in Configurations:
+        for config in configurations:
             requested_list.append(config["name"])
 
     # Now try to find the requested configs and check they are available with current teamcity status
-    for config in Configurations:
+    for config in configurations:
         if config["name"] in requested_list:
             if "download" in config:
-                if in_teamcity == 1:
-                    ConfigurationsToRun.append(config)
+                if in_teamcity:
+                    configurations_to_run.append(config)
             else:
-                ConfigurationsToRun.append(config)
+                configurations_to_run.append(config)
 
     print("Accepted configurations:")
-    for item in ConfigurationsToRun:
+    for item in configurations_to_run:
         print("     ", item["name"])
 
 
@@ -122,10 +123,13 @@ def parse_command_line(argv):
     # create parser
     parser = argparse.ArgumentParser()
 
-    test_help_string = "Optional space separated list selected from: " + convert_to_str(TestFlags.keys(), ",  ")
+    test_help_string = "Optional space separated list selected from: " + convert_to_str(test_flags.keys(), ",  ")
     server_help_string = "Optional space separated list selected from: "
-    for config in Configurations:
-        server_help_string += config["name"] + ",  "
+    for config in configurations:
+        if "download" in config:
+            if not in_teamcity:
+                continue
+        server_help_string += config["name"] + ", "
 
     # add arguments
     parser.add_argument("--tests", nargs='*', required=False, help=test_help_string)
@@ -244,7 +248,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     """
     Unit tests
     """
-    if TestFlags["UNIT_TESTS"]:
+    if test_flags["UNIT_TESTS"]:
         begin_test_suite('Unit tests')
         driverContainer.exec(
                 ["python3", "/testkit/driver/%s/unittests.py" % driverName],
@@ -299,14 +303,14 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     """
     Stub tests
     """
-    if TestFlags["STUB_TESTS"]:
+    if test_flags["STUB_TESTS"]:
         runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
 
     """
     TLS tests
     """
     # Build TLS server
-    if TestFlags["TLS_TESTS"]:
+    if test_flags["TLS_TESTS"]:
         runnerContainer.exec(
                 ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
         runnerContainer.exec(
@@ -323,7 +327,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # Until expanded protocol is implemented then we will only support current
     # version + previous 2 minors + last minor version of last major version.
 
-    for neo4j_config in ConfigurationsToRun:
+    for neo4j_config in configurations_to_run:
         download = neo4j_config.get('download', None)
         if download:
             print("Downloading Neo4j docker image")
@@ -367,7 +371,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             "TEST_NEO4J_PASS":   neo4j.password,
         })
 
-        if TestFlags["TESTKIT_TESTS"]:
+        if test_flags["TESTKIT_TESTS"]:
             # Generic integration tests, requires a backend
             suite = neo4j_config["suite"]
             if suite:
@@ -407,7 +411,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # driver than the integration tests do and are therefore written in
         # the driver language.
         # None of the drivers will work properly in cluster.
-        if TestFlags["STRESS_TESTS"]:
+        if test_flags["STRESS_TESTS"]:
             if not cluster or driverName in ['go', 'javascript']:
                 print("Building and running stress tests...")
                 driverContainer.exec([
@@ -420,7 +424,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # Driver integration tests should check env variable to skip tests
         # depending on if running in cluster or not, this is not properly done
         # in any (?) driver right now so skip the suite...
-        if TestFlags["INTEGRATION_TESTS"]:
+        if test_flags["INTEGRATION_TESTS"]:
             if not cluster or driverName in []:
                 print("Building and running integration tests...")
                 driverContainer.exec([
