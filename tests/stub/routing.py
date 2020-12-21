@@ -1,9 +1,8 @@
 import unittest
 
-from tests.shared import *
-from tests.stub.shared import *
+from tests.shared import get_driver_name, new_backend
+from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
-import nutkit.protocol as types
 
 
 def get_extra_hello_props():
@@ -12,6 +11,7 @@ def get_extra_hello_props():
     elif get_driver_name() in ["javascript"]:
         return ', "realm": "", "ticket": ""'
     return ""
+
 
 # This should be the latest/current version of the protocol.
 # Older protocol that needs to be tested inherits from this and override
@@ -45,6 +45,24 @@ class Routing(unittest.TestCase):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
+        """
+
+    def driver_router_script(self):
+        # For Python. Connects to router upon driver creation, at this point
+        # the database name is unknown...
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"mode": "r", "db": "system"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        S: <EXIT>
         """
 
     def read_script(self):
@@ -111,7 +129,6 @@ class Routing(unittest.TestCase):
 
     def get_vars(self):
         host = self._routingServer.host
-        dbparam = "db"
         v = {
             "#VERSION#": "4.1",
             "#DBPARAM#": "db",
@@ -121,7 +138,7 @@ class Routing(unittest.TestCase):
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
-        if get_driver_name() in ['dotnet', 'java', 'javascript']:
+        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python']:
             v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
@@ -135,21 +152,38 @@ class Routing(unittest.TestCase):
     # Checks that routing is used to connect to correct server and that parameters for
     # session run is passed on to the target server (not the router).
     def test_session_run_read(self):
+        if get_driver_name() in ['python']:
+            self._routingServer.start(script=self.driver_router_script(),
+                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
+        if get_driver_name() in ['python']:
+            self._routingServer.done()
+        db = self.get_db()
+        if db or get_driver_name() not in ['python']:
+            self._routingServer.start(script=self.router_script(),
+                                      vars=self.get_vars())
         self._readServer.start(script=self.read_script(), vars=self.get_vars())
-        session = driver.session('r', database=self.get_db())
+        session = driver.session('r', database=db)
         session.run("RETURN 1 as n")
         session.close()
         driver.close()
         self._routingServer.done()
-        self._readServer.done() 
+        self._readServer.done()
 
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
+        if get_driver_name() in ['python']:
+            self._routingServer.start(script=self.driver_router_script(),
+                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
-        self._readServer.start(script=self.read_tx_script(), vars=self.get_vars())
+        if get_driver_name() in ['python']:
+            self._routingServer.done()
+        db = self.get_db()
+        if db or get_driver_name() not in ['python']:
+            self._routingServer.start(script=self.router_script(),
+                                      vars=self.get_vars())
+        self._readServer.start(script=self.read_tx_script(),
+                               vars=self.get_vars())
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
@@ -161,10 +195,19 @@ class Routing(unittest.TestCase):
 
     # Checks that write server is used
     def test_session_run_write(self):
+        if get_driver_name() in ['python']:
+            self._routingServer.start(script=self.driver_router_script(),
+                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
-        self._writeServer.start(script=self.write_script(), vars=self.get_vars())
-        session = driver.session('w', database=self.get_db())
+        if get_driver_name() in ['python']:
+            self._routingServer.done()
+        db = self.get_db()
+        if db or get_driver_name() not in ['python']:
+            self._routingServer.start(script=self.router_script(),
+                                      vars=self.get_vars())
+        self._writeServer.start(script=self.write_script(),
+                                vars=self.get_vars())
+        session = driver.session('w', database=db)
         session.run("RETURN 1 as n")
         session.close()
         driver.close()
@@ -173,10 +216,19 @@ class Routing(unittest.TestCase):
 
     # Checks that write server is used
     def test_tx_run_write(self):
+        if get_driver_name() in ['python']:
+            self._routingServer.start(script=self.driver_router_script(),
+                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
-        self._writeServer.start(script=self.write_tx_script(), vars=self.get_vars())
-        session = driver.session('w', database=self.get_db())
+        if get_driver_name() in ['python']:
+            self._routingServer.done()
+        db = self.get_db()
+        if db or get_driver_name() not in ['python']:
+            self._routingServer.start(script=self.router_script(),
+                                      vars=self.get_vars())
+        self._writeServer.start(script=self.write_tx_script(),
+                                vars=self.get_vars())
+        session = driver.session('w', database=db)
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
         tx.commit()
@@ -184,6 +236,7 @@ class Routing(unittest.TestCase):
         driver.close()
         self._routingServer.done()
         self._writeServer.done()
+
 
 class RoutingV3(Routing):
     def router_script(self):
@@ -199,6 +252,23 @@ class RoutingV3(Routing):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
+        """
+
+    def driver_router_script(self):
+        # For Python. Connects to router upon driver creation
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
+        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
+        C: PULL_ALL
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        S: <EXIT>
         """
 
     def read_script(self):
@@ -273,13 +343,13 @@ class RoutingV3(Routing):
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#EXTR_HELLO_ROUTING_PROPS#": "",
         }
-        
+
         if get_driver_name() in ['go']:
             v["#ROUTINGMODE#"] = '"mode": "r"'
-        
+
         if get_driver_name() in ['java']:
             v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#'] 
-        
+
         if get_driver_name() in ['javascript']:
             v["#ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
 
@@ -320,18 +390,19 @@ class NoRouting(unittest.TestCase):
             "#ROUTING#": ', "routing": null' if get_driver_name() not in ['javascript'] else ''
         }
 
-
-    # Checks that routing is disabled when URI is bolt, no routing in HELLO and
-    # no call to retrieve routing table. From bolt >= 4.1 the routing context is
-    # used to disable/enable server side routing.
+    # Checks that routing is disabled when URI is bolt, no routing in
+    # HELLO and no call to retrieve routing table. From bolt >= 4.1 the
+    # routing context is used to disable/enable server side routing.
     def test_session_run_read(self):
         # Driver is configured to talk to "routing" stub server
         uri = "bolt://%s" % self._server.address
         self._server.start(script=self.script(), vars=self.get_vars())
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
+        driver = Driver(self._backend, uri,
+                        AuthorizationToken(scheme="basic", principal="p",
+                                           credentials="c"),
+                        userAgent="007")
         session = driver.session('r', database="adb")
         session.run("RETURN 1 as n")
         session.close()
         driver.close()
         self._server.done()
-

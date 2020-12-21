@@ -90,6 +90,9 @@ class StubServer:
         If the server process is still running after polling it will be killed
           and an exception will be raised.
         """
+        if not self._process:
+            return
+
         polls = 200
         while polls:
             self._process.poll()
