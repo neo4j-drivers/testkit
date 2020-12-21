@@ -149,21 +149,15 @@ class Routing(unittest.TestCase):
     def get_db(self):
         return "adb"
 
-    # Checks that routing is used to connect to correct server and that parameters for
-    # session run is passed on to the target server (not the router).
+    # Checks that routing is used to connect to correct server and that
+    # parameters for session run is passed on to the target server
+    # (not the router).
     def test_session_run_read(self):
-        if get_driver_name() in ['python']:
-            self._routingServer.start(script=self.driver_router_script(),
-                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        if get_driver_name() in ['python']:
-            self._routingServer.done()
-        db = self.get_db()
-        if db or get_driver_name() not in ['python']:
-            self._routingServer.start(script=self.router_script(),
-                                      vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
         self._readServer.start(script=self.read_script(), vars=self.get_vars())
-        session = driver.session('r', database=db)
+        session = driver.session('r', database=self.get_db())
         session.run("RETURN 1 as n")
         session.close()
         driver.close()
@@ -172,16 +166,9 @@ class Routing(unittest.TestCase):
 
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
-        if get_driver_name() in ['python']:
-            self._routingServer.start(script=self.driver_router_script(),
-                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        if get_driver_name() in ['python']:
-            self._routingServer.done()
-        db = self.get_db()
-        if db or get_driver_name() not in ['python']:
-            self._routingServer.start(script=self.router_script(),
-                                      vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
         self._readServer.start(script=self.read_tx_script(),
                                vars=self.get_vars())
         session = driver.session('r', database=self.get_db())
@@ -195,19 +182,12 @@ class Routing(unittest.TestCase):
 
     # Checks that write server is used
     def test_session_run_write(self):
-        if get_driver_name() in ['python']:
-            self._routingServer.start(script=self.driver_router_script(),
-                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        if get_driver_name() in ['python']:
-            self._routingServer.done()
-        db = self.get_db()
-        if db or get_driver_name() not in ['python']:
-            self._routingServer.start(script=self.router_script(),
-                                      vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
         self._writeServer.start(script=self.write_script(),
                                 vars=self.get_vars())
-        session = driver.session('w', database=db)
+        session = driver.session('w', database=self.get_db())
         session.run("RETURN 1 as n")
         session.close()
         driver.close()
@@ -216,19 +196,12 @@ class Routing(unittest.TestCase):
 
     # Checks that write server is used
     def test_tx_run_write(self):
-        if get_driver_name() in ['python']:
-            self._routingServer.start(script=self.driver_router_script(),
-                                      vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        if get_driver_name() in ['python']:
-            self._routingServer.done()
-        db = self.get_db()
-        if db or get_driver_name() not in ['python']:
-            self._routingServer.start(script=self.router_script(),
-                                      vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
         self._writeServer.start(script=self.write_tx_script(),
                                 vars=self.get_vars())
-        session = driver.session('w', database=db)
+        session = driver.session('w', database=self.get_db())
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
         tx.commit()
