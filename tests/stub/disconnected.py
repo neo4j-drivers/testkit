@@ -92,6 +92,8 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_run(self):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # run message.
+        if self._driverName in ['python']:
+            self.skipTest("Too raw error handling")
         self._server.start(script=script_on_run)
         step = self._run()
         self._session.close()
@@ -107,6 +109,8 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_pull(self):
         # Verifies how the driver handles when server disconnects right after driver sent bolt
         # pull message.
+        if self._driverName in ['python']:
+            self.skipTest("Too raw error handling")
         self._server.start(script=script_on_pull)
         step = self._run()
         self._session.close()
