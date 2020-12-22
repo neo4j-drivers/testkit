@@ -29,6 +29,11 @@ RUN apt-get update && \
         ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+# Install our own CAs on the image.
+# Assumes Linux Debian based image.
+COPY CAs/* /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+
 # Install pyenv
 RUN git clone https://github.com/pyenv/pyenv.git .pyenv
 ENV PYENV_ROOT /.pyenv
