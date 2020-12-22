@@ -80,7 +80,7 @@ class Backend:
                         print("Response: <invalid unicode>")
                 try:
                     res = json.loads(response, object_hook=decode_hook)
-                except json.decoder.JSONDecodeError as e:
+                except json.decoder.JSONDecodeError:
                     raise Exception("Failed to decode: %s" % response)
 
                 # All received errors are raised as exceptions
@@ -91,12 +91,13 @@ class Backend:
                 if in_response:
                     response = response + line
                 else:
-                    # When backend crashes we will end up reading empty lines until end of universe
-                    # Use this simple check to detect this condition and abort
+                    # When backend crashes we will end up reading empty lines
+                    # until end of universe. Use this simple check to detect
+                    # this condition and abort.
                     if not line:
                         num_blanks += 1
                         if num_blanks > 50:
-                            raise Exception("Detected possible crash in backend")
+                            raise Exception("Detected possible backend crash")
                     # The backend can send it's own logs outside of response blocks
                     elif debug:
                         print("[BACKEND]: %s" % line)
