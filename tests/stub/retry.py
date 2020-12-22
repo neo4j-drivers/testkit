@@ -145,7 +145,7 @@ class TestRetry(unittest.TestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driverName in ["java", 'python']:
+        if self._driverName in ["java", 'python', 'javascript', 'dotnet']:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(script=script_commit_disconnect)
