@@ -1,7 +1,7 @@
-import unittest, os
+import unittest
 
-from tests.shared import *
-from tests.stub.shared import *
+from tests.shared import new_backend, get_driver_name
+from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
@@ -67,6 +67,7 @@ C: COMMIT
 S: <EXIT>
 """
 
+
 class TestRetry(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
@@ -82,6 +83,7 @@ class TestRetry(unittest.TestCase):
     def test_read(self):
         self._server.start(script=script_read)
         num_retries = 0
+
         def once(tx):
             nonlocal num_retries
             num_retries = num_retries + 1
@@ -89,8 +91,10 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        auth = AuthorizationToken(scheme="basic", principal="neo4j",
+                                  credentials="pass")
+        driver = Driver(self._backend,
+                        "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
         x = session.readTransaction(once)
         self.assertIsInstance(x, types.CypherInt)
@@ -102,8 +106,8 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
     def test_read_twice(self):
-        # We could probably use AUTO RESET in the script but this makes the diffs more
-        # obvious.
+        # We could probably use AUTO RESET in the script but this makes the
+        # diffs more obvious.
         vars = {
             "$extra_reset_1": "",
             "$extra_reset_2": "",
@@ -115,6 +119,7 @@ class TestRetry(unittest.TestCase):
 
         self._server.start(script=script_retry, vars=vars)
         num_retries = 0
+
         def twice(tx):
             nonlocal num_retries
             num_retries = num_retries + 1
@@ -122,8 +127,10 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        auth = AuthorizationToken(scheme="basic", principal="neo4j",
+                                  credentials="pass")
+        driver = Driver(self._backend,
+                        "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
         x = session.readTransaction(twice)
         self.assertIsInstance(x, types.CypherInt)
@@ -136,28 +143,28 @@ class TestRetry(unittest.TestCase):
 
     def test_disconnect_on_commit(self):
         # Should NOT retry when connection is lost on unconfirmed commit.
-        # The rule could be relaxed on read transactions therefore we test on writeTransaction.
-        # An error should be raised to indicate the failure
-        if self._driverName in ["java"]:
-            self.skipTest("Java keeps retrying on commit despite connection being dropped")
-        if not self._driverName in ["go"]:
-            self.skipTest("Backend missing support for SessionWriteTransaction")
+        # The rule could be relaxed on read transactions therefore we test on
+        # writeTransaction.  An error should be raised to indicate the failure
+        if self._driverName in ["java", 'python']:
+            self.skipTest("Keeps retrying on commit despite connection "
+                          "being dropped")
         self._server.start(script=script_commit_disconnect)
         num_retries = 0
+
         def once(tx):
             nonlocal num_retries
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
-            record = result.next()
+            result.next()
         auth = AuthorizationToken(scheme="basic")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        driver = Driver(self._backend,
+                        "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
 
-        with self.assertRaises(types.DriverError) as e: # Check further...
+        with self.assertRaises(types.DriverError):  # Check further...
             session.writeTransaction(once)
 
         self.assertEqual(num_retries, 1)
         session.close()
         driver.close()
         self._server.done()
-
