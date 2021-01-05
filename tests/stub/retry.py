@@ -23,12 +23,12 @@ C: COMMIT
 S: SUCCESS {}
 """
 
-script_retry = """
+script_retry_with_fail_after_commit = """
 !: BOLT 4
 !: AUTO HELLO
 !: AUTO GOODBYE
 
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -36,11 +36,36 @@ S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
-S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+S: FAILURE {"code": "$error", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 $extra_reset_1
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+$extra_reset_2
+"""
+
+script_retry_with_fail_after_pull = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: FAILURE {"code": "$error", "message": "<whatever>"}
+C: RESET
+S: SUCCESS {}
+$extra_reset_1
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -105,19 +130,20 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
-    def test_read_twice(self):
+    def _run_with_transient_error(self, script, err):
         # We could probably use AUTO RESET in the script but this makes the
         # diffs more obvious.
         vars = {
             "$extra_reset_1": "",
             "$extra_reset_2": "",
+            "$error": err,
         }
         if self._driverName not in ["go"]:
             vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
         if self._driverName in ["java", "javascript"]:
             vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
 
-        self._server.start(script=script_retry, vars=vars)
+        self._server.start(script=script, vars=vars)
         num_retries = 0
 
         def twice(tx):
@@ -132,7 +158,7 @@ class TestRetry(unittest.TestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.readTransaction(twice)
+        x = session.writeTransaction(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -140,6 +166,39 @@ class TestRetry(unittest.TestCase):
         session.close()
         driver.close()
         self._server.done()
+
+    def test_retry_database_unavailable(self):
+        # Simple case, correctly classified transient error
+        self._run_with_transient_error(
+                script_retry_with_fail_after_commit,
+                "Neo.TransientError.Database.DatabaseUnavailable")
+
+    def test_retry_made_up_transient(self):
+        # Driver should retry all transient error (with some exceptions), make
+        # up a transient error and the driver should retry.
+        self._run_with_transient_error(
+                script_retry_with_fail_after_commit,
+                "Neo.TransientError.Completely.MadeUp")
+
+    def test_retry_NotALeader(self):
+        if get_driver_name() in ['dotnet', 'javascript']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java']:
+            self.skipTest("Sends ROLLBACK after RESET")
+        # Cluster special treatment
+        self._run_with_transient_error(
+                script_retry_with_fail_after_pull,
+                "Neo.ClientError.Cluster.NotALeader")
+
+    def test_retry_ForbiddenReadOnlyDatabase(self):
+        if get_driver_name() in ['dotnet', 'javascript']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java']:
+            self.skipTest("Sends ROLLBACK after RESET")
+        # Cluster special treatment
+        self._run_with_transient_error(
+                script_retry_with_fail_after_pull,
+                "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
 
     def test_disconnect_on_commit(self):
         # Should NOT retry when connection is lost on unconfirmed commit.
