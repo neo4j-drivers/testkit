@@ -61,7 +61,8 @@ C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
-S: FAILURE {"code": "$error", "message": "<whatever>"}
+S: SUCCESS {}
+   FAILURE {"code": "$error", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 $extra_reset_1
@@ -138,7 +139,7 @@ class TestRetry(unittest.TestCase):
             "$extra_reset_2": "",
             "$error": err,
         }
-        if self._driverName not in ["go"]:
+        if self._driverName not in ["go", "python"]:
             vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
         if self._driverName in ["java", "javascript"]:
             vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
