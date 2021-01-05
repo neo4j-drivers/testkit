@@ -36,7 +36,7 @@ S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
-S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+S: FAILURE {"code": "$error", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 $extra_reset_1
@@ -105,12 +105,13 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
-    def test_read_twice(self):
+    def _run_with_transient_error(self, err):
         # We could probably use AUTO RESET in the script but this makes the
         # diffs more obvious.
         vars = {
             "$extra_reset_1": "",
             "$extra_reset_2": "",
+            "$error": err,
         }
         if self._driverName not in ["go"]:
             vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
@@ -140,6 +141,27 @@ class TestRetry(unittest.TestCase):
         session.close()
         driver.close()
         self._server.done()
+
+    def test_retry_database_unavailable(self):
+        # Simple case, correctly classified transient error
+        self._run_with_transient_error(
+                "Neo.TransientError.Database.DatabaseUnavailable")
+
+    def test_retry_made_up_transient(self):
+        # Driver should retry all transient error (with some exceptions), make
+        # up a transient error and the driver should retry.
+        self._run_with_transient_error(
+                "Neo.TransientError.Completely.MadeUp")
+
+    def test_retry_NotALeader(self):
+        # Cluster special treatment
+        self._run_with_transient_error(
+            "Neo.ClientError.Cluster.NotALeader")
+
+    def test_retry_ForbiddenReadOnlyDatabase(self):
+        # Cluster special treatment
+        self._run_with_transient_error(
+            "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
 
     def test_disconnect_on_commit(self):
         # Should NOT retry when connection is lost on unconfirmed commit.
