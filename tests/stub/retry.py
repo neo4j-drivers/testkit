@@ -181,12 +181,20 @@ class TestRetry(unittest.TestCase):
                 "Neo.TransientError.Completely.MadeUp")
 
     def test_retry_NotALeader(self):
+        if get_driver_name() in ['dotnet', 'javascript']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java']:
+            self.skipTest("Sends ROLLBACK after RESET")
         # Cluster special treatment
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
                 "Neo.ClientError.Cluster.NotALeader")
 
     def test_retry_ForbiddenReadOnlyDatabase(self):
+        if get_driver_name() in ['dotnet', 'javascript']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java']:
+            self.skipTest("Sends ROLLBACK after RESET")
         # Cluster special treatment
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
