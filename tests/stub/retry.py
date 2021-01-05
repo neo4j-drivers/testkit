@@ -28,7 +28,7 @@ script_retry_with_fail_after_commit = """
 !: AUTO HELLO
 !: AUTO GOODBYE
 
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -40,7 +40,7 @@ S: FAILURE {"code": "$error", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 $extra_reset_1
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -57,7 +57,7 @@ script_retry_with_fail_after_pull = """
 !: AUTO HELLO
 !: AUTO GOODBYE
 
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -65,7 +65,7 @@ S: FAILURE {"code": "$error", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 $extra_reset_1
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -158,7 +158,7 @@ class TestRetry(unittest.TestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.readTransaction(twice)
+        x = session.writeTransaction(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
