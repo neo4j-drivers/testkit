@@ -295,7 +295,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # works simply by commenting detach and see that the backend starts.
     print("Start test backend in driver container")
     driverContainer.exec_detached(
-            ["python3", "/testkit/driver/%s/backend.py" % driverName],
+            ["python3", os.path.join(driverGlue, "backend.py")],
             envMap=driverEnv)
     # Wait until backend started
     # Use driver container to check for backend availability
