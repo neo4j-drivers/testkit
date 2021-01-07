@@ -184,7 +184,7 @@ class TestRetry(unittest.TestCase):
     def test_retry_NotALeader(self):
         if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ['java', 'python']:
             self.skipTest("Sends ROLLBACK after RESET")
         # Cluster special treatment
         self._run_with_transient_error(
@@ -194,7 +194,7 @@ class TestRetry(unittest.TestCase):
     def test_retry_ForbiddenReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ['java', 'python']:
             self.skipTest("Sends ROLLBACK after RESET")
         # Cluster special treatment
         self._run_with_transient_error(
