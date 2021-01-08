@@ -47,24 +47,6 @@ class Routing(unittest.TestCase):
         S: SUCCESS {"type": "r"}
         """
 
-    def driver_router_script(self):
-        # For Python. Connects to router upon driver creation, at this point
-        # the database name is unknown...
-        return """
-        !: BOLT #VERSION#
-        !: AUTO RESET
-        !: AUTO GOODBYE
-
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"mode": "r", "db": "system"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
-        S: <EXIT>
-        """
-
     def read_script(self):
         return """
         !: BOLT #VERSION#
@@ -225,23 +207,6 @@ class RoutingV3(Routing):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
-        """
-
-    def driver_router_script(self):
-        # For Python. Connects to router upon driver creation
-        return """
-        !: BOLT #VERSION#
-        !: AUTO RESET
-        !: AUTO GOODBYE
-
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
-        C: PULL_ALL
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
-        S: <EXIT>
         """
 
     def read_script(self):
