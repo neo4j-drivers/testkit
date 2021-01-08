@@ -121,18 +121,13 @@ class Routing(unittest.TestCase):
 
     def get_vars(self):
         host = self._routingServer.host
-        dbparam = "db"
         v = {
             "#VERSION#": "4.3",
-            "#DBPARAM#": dbparam,
             "#HOST#": host,
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
-
-        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python']:
-            v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
             v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
@@ -229,7 +224,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $#DBPARAM#)" {"context": #ROUTINGCTX#, "#DBPARAM#": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]]
@@ -238,20 +233,15 @@ class RoutingV4(Routing):
 
     def get_vars(self):
         host = self._routingServer.host
-        dbparam = "db"
         v = {
             "#VERSION#": 4.1,
             "#HOST#": host,
-            "#DBPARAM#": dbparam,
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
         }
 
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
-
-        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python']:
-            v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
             v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
