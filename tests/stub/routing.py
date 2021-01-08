@@ -131,7 +131,7 @@ class Routing(unittest.TestCase):
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
-        if get_driver_name() in ['dotnet', 'java', 'javascript']:
+        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python']:
             v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
@@ -142,11 +142,13 @@ class Routing(unittest.TestCase):
     def get_db(self):
         return "adb"
 
-    # Checks that routing is used to connect to correct server and that parameters for
-    # session run is passed on to the target server (not the router).
+    # Checks that routing is used to connect to correct server and that
+    # parameters for session run is passed on to the target server
+    # (not the router).
     def test_session_run_read(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
         self._readServer.start(script=self.read_script(), vars=self.get_vars())
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session('r', database=self.get_db())
@@ -159,8 +161,10 @@ class Routing(unittest.TestCase):
     def test_default_db(self):
         vars = self.get_vars()
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script_default_db(), vars=vars)
-        self._readServer.start(script=self.read_script(), vars=vars)
+        self._routingServer.start(script=self.router_script_default_db(),
+                                  vars=vars)
+        self._readServer.start(script=self.read_script(),
+                               vars=vars)
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session('r')
         session.run("RETURN 1 as n")
@@ -172,8 +176,10 @@ class Routing(unittest.TestCase):
     # Same test as for session.run but for transaction run.
     def test_tx_run_read(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
-        self._readServer.start(script=self.read_tx_script(), vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
+        self._readServer.start(script=self.read_tx_script(),
+                               vars=self.get_vars())
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
@@ -186,8 +192,10 @@ class Routing(unittest.TestCase):
     # Checks that write server is used
     def test_session_run_write(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
-        self._writeServer.start(script=self.write_script(), vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
+        self._writeServer.start(script=self.write_script(),
+                                vars=self.get_vars())
         session = driver.session('w', database=self.get_db())
         session.run("RETURN 1 as n")
         session.close()
@@ -198,8 +206,10 @@ class Routing(unittest.TestCase):
     # Checks that write server is used
     def test_tx_run_write(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
-        self._writeServer.start(script=self.write_tx_script(), vars=self.get_vars())
+        self._routingServer.start(script=self.router_script(),
+                                  vars=self.get_vars())
+        self._writeServer.start(script=self.write_tx_script(),
+                                vars=self.get_vars())
         session = driver.session('w', database=self.get_db())
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
@@ -240,7 +250,7 @@ class RoutingV4(Routing):
 
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
-        if get_driver_name() in ['dotnet', 'java', 'javascript']:
+        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python']:
             v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
@@ -390,13 +400,15 @@ class NoRouting(unittest.TestCase):
         }
 
     # Checks that routing is disabled when URI is bolt, no routing in HELLO and
-    # no call to retrieve routing table. From bolt >= 4.1 the routing context is
-    # used to disable/enable server side routing.
+    # no call to retrieve routing table. From bolt >= 4.1 the routing context
+    # is used to disable/enable server side routing.
     def test_session_run_read(self):
         # Driver is configured to talk to "routing" stub server
         uri = "bolt://%s" % self._server.address
         self._server.start(script=self.script(), vars=self.get_vars())
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic", principal="p", credentials="c"), userAgent="007")
+        driver = Driver(self._backend, uri,
+                        AuthorizationToken(scheme="basic", principal="p",
+                                           credentials="c"), userAgent="007")
         session = driver.session('r', database="adb")
         session.run("RETURN 1 as n")
         session.close()
