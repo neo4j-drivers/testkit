@@ -1,7 +1,7 @@
-import unittest, os
+import unittest
 
-from tests.shared import *
-from tests.stub.shared import *
+from tests.shared import new_backend, get_driver_name
+from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
@@ -23,12 +23,12 @@ C: COMMIT
 S: SUCCESS {}
 """
 
-script_retry = """
+script_retry_with_fail_after_commit = """
 !: BOLT 4
 !: AUTO HELLO
 !: AUTO GOODBYE
 
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -36,11 +36,37 @@ S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
-S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+S: FAILURE {"code": "$error", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 $extra_reset_1
-C: BEGIN {"mode": "r"}
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+$extra_reset_2
+"""
+
+script_retry_with_fail_after_pull = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {}
+   FAILURE {"code": "$error", "message": "<whatever>"}
+C: RESET
+S: SUCCESS {}
+$extra_reset_1
+C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
    PULL {"n": 1000}
@@ -67,6 +93,7 @@ C: COMMIT
 S: <EXIT>
 """
 
+
 class TestRetry(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
@@ -82,6 +109,7 @@ class TestRetry(unittest.TestCase):
     def test_read(self):
         self._server.start(script=script_read)
         num_retries = 0
+
         def once(tx):
             nonlocal num_retries
             num_retries = num_retries + 1
@@ -89,8 +117,10 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        auth = AuthorizationToken(scheme="basic", principal="neo4j",
+                                  credentials="pass")
+        driver = Driver(self._backend,
+                        "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
         x = session.readTransaction(once)
         self.assertIsInstance(x, types.CypherInt)
@@ -101,20 +131,22 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
-    def test_read_twice(self):
-        # We could probably use AUTO RESET in the script but this makes the diffs more
-        # obvious.
+    def _run_with_transient_error(self, script, err):
+        # We could probably use AUTO RESET in the script but this makes the
+        # diffs more obvious.
         vars = {
             "$extra_reset_1": "",
             "$extra_reset_2": "",
+            "$error": err,
         }
-        if self._driverName not in ["go"]:
+        if self._driverName not in ["go", "python"]:
             vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
         if self._driverName in ["java", "javascript"]:
             vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
 
-        self._server.start(script=script_retry, vars=vars)
+        self._server.start(script=script, vars=vars)
         num_retries = 0
+
         def twice(tx):
             nonlocal num_retries
             num_retries = num_retries + 1
@@ -122,10 +154,12 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        auth = AuthorizationToken(scheme="basic", principal="neo4j",
+                                  credentials="pass")
+        driver = Driver(self._backend,
+                        "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.readTransaction(twice)
+        x = session.writeTransaction(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -134,30 +168,63 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
+    def test_retry_database_unavailable(self):
+        # Simple case, correctly classified transient error
+        self._run_with_transient_error(
+                script_retry_with_fail_after_commit,
+                "Neo.TransientError.Database.DatabaseUnavailable")
+
+    def test_retry_made_up_transient(self):
+        # Driver should retry all transient error (with some exceptions), make
+        # up a transient error and the driver should retry.
+        self._run_with_transient_error(
+                script_retry_with_fail_after_commit,
+                "Neo.TransientError.Completely.MadeUp")
+
+    def test_retry_NotALeader(self):
+        if get_driver_name() in ['dotnet', 'javascript']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java', 'python']:
+            self.skipTest("Sends ROLLBACK after RESET")
+        # Cluster special treatment
+        self._run_with_transient_error(
+                script_retry_with_fail_after_pull,
+                "Neo.ClientError.Cluster.NotALeader")
+
+    def test_retry_ForbiddenReadOnlyDatabase(self):
+        if get_driver_name() in ['dotnet', 'javascript']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java', 'python']:
+            self.skipTest("Sends ROLLBACK after RESET")
+        # Cluster special treatment
+        self._run_with_transient_error(
+                script_retry_with_fail_after_pull,
+                "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
+
     def test_disconnect_on_commit(self):
         # Should NOT retry when connection is lost on unconfirmed commit.
-        # The rule could be relaxed on read transactions therefore we test on writeTransaction.
-        # An error should be raised to indicate the failure
-        if self._driverName in ["java"]:
-            self.skipTest("Java keeps retrying on commit despite connection being dropped")
-        if not self._driverName in ["go"]:
-            self.skipTest("Backend missing support for SessionWriteTransaction")
+        # The rule could be relaxed on read transactions therefore we test on
+        # writeTransaction.  An error should be raised to indicate the failure
+        if self._driverName in ["java", 'python', 'javascript', 'dotnet']:
+            self.skipTest("Keeps retrying on commit despite connection "
+                          "being dropped")
         self._server.start(script=script_commit_disconnect)
         num_retries = 0
+
         def once(tx):
             nonlocal num_retries
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
-            record = result.next()
+            result.next()
         auth = AuthorizationToken(scheme="basic")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address, auth)
+        driver = Driver(self._backend,
+                        "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
 
-        with self.assertRaises(types.DriverError) as e: # Check further...
+        with self.assertRaises(types.DriverError):  # Check further...
             session.writeTransaction(once)
 
         self.assertEqual(num_retries, 1)
         session.close()
         driver.close()
         self._server.done()
-

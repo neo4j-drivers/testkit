@@ -54,7 +54,7 @@ docker run --name neo4j --env NEO4J_AUTH=neo4j/pass -p7687:7687 --rm neo4j:lates
 To run a single named test using a local Neo4j database:
 ```console
 export TEST_NEO4J_HOST=localhost
-python3 -m unittest -v tests.neo4j.datatypes.TestDatatypes.test_graph_node
+python3 -m unittest tests.neo4j.datatypes.TestDataTypes.testShouldEchoBack
 ```
 
 ## Command Line Usage

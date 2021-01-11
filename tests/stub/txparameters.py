@@ -121,13 +121,11 @@ class TxBeginParameters(unittest.TestCase):
 
     def _run(self, accessMode, params=None, bookmarks=None, txMeta=None, timeout=None):
         session = self._driver.session(accessMode, bookmarks=bookmarks)
-        try:
-            tx = session.beginTransaction(txMeta, timeout)
-            # Need to do something on the transaction, driver might do lazy begin
-            tx.run("RETURN 1 as n")
-            tx.commit()
-        finally:
-            session.close()
+        tx = session.beginTransaction(txMeta, timeout)
+        # Need to do something on the transaction, driver might do lazy begin
+        tx.run("RETURN 1 as n")
+        tx.commit()
+        session.close()
 
     def test_accessmode_read(self):
         self._server.start(script=script_accessmode_read)

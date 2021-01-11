@@ -89,7 +89,7 @@ class TestTxFuncRun(unittest.TestCase):
 
     def test_does_not_update_last_bookmark_on_rollback(self):
         if get_driver_name() in ["dotnet", "javascript", "java"]:
-            self.skipTest("Rollback not implemented in backend")
+            self.skipTest("Client exceptions not properly handled in backend")
 
         # Verifies that last bookmarks still is empty when transactional
         # function rolls back transaction.
@@ -105,3 +105,28 @@ class TestTxFuncRun(unittest.TestCase):
         self.assertTrue(throwed)
         bookmarks = self._session.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
+
+    def test_client_exception_rolls_back_change(self):
+        if get_driver_name() in ["dotnet", "javascript", "java"]:
+            self.skipTest("Client exceptions not properly handled in backend")
+        nodeid = -1
+
+        def run(tx):
+            result = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
+            global nodeid
+            nodeid = result.next().value
+            raise Exception("No thanks")
+
+        self._session = self._driver.session("w")
+        try:
+            self._session.writeTransaction(run)
+        except Exception:
+            throwed = True
+        self.assertTrue(throwed)
+
+        # Try to retrieve the node, it shouldn't be there
+        result = self._session.run(
+                "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
+                params={"nodeid": types.CypherInt(nodeid)})
+        record = result.next()
+        self.assertIsInstance(record, types.NullRecord)

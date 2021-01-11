@@ -67,13 +67,13 @@ def initialise_configurations():
 
     if in_teamcity:
         configurations.append({"name": "4.2-tc-enterprise",
-                               "image": "neo4j:4.2.2-enterprise",
+                               "image": "neo4j:4.2.3-enterprise",
                                "version": "4.2",
                                "edition": "enterprise",
                                "cluster": False,
                                "suite": "4.2",
                                "scheme": "neo4j",
-                               "download": teamcity.DockerImage("neo4j-enterprise-4.2.2-docker-loadable.tar")})
+                               "download": teamcity.DockerImage("neo4j-enterprise-4.2.3-docker-loadable.tar")})
 
         configurations.append({"name": "4.3-tc-enterprise",
                                "image": "neo4j:4.3.0-drop02.0-enterprise",
@@ -154,20 +154,17 @@ def cleanup():
                        stderr=subprocess.DEVNULL)
 
 
-def ensure_driver_image(root_path, branch_name, driver_name):
+def ensure_driver_image(root_path, driver_glue_path, branch_name, driver_name):
     """ Ensures that an up to date Docker image exists for the driver.
     """
     # Construct Docker image name from driver name (i.e drivers-go) and
     # branch name (i.e 4.2, go-1.14-image)
     image_name = "drivers-%s:%s" % (driver_name, branch_name)
-    # Context path is the Docker build context, all files added/copied to the
-    # driver image needs to be here.
-    context_path = os.path.join(root_path, "driver", driver_name)
     # Copy CAs that the driver should know of to the Docker build context
     # (first remove any previous...). Each driver container should contain
     # those CAs in such a way that driver language can use them as system
     # CAs without any custom modification of the driver.
-    cas_path = os.path.join(context_path, "CAs")
+    cas_path = os.path.join(driver_glue_path, "CAs")
     shutil.rmtree(cas_path, ignore_errors=True)
     cas_source_path = os.path.join(root_path, "tests", "tls",
                                    "certs", "driver")
@@ -175,9 +172,9 @@ def ensure_driver_image(root_path, branch_name, driver_name):
 
     # This will use the driver folder as build context.
     print("Building driver Docker image %s from %s"
-          % (image_name, context_path))
+          % (image_name, driver_glue_path))
     subprocess.check_call([
-        "docker", "build", "--tag", image_name, context_path])
+        "docker", "build", "--tag", image_name, driver_glue_path])
 
     print("Checking for dangling intermediate images")
     images = subprocess.check_output([
@@ -191,10 +188,40 @@ def ensure_driver_image(root_path, branch_name, driver_name):
     return image_name
 
 
+def ensure_runner_image(root_path, testkitBranch):
+    # Use Go driver image for this since we need to build TLS server and
+    # use that in the runner.
+    # TODO: Use a dedicated Docker image for this.
+    return ensure_driver_image(
+            root_path, os.path.join(root_path, "driver", "go"),
+            testkitBranch, "go")
+
+
+def get_driver_glue(thisPath, driverName, driverRepo):
+    """ Locates where driver has it's docker image and Python "glue" scripts
+    needed to build and run tests for the driver.
+    Returns a tuple consisting of the absolute path on this machine along with
+    the path as it will be mounted in the driver container.
+    """
+    in_driver_repo = os.path.join(driverRepo, "testkit")
+    if os.path.isdir(in_driver_repo):
+        return (in_driver_repo, "/driver/testkit")
+
+    in_this_repo = os.path.join(thisPath, "driver", driverName)
+    if os.path.isdir(in_this_repo):
+        return (in_this_repo, "/testkit/driver/%s" % driverName)
+
+    raise Exception("No glue found for %s" % driverName)
+
+
 def main(thisPath, driverName, testkitBranch, driverRepo):
-    driverImage = ensure_driver_image(thisPath, testkitBranch, driverName)
-    if not driverImage:
-        sys.exit(1)
+    # Path where scripts are that adapts driver to testkit.
+    # Both absolute path and path relative to driver container.
+    absGlue, driverGlue = get_driver_glue(
+            thisPath, driverName, driverRepo)
+
+    driverImage = ensure_driver_image(thisPath, absGlue,
+                                      testkitBranch, driverName)
 
     # Prepare collecting of artifacts, collected to ./artifcats/
     artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
@@ -245,7 +272,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # Build the driver and it's testkit backend
     print("Build driver and test backend in driver container")
     driverContainer.exec(
-            ["python3", "/testkit/driver/%s/build.py" % driverName],
+            ["python3", os.path.join(driverGlue, "build.py")],
             envMap=driverEnv)
     print("Finished building driver and test backend")
 
@@ -255,7 +282,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     if test_flags["UNIT_TESTS"]:
         begin_test_suite('Unit tests')
         driverContainer.exec(
-                ["python3", "/testkit/driver/%s/unittests.py" % driverName],
+                ["python3", os.path.join(driverGlue, "unittests.py")],
                 envMap=driverEnv)
         end_test_suite('Unit tests')
 
@@ -268,7 +295,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # works simply by commenting detach and see that the backend starts.
     print("Start test backend in driver container")
     driverContainer.exec_detached(
-            ["python3", "/testkit/driver/%s/backend.py" % driverName],
+            ["python3", os.path.join(driverGlue, "backend.py")],
             envMap=driverEnv)
     # Wait until backend started
     # Use driver container to check for backend availability
@@ -279,9 +306,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    # Use Go driver image for this since we need to build TLS server and
-    # use that in the runner.
-    runnerImage = ensure_driver_image(thisPath, testkitBranch, "go")
+    runnerImage = ensure_runner_image(thisPath, testkitBranch)
     runnerEnv = {
         "PYTHONPATH": "/testkit",  # To use modules
     }
@@ -419,7 +444,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             if not cluster or driverName in ['go', 'javascript']:
                 print("Building and running stress tests...")
                 driverContainer.exec([
-                    "python3", "/testkit/driver/%s/stress.py" % driverName],
+                    "python3", os.path.join(driverGlue, "stress.py")],
                     envMap=driverEnv)
             else:
                 print("Skipping stress tests for %s" % serverName)
@@ -432,7 +457,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             if not cluster or driverName in []:
                 print("Building and running integration tests...")
                 driverContainer.exec([
-                    "python3", "/testkit/driver/%s/integration.py" % driverName],
+                    "python3", os.path.join(driverGlue, "integration.py")],
                     envMap=driverEnv)
             else:
                 print("Skipping integration tests for %s" % serverName)
@@ -450,7 +475,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
 
 if __name__ == "__main__":
-
     parse_command_line(sys.argv)
 
     driverName = os.environ.get("TEST_DRIVER_NAME")
