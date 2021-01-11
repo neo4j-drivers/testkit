@@ -67,13 +67,13 @@ def initialise_configurations():
 
     if in_teamcity:
         configurations.append({"name": "4.2-tc-enterprise",
-                               "image": "neo4j:4.2.2-enterprise",
+                               "image": "neo4j:4.2.3-enterprise",
                                "version": "4.2",
                                "edition": "enterprise",
                                "cluster": False,
                                "suite": "4.2",
                                "scheme": "neo4j",
-                               "download": teamcity.DockerImage("neo4j-enterprise-4.2.2-docker-loadable.tar")})
+                               "download": teamcity.DockerImage("neo4j-enterprise-4.2.3-docker-loadable.tar")})
 
         configurations.append({"name": "4.3-tc-enterprise",
                                "image": "neo4j:4.3.0-drop02.0-enterprise",
