@@ -1,7 +1,7 @@
-import unittest, os
+import unittest
 
-from tests.shared import *
-from tests.stub.shared import *
+from tests.shared import new_backend, get_driver_name
+from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
@@ -41,9 +41,11 @@ class SessionRunDisconnected(unittest.TestCase):
         self._backend = new_backend()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
+        auth = AuthorizationToken(scheme="basic", principal="neo4j",
+                                  credentials="pass")
         uri = "bolt://%s" % self._server.address
-        self._driver = Driver(self._backend, uri, auth, userAgent=customUserAgent)
+        self._driver = Driver(self._backend, uri, auth,
+                              userAgent=customUserAgent)
         self._session = self._driver.session("w")
 
     def tearDown(self):
@@ -52,8 +54,8 @@ class SessionRunDisconnected(unittest.TestCase):
         # is killed and it's output is dumped for analys.
         self._server.reset()
 
-    # Helper function that runs the sequence and returns the name of the step at which the
-    # error happened.
+    # Helper function that runs the sequence and returns the name of the step
+    # at which the error happened.
     def _run(self):
         try:
             result = self._session.run("RETURN 1 as n")
@@ -61,22 +63,22 @@ class SessionRunDisconnected(unittest.TestCase):
             return "after run"
 
         try:
-            record = result.next()
+            result.next()
         except types.DriverError:
             return "after first next"
 
         try:
-            nullRecord = result.next()
+            result.next()
         except types.DriverError:
             return "after last next"
 
         return "success"
 
     def test_disconnect_on_hello(self):
-        # Verifies how the driver handles when server disconnects right after driver sent bolt
-        # hello message.
-        if not self._driverName in ["go", "javascript","java"]:
-            self.skipTest("No support for custom user-agent in testkit backend")
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt HELLO message.
+        if self._driverName in ['python']:
+            self.skipTest("No support for custom user-agent in backend")
         self._server.start(script=script_on_hello, vars=self.get_vars())
         step = self._run()
         self._session.close()
@@ -84,14 +86,13 @@ class SessionRunDisconnected(unittest.TestCase):
         self._server.done()
 
         expectedStep = "after first next"
-        if self._driverName in ["go","java"]:
-            # Go and java report this error earlier
+        if self._driverName in ["go", "java", "dotnet"]:
             expectedStep = "after run"
         self.assertEqual(step, expectedStep)
 
     def test_disconnect_on_run(self):
-        # Verifies how the driver handles when server disconnects right after driver sent bolt
-        # run message.
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt run message.
         if self._driverName in ['python']:
             self.skipTest("Too raw error handling")
         self._server.start(script=script_on_run)
@@ -107,8 +108,8 @@ class SessionRunDisconnected(unittest.TestCase):
         self.assertEqual(step, expectedStep)
 
     def test_disconnect_on_pull(self):
-        # Verifies how the driver handles when server disconnects right after driver sent bolt
-        # pull message.
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt PULL message.
         if self._driverName in ['python']:
             self.skipTest("Too raw error handling")
         self._server.start(script=script_on_pull)
@@ -134,4 +135,4 @@ class SessionRunDisconnected(unittest.TestCase):
         elif self._driverName == "java":
             return ', "realm": "", "routing": null'
         else:
-            return "";
+            return ""
