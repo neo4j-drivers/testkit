@@ -77,9 +77,8 @@ class SessionRunDisconnected(unittest.TestCase):
     def test_disconnect_on_hello(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt HELLO message.
-        if self._driverName not in ["go", "javascript", "java"]:
-            self.skipTest(
-                    "No support for custom user-agent in testkit backend")
+        if self._driverName in ['python']:
+            self.skipTest("No support for custom user-agent in backend")
         self._server.start(script=script_on_hello, vars=self.get_vars())
         step = self._run()
         self._session.close()
