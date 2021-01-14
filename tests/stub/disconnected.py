@@ -86,8 +86,7 @@ class SessionRunDisconnected(unittest.TestCase):
         self._server.done()
 
         expectedStep = "after first next"
-        if self._driverName in ["go", "java"]:
-            # Go and java report this error earlier
+        if self._driverName in ["go", "java", "dotnet"]:
             expectedStep = "after run"
         self.assertEqual(step, expectedStep)
 
