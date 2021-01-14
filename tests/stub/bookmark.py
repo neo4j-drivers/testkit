@@ -1,9 +1,8 @@
-import unittest, os
+import unittest
 
-from tests.shared import *
-from tests.stub.shared import *
+from tests.shared import new_backend
+from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
-import nutkit.protocol as types
 
 
 # TODO: Tests for 3.5 (no support for PULL n)
@@ -23,13 +22,15 @@ C: COMMIT
 S: SUCCESS {"bookmark": "bm"}
 """
 
+
 # Tests bookmarks from transaction
 class Tx(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._server = StubServer(9001)
         uri = "bolt://%s" % self._server.address
-        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        auth = AuthorizationToken(scheme="basic")
+        self._driver = Driver(self._backend, uri, auth)
 
     def tearDown(self):
         self._backend.close()
