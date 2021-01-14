@@ -48,8 +48,6 @@ class ProtocolVersions(unittest.TestCase):
         self._run("4.1")
 
     def test_supports_bolt_4x2(self):
-        if get_driver_name() not in ['javascript', 'go']:
-            self.skipTest("Does not supports extended handshake")
         self._run("4.2")
 
     def test_supports_bolt_4x3(self):
