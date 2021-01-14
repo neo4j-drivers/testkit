@@ -107,7 +107,7 @@ class TestTxFuncRun(unittest.TestCase):
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
-        if get_driver_name() in ["dotnet", "javascript", "java"]:
+        if get_driver_name() in ["javascript", "java"]:
             self.skipTest("Client exceptions not properly handled in backend")
         nodeid = -1
 
