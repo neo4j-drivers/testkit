@@ -1,5 +1,7 @@
 # Checks if there are any connections open to the specified remote address+port
-import sys, socket, subprocess
+import sys
+import socket
+import subprocess
 
 
 if __name__ == "__main__":
@@ -7,11 +9,15 @@ if __name__ == "__main__":
     port = sys.argv[2]
 
     portx = format(int(port), '04X')
-    addressx = format(socket.ntohl(int.from_bytes(socket.inet_aton(socket.gethostbyname(address)), byteorder='big', signed=False)), '08X')
+    host = socket.gethostbyname(address)
+    addressx = format(socket.ntohl(int.from_bytes(socket.inet_aton(host),
+                                                  byteorder='big',
+                                                  signed=False)), '08X')
     remote = "%s:%s" % (addressx, portx)
 
-    conns = subprocess.check_output(["cat", "/proc/net/tcp"], universal_newlines=True)
-    conns = conns.splitlines()[1:] # Skip header
+    conns = subprocess.check_output(
+            ["cat", "/proc/net/tcp"], universal_newlines=True)
+    conns = conns.splitlines()[1:]  # Skip header
 
     # COLUMNS (of interest)
     # 0  Entry number
@@ -24,7 +30,8 @@ if __name__ == "__main__":
         # First check if the remote address matches
         if conn[2] == remote:
             state = conn[3]
-            # TCP_ESTABLISHED (01), TCP_SYN_SENT (02) and TCP_SYN_RECV (03) is not legal
+            # TCP_ESTABLISHED (01), TCP_SYN_SENT (02) and
+            # TCP_SYN_RECV (03) are not legal
             if state in ['01', '02', '03']:
                 active.append(conn)
 
@@ -32,4 +39,3 @@ if __name__ == "__main__":
         print("ERROR: Connections to %s:%s are still open: %s" % (address, port, active))
         sys.exit(-1)
     sys.exit(0)
-

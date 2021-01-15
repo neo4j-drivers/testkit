@@ -86,7 +86,6 @@ def initialise_configurations():
 
 
 def set_test_flags(requested_list):
-    source = []
     if not requested_list:
         requested_list = test_flags
 
@@ -113,7 +112,8 @@ def construct_configuration_list(requested_list):
         for config in configurations:
             requested_list.append(config["name"])
 
-    # Now try to find the requested configs and check they are available with current teamcity status
+    # Now try to find the requested configs and check they are available
+    # with current teamcity status
     for config in configurations:
         if config["name"] in requested_list:
             configurations_to_run.append(config)
@@ -201,15 +201,16 @@ def get_driver_glue(thisPath, driverName, driverRepo):
     """ Locates where driver has it's docker image and Python "glue" scripts
     needed to build and run tests for the driver.
     Returns a tuple consisting of the absolute path on this machine along with
-    the path as it will be mounted in the driver container.
+    the path as it will be mounted in the driver container (need trailing
+    slash).
     """
     in_driver_repo = os.path.join(driverRepo, "testkit")
     if os.path.isdir(in_driver_repo):
-        return (in_driver_repo, "/driver/testkit")
+        return (in_driver_repo, "/driver/testkit/")
 
     in_this_repo = os.path.join(thisPath, "driver", driverName)
     if os.path.isdir(in_this_repo):
-        return (in_this_repo, "/testkit/driver/%s" % driverName)
+        return (in_this_repo, "/testkit/driver/%s/" % driverName)
 
     raise Exception("No glue found for %s" % driverName)
 
@@ -272,7 +273,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # Build the driver and it's testkit backend
     print("Build driver and test backend in driver container")
     driverContainer.exec(
-            ["python3", os.path.join(driverGlue, "build.py")],
+            ["python3", driverGlue + "build.py"],
             envMap=driverEnv)
     print("Finished building driver and test backend")
 
@@ -282,7 +283,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     if test_flags["UNIT_TESTS"]:
         begin_test_suite('Unit tests')
         driverContainer.exec(
-                ["python3", os.path.join(driverGlue, "unittests.py")],
+                ["python3", driverGlue + "unittests.py"],
                 envMap=driverEnv)
         end_test_suite('Unit tests')
 
@@ -295,7 +296,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     # works simply by commenting detach and see that the backend starts.
     print("Start test backend in driver container")
     driverContainer.exec_detached(
-            ["python3", os.path.join(driverGlue, "backend.py")],
+            ["python3", driverGlue + "backend.py"],
             envMap=driverEnv)
     # Wait until backend started
     # Use driver container to check for backend availability
@@ -441,13 +442,10 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # the driver language.
         # None of the drivers will work properly in cluster.
         if test_flags["STRESS_TESTS"]:
-            if not cluster or driverName in ['go', 'javascript', 'java']:
-                print("Building and running stress tests...")
-                driverContainer.exec([
-                    "python3", os.path.join(driverGlue, "stress.py")],
-                    envMap=driverEnv)
-            else:
-                print("Skipping stress tests for %s" % serverName)
+            print("Building and running stress tests...")
+            driverContainer.exec([
+                "python3", driverGlue + "stress.py"],
+                envMap=driverEnv)
 
         # Run driver native integration tests within the driver container.
         # Driver integration tests should check env variable to skip tests
@@ -457,7 +455,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
             if not cluster or driverName in []:
                 print("Building and running integration tests...")
                 driverContainer.exec([
-                    "python3", os.path.join(driverGlue, "integration.py")],
+                    "python3", driverGlue + "integration.py"],
                     envMap=driverEnv)
             else:
                 print("Skipping integration tests for %s" % serverName)
