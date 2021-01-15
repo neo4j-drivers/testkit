@@ -441,13 +441,10 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # the driver language.
         # None of the drivers will work properly in cluster.
         if test_flags["STRESS_TESTS"]:
-            if not cluster or driverName in ['go', 'javascript', 'java']:
-                print("Building and running stress tests...")
-                driverContainer.exec([
-                    "python3", os.path.join(driverGlue, "stress.py")],
-                    envMap=driverEnv)
-            else:
-                print("Skipping stress tests for %s" % serverName)
+            print("Building and running stress tests...")
+            driverContainer.exec([
+                "python3", os.path.join(driverGlue, "stress.py")],
+                envMap=driverEnv)
 
         # Run driver native integration tests within the driver container.
         # Driver integration tests should check env variable to skip tests
