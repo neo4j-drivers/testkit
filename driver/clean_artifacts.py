@@ -1,4 +1,5 @@
-import  os, shutil
+import os
+import shutil
 
 if __name__ == "__main__":
     # Cleanup artifacts
@@ -9,4 +10,3 @@ if __name__ == "__main__":
             os.unlink(path)
         else:
             shutil.rmtree(path)
-
