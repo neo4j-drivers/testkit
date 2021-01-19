@@ -332,7 +332,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # The stress test suite uses threading and put a bigger load on the
         # driver than the integration tests do and are therefore written in
         # the driver language.
-        # None of the drivers will work properly in cluster.
         if test_flags["STRESS_TESTS"]:
             print("Building and running stress tests...")
             driverContainer.run_stress_tests(hostname, port, neo4j.username,
