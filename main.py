@@ -16,6 +16,7 @@ import docker
 import teamcity
 import neo4j
 import driver
+import runner
 import argparse
 
 networks = ["the-bridge"]
@@ -258,9 +259,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     driverContainer.build_driver_and_backend()
     print("Finished building driver and test backend")
 
-    """
-    Unit tests
-    """
     if test_flags["UNIT_TESTS"]:
         begin_test_suite('Unit tests')
         driverContainer.run_unit_tests()
@@ -272,55 +270,21 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
     # Start runner container, responsible for running the unit tests.
     runnerImage = ensure_runner_image(thisPath, testkitBranch)
-    runnerEnv = {
-        "PYTHONPATH": "/testkit",  # To use modules
-    }
-    # Copy TEST_ variables that might have been set explicit
-    for varName in os.environ:
-        if varName.startswith("TEST_"):
-            runnerEnv[varName] = os.environ[varName]
-    # Override with settings that must have a known value
-    runnerEnv.update({
-        # Runner connects to backend in driver container
-        "TEST_BACKEND_HOST": "driver",
-        # Driver connects to me
-        "TEST_STUB_HOST":    "runner",
-    })
-    runnerContainer = docker.run(
-            runnerImage, "runner",
-            command=["python3", "/testkit/driver/bootstrap.py"],
-            mountMap={thisPath: "/testkit"},
-            envMap=runnerEnv,
-            network="the-bridge",
-            aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
+    runnerContainer = runner.start_container(runnerImage, thisPath)
 
-    """
-    Stub tests
-    """
     if test_flags["STUB_TESTS"]:
-        runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
+        runnerContainer.run_stub_tests()
 
-    """
-    TLS tests
-    """
-    # Build TLS server
     if test_flags["TLS_TESTS"]:
-        runnerContainer.exec(
-                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
-        runnerContainer.exec(
-                ["python3", "-m", "tests.tls.suites"])
+        runnerContainer.run_tls_tests()
 
     """
-    Neo4j server tests
+    Neo4j server test matrix
     """
     # Make an artifacts folder where the database can place it's logs, each
     # time we start a database server we should use a different folder.
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
     os.makedirs(neo4jArtifactsPath)
-
-    # Until expanded protocol is implemented then we will only support current
-    # version + previous 2 minors + last minor version of last major version.
-
     for neo4j_config in configurations_to_run:
         download = neo4j_config.get('download', None)
         if download:
@@ -353,24 +317,14 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         driverContainer.poll_host_and_port_until_available(hostname, port)
         print("Neo4j is reachable from driver")
 
-        # Run the actual test suite within the runner container. The tests
-        # will connect to driver backend and configure drivers to connect to
-        # the neo4j instance.
-        runnerEnv.update({
-            # Hostname of Docker container running db
-            "TEST_NEO4J_HOST":   hostname,
-            "TEST_NEO4J_USER":   neo4j.username,
-            "TEST_NEO4J_PASS":   neo4j.password,
-        })
-
         if test_flags["TESTKIT_TESTS"]:
             # Generic integration tests, requires a backend
             suite = neo4j_config["suite"]
             if suite:
                 print("Running test suite %s" % suite)
-                runnerContainer.exec([
-                    "python3", "-m", "tests.neo4j.suites", suite],
-                    envMap=runnerEnv)
+                runnerContainer.run_neo4j_tests(suite, hostname,
+                                                neo4j.username,
+                                                neo4j.password)
             else:
                 print("No test suite specified for %s" % serverName)
 
