@@ -70,7 +70,7 @@ class Backend:
             line = self._reader.readline().strip()
             if line == "#response begin":
                 if in_response:
-                    raise "already in response"
+                    raise Exception("already in response")
                 in_response = True
             elif line == "#response end":
                 if debug:
