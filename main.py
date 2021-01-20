@@ -250,7 +250,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     ])
 
     driverContainer = driver.start_container(
-            driverImage, thisPath, driverRepo, artifactsPath, driverGlue)
+            driverName, driverImage, thisPath, driverRepo, artifactsPath, driverGlue)
 
     driverContainer.clean_artifacts()
     print("Cleaned up artifacts")

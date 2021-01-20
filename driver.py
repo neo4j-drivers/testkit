@@ -2,19 +2,23 @@ import os
 import docker
 
 
-def start_container(image, testkitPath, driverRepoPath, artifactsPath,
+def start_container(name, image, testkitPath, driverRepoPath, artifactsPath,
                     gluePath):
+    # Configure volume map for the driver container
+    mountMap={
+        testkitPath: "/testkit",
+        driverRepoPath: "/driver",
+        artifactsPath: "/artifacts"
+    }
+    if name == "java":
+        mountMap["testkit-m2"] = "/root/.m2"
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
     container = docker.run(
         image, "driver",
         command=["python3", "/testkit/driver/bootstrap.py"],
-        mountMap={
-            testkitPath: "/testkit",
-            driverRepoPath: "/driver",
-            artifactsPath: "/artifacts"
-        },
+        mountMap=mountMap,
         portMap={9876: 9876},  # For convenience when debugging
         network="the-bridge",
         workingFolder="/driver")
