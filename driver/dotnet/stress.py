@@ -13,11 +13,19 @@ if __name__ == "__main__":
     os.environ['NEO4J_USER'] = user
     os.environ['NEO4J_PASSWORD'] = password
     os.environ['NEO4J_URI'] = uri
+
     cmd = [
-            "dotnet",
-            "test",
-            "--filter", "DisplayName~CausalClusterStressTests"
+        "dotnet",
+        "test"
     ]
+
+    if os.environ.get("TEST_NEO4J_IS_CLUSTER"):
+        cmd.append("--filter")
+        cmd.append("DisplayName~CausalClusterStressTests")
+    else:
+        cmd.append("--filter")
+        cmd.append("DisplayName~SingleInstanceStressTests")
+
     subprocess.run(cmd, universal_newlines=True,
                    stderr=subprocess.STDOUT, check=True,
                    cwd="Neo4j.Driver/Neo4j.Driver.Tests.Integration")
