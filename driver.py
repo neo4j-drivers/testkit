@@ -10,8 +10,9 @@ def start_container(name, image, testkitPath, driverRepoPath, artifactsPath,
         driverRepoPath: "/driver",
         artifactsPath: "/artifacts"
     }
-    if name == "java":
-        mountMap["testkit-m2"] = "/root/.m2"
+    if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
+        if name == "java":
+            mountMap["testkit-m2"] = "/root/.m2"
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.

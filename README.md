@@ -13,6 +13,8 @@ Environment variables:
     Path to driver repository
   * TEST_BRANCH
     Name of testkit branch. When running locally set this to 'local'.
+  * TEST_BUILD_CACHE_ENABLED
+    Set to `true` to enable build cache persistence via Docker Volumes for supported build systems. Only Maven is supported at the moment and it stores its data in `testkit-m2` volume.
 
 ```console
 export TEST_DRIVER_NAME=go
