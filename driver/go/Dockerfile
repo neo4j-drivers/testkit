@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 # Install all needed to build and run tests
 # This will install the default distribution Go version, for 18.04 this means 1.10

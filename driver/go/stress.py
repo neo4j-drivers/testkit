@@ -22,12 +22,10 @@ if __name__ == "__main__":
     user = os.environ["TEST_NEO4J_USER"]
     password = os.environ["TEST_NEO4J_PASS"]
 
-    # Build the test-stress application
-    os.environ["GOPATH"] = "/home/build"
-    run(["go", "install", "-v", "--race", root_package + "/test-stress"])
     # Run the stress tests
-    cmd = ["/home/build/bin/test-stress", "-uri", uri,
-           "-user", user, "-password", password]
+    stressPath = os.path.join(".", "test-stress")
+    cmd = ["go", "run", "--race", stressPath,
+           "-uri", uri, "-user", user, "-password", password]
     if os.environ.get("TEST_NEO4J_IS_CLUSTER"):
         cmd.append("-cluster")
     run(cmd)
