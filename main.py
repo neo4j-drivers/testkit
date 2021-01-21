@@ -9,13 +9,13 @@ import os
 import sys
 import atexit
 import subprocess
-import shutil
 from tests.testenv import (
         begin_test_suite, end_test_suite, in_teamcity)
 import docker
 import teamcity
 import neo4j
 import driver
+import runner
 import argparse
 
 networks = ["the-bridge"]
@@ -160,75 +160,7 @@ def cleanup():
                        stderr=subprocess.DEVNULL)
 
 
-def ensure_driver_image(root_path, driver_glue_path, branch_name, driver_name):
-    """ Ensures that an up to date Docker image exists for the driver.
-    """
-    # Construct Docker image name from driver name (i.e drivers-go) and
-    # branch name (i.e 4.2, go-1.14-image)
-    image_name = "drivers-%s:%s" % (driver_name, branch_name)
-    # Copy CAs that the driver should know of to the Docker build context
-    # (first remove any previous...). Each driver container should contain
-    # those CAs in such a way that driver language can use them as system
-    # CAs without any custom modification of the driver.
-    cas_path = os.path.join(driver_glue_path, "CAs")
-    shutil.rmtree(cas_path, ignore_errors=True)
-    cas_source_path = os.path.join(root_path, "tests", "tls",
-                                   "certs", "driver")
-    shutil.copytree(cas_source_path, cas_path)
-
-    # This will use the driver folder as build context.
-    print("Building driver Docker image %s from %s"
-          % (image_name, driver_glue_path))
-    subprocess.check_call([
-        "docker", "build", "--tag", image_name, driver_glue_path])
-
-    print("Checking for dangling intermediate images")
-    images = subprocess.check_output([
-        "docker", "images", "-a", "--filter=dangling=true", "-q"
-    ], encoding="utf-8").splitlines()
-    if len(images):
-        print("Cleaning up images: %s" % images)
-        # Sometimes fails, do not fail build due to that
-        subprocess.run(["docker", "rmi", " ".join(images)])
-
-    return image_name
-
-
-def ensure_runner_image(root_path, testkitBranch):
-    # Use Go driver image for this since we need to build TLS server and
-    # use that in the runner.
-    # TODO: Use a dedicated Docker image for this.
-    return ensure_driver_image(
-            root_path, os.path.join(root_path, "driver", "go"),
-            testkitBranch, "go")
-
-
-def get_driver_glue(thisPath, driverName, driverRepo):
-    """ Locates where driver has it's docker image and Python "glue" scripts
-    needed to build and run tests for the driver.
-    Returns a tuple consisting of the absolute path on this machine along with
-    the path as it will be mounted in the driver container (need trailing
-    slash).
-    """
-    in_driver_repo = os.path.join(driverRepo, "testkit")
-    if os.path.isdir(in_driver_repo):
-        return (in_driver_repo, "/driver/testkit/")
-
-    in_this_repo = os.path.join(thisPath, "driver", driverName)
-    if os.path.isdir(in_this_repo):
-        return (in_this_repo, "/testkit/driver/%s/" % driverName)
-
-    raise Exception("No glue found for %s" % driverName)
-
-
 def main(thisPath, driverName, testkitBranch, driverRepo):
-    # Path where scripts are that adapts driver to testkit.
-    # Both absolute path and path relative to driver container.
-    absGlue, driverGlue = get_driver_glue(thisPath, driverName, driverRepo)
-
-    driverImage = ensure_driver_image(thisPath, absGlue,
-                                      testkitBranch, driverName)
-
     # Prepare collecting of artifacts, collected to ./artifcats/
     artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
     if not os.path.exists(artifactsPath):
@@ -248,9 +180,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         "docker", "network", "create", "the-bridge"
     ])
 
-    driverContainer = driver.start_container(
-            driverImage, thisPath, driverRepo, artifactsPath, driverGlue)
-
+    driverContainer = driver.start_container(thisPath, testkitBranch,
+                                             driverName, driverRepo,
+                                             artifactsPath)
     driverContainer.clean_artifacts()
     print("Cleaned up artifacts")
 
@@ -258,9 +190,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     driverContainer.build_driver_and_backend()
     print("Finished building driver and test backend")
 
-    """
-    Unit tests
-    """
     if test_flags["UNIT_TESTS"]:
         begin_test_suite('Unit tests')
         driverContainer.run_unit_tests()
@@ -271,56 +200,21 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    runnerImage = ensure_runner_image(thisPath, testkitBranch)
-    runnerEnv = {
-        "PYTHONPATH": "/testkit",  # To use modules
-    }
-    # Copy TEST_ variables that might have been set explicit
-    for varName in os.environ:
-        if varName.startswith("TEST_"):
-            runnerEnv[varName] = os.environ[varName]
-    # Override with settings that must have a known value
-    runnerEnv.update({
-        # Runner connects to backend in driver container
-        "TEST_BACKEND_HOST": "driver",
-        # Driver connects to me
-        "TEST_STUB_HOST":    "runner",
-    })
-    runnerContainer = docker.run(
-            runnerImage, "runner",
-            command=["python3", "/testkit/driver/bootstrap.py"],
-            mountMap={thisPath: "/testkit"},
-            envMap=runnerEnv,
-            network="the-bridge",
-            aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
+    runnerContainer = runner.start_container(thisPath, testkitBranch)
 
-    """
-    Stub tests
-    """
     if test_flags["STUB_TESTS"]:
-        runnerContainer.exec(["python3", "-m", "tests.stub.suites"])
+        runnerContainer.run_stub_tests()
 
-    """
-    TLS tests
-    """
-    # Build TLS server
     if test_flags["TLS_TESTS"]:
-        runnerContainer.exec(
-                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
-        runnerContainer.exec(
-                ["python3", "-m", "tests.tls.suites"])
+        runnerContainer.run_tls_tests()
 
     """
-    Neo4j server tests
+    Neo4j server test matrix
     """
     # Make an artifacts folder where the database can place it's logs, each
     # time we start a database server we should use a different folder.
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
     os.makedirs(neo4jArtifactsPath)
-
-    # Until expanded protocol is implemented then we will only support current
-    # version + previous 2 minors + last minor version of last major version.
-
     for neo4j_config in configurations_to_run:
         download = neo4j_config.get('download', None)
         if download:
@@ -353,24 +247,14 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         driverContainer.poll_host_and_port_until_available(hostname, port)
         print("Neo4j is reachable from driver")
 
-        # Run the actual test suite within the runner container. The tests
-        # will connect to driver backend and configure drivers to connect to
-        # the neo4j instance.
-        runnerEnv.update({
-            # Hostname of Docker container running db
-            "TEST_NEO4J_HOST":   hostname,
-            "TEST_NEO4J_USER":   neo4j.username,
-            "TEST_NEO4J_PASS":   neo4j.password,
-        })
-
         if test_flags["TESTKIT_TESTS"]:
             # Generic integration tests, requires a backend
             suite = neo4j_config["suite"]
             if suite:
                 print("Running test suite %s" % suite)
-                runnerContainer.exec([
-                    "python3", "-m", "tests.neo4j.suites", suite],
-                    envMap=runnerEnv)
+                runnerContainer.run_neo4j_tests(suite, hostname,
+                                                neo4j.username,
+                                                neo4j.password)
             else:
                 print("No test suite specified for %s" % serverName)
 
@@ -378,7 +262,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # The stress test suite uses threading and put a bigger load on the
         # driver than the integration tests do and are therefore written in
         # the driver language.
-        # None of the drivers will work properly in cluster.
         if test_flags["STRESS_TESTS"]:
             print("Building and running stress tests...")
             driverContainer.run_stress_tests(hostname, port, neo4j.username,

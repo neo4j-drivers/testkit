@@ -11,17 +11,17 @@ class Transaction:
         req = protocol.TransactionRun(self._id, cypher, params)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Result):
-            raise "Should be result"
+            raise Exception("Should be result but was: %s" % res)
         return Result(self._backend, res)
 
     def commit(self):
         req = protocol.TransactionCommit(self._id)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
-            raise "Should be transaction"
+            raise Exception("Should be transaction but was: %s" % res)
 
     def rollback(self):
         req = protocol.TransactionRollback(self._id)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
-            raise "Should be transaction"
+            raise Exception("Should be transaction but was: %s" % res)
