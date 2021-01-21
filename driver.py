@@ -1,17 +1,71 @@
 import os
+import shutil
+import subprocess
+
 import docker
 
 
-def start_container(name, image, testkitPath, driverRepoPath, artifactsPath,
-                    gluePath):
+def _get_glue(thisPath, driverName, driverRepo):
+    """ Locates where driver has it's docker image and Python "glue" scripts
+    needed to build and run tests for the driver.
+    Returns a tuple consisting of the absolute path on this machine along with
+    the path as it will be mounted in the driver container (need trailing
+    slash).
+    """
+    in_driver_repo = os.path.join(driverRepo, "testkit")
+    if os.path.isdir(in_driver_repo):
+        return (in_driver_repo, "/driver/testkit/")
+
+    in_this_repo = os.path.join(thisPath, "driver", driverName)
+    if os.path.isdir(in_this_repo):
+        return (in_this_repo, "/testkit/driver/%s/" % driverName)
+
+    raise Exception("No glue found for %s" % driverName)
+
+
+def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
+    """ Ensures that an up to date Docker image exists for the driver.
+    """
+    # Construct Docker image name from driver name (i.e drivers-go) and
+    # branch name (i.e 4.2, go-1.14-image)
+    image_name = "drivers-%s:%s" % (driver_name, branch_name)
+    # Copy CAs that the driver should know of to the Docker build context
+    # (first remove any previous...). Each driver container should contain
+    # those CAs in such a way that driver language can use them as system
+    # CAs without any custom modification of the driver.
+    cas_path = os.path.join(docker_image_path, "CAs")
+    shutil.rmtree(cas_path, ignore_errors=True)
+    cas_source_path = os.path.join(testkit_path, "tests", "tls",
+                                   "certs", "driver")
+    shutil.copytree(cas_source_path, cas_path)
+
+    # This will use the driver folder as build context.
+    print("Building driver Docker image %s from %s"
+          % (image_name, docker_image_path))
+    subprocess.check_call([
+        "docker", "build", "--tag", image_name, docker_image_path])
+
+    docker.remove_dangling()
+
+    return image_name
+
+
+def start_container(testkit_path, branch_name, driver_name, driver_path,
+                    artifacts_path):
+    # Path where scripts are that adapts driver to testkit.
+    # Both absolute path and path relative to driver container.
+    host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
+                                                 driver_path)
+    image = _ensure_image(testkit_path, host_glue_path,
+                          branch_name, driver_name)
     # Configure volume map for the driver container
-    mountMap={
-        testkitPath: "/testkit",
-        driverRepoPath: "/driver",
-        artifactsPath: "/artifacts"
+    mountMap = {
+        testkit_path:   "/testkit",
+        driver_path:    "/driver",
+        artifacts_path: "/artifacts"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
-        if name == "java":
+        if driver_name == "java":
             mountMap["testkit-m2"] = "/root/.m2"
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
@@ -23,7 +77,7 @@ def start_container(name, image, testkitPath, driverRepoPath, artifactsPath,
         portMap={9876: 9876},  # For convenience when debugging
         network="the-bridge",
         workingFolder="/driver")
-    return Container(container, gluePath)
+    return Container(container, driver_glue_path)
 
 
 class Container:

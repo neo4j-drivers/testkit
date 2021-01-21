@@ -1,8 +1,25 @@
 import os
+import subprocess
+
 import docker
 
 
-def start_container(image, testkitPath):
+def _ensure_image(testkit_path, branch_name):
+    """ Ensures that an up to date Docker image exists.
+    """
+    # Construct Docker image name from branch name
+    image_name = "runner:%s" % branch_name
+    image_path = os.path.join(testkit_path, "runner_image")
+    print("Building runner Docker image %s from %s" % (image_name, image_path))
+    subprocess.check_call([
+        "docker", "build", "--tag", image_name, image_path])
+    docker.remove_dangling()
+
+    return image_name
+
+
+def start_container(testkit_path, branch_name):
+    image = _ensure_image(testkit_path, branch_name)
     env = {
         # Runner connects to backend in driver container
         "TEST_BACKEND_HOST": "driver",
@@ -18,7 +35,7 @@ def start_container(image, testkitPath):
     container = docker.run(
             image, "runner",
             command=["python3", "/testkit/driver/bootstrap.py"],
-            mountMap={testkitPath: "/testkit"},
+            mountMap={testkit_path: "/testkit"},
             envMap=env,
             network="the-bridge",
             aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS

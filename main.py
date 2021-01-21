@@ -9,7 +9,6 @@ import os
 import sys
 import atexit
 import subprocess
-import shutil
 from tests.testenv import (
         begin_test_suite, end_test_suite, in_teamcity)
 import docker
@@ -161,75 +160,7 @@ def cleanup():
                        stderr=subprocess.DEVNULL)
 
 
-def ensure_driver_image(root_path, driver_glue_path, branch_name, driver_name):
-    """ Ensures that an up to date Docker image exists for the driver.
-    """
-    # Construct Docker image name from driver name (i.e drivers-go) and
-    # branch name (i.e 4.2, go-1.14-image)
-    image_name = "drivers-%s:%s" % (driver_name, branch_name)
-    # Copy CAs that the driver should know of to the Docker build context
-    # (first remove any previous...). Each driver container should contain
-    # those CAs in such a way that driver language can use them as system
-    # CAs without any custom modification of the driver.
-    cas_path = os.path.join(driver_glue_path, "CAs")
-    shutil.rmtree(cas_path, ignore_errors=True)
-    cas_source_path = os.path.join(root_path, "tests", "tls",
-                                   "certs", "driver")
-    shutil.copytree(cas_source_path, cas_path)
-
-    # This will use the driver folder as build context.
-    print("Building driver Docker image %s from %s"
-          % (image_name, driver_glue_path))
-    subprocess.check_call([
-        "docker", "build", "--tag", image_name, driver_glue_path])
-
-    print("Checking for dangling intermediate images")
-    images = subprocess.check_output([
-        "docker", "images", "-a", "--filter=dangling=true", "-q"
-    ], encoding="utf-8").splitlines()
-    if len(images):
-        print("Cleaning up images: %s" % images)
-        # Sometimes fails, do not fail build due to that
-        subprocess.run(["docker", "rmi", " ".join(images)])
-
-    return image_name
-
-
-def ensure_runner_image(root_path, testkitBranch):
-    # Use Go driver image for this since we need to build TLS server and
-    # use that in the runner.
-    # TODO: Use a dedicated Docker image for this.
-    return ensure_driver_image(
-            root_path, os.path.join(root_path, "driver", "go"),
-            testkitBranch, "go")
-
-
-def get_driver_glue(thisPath, driverName, driverRepo):
-    """ Locates where driver has it's docker image and Python "glue" scripts
-    needed to build and run tests for the driver.
-    Returns a tuple consisting of the absolute path on this machine along with
-    the path as it will be mounted in the driver container (need trailing
-    slash).
-    """
-    in_driver_repo = os.path.join(driverRepo, "testkit")
-    if os.path.isdir(in_driver_repo):
-        return (in_driver_repo, "/driver/testkit/")
-
-    in_this_repo = os.path.join(thisPath, "driver", driverName)
-    if os.path.isdir(in_this_repo):
-        return (in_this_repo, "/testkit/driver/%s/" % driverName)
-
-    raise Exception("No glue found for %s" % driverName)
-
-
 def main(thisPath, driverName, testkitBranch, driverRepo):
-    # Path where scripts are that adapts driver to testkit.
-    # Both absolute path and path relative to driver container.
-    absGlue, driverGlue = get_driver_glue(thisPath, driverName, driverRepo)
-
-    driverImage = ensure_driver_image(thisPath, absGlue,
-                                      testkitBranch, driverName)
-
     # Prepare collecting of artifacts, collected to ./artifcats/
     artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
     if not os.path.exists(artifactsPath):
@@ -249,9 +180,9 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         "docker", "network", "create", "the-bridge"
     ])
 
-    driverContainer = driver.start_container(
-            driverName, driverImage, thisPath, driverRepo, artifactsPath, driverGlue)
-
+    driverContainer = driver.start_container(thisPath, testkitBranch,
+                                             driverName, driverRepo,
+                                             artifactsPath)
     driverContainer.clean_artifacts()
     print("Cleaned up artifacts")
 
@@ -269,8 +200,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    runnerImage = ensure_runner_image(thisPath, testkitBranch)
-    runnerContainer = runner.start_container(runnerImage, thisPath)
+    runnerContainer = runner.start_container(thisPath, testkitBranch)
 
     if test_flags["STUB_TESTS"]:
         runnerContainer.run_stub_tests()
