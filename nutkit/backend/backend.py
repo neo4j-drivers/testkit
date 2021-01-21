@@ -1,29 +1,29 @@
 import json
-import sys
 import inspect
-import threading
 import socket
 import os
 
 import nutkit.protocol as protocol
 
-protocolClasses = dict([m for m in inspect.getmembers(protocol, inspect.isclass)])
+protocolClasses = dict([
+    m for m in inspect.getmembers(protocol, inspect.isclass)])
 debug = os.environ.get('TEST_DEBUG_REQRES', 0)
+
 
 class Encoder(json.JSONEncoder):
     def default(self, o):
         name = type(o).__name__
         if name in protocolClasses:
-            return {"name":name, "data":o.__dict__ }
+            return {"name": name, "data": o.__dict__}
         return json.JSONEncoder.default(self, o)
 
 
 def decode_hook(x):
-    if not 'name' in x:
+    if 'name' not in x:
         return x
 
     name = x['name']
-    if not name in protocolClasses:
+    if name not in protocolClasses:
         return x
 
     data = x.get('data', {})
@@ -80,7 +80,7 @@ class Backend:
                         print("Response: <invalid unicode>")
                 try:
                     res = json.loads(response, object_hook=decode_hook)
-                except json.decoder.JSONDecodeError as e:
+                except json.decoder.JSONDecodeError:
                     raise Exception("Failed to decode: %s" % response)
 
                 # All received errors are raised as exceptions
@@ -91,17 +91,19 @@ class Backend:
                 if in_response:
                     response = response + line
                 else:
-                    # When backend crashes we will end up reading empty lines until end of universe
-                    # Use this simple check to detect this condition and abort
+                    # When backend crashes we will end up reading empty lines
+                    # until end of universe.  Use this simple check to detect
+                    # this condition and abort
                     if not line:
                         num_blanks += 1
                         if num_blanks > 50:
-                            raise Exception("Detected possible crash in backend")
-                    # The backend can send it's own logs outside of response blocks
+                            raise Exception(
+                                    "Detected possible crash in backend")
+                    # The backend can send it's own logs outside of response
+                    # blocks
                     elif debug:
                         print("[BACKEND]: %s" % line)
 
     def sendAndReceive(self, req, timeout=default_timeout):
         self.send(req)
         return self.receive(timeout)
-

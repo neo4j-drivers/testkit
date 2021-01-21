@@ -1,7 +1,8 @@
 """
-Represents types that is part of the bolt/cypher protocol that needs to be sent as parameters
-to queries (from frontend to backend) and data retrieved as a result from running a query
-(from backend to frontend). The values in record response has instances of these types.
+Represents types that is part of the bolt/cypher protocol that needs to be sent
+as parameters to queries (from frontend to backend) and data retrieved as a
+result from running a query (from backend to frontend). The values in record
+response has instances of these types.
 
 All cypher types are sent from backend as:
     {
@@ -16,6 +17,7 @@ All cypher types are sent from backend as:
 class CypherNull:
     """ Represents null/nil as sent/received to/from the database
     """
+
     def __init__(self, value=None):
         self.value = None
 
@@ -108,7 +110,7 @@ class Node:
         return "Node (id={}, labels={}), props={}".format(
             self.id, self.labels, self.props)
 
-    def __eq__(self):
+    def __eq__(self, other):
         if not isinstance(other, Node):
             return False
 
@@ -117,4 +119,3 @@ class Node:
 
 # More in line with other naming
 CypherNode = Node
-
