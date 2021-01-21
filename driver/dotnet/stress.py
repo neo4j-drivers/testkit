@@ -26,6 +26,7 @@ if __name__ == "__main__":
         cmd.append("--filter")
         cmd.append("DisplayName~SingleInstanceStressTests")
 
-    subprocess.run(cmd, universal_newlines=True,
-                   stderr=subprocess.STDOUT, check=True,
-                   cwd="Neo4j.Driver/Neo4j.Driver.Tests.Integration")
+    # Temp commented out to test time to run on TeamCity
+    # subprocess.run(cmd, universal_newlines=True,
+    #               stderr=subprocess.STDOUT, check=True,
+    #               cwd="Neo4j.Driver/Neo4j.Driver.Tests.Integration")
