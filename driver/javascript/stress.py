@@ -9,4 +9,4 @@ def run(args):
 
 if __name__ == "__main__":
     os.environ['STRESS_TEST_MODE'] = 'fastest'
-    run(["gulp", "run-stress-tests"])
+    run(["npm", "run", "run-stress-tests"])
