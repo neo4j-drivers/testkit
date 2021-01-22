@@ -9,6 +9,8 @@ import os
 import sys
 import atexit
 import subprocess
+import argparse
+
 from tests.testenv import (
         begin_test_suite, end_test_suite, in_teamcity)
 import docker
@@ -16,7 +18,7 @@ import teamcity
 import neo4j
 import driver
 import runner
-import argparse
+import settings
 
 networks = ["the-bridge"]
 
@@ -160,7 +162,12 @@ def cleanup():
                        stderr=subprocess.DEVNULL)
 
 
-def main(thisPath, driverName, testkitBranch, driverRepo):
+def main(settings):
+    thisPath = settings.testkit_path
+    driverName = settings.driver_name
+    testkitBranch = settings.branch
+    driverRepo = settings.driver_repo
+    #  thisPath, driverName, testkitBranch, driverRepo):
     # Prepare collecting of artifacts, collected to ./artifcats/
     artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
     if not os.path.exists(artifactsPath):
@@ -294,21 +301,6 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 if __name__ == "__main__":
     parse_command_line(sys.argv)
 
-    driverName = os.environ.get("TEST_DRIVER_NAME")
-    if not driverName:
-        print("Missing environment variable TEST_DRIVER_NAME that contains "
-              "name of the driver")
-        sys.exit(1)
-
-    testkitBranch = os.environ.get("TEST_BRANCH")
-    if not testkitBranch:
-        if in_teamcity:
-            print("Missing environment variable TEST_BRANCH that contains "
-                  "name of testkit branch. "
-                  "This name is used to name Docker repository. ")
-            sys.exit(1)
-        testkitBranch = "local"
-
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
     # Add this path to python sys path to be able to invoke modules
@@ -316,10 +308,11 @@ if __name__ == "__main__":
     thisPath = os.path.dirname(os.path.abspath(__file__))
     os.environ['PYTHONPATH'] = thisPath
 
-    # Retrieve path to driver git repository
-    driverRepo = os.environ.get("TEST_DRIVER_REPO")
-    if not driverRepo:
-        print("Missing environment variable TEST_DRIVER_REPO that contains "
-              "path to driver repository")
-        sys.exit(1)
-    main(thisPath, driverName, testkitBranch, driverRepo)
+    try:
+        settings = settings.build(thisPath)
+    except settings.InvalidArgs as e:
+        print('')
+        print(e)
+        os.sys.exit(-1)
+
+    main(settings)
