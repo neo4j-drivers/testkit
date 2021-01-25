@@ -1,5 +1,13 @@
 import docker
+import collections
 from os.path import join
+
+
+""" Neo4j instance test configuration (no runtime properties)
+"""
+Config = collections.namedtuple('Config', [
+    'name', 'image', 'version', 'edition', 'cluster', 'suite',
+    'scheme', 'download', 'stress_test_duration'])
 
 
 username = "neo4j"

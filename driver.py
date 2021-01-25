@@ -3,6 +3,7 @@ import shutil
 import subprocess
 
 import docker
+import neo4j
 
 
 def _get_glue(thisPath, driverName, driverRepo):
@@ -51,7 +52,7 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
 
 
 def start_container(testkit_path, branch_name, driver_name, driver_path,
-                    artifacts_path):
+                    artifacts_path, network=None):
     # Path where scripts are that adapts driver to testkit.
     # Both absolute path and path relative to driver container.
     host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
@@ -75,7 +76,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
         command=["python3", "/testkit/driver/bootstrap.py"],
         mountMap=mountMap,
         portMap={9876: 9876},  # For convenience when debugging
-        network="the-bridge",
+        network=network,
         workingFolder="/driver")
     return Container(container, driver_glue_path)
 
@@ -96,28 +97,29 @@ class Container:
                 env[varName] = os.environ[varName]
         return env
 
-    def _native_env(self, hostname, port, username, password, config):
+    def _native_env(self, hostname, port, username, password,
+                    config: neo4j.Config):
         env = self._default_env()
         env.update({
-            "TEST_NEO4J_HOST":       hostname,
-            "TEST_NEO4J_PORT":       port,
-            "TEST_NEO4J_USER":       username,
-            "TEST_NEO4J_PASS":       password,
-            "TEST_NEO4J_SCHEME":     config["scheme"],
-            "TEST_NEO4J_EDITION":    config["edition"],
-            "TEST_NEO4J_VERSION":    config["version"],
+            "TEST_NEO4J_HOST":    hostname,
+            "TEST_NEO4J_PORT":    port,
+            "TEST_NEO4J_USER":    username,
+            "TEST_NEO4J_PASS":    password,
+            "TEST_NEO4J_SCHEME":  config.scheme,
+            "TEST_NEO4J_EDITION": config.edition,
+            "TEST_NEO4J_VERSION": config.version,
         })
-        if config['cluster']:
+        if config.cluster:
             env["TEST_NEO4J_IS_CLUSTER"] = "1"
 
-        env["TEST_NEO4J_STRESS_DURATION"] = config["stress_test_duration"]
+        env["TEST_NEO4J_STRESS_DURATION"] = config.stress_test_duration
 
         # To support the legacy .net integration tests
         # TODO: Move this to testkit/driver/dotnet/*.py
         ctrlArgs = ""
-        if config["edition"] == "enterprise":
+        if config.edition == "enterprise":
             ctrlArgs += "-e "
-        ctrlArgs += config["version"]
+        ctrlArgs += config.version
         env["NEOCTRL_ARGS"] = ctrlArgs
 
         return env
@@ -142,14 +144,15 @@ class Container:
                 ["python3", self._gluePath + "unittests.py"],
                 envMap=self._default_env())
 
-    def run_stress_tests(self, hostname, port, username, password, config):
+    def run_stress_tests(self, hostname, port, username, password,
+                         config: neo4j.Config) -> None:
         env = self._native_env(hostname, port, username, password, config)
         self._container.exec([
             "python3", self._gluePath + "stress.py"],
             envMap=env)
 
     def run_integration_tests(self, hostname, port, username, password,
-                              config):
+                              config: neo4j.Config):
         env = self._native_env(hostname, port, username, password, config)
         self._container.exec([
             "python3", self._gluePath + "integration.py"],

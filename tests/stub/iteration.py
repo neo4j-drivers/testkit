@@ -211,6 +211,8 @@ class TxRun(unittest.TestCase):
     """
 
     def test_nested(self):
+        if get_driver_name() in ['javascript']:
+            self.skipTest('Flaking')
         # ex JAVA - java completely pulls the first query before running the second
         if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
