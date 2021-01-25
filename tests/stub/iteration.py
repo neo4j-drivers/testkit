@@ -185,7 +185,6 @@ class TxRun(unittest.TestCase):
     S: SUCCESS {"fields": ["x"], "qid": 1}
        RECORD ["1_1"]
        SUCCESS {"has_more": true}
-    #AFTER_ASK_RECORD_1_1#
     C: RUN "CYPHER" {} {}
        PULL {"n": 1}
     S: SUCCESS {"fields": ["x"], "qid": 2}
@@ -194,7 +193,9 @@ class TxRun(unittest.TestCase):
     C: PULL {"n": 1, "qid": 2}
     S: RECORD ["2_2"]
        SUCCESS {"has_more": false}
-    #AFTER_ASK_RECORD_2_2#
+    C: PULL {"n": 1, "qid": 1}
+    S: RECORD ["1_2"]
+       SUCCESS {"has_more": false}
     C: RUN "CYPHER" {} {}
        PULL {"n": 1}
     S: SUCCESS {"fields": ["x"], "qid": 3}
@@ -205,22 +206,17 @@ class TxRun(unittest.TestCase):
     """
 
     script_record_1_2 = """
-    C: PULL {"n": 1, "qid": 1}
-    S: RECORD ["1_2"]
-       SUCCESS {"has_more": false}
     """
 
     def test_nested(self):
         if get_driver_name() in ['javascript']:
-            self.skipTest('Flaking')
+            self.skipTest('It could not guarantee the order of records requests between in the nested transactions')
         # ex JAVA - java completely pulls the first query before running the second
         if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
-        after_ask_record_1_1 = TxRun.script_record_1_2 if get_driver_name() in 'javascript' else ''
-        after_ask_record_2_2 = TxRun.script_record_1_2 if get_driver_name() not in 'javascript' else ''
-        self._server.start(script=TxRun.script_nested_n, vars={"#VERSION#": "4", "#AFTER_ASK_RECORD_1_1#": after_ask_record_1_1, "#AFTER_ASK_RECORD_2_2#": after_ask_record_2_2})
+        self._server.start(script=TxRun.script_nested_n, vars={"#VERSION#": "4"})
         session = driver.session("w", fetchSize=1)
         tx = session.beginTransaction()
         res1 = tx.run("CYPHER")
