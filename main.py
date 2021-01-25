@@ -40,6 +40,7 @@ def initialise_configurations():
         "version": "4.2",
         "edition": "enterprise",
         "cluster": True,
+        "stress_test_duration": 300,
         "suite": "",  # TODO: Define cluster suite
         "scheme": "neo4j"})
 
@@ -49,6 +50,7 @@ def initialise_configurations():
         "version": "3.5",
         "edition": "enterprise",
         "cluster": False,
+        "stress_test_duration": 0,
         "suite": "3.5",
         "scheme": "bolt"})
 
@@ -58,6 +60,7 @@ def initialise_configurations():
         "image": "neo4j:4.0",
         "edition": "community",
         "cluster": False,
+        "stress_test_duration": 0,
         "suite": "4.0",
         "scheme": "neo4j"})
 
@@ -67,6 +70,7 @@ def initialise_configurations():
         "version": "4.1",
         "edition": "enterprise",
         "cluster": False,
+        "stress_test_duration": 0,
         "suite": "4.1",
         "scheme": "neo4j"})
 
@@ -77,6 +81,7 @@ def initialise_configurations():
             "version": "4.2",
             "edition": "enterprise",
             "cluster": False,
+            "stress_test_duration": 0,
             "suite": "4.2",
             "scheme": "neo4j",
             "download": teamcity.DockerImage(
@@ -88,6 +93,7 @@ def initialise_configurations():
             "version": "4.3",
             "edition": "enterprise",
             "cluster": False,
+            "stress_test_duration": 0,
             "suite": "4.3",
             "scheme": "neo4j",
             "download": teamcity.DockerImage(
@@ -223,6 +229,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
 
         cluster = neo4j_config["cluster"]
         serverName = neo4j_config["name"]
+        stress_duration = neo4j_config["stress_test_duration"]
 
         # Start a Neo4j server
         if cluster:
@@ -262,7 +269,7 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # The stress test suite uses threading and put a bigger load on the
         # driver than the integration tests do and are therefore written in
         # the driver language.
-        if test_flags["STRESS_TESTS"]:
+        if test_flags["STRESS_TESTS"] and stress_duration > 0:
             print("Building and running stress tests...")
             driverContainer.run_stress_tests(hostname, port, neo4j.username,
                                              neo4j.password, neo4j_config)

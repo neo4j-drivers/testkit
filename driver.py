@@ -110,6 +110,8 @@ class Container:
         if config['cluster']:
             env["TEST_NEO4J_IS_CLUSTER"] = "1"
 
+        env["TEST_NEO4J_STRESS_DURATION"] = config["stress_test_duration"]
+
         # To support the legacy .net integration tests
         # TODO: Move this to testkit/driver/dotnet/*.py
         ctrlArgs = ""
