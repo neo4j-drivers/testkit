@@ -78,6 +78,39 @@ S: SUCCESS {}
 $extra_reset_2
 """
 
+script_retry_with_fail_after_pull_server1 = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {}
+   FAILURE {"code": "$error", "message": "<whatever>"}
+C: RESET
+S: SUCCESS {}
+$extra_reset_1
+"""
+
+script_retry_with_fail_after_pull_server2 = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+$extra_reset_2
+"""
+
 script_commit_disconnect = """
 !: BOLT 4
 !: AUTO HELLO
@@ -181,26 +214,6 @@ class TestRetry(unittest.TestCase):
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Completely.MadeUp")
 
-    def test_retry_NotALeader(self):
-        if get_driver_name() in ['dotnet', 'javascript']:
-            self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
-            self.skipTest("Sends ROLLBACK after RESET")
-        # Cluster special treatment
-        self._run_with_transient_error(
-                script_retry_with_fail_after_pull,
-                "Neo.ClientError.Cluster.NotALeader")
-
-    def test_retry_ForbiddenReadOnlyDatabase(self):
-        if get_driver_name() in ['dotnet', 'javascript']:
-            self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
-            self.skipTest("Sends ROLLBACK after RESET")
-        # Cluster special treatment
-        self._run_with_transient_error(
-                script_retry_with_fail_after_pull,
-                "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
-
     def test_disconnect_on_commit(self):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
@@ -228,3 +241,228 @@ class TestRetry(unittest.TestCase):
         session.close()
         driver.close()
         self._server.done()
+
+class TestRetryClustering(unittest.TestCase): 
+    def setUp(self):
+        self._backend = new_backend()
+        self._routingServer = StubServer(9001)
+        self._readServer = StubServer(9002)
+        self._writeServer = StubServer(9003)
+        self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
+        self._auth = AuthorizationToken(
+                scheme="basic", principal="p", credentials="c")
+        self._userAgent = "007"
+
+    def test_read(self):
+        self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
+        self._readServer.start(script=script_read)
+        num_retries = 0
+
+        def once(tx):
+            nonlocal num_retries
+            num_retries = num_retries + 1
+            result = tx.run("RETURN 1")
+            record = result.next()
+            return record.values[0]
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        session = driver.session("r")
+        x = session.readTransaction(once)
+        self.assertIsInstance(x, types.CypherInt)
+        self.assertEqual(x.value, 1)
+        self.assertEqual(num_retries, 1)
+
+        session.close()
+        driver.close()
+        self._readServer.done()
+        self._routingServer.done()
+
+    def test_retry_database_unavailable(self):
+        # Simple case, correctly classified transient error
+        self._run_with_transient_error(
+                script_retry_with_fail_after_commit,
+                "Neo.TransientError.Database.DatabaseUnavailable")
+    
+    def test_retry_made_up_transient(self):
+        # Driver should retry all transient error (with some exceptions), make
+        # up a transient error and the driver should retry.
+        self._run_with_transient_error(
+                script_retry_with_fail_after_commit,
+                "Neo.TransientError.Completely.MadeUp")
+    
+    def test_retry_ForbiddenOnReadOnlyDatabase(self):
+        if get_driver_name() in ['dotnet']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java', 'python']:
+            self.skipTest("Sends ROLLBACK after RESET")
+
+        self._run_with_transient_error(
+                script_retry_with_fail_after_pull,
+                "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
+
+    def test_retry_NotALeader(self):
+        if get_driver_name() in ['dotnet']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java', 'python']:
+            self.skipTest("Sends ROLLBACK after RESET")
+
+        self._run_with_transient_error(
+                script_retry_with_fail_after_pull,
+                "Neo.ClientError.Cluster.NotALeader")
+
+    def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
+        if get_driver_name() in ['dotnet']:
+            self.skipTest("Behaves strange")
+        if get_driver_name() in ['java', 'python']:
+            self.skipTest("Sends ROLLBACK after RESET")
+
+        self._routingServer.start(script=self.router_script_swap_reader_and_writer(), vars=self.get_vars())
+        # We could probably use AUTO RESET in the script but this makes the
+        # diffs more obvious.
+        vars = {
+            "$extra_reset_1": "",
+            "$extra_reset_2": "",
+            "$error": "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase",
+        }
+        if get_driver_name() not in ["go", "python"]:
+            vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
+        if get_driver_name() in ["java", "javascript"]:
+            vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
+
+        self._writeServer.start(script=script_retry_with_fail_after_pull_server1, vars=vars)
+        self._readServer.start(script=script_retry_with_fail_after_pull_server2, vars=vars)
+        
+        num_retries = 0
+
+        def twice(tx):
+            nonlocal num_retries
+            num_retries = num_retries + 1
+            result = tx.run("RETURN 1")
+            record = result.next()
+            return record.values[0]
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+
+        session = driver.session("r")
+        x = session.writeTransaction(twice)
+        self.assertIsInstance(x, types.CypherInt)
+        self.assertEqual(x.value, 1)
+        self.assertEqual(num_retries, 2)
+
+        session.close()
+        driver.close()
+        self._writeServer.done()
+        self._routingServer.done()
+        self._readServer.done()
+
+
+    def _run_with_transient_error(self, script, err):
+        self._routingServer.start(script=self.router_script(), vars=self.get_vars())
+        # We could probably use AUTO RESET in the script but this makes the
+        # diffs more obvious.
+        vars = {
+            "$extra_reset_1": "",
+            "$extra_reset_2": "",
+            "$error": err,
+        }
+        if get_driver_name() not in ["go", "python"]:
+            vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
+        if get_driver_name() in ["java", "javascript"]:
+            vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
+
+        self._writeServer.start(script=script, vars=vars)
+        num_retries = 0
+
+        def twice(tx):
+            nonlocal num_retries
+            num_retries = num_retries + 1
+            result = tx.run("RETURN 1")
+            record = result.next()
+            return record.values[0]
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+
+        session = driver.session("r")
+        x = session.writeTransaction(twice)
+        self.assertIsInstance(x, types.CypherInt)
+        self.assertEqual(x.value, 1)
+        self.assertEqual(num_retries, 2)
+
+        session.close()
+        driver.close()
+        self._writeServer.done()
+        self._routingServer.done()
+
+
+    def tearDown(self):
+        self._backend.close()
+        self._routingServer.reset()
+        self._readServer.reset()
+        self._writeServer.reset()
+    
+    def router_script(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        """
+    
+    def router_script_swap_reader_and_writer(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
+        """
+    
+    def router_script_not_retry(self): 
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# None
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        """
+
+    def get_vars(self):
+        host = self._routingServer.host
+        v = {
+            "#VERSION#": "4.3",
+            "#HOST#": host,
+            "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
+            "#EXTRA_HELLO_PROPS#": self.get_extra_hello_props(),
+        }
+        v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
+
+        if get_driver_name() in ['javascript']:
+            v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
+        return v
+
+    def get_extra_hello_props(self):
+        if get_driver_name() in ["java"]:
+            return ', "realm": ""'
+        elif get_driver_name() in ["javascript"]:
+            return ', "realm": "", "ticket": ""'
+        return ""
+
+
