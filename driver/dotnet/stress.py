@@ -16,7 +16,9 @@ if __name__ == "__main__":
 
     cmd = [
         "dotnet",
-        "test"
+        "test",
+        "--no-restore",
+        "--no-build"
     ]
 
     if os.environ.get("TEST_NEO4J_IS_CLUSTER"):

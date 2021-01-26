@@ -49,7 +49,8 @@ def initialise_configurations():
         cluster=True,
         suite="",  # TODO: Define cluster suite
         scheme="neo4j",
-        download=None))
+        download=None,
+        stress_test_duration=90))
 
     configurations.append(neo4j.Config(
         name="3.5-enterprise",
@@ -59,7 +60,8 @@ def initialise_configurations():
         cluster=False,
         suite="3.5",
         scheme="bolt",
-        download=None))
+        download=None,
+        stress_test_duration=0))
 
     configurations.append(neo4j.Config(
         name="4.0-community",
@@ -69,7 +71,8 @@ def initialise_configurations():
         cluster=False,
         suite="4.0",
         scheme="neo4j",
-        download=None))
+        download=None,
+        stress_test_duration=0))
 
     configurations.append(neo4j.Config(
         name="4.1-enterprise",
@@ -79,7 +82,8 @@ def initialise_configurations():
         cluster=False,
         suite="4.1",
         scheme="neo4j",
-        download=None))
+        download=None,
+        stress_test_duration=0))
 
     if in_teamcity:
         configurations.append(neo4j.Config(
@@ -91,7 +95,8 @@ def initialise_configurations():
             suite="4.2",
             scheme="neo4j",
             download=teamcity.DockerImage(
-                "neo4j-enterprise-4.2.3-docker-loadable.tar")))
+                "neo4j-enterprise-4.2.3-docker-loadable.tar"),
+            stress_test_duration=0))
 
         configurations.append(neo4j.Config(
             name="4.3-tc-enterprise",
@@ -102,7 +107,8 @@ def initialise_configurations():
             suite="4.3",
             scheme="neo4j",
             download=teamcity.DockerImage(
-                "neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar")))
+                "neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar"),
+            stress_test_duration=0))
 
 
 def set_test_flags(requested_list):
@@ -159,7 +165,7 @@ def parse_command_line(argv):
     construct_configuration_list(args.configs)
     print("Accepted configurations:")
     for item in configurations_to_run:
-        print("     ", item["name"])
+        print("     ", item.name)
 
 
 def cleanup():
@@ -239,6 +245,7 @@ def main(settings):
 
         cluster = neo4j_config.cluster
         serverName = neo4j_config.name
+        stress_duration = neo4j_config.stress_test_duration
 
         # Start a Neo4j server
         if cluster:
@@ -278,7 +285,7 @@ def main(settings):
         # The stress test suite uses threading and put a bigger load on the
         # driver than the integration tests do and are therefore written in
         # the driver language.
-        if test_flags["STRESS_TESTS"]:
+        if test_flags["STRESS_TESTS"] and stress_duration > 0:
             print("Building and running stress tests...")
             driverContainer.run_stress_tests(hostname, port, neo4j.username,
                                              neo4j.password, neo4j_config)
