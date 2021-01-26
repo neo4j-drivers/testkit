@@ -120,6 +120,7 @@ def set_test_flags(requested_list):
 
 
 def construct_configuration_list(requested_list):
+    global configurations_to_run
     # if no configs were requested we will default to running them all
     if not requested_list:
         configurations_to_run = configurations
