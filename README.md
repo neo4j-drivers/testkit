@@ -58,6 +58,24 @@ To run a single named test using a local Neo4j database:
 export TEST_NEO4J_HOST=localhost
 python3 -m unittest tests.neo4j.datatypes.TestDataTypes.testShouldEchoBack
 ```
+## Running all test suites for all known drivers within docker containers 
+
+This test runner will clone and run the tests for each known driver repository. 
+
+Requirements on host:
+
+  * Python3.6 >=
+  * Docker 19.03 >=
+
+Environment Variables:
+  * TEST_DRIVER_BRANCH
+    Branch to be tested in all drivers. Default: 4.3
+
+```console
+python3 run_all.py
+```
+
+This test runs the `main.py` overriding the enviroment variables `TEST_DRIVER_NAME` and `TEST_DRIVER_REPO` with correct values for each driver. The others enviroment variables will be used by `main.py` as usual.
 
 ## Command Line Usage
 
