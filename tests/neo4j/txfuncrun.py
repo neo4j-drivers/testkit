@@ -88,7 +88,7 @@ class TestTxFuncRun(unittest.TestCase):
         self.assertGreater(len(bookmarks[0]), 3)
 
     def test_does_not_update_last_bookmark_on_rollback(self):
-        if get_driver_name() in ["dotnet", "javascript", "java"]:
+        if get_driver_name() in ["dotnet", "java"]:
             self.skipTest("Client exceptions not properly handled in backend")
 
         # Verifies that last bookmarks still is empty when transactional
