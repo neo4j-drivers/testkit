@@ -36,11 +36,9 @@ test_flags = {
     "TLS_TESTS": True
 }
 
-configurations_to_run = []
-configurations = []
-
 
 def initialise_configurations():
+    configurations = []
     configurations.append(neo4j.Config(
         name="4.2-cluster",
         image="neo4j:4.2-enterprise",
@@ -109,6 +107,7 @@ def initialise_configurations():
             download=teamcity.DockerImage(
                 "neo4j-enterprise-4.3.0-drop02.0-docker-loadable.tar"),
             stress_test_duration=0))
+    return configurations
 
 
 def set_test_flags(requested_list):
@@ -125,24 +124,21 @@ def set_test_flags(requested_list):
             print("     ", item)
 
 
-def construct_configuration_list(requested_list):
-    global configurations_to_run
+def construct_configuration_list(configurations, requested_list):
     # if no configs were requested we will default to running them all
     if not requested_list:
-        configurations_to_run = configurations
-        return
+        return configurations
 
     # Now try to find the requested configs and check they are available
     # with current teamcity status
+    configs = []
     for config in configurations:
         if config.name in requested_list:
-            configurations_to_run.append(config)
+            configs.append(config)
+    return configs
 
 
-def parse_command_line(argv):
-    # setup the configurations that are available
-    initialise_configurations()
-
+def parse_command_line(configurations, argv):
     # create parser
     parser = argparse.ArgumentParser()
 
@@ -162,10 +158,11 @@ def parse_command_line(argv):
     args = parser.parse_args()
 
     set_test_flags(args.tests)
-    construct_configuration_list(args.configs)
+    configs = construct_configuration_list(configurations, args.configs)
     print("Accepted configurations:")
-    for item in configurations_to_run:
+    for item in configs:
         print("     ", item.name)
+    return configs
 
 
 def cleanup():
@@ -176,7 +173,7 @@ def cleanup():
                        stderr=subprocess.DEVNULL)
 
 
-def main(settings):
+def main(settings, configurations):
     thisPath = settings.testkit_path
     driverName = settings.driver_name
     testkitBranch = settings.branch
@@ -237,7 +234,7 @@ def main(settings):
     # time we start a database server we should use a different folder.
     neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
     os.makedirs(neo4jArtifactsPath)
-    for neo4j_config in configurations_to_run:
+    for neo4j_config in configurations:
         download = neo4j_config.download
         if download:
             print("Downloading Neo4j docker image")
@@ -315,7 +312,9 @@ def main(settings):
 
 
 if __name__ == "__main__":
-    parse_command_line(sys.argv)
+    # setup the configurations that are available
+    configurations = initialise_configurations()
+    configurations = parse_command_line(configurations, sys.argv)
 
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
@@ -331,4 +330,4 @@ if __name__ == "__main__":
         print(e)
         os.sys.exit(-1)
 
-    main(settings)
+    main(settings, configurations)
