@@ -293,7 +293,7 @@ class TestRetryClustering(unittest.TestCase):
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
+        if get_driver_name() in ['python']:
             self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
@@ -303,7 +303,7 @@ class TestRetryClustering(unittest.TestCase):
     def test_retry_NotALeader(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
+        if get_driver_name() in ['python']:
             self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
@@ -313,7 +313,7 @@ class TestRetryClustering(unittest.TestCase):
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
+        if get_driver_name() in ['python']:
             self.skipTest("Sends ROLLBACK after RESET")
 
         self._routingServer.start(script=self.router_script_swap_reader_and_writer(), vars=self.get_vars())
