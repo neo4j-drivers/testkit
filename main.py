@@ -93,7 +93,7 @@ def initialise_configurations():
             suite="4.2",
             scheme="neo4j",
             download=teamcity.DockerImage(
-                "neo4j-enterprise-4.2.3-docker-loadable.tar"),
+                "neo4j-enterprise-4.2.4-docker-loadable.tar"),
             stress_test_duration=0))
 
         configurations.append(neo4j.Config(
