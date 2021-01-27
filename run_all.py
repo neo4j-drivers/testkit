@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import tempfile
 
@@ -16,12 +17,12 @@ drivers = [
     "repo": "git@github.com:neo4j/neo4j-python-driver.git"
   },
   {
-    "name": "dotnet",
-    "repo": "git@github.com:neo4j/neo4j-dotnet-driver.git"
-  },
-  {
     "name": "java",
     "repo": "git@github.com:neo4j/neo4j-java-driver.git"
+  },
+  {
+    "name": "dotnet",
+    "repo": "git@github.com:neo4j/neo4j-dotnet-driver.git"
   }
 ]
 
@@ -51,7 +52,8 @@ def update_environment(driver, repo_path):
   os.environ['TEST_DRIVER_NAME'] = driver.get('name')
 
 def run():
-  subprocess.run(["python3", "main.py"], check=True)
+  arguments = sys.argv[1:]
+  subprocess.run(["python3", "main.py"] + arguments, check=True)
 
 if __name__ == "__main__":
   (temp_path, driver_repo_path, branch) = setup_environment()
