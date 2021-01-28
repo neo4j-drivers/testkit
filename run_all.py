@@ -6,23 +6,23 @@ import tempfile
 drivers = [
     {
         "name": "go",
-        "repo": "git@github.com:neo4j/neo4j-go-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-go-driver.git"
     },
     {
         "name": "javascript",
-        "repo": "git@github.com:neo4j/neo4j-javascript-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-javascript-driver.git"
     },
     {
         "name": "python",
-        "repo": "git@github.com:neo4j/neo4j-python-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-python-driver.git"
     },
     {
         "name": "java",
-        "repo": "git@github.com:neo4j/neo4j-java-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-java-driver.git"
     },
     {
         "name": "dotnet",
-        "repo": "git@github.com:neo4j/neo4j-dotnet-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-dotnet-driver.git"
     }
 ]
 
