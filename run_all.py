@@ -6,23 +6,63 @@ import tempfile
 drivers = [
     {
         "name": "go",
-        "repo": "https://github.com/neo4j/neo4j-go-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-go-driver.git",
+        "art": [
+            " XXX   XX ",
+            "X     X  X",
+            "X XX  X  X",
+            "X  X  X  X",
+            "X  X  X  X",
+            " XX    XX ",
+        ],
     },
     {
         "name": "javascript",
-        "repo": "https://github.com/neo4j/neo4j-javascript-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-javascript-driver.git",
+        "art": [
+            "   X   XXX",
+            "   X  X   ",
+            "   X  XXX ",
+            "X  X     X",
+            "X  X     X",
+            " XX   XXX ",
+        ],
     },
     {
         "name": "python",
-        "repo": "https://github.com/neo4j/neo4j-python-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-python-driver.git",
+        "art": [
+            "XXX   X  X",
+            "X  X  X  X",
+            "X  X  X  X",
+            "X X    XX ",
+            "X      XX ",
+            "X      XX ",
+        ],
     },
     {
         "name": "java",
-        "repo": "https://github.com/neo4j/neo4j-java-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-java-driver.git",
+        "art": [
+            "   X   XX ",
+            "   X  X  X",
+            "   X  XXXX",
+            "X  X  X  X",
+            "X  X  X  X",
+            " XX   X  X",
+        ],
     },
     {
         "name": "dotnet",
-        "repo": "https://github.com/neo4j/neo4j-dotnet-driver.git"
+        "repo": "https://github.com/neo4j/neo4j-dotnet-driver.git",
+        "art": [
+            "    X    X",
+            "    XX   X",
+            "    X X  X",
+            "    X   XX",
+            " XX X    X",
+            " XX X    X",
+        ],
     }
 ]
 
@@ -61,11 +101,29 @@ def run():
     arguments = sys.argv[1:]
     subprocess.run(["python3", "main.py"] + arguments, check=True)
 
+def print_art(driver, scale):
+    print('')
+    print('Testing %s (%s)' % (driver["name"], driver["repo"]))
+    print('')
+
+    art = driver.get("art", False)
+    if not art:
+        return
+
+    print('')
+    for l in art:
+        for s in range(scale):
+            for c in l:
+                print(c*scale, end='')
+            print('')
+    print('')
+
 
 if __name__ == "__main__":
     (temp_path, driver_repo_path, branch) = setup_environment()
 
     for driver in drivers:
+        print_art(driver, 2)
         clone_repo(driver, branch, driver_repo_path)
         update_environment(driver, driver_repo_path)
         run()
