@@ -28,7 +28,7 @@ class TestTxRun(unittest.TestCase):
         self.assertGreater(len(bookmarks[0]), 3)
 
     def test_does_not_update_last_bookmark_on_rollback(self):
-        if get_driver_name() in ["dotnet", "java"]:
+        if get_driver_name() in ["java"]:
             self.skipTest("Rollback not implemented in backend")
 
         # Verifies that last bookmark is set on the session upon
