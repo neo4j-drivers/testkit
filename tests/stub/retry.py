@@ -141,7 +141,7 @@ class TestRetry(unittest.TestCase):
         }
         if self._driverName not in ["go", "python"]:
             vars["$extra_reset_2"] = "C: RESET\nS: SUCCESS {}"
-        if self._driverName in ["java", "javascript"]:
+        if self._driverName in ["java", "javascript", "ruby"]:
             vars["$extra_reset_1"] = "C: RESET\nS: SUCCESS {}"
 
         self._server.start(script=script, vars=vars)
@@ -184,7 +184,7 @@ class TestRetry(unittest.TestCase):
     def test_retry_NotALeader(self):
         if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
+        if get_driver_name() in ['java', 'python', 'ruby']:
             self.skipTest("Sends ROLLBACK after RESET")
         # Cluster special treatment
         self._run_with_transient_error(
@@ -194,7 +194,7 @@ class TestRetry(unittest.TestCase):
     def test_retry_ForbiddenReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['java', 'python']:
+        if get_driver_name() in ['java', 'python', 'ruby']:
             self.skipTest("Sends ROLLBACK after RESET")
         # Cluster special treatment
         self._run_with_transient_error(
@@ -205,7 +205,7 @@ class TestRetry(unittest.TestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driverName in ["java", 'python', 'javascript', 'dotnet']:
+        if self._driverName in ["java", 'python', 'javascript', 'dotnet', 'ruby']:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(script=script_commit_disconnect)

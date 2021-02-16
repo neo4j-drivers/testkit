@@ -6,7 +6,7 @@ from nutkit.frontend import Driver, AuthorizationToken
 
 
 def get_extra_hello_props():
-    if get_driver_name() in ["java"]:
+    if get_driver_name() in ["java", "ruby"]:
         return ', "realm": ""'
     elif get_driver_name() in ["javascript"]:
         return ', "realm": "", "ticket": ""'
@@ -120,7 +120,7 @@ class Routing(unittest.TestCase):
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
-        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python']:
+        if get_driver_name() in ['dotnet', 'java', 'javascript', 'python', 'ruby']:
             v["#DBPARAM#"] = "database"
 
         if get_driver_name() in ['javascript']:
@@ -285,8 +285,8 @@ class RoutingV3(Routing):
         if get_driver_name() in ['go']:
             v["#ROUTINGMODE#"] = '"mode": "r"'
 
-        if get_driver_name() in ['java']:
-            v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#'] 
+        if get_driver_name() in ['java', 'ruby']:
+            v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#']
 
         if get_driver_name() in ['javascript']:
             v["#ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
