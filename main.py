@@ -98,7 +98,7 @@ def initialise_configurations():
 
         configurations.append(neo4j.Config(
             name="4.3-tc-enterprise",
-            image="neo4j:4.3.0-drop02.0-enterprise",
+            image="neo4j:4.3.0-drop03.0-enterprise",
             version="4.3",
             edition="enterprise",
             cluster=False,
