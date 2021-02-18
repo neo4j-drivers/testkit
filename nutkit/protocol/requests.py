@@ -22,13 +22,14 @@ class NewDriver:
     Backend should respond with a Driver response or an Error response.
     """
 
-    def __init__(self, uri, authToken, userAgent=None):
+    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
         self.authorizationToken = authToken
         # Optional custom user agent string
         self.userAgent = userAgent
+        self.resolverRegistered = resolverRegistered
 
 
 class AuthorizationToken:
@@ -43,6 +44,25 @@ class AuthorizationToken:
         self.realm = realm
         self.ticket = ticket
 
+
+class VerifyConnectivity:
+    """ Request to verify connectivity on the driver
+    instance corresponding to the specified driver id.
+    Backend should respond with a Driver response or an Error response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+class ResolverResolutionCompleted:
+    """ Pushes the results of the resolver function resolution back to the backend.
+    This must only be sent immediately after the backend requests a new address resolution
+    by replying with the ResolverResolutionRequired response.
+    """
+
+    def __init__(self, requestId, addresses):
+        self.requestId = requestId
+        self.addresses = addresses
 
 class DriverClose:
     """ Request to close the driver instance on the backend.
@@ -63,7 +83,7 @@ class NewSession:
 
     def __init__(self, driverId, accessMode, bookmarks=None,
                  database=None, fetchSize=None):
-        # Id of driver on backend that sessio should be created on
+        # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
         self.accessMode = accessMode
