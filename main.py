@@ -180,10 +180,10 @@ def main(settings, configurations):
     driverRepo = settings.driver_repo
     #  thisPath, driverName, testkitBranch, driverRepo):
     # Prepare collecting of artifacts, collected to ./artifcats/
-    artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
-    if not os.path.exists(artifactsPath):
-        os.makedirs(artifactsPath)
-    print("Putting artifacts in %s" % artifactsPath)
+    artifacts_path = os.path.abspath(os.path.join(".", "artifacts"))
+    if not os.path.exists(artifacts_path):
+        os.makedirs(artifacts_path)
+    print("Putting artifacts in %s" % artifacts_path)
 
     # Important to stop all docker images upon exit
     # Also make sure that none of those images are running at this point
@@ -200,7 +200,7 @@ def main(settings, configurations):
 
     driverContainer = driver.start_container(thisPath, testkitBranch,
                                              driverName, driverRepo,
-                                             artifactsPath,
+                                             artifacts_path,
                                              network="the-bridge")
     driverContainer.clean_artifacts()
     print("Cleaned up artifacts")
@@ -232,7 +232,7 @@ def main(settings, configurations):
     """
     # Make an artifacts folder where the database can place it's logs, each
     # time we start a database server we should use a different folder.
-    neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
+    neo4jArtifactsPath = os.path.join(artifacts_path, "neo4j")
     os.makedirs(neo4jArtifactsPath)
     for neo4j_config in configurations:
         download = neo4j_config.download
