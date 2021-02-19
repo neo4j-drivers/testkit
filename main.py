@@ -175,10 +175,10 @@ def cleanup():
 
 def main(settings, configurations):
     thisPath = settings.testkit_path
-    driverName = settings.driver_name
+    driver_name = settings.driver_name
     testkitBranch = settings.branch
     driverRepo = settings.driver_repo
-    #  thisPath, driverName, testkitBranch, driverRepo):
+    #  thisPath, driver_name, testkitBranch, driverRepo):
     # Prepare collecting of artifacts, collected to ./artifcats/
     artifacts_path = os.path.abspath(os.path.join(".", "artifacts"))
     if not os.path.exists(artifacts_path):
@@ -199,7 +199,7 @@ def main(settings, configurations):
     ])
 
     driverContainer = driver.start_container(thisPath, testkitBranch,
-                                             driverName, driverRepo,
+                                             driver_name, driverRepo,
                                              artifacts_path,
                                              network="the-bridge")
     driverContainer.clean_artifacts()
