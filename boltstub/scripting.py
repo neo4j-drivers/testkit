@@ -549,8 +549,7 @@ class ClientMessageLine(ClientLine):
         else:
             actor.log("%s", c_msg)
             # Temp hack
-            print("Expected «{}»\n"
-                  "Received «{}»".format(line, c_msg), line, c_msg)
+            print("Expected «{}»\nReceived «{}»".format(line, c_msg))
             if line:
                 raise ScriptMismatch("Expected «{}»\n"
                                      "Received «{}»".format(line, c_msg), line, c_msg)

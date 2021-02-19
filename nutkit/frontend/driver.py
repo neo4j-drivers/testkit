@@ -9,14 +9,18 @@ class Driver:
         req = protocol.NewDriver(uri, authToken, userAgent=userAgent)
         res = backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+            raise Exception("Should be driver, received {}: {}".format(
+                type(res), res
+            ))
         self._driver = res
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+            raise Exception("Should be driver, received {}: {}".format(
+                type(res), res
+            ))
 
     def session(self, accessMode, bookmarks=None, database=None,
                 fetchSize=None):
@@ -25,5 +29,7 @@ class Driver:
                                   fetchSize=fetchSize)
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Session):
-            raise Exception("Should be session")
+            raise Exception("Should be session, received {}: {}".format(
+                type(res), res
+            ))
         return Session(self._backend, res)
