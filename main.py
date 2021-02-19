@@ -174,11 +174,11 @@ def cleanup():
 
 
 def main(settings, configurations):
-    thisPath = settings.testkit_path
+    this_path = settings.testkit_path
     driver_name = settings.driver_name
     testkitBranch = settings.branch
     driverRepo = settings.driver_repo
-    #  thisPath, driver_name, testkitBranch, driverRepo):
+    #  this_path, driver_name, testkitBranch, driverRepo):
     # Prepare collecting of artifacts, collected to ./artifcats/
     artifacts_path = os.path.abspath(os.path.join(".", "artifacts"))
     if not os.path.exists(artifacts_path):
@@ -198,7 +198,7 @@ def main(settings, configurations):
         "docker", "network", "create", "the-bridge"
     ])
 
-    driverContainer = driver.start_container(thisPath, testkitBranch,
+    driverContainer = driver.start_container(this_path, testkitBranch,
                                              driver_name, driverRepo,
                                              artifacts_path,
                                              network="the-bridge")
@@ -219,7 +219,7 @@ def main(settings, configurations):
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    runnerContainer = runner.start_container(thisPath, testkitBranch)
+    runnerContainer = runner.start_container(this_path, testkitBranch)
 
     if test_flags["STUB_TESTS"]:
         runnerContainer.run_stub_tests()
