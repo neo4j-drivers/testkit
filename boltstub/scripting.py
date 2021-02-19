@@ -97,7 +97,7 @@ class BoltScript:
                 request[versionindex + minor_offset],
                 request[versionindex + minor_version_difference_offset])
 
-    def _get_versions(self, request): 
+    def _get_versions(self, request):
         for n in range(0, 4):
             (major, max_minor, minor_difference) = self._get_version_range_defintion(request, n)
             for minor in range(max_minor, max_minor - minor_difference - 1 , -1):
@@ -399,6 +399,7 @@ class Bolt4x1Script(BoltScript):
         else:
             yield Structure(b"\x70", {})
 
+
 class Bolt4x2Script(BoltScript):
 
     protocol_version = (4, 2)
@@ -434,6 +435,7 @@ class Bolt4x2Script(BoltScript):
             })
         else:
             yield Structure(b"\x70", {})
+
 
 class Bolt4x3Script(BoltScript):
 
@@ -474,7 +476,6 @@ class Bolt4x3Script(BoltScript):
 
 
 class BoltScriptError(Exception):
-
     pass
 
 
@@ -493,12 +494,10 @@ class Line:
 
 
 class ClientLine(Line):
-
     pass
 
 
 class ServerLine(Line):
-
     pass
 
 
@@ -565,9 +564,8 @@ class ClientMessageLine(ClientLine):
 
     def compare(self, script_fields, message_fields):
         if len(script_fields) == len(message_fields):
-            for i in range(len(script_fields)):
-                return self.compare_value(script_fields[i], message_fields[i])
-            return True
+            return all(self.compare_value(script_fields[i], message_fields[i])
+                       for i in range(len(script_fields)))
         else:
             return False
 
@@ -580,9 +578,10 @@ class ClientMessageLine(ClientLine):
             if set(val_a.keys()) != set(val_b.keys()):
                 return False
             else:
-                for key in val_a.keys():
-                    return self.compare_value(val_a[key], val_b[key])
+                return all(self.compare_value(val_a[key], val_b[key])
+                           for key in val_a.keys())
         return val_a == val_b
+
 
 class ServerMessageLine(ServerLine):
 
@@ -666,5 +665,4 @@ class ScriptMismatch(Exception):
 
 
 class ServerExit(Exception):
-
     pass
