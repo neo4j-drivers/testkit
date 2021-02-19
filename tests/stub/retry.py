@@ -242,7 +242,8 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
-class TestRetryClustering(unittest.TestCase): 
+
+class TestRetryClustering(unittest.TestCase):
     def setUp(self):
         self._backend = new_backend()
         self._routingServer = StubServer(9001)
@@ -282,14 +283,14 @@ class TestRetryClustering(unittest.TestCase):
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Database.DatabaseUnavailable")
-    
+
     def test_retry_made_up_transient(self):
         # Driver should retry all transient error (with some exceptions), make
         # up a transient error and the driver should retry.
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Completely.MadeUp")
-    
+
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
@@ -331,7 +332,7 @@ class TestRetryClustering(unittest.TestCase):
 
         self._writeServer.start(script=script_retry_with_fail_after_pull_server1, vars=vars)
         self._readServer.start(script=script_retry_with_fail_after_pull_server2, vars=vars)
-        
+
         num_retries = 0
 
         def twice(tx):
@@ -354,7 +355,6 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
         self._readServer.done()
-
 
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(script=self.router_script(), vars=self.get_vars())
@@ -393,13 +393,12 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
 
-
     def tearDown(self):
         self._backend.close()
         self._routingServer.reset()
         self._readServer.reset()
         self._writeServer.reset()
-    
+
     def router_script(self):
         return """
         !: BOLT #VERSION#
@@ -408,14 +407,14 @@ class TestRetryClustering(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
-    
+
     def router_script_swap_reader_and_writer(self):
         return """
         !: BOLT #VERSION#
@@ -424,15 +423,15 @@ class TestRetryClustering(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
         """
-    
-    def router_script_not_retry(self): 
+
+    def router_script_not_retry(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -440,7 +439,7 @@ class TestRetryClustering(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 
