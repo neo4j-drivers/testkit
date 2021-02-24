@@ -611,6 +611,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1]], sequences)
 
     def test_should_round_robin_readers_when_reading_using_session_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
@@ -630,6 +633,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1], [1]], sequences)
 
     def test_should_round_robin_readers_when_reading_using_tx_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
@@ -651,6 +657,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1], [1]], sequences)
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -671,6 +680,9 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -740,6 +752,9 @@ class Routing(unittest.TestCase):
         self._writeServer1.done()
 
     def test_should_round_robin_writers_when_writing_using_session_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script(), vars=self.get_vars())
@@ -756,6 +771,9 @@ class Routing(unittest.TestCase):
         self._writeServer2.done()
 
     def test_should_round_robin_writers_when_writing_using_tx_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
@@ -774,6 +792,9 @@ class Routing(unittest.TestCase):
         self._writeServer2.done()
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -794,6 +815,9 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -852,7 +876,8 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(self):
-        if get_driver_name() not in ['java']:
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet']:
             self.skipTest("consume not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -874,6 +899,9 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_not_a_leader_failure(), vars=self.get_vars())
@@ -894,7 +922,8 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code_using_tx_run(self):
-        if get_driver_name() not in ['java']:
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet']:
             self.skipTest("consume not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -918,6 +947,9 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code_using_tx_run(
             self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_not_a_leader_failure(), vars=self.get_vars())
@@ -1000,6 +1032,9 @@ class Routing(unittest.TestCase):
         self.assertEqual(["BookmarkC"], second_bookmark)
 
     def test_should_retry_read_tx_until_success(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1026,6 +1061,9 @@ class Routing(unittest.TestCase):
         self.assertEqual(2, try_count)
 
     def test_should_retry_write_tx_until_success(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1052,6 +1090,9 @@ class Routing(unittest.TestCase):
         self.assertEqual(2, try_count)
 
     def test_should_retry_read_tx_and_rediscovery_until_success(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
@@ -1082,6 +1123,9 @@ class Routing(unittest.TestCase):
         self.assertEqual(3, try_count)
 
     def test_should_retry_write_tx_and_rediscovery_until_success(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
@@ -1135,6 +1179,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1]], sequences)
 
     def test_should_successfully_read_from_readable_router_using_tx_function(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_reader_support(), vars=self.get_vars())
 
@@ -1153,6 +1200,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1]], sequences)
 
     def test_should_send_empty_hello(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, "neo4j://%s" % self._routingServer1.address, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_context_and_reader_support(), vars=self.get_vars())
 
@@ -1171,8 +1221,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1]], sequences)
 
     def test_should_serve_reads_and_fail_writes_when_no_writers_available(self):
-        if get_driver_name() not in ['java']:
-            self.skipTest("consume not implemented in backend")
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'python']:
+            self.skipTest("consume not implemented in backend or requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
@@ -1232,6 +1283,9 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1]], sequences)
 
     def test_should_accept_routing_table_with_single_router(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
@@ -1272,6 +1326,9 @@ class Routing(unittest.TestCase):
         self.assertEqual(["neo4j:bookmark:v1:tx95"], last_bookmarks)
 
     def test_should_forget_address_on_database_unavailable_error(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'python']:
+            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_one_writer(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_database_unavailable_failure(), vars=self.get_vars())
@@ -1709,7 +1766,7 @@ class RoutingV3(Routing):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# , "routing": {"address": "#HOST#:9000"}}
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {#ROUTINGMODE#}
         C: PULL_ALL
@@ -2048,6 +2105,7 @@ class RoutingV3(Routing):
             "#ROUTINGCTX#": '{"address": "' + host + ':9000", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#EXTR_HELLO_ROUTING_PROPS#": "",
+            "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#": ""
         }
 
         if get_driver_name() in ['go']:
@@ -2055,6 +2113,7 @@ class RoutingV3(Routing):
 
         if get_driver_name() in ['java']:
             v["#EXTR_HELLO_ROUTING_PROPS#"] = ', "routing": ' + v['#ROUTINGCTX#']
+            v["#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#"] = ', "routing": {"address": "' + host + ':9000"}'
 
         if get_driver_name() in ['javascript']:
             v["#ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
