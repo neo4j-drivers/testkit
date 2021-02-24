@@ -840,7 +840,8 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(self):
-        if get_driver_name() not in ['java']:
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_procedure_not_found_failure(), vars=self.get_vars())
@@ -858,7 +859,8 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_fail_discovery_when_router_fails_with_unknown_code(self):
-        if get_driver_name() not in ['java']:
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_unknown_failure(), vars=self.get_vars())
@@ -1156,7 +1158,8 @@ class Routing(unittest.TestCase):
         self.assertEqual(3, try_count)
 
     def test_should_use_initial_router_for_discovery_when_others_unavailable(self):
-        if get_driver_name() not in ['java']:
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
@@ -1204,7 +1207,8 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, "neo4j://%s" % self._routingServer1.address, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_empty_context_and_reader_support(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_with_empty_context_and_reader_support(),
+                                   vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
         sequences = []
@@ -1255,7 +1259,8 @@ class Routing(unittest.TestCase):
         self.assertTrue(failed)
 
     def test_should_accept_routing_table_without_writers_and_then_rediscover(self):
-        if get_driver_name() not in ['java']:
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
@@ -1357,7 +1362,8 @@ class Routing(unittest.TestCase):
         self.assertEqual(2, try_count)
 
     def test_should_use_resolver_during_rediscovery_when_existing_routers_fail(self):
-        if get_driver_name() not in ['java']:
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
         resolver_invoked = False
 
@@ -1394,14 +1400,16 @@ class Routing(unittest.TestCase):
         self.assertEqual([[1], [1]], sequences)
 
     def test_should_revert_to_initial_router_if_known_router_throws_protocol_errors(self):
-        if get_driver_name() not in ['java']:
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
 
         def resolver(address):
             return [self._routingServer1.address, self._routingServer3.address]
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
-        self._routingServer1.start(script=self.router_script_with_another_router_and_non_existent_reader(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_with_another_router_and_non_existent_reader(),
+                                   vars=self.get_vars())
         self._routingServer2.start(script=self.router_script_with_empty_response(), vars=self.get_vars())
         self._routingServer3.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
