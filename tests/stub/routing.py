@@ -53,7 +53,7 @@ class Routing(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# null
+        C: ROUTE #ROUTINGCTX# none
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 
@@ -65,6 +65,20 @@ class Routing(unittest.TestCase):
         !: AUTO RESET
 
         C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r"}
+        """
+
+    def read_script_default_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO HELLO
+        !: AUTO GOODBYE
+        !: AUTO RESET
+
+        C: RUN "RETURN 1 as n" {} {"mode": "r"}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
            RECORD [1]
@@ -125,7 +139,7 @@ class Routing(unittest.TestCase):
             "#VERSION#": "4.3",
             "#HOST#": host,
             "#ROUTINGCTX#": '{"address": "' + host + ':9001", "region": "china", "policy": "my_policy"}',
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
+            "#EXTRA_HELLO_PROPS#": get_extra_hello_props()
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
@@ -158,7 +172,7 @@ class Routing(unittest.TestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer.start(script=self.router_script_default_db(),
                                   vars=vars)
-        self._readServer.start(script=self.read_script(),
+        self._readServer.start(script=self.read_script_default_db(),
                                vars=vars)
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session('r')
