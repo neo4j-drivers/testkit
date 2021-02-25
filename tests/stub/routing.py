@@ -371,6 +371,10 @@ class RoutingV3(Routing):
     def get_db(self):
         return None
 
+        # Ignore this on older protocol versions than 4.3
+    def test_default_db(self):
+          pass
+
 
 class NoRouting(unittest.TestCase):
     def setUp(self):
