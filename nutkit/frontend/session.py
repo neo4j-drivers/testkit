@@ -4,7 +4,8 @@ from .transaction import Transaction
 
 
 class Session:
-    def __init__(self, backend, session):
+    def __init__(self, driver, backend, session):
+        self._driver = driver
         self._backend = backend
         self._session = session
 
@@ -53,6 +54,9 @@ class Session:
                         errorId = e.id
                     self._backend.send(protocol.RetryableNegative(
                         self._session.id, errorId=errorId))
+            elif isinstance(res, protocol.ResolverResolutionRequired):
+                addresses = self._driver.resolve(res.address)
+                self._backend.send(protocol.ResolverResolutionCompleted(res.id, addresses))
             elif isinstance(res, protocol.RetryableDone):
                 return x
 

@@ -30,6 +30,19 @@ class Driver:
         self.id = id
 
 
+class ResolverResolutionRequired:
+    """ Represents a need for new address resolution.
+    This means that the backend is expecting the frontend
+    to call the resolver function and submit a new request
+    with the results of it.
+    """
+
+    def __init__(self, id, address):
+        # Id of callback request
+        self.id = id
+        self.address = address
+
+
 class Session:
     """ Represents a session instance on the backend
     """
