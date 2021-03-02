@@ -1574,6 +1574,23 @@ class Routing(unittest.TestCase):
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
 
+    def should_support_multi_db(self):
+        return True
+
+    def test_should_successfully_check_if_support_for_multi_db_is_available(self):
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+            self.skipTest("supportsMultiDb not implemented in backend")
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+
+        supports_multi_db = driver.supportsMultiDB()
+
+        driver.close()
+        self._routingServer1.done()
+        self.assertEqual(self.should_support_multi_db(), supports_multi_db)
+
 
 class RoutingV4(Routing):
     def router_script(self):
@@ -2342,6 +2359,9 @@ class RoutingV3(Routing):
 
     def get_db(self):
         return None
+
+    def should_support_multi_db(self):
+        return False
 
 
 class NoRouting(unittest.TestCase):
