@@ -43,6 +43,16 @@ class ResolverResolutionRequired:
         self.address = address
 
 
+class MultiDBSupport:
+    """ Specifies whether the server or cluster the driver connects to supports multi-databases.
+    It is sent in response to the CheckMultiDBSupport request.
+    """
+
+    def __init__(self, id, available):
+        self.id = id
+        self.available = available
+
+
 class Session:
     """ Represents a session instance on the backend
     """

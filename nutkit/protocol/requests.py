@@ -54,6 +54,16 @@ class VerifyConnectivity:
     def __init__(self, driverId):
         self.driverId = driverId
 
+
+class CheckMultiDBSupport:
+    """ Request to check if the server or cluster the driver connects to supports multi-databases.
+    Backend should respond with a MultiDBSupport response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
 class ResolverResolutionCompleted:
     """ Pushes the results of the resolver function resolution back to the backend.
     This must only be sent immediately after the backend requests a new address resolution
@@ -63,6 +73,7 @@ class ResolverResolutionCompleted:
     def __init__(self, requestId, addresses):
         self.requestId = requestId
         self.addresses = addresses
+
 
 class DriverClose:
     """ Request to close the driver instance on the backend.

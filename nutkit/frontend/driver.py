@@ -22,6 +22,13 @@ class Driver:
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be driver")
 
+    def supportsMultiDB(self):
+        req = protocol.CheckMultiDBSupport(self._driver.id)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.MultiDBSupport):
+            raise Exception("Should be MultiDBSupport")
+        return res.available
+
     def close(self):
         req = protocol.DriverClose(self._driver.id)
         res = self._backend.sendAndReceive(req)
