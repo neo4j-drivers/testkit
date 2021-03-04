@@ -254,6 +254,33 @@ class Routing(unittest.TestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": []}}
         """
 
+    def router_script_with_db_not_found_failure(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# "adb"
+        S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
+           IGNORED
+        """
+
+    def router_script_with_unreachable_db_and_adb_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# "unreachable"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": []}}
+        C: ROUTE #ROUTINGCTX# "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+        """
+
     def read_script(self):
         return """
         !: BOLT #VERSION#
@@ -278,6 +305,20 @@ class Routing(unittest.TestCase):
         C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
         C: PULL {"n": 1000}
         S: <EXIT>
+        """
+
+    def read_script_with_bookmarks(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO HELLO
+        !: AUTO GOODBYE
+        !: AUTO RESET
+
+        C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb", "bookmarks": ["sys:1234", "foo:5678"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r", "bookmark": "foo:6678"}
         """
 
     def read_tx_script(self):
@@ -1591,6 +1632,103 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self.assertEqual(self.should_support_multi_db(), supports_multi_db)
 
+    def test_should_read_successfully_on_empty_discovery_result_using_session_run(self):
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+            self.skipTest("resolver not implemented in backend")
+
+        def resolver(address):
+            return [self._routingServer1.address, self._routingServer2.address]
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
+        self._routingServer1.start(script=self.router_script_with_empty_response(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
+        self._readServer1.start(script=self.read_script(), vars=self.get_vars())
+
+        session = driver.session('r', database=self.get_db())
+        result = session.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self._routingServer2.done()
+        self._readServer1.done()
+        self.assertEqual([1], sequence)
+
+    def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(self):
+        # TODO add support and remove this block
+        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+            self.skipTest("add code support")
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer1.start(script=self.router_script_with_db_not_found_failure(), vars=self.get_vars())
+
+        session = driver.session('r', database=self.get_db())
+        failed = False
+        try:
+            session.run("RETURN 1 as n")
+        except types.DriverError as e:
+            if get_driver_name() in ['java']:
+                self.assertEqual('org.neo4j.driver.exceptions.FatalDiscoveryException', e.errorType)
+            self.assertEqual('Neo.ClientError.Database.DatabaseNotFound', e.code)
+            failed = True
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self.assertTrue(failed)
+
+    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python', 'javascript', 'go']:
+            self.skipTest("requires investigation")
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer1.start(script=self.router_script_with_unreachable_db_and_adb_db(), vars=self.get_vars())
+        self._readServer1.start(script=self.read_script(), vars=self.get_vars())
+
+        session = driver.session('r', database="unreacheable")
+        failed_on_unreachable = False
+        try:
+            session.run("RETURN 1 as n")
+        except types.DriverError as e:
+            if get_driver_name() in ['java']:
+                self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
+            failed_on_unreachable = True
+        session.close()
+
+        session = driver.session('r', database=self.get_db())
+        result = session.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertTrue(failed_on_unreachable)
+        self.assertEqual([1], sequence)
+
+    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
+        pass
+
+    def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._readServer1.start(script=self.read_script_with_bookmarks(), vars=self.get_vars())
+
+        session = driver.session('r', database=self.get_db(), bookmarks=["sys:1234", "foo:5678"])
+        result = session.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        last_bookmarks = session.lastBookmarks()
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertEqual([1], sequence)
+        self.assertEqual(["foo:6678"], last_bookmarks)
+
 
 class RoutingV4(Routing):
     def router_script(self):
@@ -1812,6 +1950,54 @@ class RoutingV4(Routing):
         S: SUCCESS {"type": "r"}
         """
 
+    def router_script_with_db_not_found_failure(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: PULL {"n": -1}
+        S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
+           IGNORED
+        """
+
+    def router_script_with_unreachable_db_and_adb_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "unreachable"} {#ROUTINGMODE# "db": "system"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, []]
+        S: SUCCESS {"type": "r"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def router_script_with_bookmarks(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO HELLO
+        !: AUTO GOODBYE
+        
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", 'bookmarks': ['sys:1234', 'foo:5678']}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r", "bookmark": "sys:2234"}
+        """
+
     def get_vars(self):
         host = self._routingServer1.host
         v = {
@@ -1834,6 +2020,26 @@ class RoutingV4(Routing):
 
     # Ignore this on older protocol versions than 4.3
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
+        pass
+
+    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer1.start(script=self.router_script_with_bookmarks(), vars=self.get_vars())
+        self._readServer1.start(script=self.read_script_with_bookmarks(), vars=self.get_vars())
+
+        session = driver.session('r', database=self.get_db(), bookmarks=["sys:1234", "foo:5678"])
+        result = session.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        last_bookmarks = session.lastBookmarks()
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertEqual([1], sequence)
+        self.assertEqual(["foo:6678"], last_bookmarks)
+
+    def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         pass
 
 
@@ -2050,6 +2256,19 @@ class RoutingV3(Routing):
         S: SUCCESS {"type": "r"}
         """
 
+    def router_script_with_db_not_found_failure(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
+        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
+        C: PULL_ALL
+        S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
+           IGNORED
+        """
+
     def read_script(self):
         return """
         !: BOLT #VERSION#
@@ -2072,6 +2291,19 @@ class RoutingV3(Routing):
         C: RUN "RETURN 1 as n" {} {"mode": "r"}
         C: PULL_ALL
         S: <EXIT>
+        """
+
+    def read_script_with_bookmarks(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO HELLO
+        !: AUTO GOODBYE
+        !: AUTO RESET
+        C: RUN "RETURN 1 as n" {} {"mode": "r", "bookmarks": ["sys:1234", "foo:5678"]}
+        C: PULL_ALL
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r", "bookmark": "foo:6678"}
         """
 
     def read_tx_script(self):
@@ -2362,6 +2594,12 @@ class RoutingV3(Routing):
 
     def should_support_multi_db(self):
         return False
+
+    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
+        pass
+
+    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
+        pass
 
 
 class NoRouting(unittest.TestCase):
