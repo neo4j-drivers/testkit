@@ -24,9 +24,9 @@ from sys import exit
 from argparse import ArgumentParser
 from logging import getLogger, INFO
 
-from boltstub import BoltStubService
-from boltstub.scripting import BoltScript
-from boltstub.watcher import watch
+from . import BoltStubService
+from .parsing import parse_file
+from .watcher import watch
 
 
 log = getLogger(__name__)
@@ -62,7 +62,7 @@ useful for Bolt client integration testing.
     if parsed.verbose:
         watch("boltstub", INFO)
 
-    scripts = map(BoltScript.load, parsed.script)
+    scripts = map(parse_file, parsed.script)
     service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
     try:
         service.start()
@@ -78,8 +78,6 @@ useful for Bolt client integration testing.
             extra = ""
             if hasattr(error, 'script') and error.script.filename:
                 extra += " in {!r}".format(error.script.filename)
-            if hasattr(error, 'line_no') and error.line_no:
-                extra += " at line {}".format(error.line_no)
             print("Script mismatch{}:\n{}".format(extra, error))
         exit(1)
 

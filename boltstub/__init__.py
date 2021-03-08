@@ -19,15 +19,22 @@
 # limitations under the License.
 
 
+from copy import deepcopy
 from logging import getLogger
 from socketserver import TCPServer, BaseRequestHandler
 from sys import stdout
+import traceback
 
-from boltstub.addressing import Address
-from boltstub.packstream import PackStream
-from boltstub.scripting import ServerExit, ScriptMismatch, BoltScript, \
-    ClientMessageLine
-from boltstub.wiring import Wire
+from .addressing import Address
+from .channel import Channel
+from .errors import ServerExit
+from .packstream import PackStream
+from .parsing import (
+    parse_file,
+    Script,
+    ScriptDeviation,
+)
+from .wiring import Wire
 
 
 log = getLogger(__name__)
@@ -65,19 +72,15 @@ class BoltStubService:
 
     @classmethod
     def load(cls, *script_filenames, **kwargs):
-        return cls(*map(BoltScript.load, script_filenames), **kwargs)
+        return cls(*map(parse_file, script_filenames), **kwargs)
 
-    def __init__(self, script, listen_addr=None, exit_on_disconnect=True, timeout=None):
+    def __init__(self, script: Script, listen_addr=None, timeout=None):
         if listen_addr:
             listen_addr = Address.parse(listen_addr)
         else:
             listen_addr = Address(("localhost", self.default_base_port))
-        self.exit_on_disconnect = exit_on_disconnect
         self.host = listen_addr.host
-        if script.port:
-            self.address = Address((listen_addr.host, script.port))
-        else:
-            self.address = Address((listen_addr.host, listen_addr.port_number))
+        self.address = Address((listen_addr.host, listen_addr.port_number))
         self.script = script
         self.exceptions = []
         service = self
@@ -96,18 +99,16 @@ class BoltStubService:
 
             def handle(self):
                 try:
-                    request = self.wire.read(20)
-                    log.info("[#%04X]  C: <HANDSHAKE> %r", self.server_address.port_number, request)
-                    response = script.on_handshake(request)
-                    log.info("[#%04X]  S: <HANDSHAKE> %r", self.server_address.port_number, response)
-                    self.wire.write(response)
-                    self.wire.send()
-                    actor = BoltActor(script, self.wire)
+                    actor = BoltActor(deepcopy(script), self.wire)
                     actor.play()
-                except ServerExit:
-                    pass
+                except ServerExit as e:
+                    log.info("[#%04X]  S: <EXIT> %s",
+                             self.wire.local_address.port_number, e)
+                except ScriptDeviation as e:
+                    e.script = script
+                    service.exceptions.append(e)
                 except Exception as e:
-                    print(e)
+                    traceback.print_exc()
                     service.exceptions.append(e)
 
             def finish(self):
@@ -123,7 +124,15 @@ class BoltStubService:
         self.server.timeout = timeout or self.default_timeout
 
     def start(self):
-        self.server.handle_request()
+        if self.script.context.restarting:
+            self.server.serve_forever()
+        else:
+            self.server.handle_request()
+            self.server.server_close()
+
+    def stop(self):
+        if self.script.context.restarting:
+            self.server.shutdown()
 
     @property
     def timed_out(self):
@@ -132,30 +141,19 @@ class BoltStubService:
 
 class BoltActor:
 
-    def __init__(self, script, wire):
+    def __init__(self, script: Script, wire):
         self.script = script
-        self.wire = wire
-        self.stream = PackStream(wire)
-
-    @property
-    def server_address(self):
-        return self.wire.local_address
+        self.channel = Channel(
+            wire, script.context.bolt_version, log_cb=self.log,
+            handshake_data=self.script.context.handshake
+        )
 
     def play(self):
-        protocol_version = self.script.protocol_version
+        self.channel.handshake()
         try:
-            for line in self.script:
-                if not line.is_compatible(protocol_version):
-                    raise ValueError("Script line %s is not compatible "
-                                     "with protocol version %r" % (line, protocol_version))
-                try:
-                    line.action(self)
-                except ScriptMismatch as error:
-                    # Attach context information and re-raise
-                    error.script = self.script
-                    error.line_no = line.line_no
-                    raise
-            ClientMessageLine.default_action(self)
+            self.script.init(self.channel)
+            while not self.script.done():
+                self.script.consume(self.channel)
         except (ConnectionError, OSError):
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
@@ -163,7 +161,11 @@ class BoltActor:
             return
 
     def log(self, text, *args):
-        log.info("[#%04X]  " + text, self.server_address.port_number, *args)
+        log.info("[#%04X]  " + text,
+                 self.channel.wire.local_address.port_number,
+                 *args)
 
     def log_error(self, text, *args):
-        log.error("[#%04X]  " + text, self.server_address.port_number, *args)
+        log.error("[#%04X]  " + text,
+                  self.channel.wire.local_address.port_number,
+                  *args)

@@ -648,7 +648,11 @@ class PackStream:
         packer = Packer(b)
         packer.pack(message)
         data = b.getvalue()
-        # TODO: multi-chunk messages
+        while len(data) > 65535:
+            chunk = data[:65535]
+            header = bytearray(divmod(len(chunk), 0x100))
+            self.wire.write(header + chunk)
+            data = data[65535:]
         header = bytearray(divmod(len(data), 0x100))
         self.wire.write(header + data + b"\x00\x00")
 

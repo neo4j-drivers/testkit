@@ -16,7 +16,7 @@ class StubServer:
         self.port = port
         self._process = None
 
-    def start(self, path=None, script=None, vars={}):
+    def start(self, path=None, script=None, vars=None):
         if self._process:
             raise Exception("Stub server in use")
 
@@ -28,8 +28,9 @@ class StubServer:
         if script:
             tempdir = tempfile.gettempdir()
             path = os.path.join(tempdir, "temp.script")
-            for v in vars:
-                script = script.replace(v, str(vars[v]))
+            if vars is not None:
+                for v in vars:
+                    script = script.replace(v, str(vars[v]))
             with open(path, "w") as f:
                 f.write(script)
 
