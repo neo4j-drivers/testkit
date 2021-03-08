@@ -198,10 +198,11 @@ class DriverError(BaseError):
     test framework needs to check detailed error handling.
     """
 
-    def __init__(self, id=None, errorType="", msg=""):
+    def __init__(self, id=None, errorType="", msg="", code=""):
         self.id = id
         self.errorType = errorType
         self.msg = msg
+        self.code = code
 
     def __str__(self):
         return "DriverError : " + self.errorType + " : " + self.msg

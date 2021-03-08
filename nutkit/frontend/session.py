@@ -18,10 +18,16 @@ class Session:
     def run(self, cypher, params=None, txMeta=None, timeout=None):
         req = protocol.SessionRun(self._session.id, cypher, params,
                                   txMeta=txMeta, timeout=timeout)
-        res = self._backend.sendAndReceive(req)
-        if not isinstance(res, protocol.Result):
-            raise Exception("Should be result but was: %s" % res)
-        return Result(self._backend, res)
+        self._backend.send(req)
+        while True:
+            res = self._backend.receive()
+            if isinstance(res, protocol.ResolverResolutionRequired):
+                addresses = self._driver.resolve(res.address)
+                self._backend.send(protocol.ResolverResolutionCompleted(res.id, addresses))
+            elif isinstance(res, protocol.Result):
+                return Result(self._backend, res)
+            else:
+                raise Exception("Should be Result or ResolverResolutionRequired but was: %s" % res)
 
     def processTransaction(self, req, fn, config=None):
         self._backend.send(req)
