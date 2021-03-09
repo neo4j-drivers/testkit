@@ -35,8 +35,8 @@ def start_container(testkit_path, branch_name):
     container = docker.run(
             image, "runner",
             command=["python3", "/testkit/driver/bootstrap.py"],
-            mountMap={testkit_path: "/testkit"},
-            envMap=env,
+            mount_map={testkit_path: "/testkit"},
+            env_map=env,
             network="the-bridge",
             aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
     return Container(container, env)
@@ -66,4 +66,4 @@ class Container:
         })
         self._container.exec([
             "python3", "-m", "tests.neo4j.suites", suite],
-            envMap=self._env)
+            env_map=self._env)

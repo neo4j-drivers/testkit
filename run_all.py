@@ -1,7 +1,8 @@
 import os
-import sys
 import subprocess
+import sys
 import tempfile
+import traceback
 
 drivers = [
     {
@@ -15,6 +16,10 @@ drivers = [
             "X  X  X  X",
             " XX    XX ",
         ],
+        "branch-translation": {
+            "4.0": "4.2",
+            "4.1": "4.2"
+        }
     },
     {
         "name": "javascript",
@@ -80,11 +85,15 @@ def setup_environment():
     return (temp_path, driver_repo_path, branch)
 
 
-def rmdir(dir):
+def rmdir(dir_):
     try:
-        subprocess.run(['rm', '-fr', dir])
-    except FileNotFoundError as error:
+        subprocess.run(['rm', '-fr', dir_])
+    except FileNotFoundError:
         pass
+
+
+def translate_branch(driver, branch):
+    return driver.get("branch-translation", {}).get(branch, branch)
 
 
 def clone_repo(driver, branch, path):
@@ -99,11 +108,23 @@ def update_environment(driver, repo_path):
 
 def run():
     arguments = sys.argv[1:]
-    subprocess.run(["python3", "main.py"] + arguments, check=True)
+    try:
+        subprocess.run(["python3", "main.py"] + arguments, check=True)
+        return True
+    except subprocess.CalledProcessError:
+        if os.environ.get("TEST_RUN_ALL_DRIVERS", "").lower() \
+                in ("true", "y", "yes", "1", "on"):
+            traceback.print_exc()
+            return False
+        else:
+            raise
 
-def print_art(driver, scale):
+
+def print_art(driver, branch, scale):
     print('')
-    print('Testing %s (%s)' % (driver["name"], driver["repo"]))
+    print(
+        'Testing %s (%s) branch %s' % (driver["name"], driver["repo"], branch)
+    )
     print('')
 
     art = driver.get("art", False)
@@ -117,16 +138,26 @@ def print_art(driver, scale):
                 print(c*scale, end='')
             print('')
     print('')
+    sys.stdout.flush()
 
 
-if __name__ == "__main__":
+def main():
     (temp_path, driver_repo_path, branch) = setup_environment()
+    success = True
 
     for driver in drivers:
-        print_art(driver, 2)
+        print_art(driver, branch, 2)
+        branch = translate_branch(driver, branch)
         clone_repo(driver, branch, driver_repo_path)
         update_environment(driver, driver_repo_path)
-        run()
+        success = run() and success
         rmdir(driver_repo_path)
 
     rmdir(temp_path)
+
+    if not success:
+        sys.exit("One or more drivers caused failing tests.")
+
+
+if __name__ == "__main__":
+    main()

@@ -29,19 +29,19 @@ class Standalone:
 
     def start(self):
         # Environment variables passed to the Neo4j docker container
-        envMap = {
+        env_map = {
             "NEO4J_dbms_connector_bolt_advertised__address":
                 "%s:%d" % (self._hostname, self._port),
             "NEO4J_AUTH":
                 "%s/%s" % (username, password),
         }
         if self._edition != "community":
-            envMap["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
+            env_map["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
         logs_path = join(self._artifacts_path, "logs")
         self._container = docker.run(
             self._image, self._hostname,
-            mountMap={logs_path: "/logs"},
-            envMap=envMap,
+            mount_map={logs_path: "/logs"},
+            env_map=env_map,
             network="the-bridge")
 
     def address(self):
@@ -99,7 +99,7 @@ class Core:
         self._container = None
 
     def start(self, image, initial_members, network):
-        envMap = {
+        env_map = {
             "NEO4J_dbms_connector_bolt_advertised__address":
                 "%s:%d" % (self.name, 7687),
             "NEO4J_dbms_mode":
@@ -126,8 +126,8 @@ class Core:
         }
         logs_path = join(self._artifacts_path, "logs")
         self._container = docker.run(image, self.name,
-                                     envMap=envMap, network=network,
-                                     mountMap={logs_path: "/logs"})
+                                     env_map=env_map, network=network,
+                                     mount_map={logs_path: "/logs"})
 
     def stop(self):
         self._container.rm()

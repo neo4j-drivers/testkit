@@ -12,9 +12,15 @@ Environment variables:
   * TEST_DRIVER_REPO
     Path to driver repository
   * TEST_BRANCH
-    Name of testkit branch. When running locally this defaults to 'local'.
+    Name of testkit branch. When running locally, this defaults to 'local'.
   * TEST_BUILD_CACHE_ENABLED
     Set to `true` to enable build cache persistence via Docker Volumes for supported build systems. Only Maven is supported at the moment and it stores its data in `testkit-m2` volume.
+  * TEST_RUN_ALL_TESTS
+    Set to `true` to make sure all tests are run even if some fail. Testkit will
+    still exit with a non-zero exit code if any test failed.
+  * TEST_DOCKER_USER
+    If specified, all docker containers are run as the specified user. Value is
+    directly passed to docker, if present. See `docker run -u` for more details.
 
 ```console
 export TEST_DRIVER_NAME=go
@@ -105,6 +111,9 @@ Requirements on host:
 Environment variables:
   * TEST_DRIVER_BRANCH
     Branch to be tested in all drivers. Default: 4.3
+  * TEST_RUN_ALL_DRIVERS
+    Set to `true` to make sure all drivers are tested even if some fail. The
+    program will still exit with a non-zero exit code if any test failed.
 
 ```console
 python3 run_all.py
