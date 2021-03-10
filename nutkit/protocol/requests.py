@@ -22,7 +22,8 @@ class NewDriver:
     Backend should respond with a Driver response or an Error response.
     """
 
-    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False):
+    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False, domainNameResolverRegistered=False,
+                 connectionTimeoutMs=None):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
@@ -30,6 +31,8 @@ class NewDriver:
         # Optional custom user agent string
         self.userAgent = userAgent
         self.resolverRegistered = resolverRegistered
+        self.domainNameResolverRegistered = domainNameResolverRegistered
+        self.connectionTimeoutMs = connectionTimeoutMs
 
 
 class AuthorizationToken:
@@ -68,6 +71,17 @@ class ResolverResolutionCompleted:
     """ Pushes the results of the resolver function resolution back to the backend.
     This must only be sent immediately after the backend requests a new address resolution
     by replying with the ResolverResolutionRequired response.
+    """
+
+    def __init__(self, requestId, addresses):
+        self.requestId = requestId
+        self.addresses = addresses
+
+
+class DomainNameResolutionCompleted:
+    """ Pushes the results of the domain name resolver function resolution back to the backend.
+    This must only be sent immediately after the backend requests a new address resolution
+    by replying with the DomainNameResolutionRequired response.
     """
 
     def __init__(self, requestId, addresses):

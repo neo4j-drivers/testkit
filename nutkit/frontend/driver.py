@@ -4,13 +4,14 @@ from .session import Session
 
 
 class Driver:
-    """
-    At present, the resolverFn is only supported in tx functions.
-    """
-    def __init__(self, backend, uri, authToken, userAgent=None, resolverFn=None):
+    def __init__(self, backend, uri, authToken, userAgent=None, resolverFn=None, domainNameResolverFn=None,
+                 connectionTimeoutMs=None):
         self._backend = backend
         self._resolverFn = resolverFn
-        req = protocol.NewDriver(uri, authToken, userAgent=userAgent, resolverRegistered=resolverFn is not None)
+        self._domainNameResolverFn = domainNameResolverFn
+        req = protocol.NewDriver(uri, authToken, userAgent=userAgent, resolverRegistered=resolverFn is not None,
+                                 domainNameResolverRegistered=domainNameResolverFn is not None,
+                                 connectionTimeoutMs=connectionTimeoutMs)
         res = backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be driver")
@@ -18,9 +19,16 @@ class Driver:
 
     def verifyConnectivity(self):
         req = protocol.VerifyConnectivity(self._driver.id)
-        res = self._backend.sendAndReceive(req)
-        if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+        self._backend.send(req)
+        while True:
+            res = self._backend.receive()
+            if isinstance(res, protocol.DomainNameResolutionRequired):
+                addresses = self.resolveDomainName(res.name)
+                self._backend.send(protocol.DomainNameResolutionCompleted(res.id, addresses))
+            elif isinstance(res, protocol.Driver):
+                return
+            else:
+                raise Exception("Should be Driver or DomainNameResolutionRequired but was: %s" % res)
 
     def supportsMultiDB(self):
         req = protocol.CheckMultiDBSupport(self._driver.id)
@@ -47,3 +55,6 @@ class Driver:
 
     def resolve(self, address):
         return self._resolverFn(address)
+
+    def resolveDomainName(self, name):
+        return self._domainNameResolverFn(name)
