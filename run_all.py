@@ -72,6 +72,54 @@ drivers = [
 ]
 
 
+def patched_process_run(*popenargs, input=None, capture_output=False,
+                        timeout=None, check=False, **kwargs):
+    """
+    Copy of subprocess.run with increased process._sigint_wait_secs.
+
+    This gives testkit enough time to clean the docker "mess" it made.
+    """
+    if input is not None:
+        if kwargs.get('stdin') is not None:
+            raise ValueError('stdin and input arguments may not both be used.')
+        kwargs['stdin'] = subprocess.PIPE
+
+    if capture_output:
+        if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+            raise ValueError('stdout and stderr arguments may not be used '
+                             'with capture_output.')
+        kwargs['stdout'] = subprocess.PIPE
+        kwargs['stderr'] = subprocess.PIPE
+
+    with subprocess.Popen(*popenargs, **kwargs) as process:
+        process._sigint_wait_secs = 10
+        try:
+            stdout, stderr = process.communicate(input, timeout=timeout)
+        except subprocess.TimeoutExpired as exc:
+            process.kill()
+            if subprocess._mswindows:
+                # Windows accumulates the output in a single blocking
+                # read() call run on child threads, with the timeout
+                # being done in a join() on those threads.  communicate()
+                # _after_ kill() is required to collect that and add it
+                # to the exception.
+                exc.stdout, exc.stderr = process.communicate()
+            else:
+                # POSIX _communicate already populated the output so
+                # far into the TimeoutExpired exception.
+                process.wait()
+            raise
+        except:  # Including KeyboardInterrupt, communicate handled that.
+            process.kill()
+            # We don't call process.wait() as .__exit__ does that for us.
+            raise
+        retcode = process.poll()
+        if check and retcode:
+            raise subprocess.CalledProcessError(retcode, process.args,
+                                                output=stdout, stderr=stderr)
+    return subprocess.CompletedProcess(process.args, retcode, stdout, stderr)
+
+
 def setup_environment():
     temp_path = tempfile.gettempdir()
     driver_repo_path = os.path.join(temp_path, 'driver')
@@ -82,7 +130,7 @@ def setup_environment():
 
     branch = os.environ.get("TEST_DRIVER_BRANCH", "4.3")
 
-    return (temp_path, driver_repo_path, branch)
+    return driver_repo_path, branch
 
 
 def rmdir(dir_):
@@ -109,7 +157,7 @@ def update_environment(driver, repo_path):
 def run():
     arguments = sys.argv[1:]
     try:
-        subprocess.run(["python3", "main.py"] + arguments, check=True)
+        patched_process_run(["python3", "main.py"] + arguments, check=True)
         return True
     except subprocess.CalledProcessError:
         if os.environ.get("TEST_RUN_ALL_DRIVERS", "").lower() \
@@ -142,18 +190,18 @@ def print_art(driver, branch, scale):
 
 
 def main():
-    (temp_path, driver_repo_path, branch) = setup_environment()
+    driver_repo_path, branch = setup_environment()
     success = True
 
     for driver in drivers:
         print_art(driver, branch, 2)
         branch = translate_branch(driver, branch)
-        clone_repo(driver, branch, driver_repo_path)
-        update_environment(driver, driver_repo_path)
-        success = run() and success
-        rmdir(driver_repo_path)
-
-    rmdir(temp_path)
+        try:
+            clone_repo(driver, branch, driver_repo_path)
+            update_environment(driver, driver_repo_path)
+            success = run() and success
+        finally:
+            rmdir(driver_repo_path)
 
     if not success:
         sys.exit("One or more drivers caused failing tests.")

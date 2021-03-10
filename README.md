@@ -21,6 +21,10 @@ Environment variables:
   * TEST_DOCKER_USER
     If specified, all docker containers are run as the specified user. Value is
     directly passed to docker, if present. See `docker run -u` for more details.
+  * TEST_DOCKER_RMI
+    Set to `true` to make testkit remove all tags it created/overwrote after
+    they are not needed anymore. If said tag is the only tag of that image,
+    docker will remove the image and all intermediate parent images.
 
 ```console
 export TEST_DRIVER_NAME=go

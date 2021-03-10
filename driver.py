@@ -41,12 +41,7 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
     shutil.copytree(cas_source_path, cas_path)
 
     # This will use the driver folder as build context.
-    print("Building driver Docker image %s from %s"
-          % (image_name, docker_image_path))
-    subprocess.check_call([
-        "docker", "build", "--tag", image_name, docker_image_path])
-
-    docker.remove_dangling()
+    docker.build_and_tag(image_name, docker_image_path)
 
     return image_name
 

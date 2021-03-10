@@ -2,6 +2,7 @@ import os
 import subprocess
 
 _running = {}
+_created_tags = set()
 
 
 class Container:
@@ -31,6 +32,7 @@ class Container:
 
     def rm(self):
         cmd = ["docker", "rm", "-f", "-v", self.name]
+        print('docker rm -f -v "%s"' % self.name)
         subprocess.run(cmd, check=False,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         del _running[self.name]
@@ -84,9 +86,24 @@ def load(readable):
         raise Exception("Failed to load docker image")
 
 
+def build_and_tag(tag_name, dockerfile_path, cwd=None):
+    print("Building runner Docker image %s from %s" % (tag_name,
+                                                       dockerfile_path))
+    subprocess.check_call([
+        "docker", "build", "--tag", tag_name, dockerfile_path
+    ], cwd=cwd)
+    _created_tags.add(tag_name)
+    remove_dangling()
+
+
 def cleanup():
     for c in list(_running.values()):
         c.rm()
+    if os.environ.get("TEST_DOCKER_RMI", "").lower() \
+            in ("true", "y", "yes", "1", "on"):
+        for t in _created_tags:
+            print('docker rmi "%s"' % t)
+            subprocess.run(["docker", "rmi", t])
 
 
 def remove_dangling():

@@ -12,6 +12,7 @@ orchestrate which suites that are executed in each context.
 import argparse
 import atexit
 import os
+import signal
 import subprocess
 import sys
 import traceback
@@ -166,9 +167,11 @@ def parse_command_line(configurations, argv):
     return configs
 
 
-def cleanup():
+def cleanup(*_, **__):
+    print("cleanup started")
     docker.cleanup()
     for n in networks:
+        print('docker network rm "%s"' % n)
         subprocess.run(["docker", "network", "rm", n],
                        check=False, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
