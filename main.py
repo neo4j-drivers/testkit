@@ -9,11 +9,13 @@ setups, it is the responsibility of this script to setup these contexts and
 orchestrate which suites that are executed in each context.
 """
 
-import os
-import sys
-import atexit
-import subprocess
 import argparse
+import atexit
+import os
+import signal
+import subprocess
+import sys
+import traceback
 
 from tests.testenv import (
         begin_test_suite, end_test_suite, in_teamcity)
@@ -165,25 +167,40 @@ def parse_command_line(configurations, argv):
     return configs
 
 
-def cleanup():
+def cleanup(*_, **__):
+    print("cleanup started")
     docker.cleanup()
     for n in networks:
+        print('docker network rm "%s"' % n)
         subprocess.run(["docker", "network", "rm", n],
                        check=False, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
 
 
 def main(settings, configurations):
-    thisPath = settings.testkit_path
-    driverName = settings.driver_name
-    testkitBranch = settings.branch
-    driverRepo = settings.driver_repo
-    #  thisPath, driverName, testkitBranch, driverRepo):
+    failed = False
+
+    def run_fail_wrapper(func, *args, **kwargs):
+        nonlocal failed
+        try:
+            func(*args, **kwargs)
+        except subprocess.CalledProcessError:
+            failed = True
+            if settings.run_all_tests:
+                traceback.print_exc()
+            else:
+                raise
+
+    this_path = settings.testkit_path
+    driver_name = settings.driver_name
+    testkit_branch = settings.branch
+    driver_repo = settings.driver_repo
+    #  this_path, driver_name, testkit_branch, driver_repo):
     # Prepare collecting of artifacts, collected to ./artifcats/
-    artifactsPath = os.path.abspath(os.path.join(".", "artifacts"))
-    if not os.path.exists(artifactsPath):
-        os.makedirs(artifactsPath)
-    print("Putting artifacts in %s" % artifactsPath)
+    artifacts_path = os.path.abspath(os.path.join(".", "artifacts"))
+    if not os.path.exists(artifacts_path):
+        os.makedirs(artifacts_path)
+    print("Putting artifacts in %s" % artifacts_path)
 
     # Important to stop all docker images upon exit
     # Also make sure that none of those images are running at this point
@@ -198,42 +215,42 @@ def main(settings, configurations):
         "docker", "network", "create", "the-bridge"
     ])
 
-    driverContainer = driver.start_container(thisPath, testkitBranch,
-                                             driverName, driverRepo,
-                                             artifactsPath,
-                                             network="the-bridge")
-    driverContainer.clean_artifacts()
+    driver_container = driver.start_container(this_path, testkit_branch,
+                                              driver_name, driver_repo,
+                                              artifacts_path,
+                                              network="the-bridge")
+    driver_container.clean_artifacts()
     print("Cleaned up artifacts")
 
     print("Build driver and test backend in driver container")
-    driverContainer.build_driver_and_backend()
+    driver_container.build_driver_and_backend()
     print("Finished building driver and test backend")
 
     if test_flags["UNIT_TESTS"]:
         begin_test_suite('Unit tests')
-        driverContainer.run_unit_tests()
+        run_fail_wrapper(driver_container.run_unit_tests)
         end_test_suite('Unit tests')
 
     print("Start test backend in driver container")
-    driverContainer.start_backend()
+    driver_container.start_backend()
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    runnerContainer = runner.start_container(thisPath, testkitBranch)
+    runner_container = runner.start_container(this_path, testkit_branch)
 
     if test_flags["STUB_TESTS"]:
-        runnerContainer.run_stub_tests()
+        run_fail_wrapper(runner_container.run_stub_tests)
 
     if test_flags["TLS_TESTS"]:
-        runnerContainer.run_tls_tests()
+        run_fail_wrapper(runner_container.run_tls_tests)
 
     """
     Neo4j server test matrix
     """
     # Make an artifacts folder where the database can place it's logs, each
     # time we start a database server we should use a different folder.
-    neo4jArtifactsPath = os.path.join(artifactsPath, "neo4j")
-    os.makedirs(neo4jArtifactsPath)
+    neo4j_artifacts_path = os.path.join(artifacts_path, "neo4j")
+    os.makedirs(neo4j_artifacts_path)
     for neo4j_config in configurations:
         download = neo4j_config.download
         if download:
@@ -241,20 +258,20 @@ def main(settings, configurations):
             docker.load(download.get())
 
         cluster = neo4j_config.cluster
-        serverName = neo4j_config.name
+        server_name = neo4j_config.name
         stress_duration = neo4j_config.stress_test_duration
 
         # Start a Neo4j server
         if cluster:
-            print("Starting neo4j cluster (%s)" % serverName)
+            print("Starting neo4j cluster (%s)" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
-                                   serverName,
-                                   neo4jArtifactsPath)
+                                   server_name,
+                                   neo4j_artifacts_path)
         else:
-            print("Starting neo4j standalone server (%s)" % serverName)
+            print("Starting neo4j standalone server (%s)" % server_name)
             server = neo4j.Standalone(neo4j_config.image,
-                                      serverName,
-                                      neo4jArtifactsPath,
+                                      server_name,
+                                      neo4j_artifacts_path,
                                       "neo4jserver", 7687,
                                       neo4j_config.edition)
         server.start()
@@ -264,7 +281,7 @@ def main(settings, configurations):
         # Use driver container to check for Neo4j availability since connect
         # will be done from there
         print("Waiting for neo4j service port to be available")
-        driverContainer.poll_host_and_port_until_available(hostname, port)
+        driver_container.poll_host_and_port_until_available(hostname, port)
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:
@@ -272,11 +289,12 @@ def main(settings, configurations):
             suite = neo4j_config.suite
             if suite:
                 print("Running test suite %s" % suite)
-                runnerContainer.run_neo4j_tests(suite, hostname,
-                                                neo4j.username,
-                                                neo4j.password)
+                run_fail_wrapper(
+                    runner_container.run_neo4j_tests,
+                    suite, hostname, neo4j.username, neo4j.password
+                )
             else:
-                print("No test suite specified for %s" % serverName)
+                print("No test suite specified for %s" % server_name)
 
         # Run the stress test suite within the driver container.
         # The stress test suite uses threading and put a bigger load on the
@@ -284,8 +302,10 @@ def main(settings, configurations):
         # the driver language.
         if test_flags["STRESS_TESTS"] and stress_duration > 0:
             print("Building and running stress tests...")
-            driverContainer.run_stress_tests(hostname, port, neo4j.username,
-                                             neo4j.password, neo4j_config)
+            run_fail_wrapper(
+                driver_container.run_stress_tests,
+                hostname, port, neo4j.username, neo4j.password, neo4j_config
+            )
 
         # Run driver native integration tests within the driver container.
         # Driver integration tests should check env variable to skip tests
@@ -294,21 +314,24 @@ def main(settings, configurations):
         if test_flags["INTEGRATION_TESTS"]:
             if not cluster:
                 print("Building and running integration tests...")
-                driverContainer.run_integration_tests(hostname, port,
-                                                      neo4j.username,
-                                                      neo4j.password,
-                                                      neo4j_config)
+                run_fail_wrapper(
+                    driver_container.run_integration_tests,
+                    hostname, port, neo4j.username, neo4j.password, neo4j_config
+                )
             else:
-                print("Skipping integration tests for %s" % serverName)
+                print("Skipping integration tests for %s" % server_name)
 
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any
         # pending connections detected here should indicate connection leakage
         # in the driver.
         print("Checking that connections are closed to the database")
-        driverContainer.assert_connections_closed(hostname, port)
+        driver_container.assert_connections_closed(hostname, port)
 
         server.stop()
+
+    if failed:
+        sys.exit("One or more test suites failed.")
 
 
 if __name__ == "__main__":
@@ -320,14 +343,14 @@ if __name__ == "__main__":
     # Use this path as base for locating a whole bunch of other stuff.
     # Add this path to python sys path to be able to invoke modules
     # from this repo
-    thisPath = os.path.dirname(os.path.abspath(__file__))
-    os.environ['PYTHONPATH'] = thisPath
+    this_path = os.path.dirname(os.path.abspath(__file__))
+    os.environ['PYTHONPATH'] = this_path
 
     try:
-        settings = settings.build(thisPath)
+        settings = settings.build(this_path)
     except settings.InvalidArgs as e:
         print('')
         print(e)
-        os.sys.exit(-1)
+        sys.exit(-1)
 
     main(settings, configurations)

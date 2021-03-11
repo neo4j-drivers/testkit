@@ -41,12 +41,7 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
     shutil.copytree(cas_source_path, cas_path)
 
     # This will use the driver folder as build context.
-    print("Building driver Docker image %s from %s"
-          % (image_name, docker_image_path))
-    subprocess.check_call([
-        "docker", "build", "--tag", image_name, docker_image_path])
-
-    docker.remove_dangling()
+    docker.build_and_tag(image_name, docker_image_path)
 
     return image_name
 
@@ -60,24 +55,24 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
     image = _ensure_image(testkit_path, host_glue_path,
                           branch_name, driver_name)
     # Configure volume map for the driver container
-    mountMap = {
+    mount_map = {
         testkit_path:   "/testkit",
         driver_path:    "/driver",
         artifacts_path: "/artifacts"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
         if driver_name == "java":
-            mountMap["testkit-m2"] = "/root/.m2"
+            mount_map["testkit-m2"] = "/root/.m2"
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
     container = docker.run(
         image, "driver",
         command=["python3", "/testkit/driver/bootstrap.py"],
-        mountMap=mountMap,
-        portMap={9876: 9876},  # For convenience when debugging
+        mount_map=mount_map,
+        port_map={9876: 9876},  # For convenience when debugging
         network=network,
-        workingFolder="/driver")
+        working_folder="/driver")
     return Container(container, driver_glue_path)
 
 
@@ -132,31 +127,31 @@ class Container:
         """
         self._container.exec(
                 ["python3", "/testkit/driver/clean_artifacts.py"],
-                envMap=self._default_env())
+                env_map=self._default_env())
 
     def build_driver_and_backend(self):
         self._container.exec(
                 ["python3", self._gluePath + "build.py"],
-                envMap=self._default_env())
+                env_map=self._default_env())
 
     def run_unit_tests(self):
         self._container.exec(
                 ["python3", self._gluePath + "unittests.py"],
-                envMap=self._default_env())
+                env_map=self._default_env())
 
     def run_stress_tests(self, hostname, port, username, password,
                          config: neo4j.Config) -> None:
         env = self._native_env(hostname, port, username, password, config)
         self._container.exec([
             "python3", self._gluePath + "stress.py"],
-            envMap=env)
+            env_map=env)
 
     def run_integration_tests(self, hostname, port, username, password,
                               config: neo4j.Config):
         env = self._native_env(hostname, port, username, password, config)
         self._container.exec([
             "python3", self._gluePath + "integration.py"],
-            envMap=env)
+            env_map=env)
 
     def start_backend(self):
         env = self._default_env()
@@ -168,13 +163,13 @@ class Container:
         # works simply by commenting detach and see that the backend starts.
         self._container.exec_detached(
                 ["python3", self._gluePath + "backend.py"],
-                envMap=env)
+                env_map=env)
         # Wait until backend started
         # Use driver container to check for backend availability
         self._container.exec([
             "python3",
             "/testkit/driver/wait_for_port.py", "localhost", "%d" % 9876],
-            envMap=env)
+            env_map=env)
 
     def poll_host_and_port_until_available(self, hostname, port):
         self._container.exec([

@@ -10,7 +10,9 @@ class InvalidArgs(Exception):
 
 
 Settings = collections.namedtuple('Settings', [
-    'in_teamcity', 'driver_name', 'branch', 'testkit_path', 'driver_repo'])
+    'in_teamcity', 'driver_name', 'branch', 'testkit_path', 'driver_repo',
+    'run_all_tests'
+])
 
 
 def build(testkit_path):
@@ -40,5 +42,8 @@ def build(testkit_path):
                 "name of testkit branch. "
                 "This name is used to name Docker repository.")
         branch = "local"
+
+    run_all_tests = os.environ.get("TEST_RUN_ALL_TESTS", "").lower() \
+        in ("true", "y", "yes", "1", "on")
 
     return Settings(**locals())
