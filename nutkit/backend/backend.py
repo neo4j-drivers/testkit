@@ -1,7 +1,7 @@
-import json
 import inspect
-import socket
+import json
 import os
+import socket
 
 import nutkit.protocol as protocol
 

@@ -1,4 +1,2 @@
 lark
 nose
-pytest
-pytest-mock
