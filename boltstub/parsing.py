@@ -665,9 +665,6 @@ class Script:
         self._consume_bang_lines(bang_lines)
         self.block_list = block_list
         self.filename = filename or ""
-        if not self.block_list.has_deterministic_end():
-            warnings.warn("Server has no deterministic end. It won't shut down "
-                          "by itself.")
 
     def _consume_bang_lines(self, bang_lines):
         for bl in bang_lines:
