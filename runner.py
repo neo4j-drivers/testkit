@@ -43,6 +43,12 @@ class Container:
     def __init__(self, container, env):
         self._container = container
         self._env = env
+        self._init_container()
+
+    def _init_container(self):
+        self._container.exec(["pip3", "install", "-U", "pip"])
+        self._container.exec(["pip3", "install", "-Ur",
+                              "/testkit/requirements.txt"])
 
     def run_stub_tests(self):
         self._container.exec(["python3", "-m", "tests.stub.suites"])
