@@ -1,5 +1,5 @@
 import abc
-from json import JSONDecoder
+import json
 from os import path
 import re
 from textwrap import wrap
@@ -23,29 +23,6 @@ def load_parser():
 
 
 parser = load_parser()
-
-
-def parse_line(content):
-    def splart(s):
-        parts = s.split(maxsplit=1)
-        while len(parts) < 2:
-            parts.append("")
-        return parts
-
-    tag, data = splart(content.strip())
-    fields = []
-    decoder = JSONDecoder()
-    while data:
-        data = data.lstrip()
-        try:
-            decoded, end = decoder.raw_decode(data)
-        except ValueError:
-            fields.append(data)
-            data = ""
-        else:
-            fields.append(decoded)
-            data = data[end:]
-    return tag, fields
 
 
 class LineError(lark.GrammarError):
@@ -80,6 +57,31 @@ class Line(str, abc.ABC):
     @abc.abstractmethod
     def canonical(self):
         pass
+
+    @staticmethod
+    def parse_line(line):
+        def splart(s):
+            parts = s.split(maxsplit=1)
+            while len(parts) < 2:
+                parts.append("")
+            return parts
+
+        content = line.content
+        tag, data = splart(content.strip())
+        fields = []
+        decoder = json.JSONDecoder()
+        while data:
+            data = data.lstrip()
+            try:
+                decoded, end = decoder.raw_decode(data)
+            except json.JSONDecodeError as e:
+                raise LineError(
+                    line,
+                    "message fields must be white space separated json"
+                ) from e
+            fields.append(decoded)
+            data = data[end:]
+        return tag, fields
 
 
 class BangLine(Line):
@@ -146,11 +148,12 @@ class BangLine(Line):
 class ClientLine(Line):
     def __new__(cls, *args, **kwargs):
         obj = super(ClientLine, cls).__new__(cls, *args, **kwargs)
-        obj.parsed = parse_line(obj.content)
+        obj.parsed = cls.parse_line(obj)
         return obj
 
     def canonical(self):
-        return "C: {}".format(self.content)
+        return " ".join(("C:", self.parsed[0],
+                         *map(json.dumps, self.parsed[1])))
 
     def match(self, msg):
         tag, fields = self.parsed
@@ -197,13 +200,25 @@ class ClientLine(Line):
 
 
 class ServerLine(Line):
+    def __new__(cls, *args, **kwargs):
+        obj = super(ServerLine, cls).__new__(cls, *args, **kwargs)
+        obj.command_match = re.match(r"^<(\S+)>(.*)$", obj.content)
+        if not obj.command_match:
+            obj.parsed = cls.parse_line(obj)
+        else:
+            obj.parsed = None, []
+        return obj
+
     def canonical(self):
-        return "S: {}".format(self.content)
+        if self.parsed is None:
+            return "S: {}".format(self.content)
+        else:
+            return " ".join(("S:", self.parsed[0],
+                             *map(json.dumps, self.parsed[1])))
 
     def try_run_command(self, channel):
-        match = re.match(r"^<(\S+)>(.*)$", self.content)
-        if match:
-            tag, args = match.groups()
+        if self.command_match:
+            tag, args = self.command_match.groups()
             args = args.strip()
             if tag == "EXIT":
                 raise ServerExit("server exit as part of the script: {}".format(

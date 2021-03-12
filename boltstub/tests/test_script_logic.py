@@ -9,9 +9,9 @@ from ..parsing import (
     ServerLine,
     AlternativeBlock,
     BlockList,
+    Line,
     OptionalBlock,
     ParallelBlock,
-    parse_line,
     PlainBlock,
     Repeat0Block,
     Repeat1Block,
@@ -39,7 +39,7 @@ class MockChannel:
         self.msg_buffer.append(struct)
 
     def send_server_line(self, server_line):
-        msg = TranslatedStructure(*parse_line(server_line.content))
+        msg = TranslatedStructure(*Line.parse_line(server_line))
         self.msg_buffer.append(msg)
 
     def msg_buffer_names(self):

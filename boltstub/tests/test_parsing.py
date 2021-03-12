@@ -22,8 +22,11 @@ def assert_plain_block_block_list(block_list, lines=None):
 
 
 def whitespace_generator(n: int,
-                         optional_with_nl: set,
-                         optional_without_nl) -> Iterator[Tuple[str]]:
+                         optional_with_nl: Optional[set],
+                         optional_without_nl: Optional[set]) -> \
+        Iterator[Tuple[str]]:
+    if optional_with_nl is None:
+        optional_with_nl = set()
     if optional_without_nl is None:
         optional_without_nl = set()
     if optional_without_nl and (min(optional_without_nl) < 0
@@ -89,6 +92,51 @@ def test_empty_script_is_invalid(whitespaces):
 def test_only_bang_script_is_invalid(whitespaces, bang):
     with pytest.raises(lark.ParseError):
         parsing.parse(whitespaces[0] + bang + whitespaces[1])
+
+
+good_fields = (
+    "null",
+    "1",
+    "1.9",
+    "-4",
+    '"a"',
+    '"None"',
+    '["a", 2]',
+    '{"a": 1, "b": "c"}',
+)
+bad_fields = (
+    "None",
+    "1,9",
+    "'a'",
+    "['a', 2]",
+    "{\"a\": 1, 'b': \"c\"}",
+)
+
+
+@pytest.mark.parametrize(("fields", "fail"), (
+    *(([field], False) for field in good_fields),
+    *(([field], True) for field in bad_fields),
+    *(([gf, bf], True) for gf in good_fields for bf in bad_fields),
+    *(([bf, gf], True) for gf in good_fields for bf in bad_fields),
+))
+@pytest.mark.parametrize("line_type", ("C:", "S:"))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(3, None, {0, 1, 2}))
+def test_message_fields(line_type, fields, fail, extra_ws):
+    if len(fields) == 1:
+        script = "%s" + line_type + " MSG %s" + fields[0] + "%s"
+    elif len(fields) == 2:
+        script = line_type + " MSG %s" + " %s".join(fields) + "%s"
+    else:
+        raise ValueError()
+    script = script % extra_ws
+    if fail:
+        with pytest.raises(parsing.LineError):
+            parsing.parse(script)
+    else:
+        script = parsing.parse(script)
+        assert_plain_block_block_list(script.block_list, [
+            "%s MSG %s" % (line_type, " ".join(fields))
+        ])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(5, {0, 4}, {1, 3}))

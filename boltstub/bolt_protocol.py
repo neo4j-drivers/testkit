@@ -1,7 +1,6 @@
 import json
 
 from .errors import ServerExit
-from .parsing import parse_line
 from .packstream import Structure
 from .util import recursive_subclasses, hex_repr
 
@@ -59,7 +58,7 @@ class BoltProtocol:
 
     @classmethod
     def translate_server_line(cls, server_line):
-        name, fields = parse_line(server_line.content)
+        name, fields = server_line.parsed
         try:
             tag = next(tag_ for tag_, name_ in cls.messages["S"].items()
                        if name == name_)

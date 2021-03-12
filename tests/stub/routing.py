@@ -126,7 +126,7 @@ class Routing(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
@@ -1991,7 +1991,7 @@ class RoutingV4(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", 'bookmarks': ['sys:1234', 'foo:5678']}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "bookmarks": ["sys:1234", "foo:5678"]}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
