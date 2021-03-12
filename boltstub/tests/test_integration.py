@@ -371,16 +371,20 @@ def test_initial_response(server_version, response_tag, response_name,
 
 
 @pytest.mark.parametrize("restarting", (False, True))
-def test_restarting(server_factory, restarting, connection_factory):
+@pytest.mark.parametrize("concurrent", (False, True))
+def test_restarting(server_factory, restarting, concurrent, connection_factory):
     script = """
     !: BOLT 4.3
-    {}
+    {}{}
     S: SUCCESS
-    """.format("!: ALLOW RESTART\n" if restarting else "")
+    """.format(
+        "!: ALLOW RESTART\n" if restarting else "",
+        "!: ALLOW CONCURRENT\n" if concurrent else "",
+    )
 
     server = server_factory(parse(script))
     for i in range(3):
-        if i > 0 and not restarting:
+        if i > 0 and not (restarting or concurrent):
             with pytest.raises((ConnectionError, OSError, BrokenSocket)):
                 con = connection_factory("localhost", 7687)
                 con.write(b"\x60\x60\xb0\x17")
@@ -388,10 +392,48 @@ def test_restarting(server_factory, restarting, connection_factory):
                 con.read(4)
             continue
         con = Connection("localhost", 7687)
+        try:
+            con.write(b"\x60\x60\xb0\x17")
+            con.write(server_version_to_version_request((4, 3)))
+            assert con.read(4) == server_version_to_version_response((4, 3))
+        finally:
+            con.close()
+    assert not server.service.exceptions
+
+
+@pytest.mark.parametrize("restarting", (False, True))
+@pytest.mark.parametrize("concurrent", (False, True))
+def test_restarting_interwoven(server_factory, restarting, concurrent,
+                               connection_factory):
+    script = """
+    !: BOLT 4.3
+    {}{}
+    C: HELLO 1
+    S: SUCCESS 1
+    C: HELLO 2
+    S: SUCCESS 2
+    """.format(
+        "!: ALLOW RESTART\n" if restarting else "",
+        "!: ALLOW CONCURRENT\n" if concurrent else "",
+    )
+    server = server_factory(parse(script))
+    for i in range(3):
+        if i > 0 and not concurrent:
+            with pytest.raises((ConnectionError, OSError, BrokenSocket)):
+                con = connection_factory("localhost", 7687)
+                con.write(b"\x60\x60\xb0\x17")
+                con.write(server_version_to_version_request((4, 3)))
+                con.read(4)
+            continue
+        con = connection_factory("localhost", 7687)
         con.write(b"\x60\x60\xb0\x17")
         con.write(server_version_to_version_request((4, 3)))
         assert con.read(4) == server_version_to_version_response((4, 3))
-        con.close()
+        con.write(b"\x00\x03")  # 3 byte long message
+        con.write(b"\xb1\x01\x01")  # HELLO 1
+        con.write(b"\x00\x00")  # end of message
+        assert con.read_message() == b"\xb1\x70\x01"  # SUCCESS 1
+        # leave connection open!
     assert not server.service.exceptions
 
 

@@ -66,17 +66,18 @@ def whitespace_generator(n: int,
 
 
 VALID_BANGS = ("!: AUTO HELLO", "!: BOLT 4.0",
-               "!: ALLOW RESTART",
+               "!: ALLOW RESTART", "!: ALLOW CONCURRENT",
                "!: HANDSHAKE 00\tfF 0204")
 INVALID_BANGS = ("!: NOPE", "!: HANDSHAKE \x00\x00\x02\x04",
                  "!: BOLT", "!: BOLT a.b")
 BANG_DEFAULTS = {"auto": set(), "bolt_version": None,
-                 "restarting": False,
+                 "restarting": False, "concurrent": False,
                  "handshake": None}
 BANG_EFFECTS = (
     ("auto", {"HELLO"}),
     ("bolt_version", (4, 0)),
     ("restarting", True),
+    ("concurrent", True),
     ("handshake", b"\x00\xff\x02\x04")
 )
 

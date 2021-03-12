@@ -21,7 +21,7 @@
 
 from copy import deepcopy
 from logging import getLogger
-from socketserver import TCPServer, BaseRequestHandler
+from socketserver import TCPServer, ThreadingMixIn, BaseRequestHandler
 from sys import stdout
 import traceback
 
@@ -58,6 +58,10 @@ class BoltStubServer(TCPServer):
         # know when the server is listening.
         print("Listening")
         stdout.flush()
+
+
+class ThreadedBoltStubServer(ThreadingMixIn, BoltStubServer):
+    pass
 
 
 class BoltStubService:
@@ -120,19 +124,24 @@ class BoltStubService:
                 except AttributeError:
                     pass
 
-        self.server = BoltStubServer(self.address, BoltStubRequestHandler)
+        if self.script.context.concurrent:
+            server_cls = ThreadedBoltStubServer
+        else:
+            server_cls = BoltStubServer
+        self.server = server_cls(self.address, BoltStubRequestHandler)
         self.server.timeout = timeout or self.default_timeout
 
     def start(self):
-        if self.script.context.restarting:
+        if self.script.context.restarting or self.script.context.concurrent:
             self.server.serve_forever()
         else:
             self.server.handle_request()
             self.server.server_close()
 
     def stop(self):
-        if self.script.context.restarting:
+        if self.script.context.restarting or self.script.context.concurrent:
             self.server.shutdown()
+        self.server.socket.close()
 
     @property
     def timed_out(self):

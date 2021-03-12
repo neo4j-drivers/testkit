@@ -88,6 +88,7 @@ class BangLine(Line):
     TYPE_AUTO = "auto"
     TYPE_BOLT = "bolt"
     TYPE_RESTART = "restart"
+    TYPE_CONCURRENT = "concurrent"
     TYPE_HANDSHAKE = "handshake"
 
     def __new__(cls, *args, **kwargs):
@@ -109,6 +110,9 @@ class BangLine(Line):
         elif re.match(r"^ALLOW\s+RESTART$", obj.content):
             obj._type = BangLine.TYPE_RESTART
             obj._arg = None
+        elif re.match(r"^ALLOW\s+CONCURRENT", obj.content):
+            obj._type = BangLine.TYPE_CONCURRENT
+            obj._arg = None
         elif re.match(r"^HANDSHAKE\s", obj.content):
             obj._type = BangLine.TYPE_HANDSHAKE
             arg = re.sub(r"\s", "", obj.content[10:])
@@ -129,7 +133,9 @@ class BangLine(Line):
     def update_context(self, ctx: "ScriptContext"):
         if self._type == BangLine.TYPE_AUTO:
             if self._arg in ctx.auto:
-                warnings.warn('Specified AUTO for "{}" multiple times')
+                warnings.warn(
+                    'Specified AUTO for "{}" multiple times'.format(self._arg)
+                )
             ctx.auto.add(self._arg)
         elif self._type == BangLine.TYPE_BOLT:
             if ctx.bolt_version is not None:
@@ -139,10 +145,19 @@ class BangLine(Line):
             if ctx.restarting:
                 warnings.warn('Specified "!: ALLOW RESTART" multiple times')
             ctx.restarting = True
+        elif self._type == BangLine.TYPE_CONCURRENT:
+            if ctx.concurrent:
+                warnings.warn('Specified "!: ALLOW CONCURRENT" multiple times')
+            ctx.concurrent = True
         elif self._type == BangLine.TYPE_HANDSHAKE:
             if ctx.handshake:
                 warnings.warn('Specified "!: HANDSHAKE" multiple times')
             ctx.handshake = self._arg
+        if ctx.restarting and ctx.concurrent:
+            warnings.warn(
+                'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
+                '(concurrent scripts are implicitly restarting)'
+            )
 
 
 class ClientLine(Line):
@@ -670,6 +685,7 @@ class ScriptContext:
         self.bolt_version = None
         self.auto = set()
         self.restarting = False
+        self.concurrent = False
         self.handshake = None
 
 
