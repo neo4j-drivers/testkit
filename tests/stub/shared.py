@@ -2,10 +2,11 @@
 
 Uses environment variables for configuration:
 """
-import subprocess
 import os
-import tempfile
 import platform
+import subprocess
+import sys
+import tempfile
 import time
 
 
@@ -59,18 +60,19 @@ class StubServer:
             self._process = None
 
     def _dump(self):
-        # print("")
+        sys.stdout.flush()
         print(">>>> Captured stub server %s stdout" % self.address)
         for line in self._process.stdout:
-            print(line)
+            print(line, end="")
         print("<<<< Captured stub server %s stdout" % self.address)
 
         print(">>>> Captured stub server %s stderr" % self.address)
         for line in self._process.stderr:
-            print(line)
+            print(line, end="")
         print("<<<< Captured stub server %s stderr" % self.address)
 
         self._close_pipes()
+        sys.stdout.flush()
 
     def _close_pipes(self):
         self._process.stdout.close()
