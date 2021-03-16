@@ -9,16 +9,48 @@ from typing import (
 from .. import parsing
 
 
-def assert_plain_block(block, lines=None):
-    assert isinstance(block, parsing.PlainBlock)
+def assert_client_block(block, lines=None):
+    assert isinstance(block, parsing.ClientBlock)
     if lines is not None:
         assert [line.canonical() for line in block.lines] == lines
 
 
-def assert_plain_block_block_list(block_list, lines=None):
+def assert_server_block(block, lines=None):
+    assert isinstance(block, parsing.ServerBlock)
+    if lines is not None:
+        assert [line.canonical() for line in block.lines] == lines
+
+
+def assert_client_block_block_list(block_list, lines=None):
     assert isinstance(block_list, parsing.BlockList)
     assert len(block_list.blocks) == 1
-    assert_plain_block(block_list.blocks[0], lines=lines)
+    assert_client_block(block_list.blocks[0], lines=lines)
+
+
+def assert_server_block_block_list(block_list, lines=None):
+    assert isinstance(block_list, parsing.BlockList)
+    assert len(block_list.blocks) == 1
+    assert_server_block(block_list.blocks[0], lines=lines)
+
+
+def assert_dialogue_blocks_block_list(block_list, lines=None):
+    expected_blocks = []
+    for l in lines:
+        if l.startswith("S:"):
+            if (expected_blocks
+                    and expected_blocks[-1][0] == assert_server_block):
+                expected_blocks[-1][1].append(l)
+            else:
+                expected_blocks.append([assert_server_block, [l]])
+        if l.startswith("C:"):
+            if (expected_blocks
+                    and expected_blocks[-1][0] == assert_client_block):
+                expected_blocks[-1][1].append(l)
+            else:
+                expected_blocks.append([assert_client_block, [l]])
+    assert len(block_list.blocks) == len(expected_blocks)
+    for i in range(len(expected_blocks)):
+        expected_blocks[i][0](block_list.blocks[i], expected_blocks[i][1])
 
 
 def whitespace_generator(n: int,
@@ -135,7 +167,9 @@ def test_message_fields(line_type, fields, fail, extra_ws):
             parsing.parse(script)
     else:
         script = parsing.parse(script)
-        assert_plain_block_block_list(script.block_list, [
+        block_assert_fns = {"C:": assert_client_block_block_list,
+                            "S:": assert_server_block_block_list}
+        block_assert_fns[line_type](script.block_list, [
             "%s MSG %s" % (line_type, " ".join(fields))
         ])
 
@@ -144,7 +178,7 @@ def test_message_fields(line_type, fields, fail, extra_ws):
 def test_simple_dialogue(extra_ws):
     script = "%sC:%sMSG1%sS:%sMSG2%s" % extra_ws
     script = parsing.parse(script)
-    assert_plain_block_block_list(script.block_list, ["C: MSG1", "S: MSG2"])
+    assert_dialogue_blocks_block_list(script.block_list, ["C: MSG1", "S: MSG2"])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
@@ -155,8 +189,8 @@ def test_simple_alternative_block(extra_ws):
     block = script.block_list.blocks[0]
     assert isinstance(block, parsing.AlternativeBlock)
     assert len(block.block_lists) == 2
-    assert_plain_block_block_list(block.block_lists[0], ["C: MSG1"])
-    assert_plain_block_block_list(block.block_lists[1], ["C: MSG2"])
+    assert_client_block_block_list(block.block_lists[0], ["C: MSG1"])
+    assert_client_block_block_list(block.block_lists[1], ["C: MSG2"])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
@@ -167,8 +201,8 @@ def test_simple_parallel_block(extra_ws):
     block = script.block_list.blocks[0]
     assert isinstance(block, parsing.ParallelBlock)
     assert len(block.block_lists) == 2
-    assert_plain_block_block_list(block.block_lists[0], ["C: MSG1"])
-    assert_plain_block_block_list(block.block_lists[1], ["C: MSG2"])
+    assert_client_block_block_list(block.block_lists[0], ["C: MSG1"])
+    assert_client_block_block_list(block.block_lists[1], ["C: MSG2"])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
@@ -178,7 +212,7 @@ def test_simple_optional_block(extra_ws):
     assert len(script.block_list.blocks) == 1
     block = script.block_list.blocks[0]
     assert isinstance(block, parsing.OptionalBlock)
-    assert_plain_block_block_list(block.block_list, ["C: MSG1"])
+    assert_client_block_block_list(block.block_list, ["C: MSG1"])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
@@ -188,7 +222,7 @@ def test_simple_0_loop(extra_ws):
     assert len(script.block_list.blocks) == 1
     block = script.block_list.blocks[0]
     assert isinstance(block, parsing.Repeat0Block)
-    assert_plain_block_block_list(block.block_list, ["C: MSG1"])
+    assert_client_block_block_list(block.block_list, ["C: MSG1"])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
@@ -198,7 +232,7 @@ def test_simple_1_loop(extra_ws):
     assert len(script.block_list.blocks) == 1
     block = script.block_list.blocks[0]
     assert isinstance(block, parsing.Repeat1Block)
-    assert_plain_block_block_list(block.block_list, ["C: MSG1"])
+    assert_client_block_block_list(block.block_list, ["C: MSG1"])
 
 
 @pytest.mark.parametrize("bang", zip(VALID_BANGS, BANG_EFFECTS))
@@ -210,7 +244,7 @@ def test_simple_bang_line(bang, extra_ws):
 
     script = ("%s" + bang + "%sC: MSG%s") % extra_ws
     script = parsing.parse(script)
-    assert_plain_block_block_list(script.block_list, ["C: MSG"])
+    assert_client_block_block_list(script.block_list, ["C: MSG"])
     assert script.context.__dict__ == expected_context
 
 
@@ -255,15 +289,15 @@ def test_nested_blocks(outer, inner):
 
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 3
-    assert_plain_block(script.block_list.blocks[0], ["S: MSG1"])
-    assert_plain_block(script.block_list.blocks[2], [
+    assert_server_block(script.block_list.blocks[0], ["S: MSG1"])
+    assert_client_block(script.block_list.blocks[2], [
         "C: MSG4" if len(outer) == 4 else "C: MSG3"
     ])
     outer_block = script.block_list.blocks[1]
     assert isinstance(outer_block, outer[0])
     if len(outer) == 4:
         assert len(outer_block.block_lists) == 2
-        assert_plain_block_block_list(outer_block.block_lists[1], ["C: MSG3"])
+        assert_client_block_block_list(outer_block.block_lists[1], ["C: MSG3"])
         assert len(outer_block.block_lists[0].blocks) == 1
         inner_block = outer_block.block_lists[0].blocks[0]
     else:
@@ -272,10 +306,12 @@ def test_nested_blocks(outer, inner):
     assert isinstance(inner_block, inner[0])
     if len(inner) == 4:
         assert len(inner_block.block_lists) == 2
-        assert_plain_block_block_list(inner_block.block_lists[0], ["C: MSG2.1"])
-        assert_plain_block_block_list(inner_block.block_lists[1], ["C: MSG2.2"])
+        assert_client_block_block_list(inner_block.block_lists[0],
+                                       ["C: MSG2.1"])
+        assert_client_block_block_list(inner_block.block_lists[1],
+                                       ["C: MSG2.2"])
     else:
-        assert_plain_block_block_list(inner_block.block_list, ["C: MSG2"])
+        assert_client_block_block_list(inner_block.block_list, ["C: MSG2"])
 
 
 @pytest.mark.parametrize("block_parts", (
@@ -301,9 +337,9 @@ def test_line_after_nondeterministic_end_block(block_parts, end_line, fail):
     else:
         script = parsing.parse(script)
         assert len(script.block_list.blocks) == 3
-        assert_plain_block(script.block_list.blocks[0], ["C: MSG1"])
-        assert_plain_block(script.block_list.blocks[2], [end_line])
+        assert_client_block(script.block_list.blocks[0], ["C: MSG1"])
         assert isinstance(script.block_list.blocks[1], block_parts[0])
+        assert_client_block(script.block_list.blocks[2], [end_line])
 
 
 @pytest.mark.parametrize("block_parts", (
@@ -322,13 +358,16 @@ def test_line_after_deterministic_end_block(block_parts, end_line):
 
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 3
-    assert_plain_block(script.block_list.blocks[0], ["C: MSG1"])
-    assert_plain_block(script.block_list.blocks[2], [end_line])
+    assert_client_block(script.block_list.blocks[0], ["C: MSG1"])
+    if end_line.startswith("C:"):
+        assert_client_block(script.block_list.blocks[2], [end_line])
+    if end_line.startswith("S:"):
+        assert_server_block(script.block_list.blocks[2], [end_line])
     block = script.block_list.blocks[1]
     assert isinstance(block, block_parts[0])
     assert len(block.block_lists) == 2
-    assert_plain_block_block_list(block.block_lists[0], ["C: MSG2"])
-    assert_plain_block_block_list(block.block_lists[1], ["C: MSG3"])
+    assert_client_block_block_list(block.block_lists[0], ["C: MSG2"])
+    assert_client_block_block_list(block.block_lists[1], ["C: MSG3"])
 
 
 @pytest.mark.parametrize("block_parts", (
@@ -347,8 +386,8 @@ def test_long_multi_blocks(block_parts):
     assert isinstance(block, block_parts[0])
     assert len(block.block_lists) == 99
     for i in range(99):
-        assert_plain_block_block_list(block.block_lists[i],
-                                      ["C: MSG%i" % (i + 1)])
+        assert_client_block_block_list(block.block_lists[i],
+                                       ["C: MSG%i" % (i + 1)])
 
 
 @pytest.mark.parametrize(("block_parts", "swap"), (
@@ -377,13 +416,13 @@ def test_block_cant_start_with_server_line(block_parts, swap):
 
 def test_script_can_start_with_server_line():
     script = parsing.parse("S: MSG\nC: MSG2")
-    assert_plain_block_block_list(script.block_list, ["S: MSG", "C: MSG2"])
+    assert_dialogue_blocks_block_list(script.block_list, ["S: MSG", "C: MSG2"])
 
 
 @pytest.mark.parametrize("extra_ws",
                          whitespace_generator(15, {0, 14}, {1, 4, 6, 8, 12},))
 def test_implicit_line_type(extra_ws):
-    script = (
+    raw_script = (
         "{}S:{}SMSG1{}"
         "SMSG2{}"
         "S:{}SMSG3{}"
@@ -394,8 +433,8 @@ def test_implicit_line_type(extra_ws):
         "C:{}MSG5{}"
         "MSG6{}".format(*extra_ws)
     )
-    script = parsing.parse(script)
-    assert_plain_block_block_list(script.block_list, [
+    script = parsing.parse(raw_script)
+    assert_dialogue_blocks_block_list(script.block_list, [
         "S: SMSG1",
         "S: SMSG2",
         "S: SMSG3",

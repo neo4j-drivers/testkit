@@ -437,19 +437,25 @@ def test_restarting_interwoven(server_factory, restarting, concurrent,
     assert not server.service.exceptions
 
 
+@pytest.mark.parametrize("restarting", (False, True))
+@pytest.mark.parametrize("concurrent", (False, True))
 @pytest.mark.parametrize("msg", (b"\xb0\x11", b"\xb0\x13"))
-def test_lists_alternatives_on_unexpected_message(msg, server_factory,
+def test_lists_alternatives_on_unexpected_message(msg, restarting, concurrent,
+                                                  server_factory,
                                                   connection_factory):
     script = """
     !: BOLT 4.3
-    
-    {{
+    {}{}
+    {{{{
         C: RUN
     ----
         C: RESET
-    }}
+    }}}}
     S: SUCCESS
-    """
+    """.format(
+        "!: ALLOW RESTART\n" if restarting else "",
+        "!: ALLOW CONCURRENT\n" if concurrent else "",
+    )
     server = server_factory(parse(script))
     con = connection_factory("localhost", 7687)
     con.write(b"\x60\x60\xb0\x17")
@@ -459,8 +465,10 @@ def test_lists_alternatives_on_unexpected_message(msg, server_factory,
     with pytest.raises(BrokenSocket):
         con.read(6)
     assert len(server.service.exceptions) == 1
-    assert "(5)C: RUN" in str(server.service.exceptions[0])
-    assert "(7)C: RESET" in str(server.service.exceptions[0])
+    server_exc = server.service.exceptions[0]
+    line_offset = restarting + concurrent
+    assert "(%i)C: RUN" % (5 + line_offset) in str(server_exc)
+    assert "(%i)C: RESET" % (7 + line_offset) in str(server_exc)
 
 
 def test_unknown_message(server_factory, connection_factory):

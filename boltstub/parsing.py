@@ -298,48 +298,70 @@ class Block(abc.ABC):
         pass
 
 
-class PlainBlock(Block):
-    def __init__(self, lines: List[Line], line_number: int):
+class ClientBlock(Block):
+    def __init__(self, lines: List[ClientLine], line_number: int):
         super().__init__(line_number)
         self.lines = lines
         self.index = 0
 
     def accepted_messages(self) -> List[ClientLine]:
-        if self.done():
-            return []
-        assert isinstance(self.lines[self.index], ClientLine)
-        return [self.lines[self.index]]
+        return self.lines[self.index:(self.index + 1)]
 
     def assert_no_init(self):
-        if isinstance(self.lines[0], ServerLine):
+        return
+
+    def can_consume(self, channel) -> bool:
+        if self.done():
+            return False
+        return self.lines[self.index].match(channel.peek())
+
+    def can_consume_after_reset(self, channel) -> bool:
+        return self.lines and self.lines[0].match(channel.peek())
+
+    def _consume(self, channel):
+        channel.consume()
+        self.index += 1
+
+    def done(self):
+        return self.index >= len(self.lines)
+
+    def has_deterministic_end(self) -> bool:
+        return True
+
+    def init(self, channel):
+        return
+
+    def reset(self):
+        self.index = 0
+
+    def try_consume(self, channel) -> bool:
+        if self.can_consume(channel):
+            self._consume(channel)
+            return True
+        return False
+
+
+class ServerBlock(Block):
+    def __init__(self, lines: List[ServerLine], line_number: int):
+        super().__init__(line_number)
+        self.lines = lines
+        self.index = 0
+
+    def accepted_messages(self) -> List[ClientLine]:
+        return []
+
+    def assert_no_init(self):
+        if self.lines:
             raise LineError(
                 self.lines[0],
                 "ambiguity of script does not allow for server response here"
             )
 
     def can_consume(self, channel) -> bool:
-        if self.done():
-            return False
-        assert isinstance(self.lines[self.index], ClientLine)
-        return self.lines[self.index].match(channel.peek())
+        return False
 
     def can_consume_after_reset(self, channel) -> bool:
-        first_client_line = None
-        for line in self.lines:
-            if isinstance(line, ClientLine):
-                first_client_line = line
-                break
-        return first_client_line and first_client_line.match(channel.peek())
-
-    def _consume(self, channel):
-        channel.consume()
-        self.index += 1
-        self.respond(channel)
-
-    def consume(self, channel):
-        assert isinstance(self.lines[self.index], ClientLine)
-        assert self.lines[self.index].match(channel.consume())
-        assert not self.done()
+        return False
 
     def done(self):
         return self.index >= len(self.lines)
@@ -351,8 +373,7 @@ class PlainBlock(Block):
         self.respond(channel)
 
     def respond(self, channel):
-        while (not self.done()
-               and isinstance(self.lines[self.index], ServerLine)):
+        while not self.done():
             line = self.lines[self.index]
             if not line.try_run_command(channel):
                 channel.send_server_line(line)
@@ -362,9 +383,6 @@ class PlainBlock(Block):
         self.index = 0
 
     def try_consume(self, channel) -> bool:
-        if self.can_consume(channel):
-            self._consume(channel)
-            return True
         return False
 
 
@@ -402,6 +420,7 @@ class AlternativeBlock(Block):
         return all(b.has_deterministic_end() for b in self.block_lists)
 
     def init(self, channel):
+        # self.assert_no_init()
         pass
 
     def reset(self):
@@ -449,8 +468,8 @@ class ParallelBlock(Block):
         return all(b.has_deterministic_end() for b in self.block_lists)
 
     def init(self, channel):
-        for b in self.block_lists:
-            b.init(channel)
+        # self.assert_no_init()
+        pass
 
     def reset(self):
         for block in self.block_lists:
@@ -502,7 +521,8 @@ class OptionalBlock(Block):
         return False
 
     def init(self, channel):
-        self.block_list.init(channel)
+        # self.assert_no_init()
+        pass
 
     def reset(self):
         self.started = False
@@ -546,7 +566,8 @@ class _RepeatBlock(Block, abc.ABC):
         return False
 
     def init(self, channel):
-        self.block_list.init(channel)
+        # self.assert_no_init()
+        pass
 
     def reset(self):
         self.in_block = False
@@ -656,8 +677,13 @@ class BlockList(Block):
             block = self.blocks[i]
             if block.try_consume(channel):
                 self.index = i
-                if block.has_deterministic_end() and block.done():
+                while block.has_deterministic_end() and block.done():
                     self.index += 1
+                    if self.index < len(self.blocks):
+                        block = self.blocks[self.index]
+                        block.init(channel)
+                    else:
+                        break
                 return True
             if not block.can_be_skipped():
                 break
@@ -746,19 +772,32 @@ class ScriptTransformer(lark.Transformer):
 
     @lark.v_args(tree=True)
     def block_list(self, tree):
-        return BlockList(
-            [c for c in tree.children if not isinstance(c, lark.Token)],
+        blocks = []
+        for child in tree.children:
+            if isinstance(child, lark.Token):
+                continue
+            if (blocks
+                    and ((isinstance(child, ClientBlock)
+                          and isinstance(blocks[-1], ClientBlock))
+                         or (isinstance(child, ServerBlock)
+                             and isinstance(blocks[-1], ServerBlock)))):
+                blocks[-1].lines.extend(child.lines)
+            else:
+                blocks.append(child)
+
+        return BlockList(blocks, tree.line)
+
+    @lark.v_args(tree=True)
+    def client_block(self, tree):
+        return ClientBlock(
+            [child for child in tree.children if isinstance(child, ClientLine)],
             tree.line
         )
 
     @lark.v_args(tree=True)
-    def plain_block(self, tree):
-        return PlainBlock(
-            [line
-             for sub_tree in tree.children
-             if isinstance(sub_tree, lark.Tree)
-             for line in sub_tree.children
-             if isinstance(line, Line)],
+    def server_block(self, tree):
+        return ServerBlock(
+            [child for child in tree.children if isinstance(child, ServerLine)],
             tree.line
         )
 

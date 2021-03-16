@@ -12,7 +12,8 @@ from ..parsing import (
     Line,
     OptionalBlock,
     ParallelBlock,
-    PlainBlock,
+    ClientBlock,
+    ServerBlock,
     Repeat0Block,
     Repeat1Block,
 )
@@ -113,10 +114,10 @@ class TestAlternativeBlock:
     def block_read(self):
         return AlternativeBlock(
             [
-                BlockList([PlainBlock([
+                BlockList([ClientBlock([
                     ClientLine(2, "C: MSG1", "MSG1")
                 ], 2)], 2),
-                BlockList([PlainBlock([
+                BlockList([ClientBlock([
                     ClientLine(3, "C: MSG2", "MSG2")
                 ], 3)], 3),
             ], 1
@@ -126,14 +127,22 @@ class TestAlternativeBlock:
     def block_write(self):
         return AlternativeBlock(
             [
-                BlockList([PlainBlock([
-                    ClientLine(2, "C: MSG1", "MSG1"),
-                    ServerLine(3, "S: SMSG1", "SMSG1")
-                ], 2)], 2),
-                BlockList([PlainBlock([
-                    ClientLine(4, "C: MSG2", "MSG2"),
-                    ServerLine(5, "S: SMSG2", "SMSG2")
-                ], 4)], 5),
+                BlockList([
+                    ClientBlock([
+                        ClientLine(2, "C: MSG1", "MSG1"),
+                    ], 2),
+                    ServerBlock([
+                        ServerLine(3, "S: SMSG1", "SMSG1")
+                    ], 3),
+                ], 2),
+                BlockList([
+                    ClientBlock([
+                        ClientLine(4, "C: MSG2", "MSG2"),
+                    ], 4),
+                    ServerBlock([
+                        ServerLine(5, "S: SMSG2", "SMSG2")
+                    ], 5),
+                ], 5),
             ], 1
         )
 
@@ -189,36 +198,40 @@ class TestBlockList:
     @pytest.fixture()
     def block_det(self):
         return BlockList([
-            PlainBlock([
+            ClientBlock([
                 ClientLine(1, "C: MSG1", "MSG1"),
                 ClientLine(2, "C: MSG2", "MSG2")
             ], 1),
-            PlainBlock([ClientLine(3, "C: MSG3", "MSG3")], 3),
+            ServerBlock([
+                ServerLine(3, "S: SMSG1", "SMSG1"),
+                ServerLine(4, "S: SMSG2", "SMSG2")
+            ], 3),
+            ClientBlock([ClientLine(5, "C: MSG3", "MSG3")], 5),
         ], 1)
 
     @pytest.fixture()
     def block_non_det(self):
         return BlockList([
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
+                ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
             ], 2), 1),
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(5, "C: MSG2", "MSG2")], 5)
+                ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5)
             ], 5), 4),
-            PlainBlock([ClientLine(7, "C: MSG3", "MSG3")], 7),
+            ClientBlock([ClientLine(7, "C: MSG3", "MSG3")], 7),
         ], 1)
 
     @pytest.fixture()
     def block_only_non_det(self):
         return BlockList([
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
+                ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
             ], 2), 1),
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(5, "C: MSG2", "MSG2")], 5)
+                ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5)
             ], 5), 4),
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(8, "C: MSG3", "MSG3")], 8)
+                ClientBlock([ClientLine(8, "C: MSG3", "MSG3")], 8)
             ], 8), 7),
         ], 1)
 
@@ -236,11 +249,16 @@ class TestBlockList:
         messages = ["MSG1", "MSG2", "MSG3", "NOMATCH"]
         channel = channel_factory(messages)
         assert block_det.has_deterministic_end()
+        assert not channel.msg_buffer
         for i in range(3):
             assert not block_det.done()
             with channel.assert_consume():
                 assert block_det.try_consume(channel)
             assert not block_det.can_consume(channel_factory(messages[i:]))
+            if i < 1:
+                assert not channel.msg_buffer
+            else:
+                assert channel.msg_buffer_names() == ["SMSG1", "SMSG2"]
         assert block_det.done()
 
     @pytest.mark.parametrize("skip1", (True, False))
@@ -315,7 +333,7 @@ class TestBlockList:
 
 class TestOptionalBlock:
     def test_block_cant_skip_out(self):
-        block = OptionalBlock(BlockList([PlainBlock([
+        block = OptionalBlock(BlockList([ClientBlock([
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -332,7 +350,7 @@ class TestOptionalBlock:
 
     @pytest.mark.parametrize("reset_idx", range(1, 2))
     def test_block_reset(self, reset_idx):
-        block = OptionalBlock(BlockList([PlainBlock([
+        block = OptionalBlock(BlockList([ClientBlock([
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -341,12 +359,12 @@ class TestOptionalBlock:
 
     def test_block_can_skip_optional_end(self):
         block = OptionalBlock(BlockList([
-            PlainBlock([
+            ClientBlock([
                 ClientLine(2, "C: MSG1", "MSG1"),
                 ClientLine(3, "C: MSG2", "MSG2")
             ], 2),
             OptionalBlock(BlockList([
-                PlainBlock([
+                ClientBlock([
                     ClientLine(5, "C: MSG3", "MSG3")
                 ], 5)
             ], 5), 4)
@@ -376,11 +394,11 @@ class TestParallelBlock:
     def block_read(self):
         return ParallelBlock(
             [
-                BlockList([PlainBlock([
+                BlockList([ClientBlock([
                     ClientLine(2, "C: MSG11", "MSG11"),
                     ClientLine(2, "C: MSG12", "MSG12")
                 ], 2)], 2),
-                BlockList([PlainBlock([
+                BlockList([ClientBlock([
                     ClientLine(3, "C: MSG21", "MSG21"),
                     ClientLine(3, "C: MSG21", "MSG22")
                 ], 3)], 3),
@@ -391,14 +409,22 @@ class TestParallelBlock:
     def block_write(self):
         return ParallelBlock(
             [
-                BlockList([PlainBlock([
-                    ClientLine(2, "C: MSG1", "MSG1"),
-                    ServerLine(3, "S: SMSG1", "SMSG1")
-                ], 2)], 2),
-                BlockList([PlainBlock([
-                    ClientLine(4, "C: MSG2", "MSG2"),
-                    ServerLine(5, "S: SMSG2", "SMSG2")
-                ], 4)], 5),
+                BlockList([
+                    ClientBlock([
+                        ClientLine(2, "C: MSG1", "MSG1"),
+                    ], 2),
+                    ServerBlock([
+                        ServerLine(3, "S: SMSG1", "SMSG1")
+                    ], 3),
+                ], 2),
+                BlockList([
+                    ClientBlock([
+                        ClientLine(4, "C: MSG2", "MSG2"),
+                    ], 4),
+                    ServerBlock([
+                        ServerLine(5, "S: SMSG2", "SMSG2")
+                    ], 5),
+                ], 5),
             ], 1
         )
 
@@ -446,37 +472,103 @@ class TestParallelBlock:
         _test_block_reset_deterministic_end(block_read, channel, reset_idx)
 
 
-class TestPlainBlock:
+class TestClientBlock:
     @pytest.fixture()
-    def block(self):
-        return PlainBlock([
+    def single_block(self):
+        return ClientBlock([
             ClientLine(1, "C: MSG1", "MSG1"),
-            ClientLine(2, "C: MSG2", "MSG2"),
-            ServerLine(3, "S: SMSG", "SMSG"),
-            ClientLine(4, "C: MSG3", "MSG3"),
         ], 1)
 
     @pytest.fixture()
-    def channel(self):
+    def single_channel(self):
         return channel_factory(["MSG1", "MSG2", "MSG3", "NOMATCH"])
 
-    def test_block(self, block, channel):
-        for _ in range(2):
-            assert not block.done()
-            assert not channel.msg_buffer
-            with channel.assert_consume():
-                assert block.try_consume(channel)
-        assert not block.done()
-        assert channel.msg_buffer_names() == ["SMSG"]
-        with channel.assert_consume():
-            assert block.try_consume(channel)
-        assert block.done()
-        assert not block.can_consume(channel)
-        assert channel.msg_buffer_names() == ["SMSG"]
+    @pytest.fixture()
+    def multi_block(self):
+        return ClientBlock([
+            ClientLine(1, "C: MSG1", "MSG1"),
+            ClientLine(2, "C: MSG2", "MSG2"),
+            ClientLine(3, "C: MSG3", "MSG3"),
+        ], 1)
 
-    @pytest.mark.parametrize("reset_idx", range(1, 3))
-    def test_block_reset(self, block, channel, reset_idx):
-        _test_block_reset_deterministic_end(block, channel, reset_idx)
+    @pytest.fixture()
+    def multi_channel(self):
+        return channel_factory(["MSG1", "MSG2", "MSG3", "NOMATCH"])
+
+    def test_single_block(self, single_block, single_channel):
+        assert single_block.can_consume(single_channel)
+        assert not single_block.done()
+        assert not single_channel.msg_buffer
+        single_block.init(single_channel)
+        assert not single_block.done()
+        assert not single_channel.msg_buffer
+        assert single_block.can_consume(single_channel)
+        with single_channel.assert_consume():
+            assert single_block.try_consume(single_channel)
+        assert single_block.done()
+        assert not single_block.can_consume(single_channel)
+        assert not single_block.try_consume(single_channel)
+
+    def test_multi_block(self, multi_block, multi_channel):
+        assert multi_block.can_consume(multi_channel)
+        assert not multi_block.done()
+        assert not multi_channel.msg_buffer
+        multi_block.init(multi_channel)
+        assert not multi_block.done()
+        assert not multi_channel.msg_buffer
+        for _ in range(3):
+            assert multi_block.can_consume(multi_channel)
+            with multi_channel.assert_consume():
+                assert multi_block.try_consume(multi_channel)
+        assert multi_block.done()
+        assert not multi_block.can_consume(multi_channel)
+        assert not multi_block.try_consume(multi_channel)
+
+
+class TestServerBlock:
+    @pytest.fixture()
+    def single_block(self):
+        return ServerBlock([
+            ServerLine(1, "S: SMSG1", "SMSG1"),
+        ], 1)
+
+    @pytest.fixture()
+    def single_channel(self):
+        return channel_factory(["SMSG1", "NOMATCH"])
+
+    @pytest.fixture()
+    def multi_block(self):
+        return ServerBlock([
+            ServerLine(1, "S: SMSG1", "SMSG1"),
+            ServerLine(2, "S: SMSG2", "SMSG2"),
+            ServerLine(3, "S: SMSG3", "SMSG3"),
+        ], 1)
+
+    @pytest.fixture()
+    def multi_channel(self):
+        return channel_factory(["NOMATCH"])
+
+    def test_single_block(self, single_block, single_channel):
+        assert not single_block.can_consume(single_channel)
+        assert not single_block.try_consume(single_channel)
+        assert not single_block.done()
+        assert not single_channel.msg_buffer
+        single_block.init(single_channel)
+        assert single_block.done()
+        assert single_channel.msg_buffer_names() == ["SMSG1"]
+        assert not single_block.can_consume(single_channel)
+        assert not single_block.try_consume(single_channel)
+
+    def test_multi_block(self, multi_block, multi_channel):
+        assert not multi_block.can_consume(multi_channel)
+        assert not multi_block.try_consume(multi_channel)
+        assert not multi_block.done()
+        assert not multi_channel.msg_buffer
+        multi_block.init(multi_channel)
+        assert multi_block.done()
+        assert multi_channel.msg_buffer_names() == ["SMSG1", "SMSG2", "SMSG3"]
+        assert not multi_block.can_consume(multi_channel)
+        assert not multi_block.try_consume(multi_channel)
 
 
 class _TestRepeatBlock:
@@ -486,7 +578,7 @@ class _TestRepeatBlock:
     @pytest.fixture()
     def block_1(self):
         return self.block_cls(BlockList([
-            PlainBlock([
+            ClientBlock([
                 ClientLine(2, "C: MSG1", "MSG1"),
             ], 2)
         ], 2), 1)
@@ -498,7 +590,7 @@ class _TestRepeatBlock:
     @pytest.fixture()
     def block_2(self):
         return self.block_cls(BlockList([
-            PlainBlock([
+            ClientBlock([
                 ClientLine(2, "C: MSG1", "MSG1"),
                 ClientLine(3, "C: MSG2", "MSG2")
             ], 2)
@@ -511,12 +603,12 @@ class _TestRepeatBlock:
     @pytest.fixture()
     def block_optional_end(self):
         return self.block_cls(BlockList([
-            PlainBlock([
+            ClientBlock([
                 ClientLine(2, "C: MSG1", "MSG1"),
                 ClientLine(3, "C: MSG2", "MSG2"),
             ], 2),
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(5, "C: MSG3", "MSG3")], 5)
+                ClientBlock([ClientLine(5, "C: MSG3", "MSG3")], 5)
             ], 5), 4),
         ], 2), 1)
 
@@ -528,10 +620,10 @@ class _TestRepeatBlock:
     def block_all_optional(self):
         return self.block_cls(BlockList([
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(3, "C: MSG1", "MSG1")], 3)
+                ClientBlock([ClientLine(3, "C: MSG1", "MSG1")], 3)
             ], 3), 2),
             OptionalBlock(BlockList([
-                PlainBlock([ClientLine(6, "C: MSG2", "MSG2")], 6)
+                ClientBlock([ClientLine(6, "C: MSG2", "MSG2")], 6)
             ], 6), 5),
         ], 2), 1)
 
