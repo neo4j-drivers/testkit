@@ -18,7 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import signal
 from sys import exit
 
 from argparse import ArgumentParser
@@ -64,10 +64,21 @@ useful for Bolt client integration testing.
 
     scripts = map(parse_file, parsed.script)
     service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
+
+    sigint_count = 0
+
+    def signal_handler(sig, frame):
+        nonlocal sigint_count
+        sigint_count += 1
+        if sigint_count > 1:
+            exit(130)
+        print("SIGINT received. Attempting Graceful shutdown.")
+        service.stop_async()
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     try:
         service.start()
-    except KeyboardInterrupt:
-        exit(130)
     except Exception as e:
         log.error(" ".join(map(str, e.args)))
         log.error("\r\n")

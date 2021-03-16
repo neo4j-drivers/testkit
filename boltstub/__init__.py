@@ -23,6 +23,7 @@ from copy import deepcopy
 from logging import getLogger
 from socketserver import TCPServer, ThreadingMixIn, BaseRequestHandler
 from sys import stdout
+from threading import Thread
 import traceback
 
 from .addressing import Address
@@ -142,6 +143,9 @@ class BoltStubService:
         if self.script.context.restarting or self.script.context.concurrent:
             self.server.shutdown()
         self.server.socket.close()
+
+    def stop_async(self):
+        Thread(target=self.stop, daemon=True).start()
 
     @property
     def timed_out(self):
