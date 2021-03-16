@@ -43,6 +43,19 @@ class ResolverResolutionRequired:
         self.address = address
 
 
+class DomainNameResolutionRequired:
+    """ Represents a need for new domain name resolution.
+    This means that the backend is expecting the frontend
+    to call the domain name resolver function and submit a new request
+    with the results of it.
+    """
+
+    def __init__(self, id, name):
+        # Id of callback request
+        self.id = id
+        self.name = name
+
+
 class MultiDBSupport:
     """ Specifies whether the server or cluster the driver connects to supports multi-databases.
     It is sent in response to the CheckMultiDBSupport request.
