@@ -15,27 +15,30 @@ def _ensure_image(testkit_path, branch_name):
     return image_name
 
 
-def start_container(testkit_path, branch_name):
+def start_container(testkit_path, branch_name, network, secondary_network):
     image = _ensure_image(testkit_path, branch_name)
+    container_name = "runner"
     env = {
         # Runner connects to backend in driver container
         "TEST_BACKEND_HOST": "driver",
         # Driver connects to me
-        "TEST_STUB_HOST":    "runner",
+        "TEST_STUB_HOST": container_name,
         # To use modules
-        "PYTHONPATH":        "/testkit",
+        "PYTHONPATH": "/testkit",
     }
     # Copy TEST_ variables that might have been set explicit
     for varName in os.environ:
         if varName.startswith("TEST_"):
             env[varName] = os.environ[varName]
-    container = docker.run(
-            image, "runner",
-            command=["python3", "/testkit/driver/bootstrap.py"],
-            mount_map={testkit_path: "/testkit"},
-            env_map=env,
-            network="the-bridge",
-            aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
+    docker.create(
+        image, "runner",
+        command=["python3", "/testkit/driver/bootstrap.py"],
+        mount_map={testkit_path: "/testkit"},
+        env_map=env,
+        network=network,
+        aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
+    docker.network_connect(secondary_network, container_name)
+    container = docker.start(container_name)
     return Container(container, env)
 
 

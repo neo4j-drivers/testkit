@@ -38,6 +38,44 @@ class Container:
         del _running[self.name]
 
 
+def create(image, name, command=None, mount_map=None, host_map=None, port_map=None,
+           env_map=None, working_folder=None, network=None, aliases=None):
+    cmd = ["docker", "create", "--name", name]
+    if mount_map is not None:
+        for k in mount_map:
+            cmd.extend(["-v", "%s:%s" % (k, mount_map[k])])
+    if host_map is not None:
+        for k in host_map:
+            cmd.extend(["--add-host", "%s:%s" % (k, host_map[k])])
+    if port_map is not None:
+        for k in port_map:
+            cmd.append("-p%d:%d" % (k, port_map[k]))
+    if env_map is not None:
+        for k in env_map:
+            cmd.extend(["--env", "%s=%s" % (k, env_map[k])])
+    if network:
+        cmd.append("--net=%s" % network)
+    if working_folder:
+        cmd.extend(["-w", working_folder])
+    if aliases is not None:
+        for a in aliases:
+            cmd.append("--network-alias=" + a)
+    if "TEST_DOCKER_USER" in os.environ:
+        cmd.extend(["-u", os.environ["TEST_DOCKER_USER"]])
+    cmd.append(image)
+    if command:
+        cmd.extend(command)
+    subprocess.run(cmd, check=True)
+
+
+def start(name):
+    cmd = ["docker", "start", name]
+    subprocess.run(cmd, check=True)
+    container = Container(name)
+    _running[name] = container
+    return container
+
+
 def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
         env_map=None, working_folder=None, network=None, aliases=None):
     # Bootstrap the driver docker image by running a bootstrap script in
@@ -72,6 +110,11 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
     container = Container(name)
     _running[name] = container
     return container
+
+
+def network_connect(network, name):
+    cmd = ["docker", "network", "connect", network, name]
+    subprocess.run(cmd, check=True)
 
 
 def load(readable):
