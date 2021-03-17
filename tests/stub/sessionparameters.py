@@ -37,7 +37,7 @@ script_bookmarks = """
 !: AUTO GOODBYE
 !: AUTO RESET
 
-C: RUN "RETURN 1 as n" {} {"bookmarks": ["b1", "b2"]}
+C: RUN "RETURN 1 as n" {} {"bookmarks{}": ["b1", "b2"]}
    PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]

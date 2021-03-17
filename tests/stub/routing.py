@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from tests.shared import get_driver_name, new_backend
@@ -295,6 +296,20 @@ class Routing(unittest.TestCase):
            SUCCESS {"type": "r"}
         """
 
+    def read_script_default_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO HELLO
+        !: AUTO GOODBYE
+        !: AUTO RESET
+
+        C: RUN "RETURN 1 as n" {} {"mode": "r"}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r"}
+        """
+
     def read_script_with_unexpected_interruption(self):
         return """
         !: BOLT #VERSION#
@@ -314,7 +329,7 @@ class Routing(unittest.TestCase):
         !: AUTO GOODBYE
         !: AUTO RESET
 
-        C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb", "bookmarks": ["sys:1234", "foo:5678"]}
+        C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb", "bookmarks{}": ["sys:1234", "foo:5678"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
            RECORD [1]
@@ -404,7 +419,7 @@ class Routing(unittest.TestCase):
         !: AUTO GOODBYE
         !: AUTO RESET
 
-        C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["ABookmark"]}
+        C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["NewBookmark"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
            RECORD [1]
@@ -571,7 +586,7 @@ class Routing(unittest.TestCase):
         !: AUTO GOODBYE
         !: AUTO RESET
 
-        C: BEGIN {"db": "adb", "bookmarks": ["neo4j:bookmark:v1:tx5", "neo4j:bookmark:v1:tx29", "neo4j:bookmark:v1:tx94", "neo4j:bookmark:v1:tx56", "neo4j:bookmark:v1:tx16", "neo4j:bookmark:v1:tx68"]}
+        C: BEGIN {"db": "adb", "bookmarks{}": ["neo4j:bookmark:v1:tx5", "neo4j:bookmark:v1:tx29", "neo4j:bookmark:v1:tx94", "neo4j:bookmark:v1:tx56", "neo4j:bookmark:v1:tx16", "neo4j:bookmark:v1:tx68"]}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
         C: PULL {"n": 1000}
@@ -656,8 +671,10 @@ class Routing(unittest.TestCase):
 
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_default_db(), vars=self.get_vars())
-        self._readServer1.start(script=self.read_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_default_db(),
+                                   vars=self.get_vars())
+        self._readServer1.start(script=self.read_script_default_db(),
+                                vars=self.get_vars())
 
         session = driver.session('r')
         result = session.run("RETURN 1 as n")
@@ -1688,7 +1705,7 @@ class Routing(unittest.TestCase):
         self._routingServer1.start(script=self.router_script_with_unreachable_db_and_adb_db(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
-        session = driver.session('r', database="unreacheable")
+        session = driver.session('r', database="unreachable")
         failed_on_unreachable = False
         try:
             session.run("RETURN 1 as n")
@@ -1739,7 +1756,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -1754,12 +1771,12 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
@@ -1775,7 +1792,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
         S: IGNORED
@@ -1790,7 +1807,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
         S: IGNORED
@@ -1804,22 +1821,22 @@ class RoutingV4(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
            PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
            PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
            PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": [],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
            PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
@@ -1834,7 +1851,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9012"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]]
@@ -1849,7 +1866,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -1874,7 +1891,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": {"address": "#HOST#:9000"}, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": {"address": "#HOST#:9000"}, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -1898,7 +1915,7 @@ class RoutingV4(Routing):
         
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]]
@@ -1913,7 +1930,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
@@ -1928,7 +1945,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9099"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -1943,7 +1960,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, []]
@@ -1958,7 +1975,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
            IGNORED
@@ -1972,31 +1989,32 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "unreachable"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "unreachable"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, []]
         S: SUCCESS {"type": "r"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
 
-    def router_script_with_bookmarks(self):
+    def router_script_with_bookmarks(self, bookmarks_in):
+        bookmarks_in = ', "bookmarks{}": %s' % json.dumps(bookmarks_in)
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
         
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", "bookmarks": ["sys:1234", "foo:5678"]}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"%s}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r", "bookmark": "sys:2234"}
-        """
+        """ % bookmarks_in
 
     def get_vars(self):
         host = self._routingServer1.host
@@ -2017,17 +2035,26 @@ class RoutingV4(Routing):
             v["#ROUTINGMODE#"] = ""
 
         return v
-
     # Ignore this on older protocol versions than 4.3
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         pass
 
     def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_bookmarks(), vars=self.get_vars())
-        self._readServer1.start(script=self.read_script_with_bookmarks(), vars=self.get_vars())
+        # passing bookmarks of the system db when fetching the routing table
+        # makes sure that newly (asynchronously) created databases exist.
+        # (causal consistency on database existence)
+        bookmarks = ["sys:1234", "foo:5678"]
 
-        session = driver.session('r', database=self.get_db(), bookmarks=["sys:1234", "foo:5678"])
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        self._routingServer1.start(
+            script=self.router_script_with_bookmarks(bookmarks),
+            vars=self.get_vars()
+        )
+        self._readServer1.start(script=self.read_script_with_bookmarks(),
+                                vars=self.get_vars())
+
+        session = driver.session('r', database=self.get_db(),
+                                 bookmarks=bookmarks)
         result = session.run("RETURN 1 as n")
         sequence = self.collectRecords(result)
         last_bookmarks = session.lastBookmarks()
@@ -2113,22 +2140,22 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": [],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
@@ -2282,6 +2309,8 @@ class RoutingV3(Routing):
            SUCCESS {"type": "r"}
         """
 
+    read_script_default_db = read_script
+
     def read_script_with_unexpected_interruption(self):
         return """
         !: BOLT #VERSION#
@@ -2299,7 +2328,7 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-        C: RUN "RETURN 1 as n" {} {"mode": "r", "bookmarks": ["sys:1234", "foo:5678"]}
+        C: RUN "RETURN 1 as n" {} {"mode": "r", "bookmarks{}": ["sys:1234", "foo:5678"]}
         C: PULL_ALL
         S: SUCCESS {"fields": ["n"]}
            RECORD [1]
@@ -2383,7 +2412,7 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-        C: RUN "RETURN 1 as n" {} {"bookmarks": ["ABookmark"]}
+        C: RUN "RETURN 1 as n" {} {"bookmarks": ["NewBookmark"]}
         C: PULL_ALL
         S: SUCCESS {"fields": ["n"]}
            RECORD [1]
@@ -2541,7 +2570,7 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
-        C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx5", "neo4j:bookmark:v1:tx29", "neo4j:bookmark:v1:tx94", "neo4j:bookmark:v1:tx56", "neo4j:bookmark:v1:tx16", "neo4j:bookmark:v1:tx68"]}
+        C: BEGIN {"bookmarks{}": ["neo4j:bookmark:v1:tx5", "neo4j:bookmark:v1:tx29", "neo4j:bookmark:v1:tx94", "neo4j:bookmark:v1:tx56", "neo4j:bookmark:v1:tx16", "neo4j:bookmark:v1:tx68"]}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
         C: PULL_ALL

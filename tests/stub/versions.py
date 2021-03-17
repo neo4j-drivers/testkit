@@ -15,7 +15,7 @@ class ProtocolVersions(unittest.TestCase):
 
     def tearDown(self):
         self._backend.close()
-        self._server.reset()
+        self._server.done()
 
     def _run(self, version, pull='PULL {"n": 1000}'):
         script = """

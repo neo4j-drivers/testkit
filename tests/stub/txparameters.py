@@ -41,7 +41,7 @@ script_bookmarks = """
 !: AUTO GOODBYE
 !: AUTO RESET
 
-C: BEGIN {"bookmarks": ["b1", "b2"]}
+C: BEGIN {"bookmarks{}": ["b1", "b2"]}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
    PULL {"n": 1000}
