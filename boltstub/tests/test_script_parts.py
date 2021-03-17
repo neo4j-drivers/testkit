@@ -30,6 +30,7 @@ class TestClientLine:
         [{"a": 1, "b": {"c": "c"}}],
         [["str", 4]],
         ["hello", "world"],
+        [["hello", "world"]],
     ))
     def test_matches_fields(self, fields):
         content = "MSG " + " ".join(map(json.dumps, fields))
@@ -47,6 +48,8 @@ class TestClientLine:
         [[{"a": 1}], [{"a": "1"}]],
         [[{"a": 1}], [{}]],
         [[{"a": 1}], [{"a": 1, "b": 2}]],
+        [["hello", "world"], ["world", "hello"]],
+        [[["hello", "world"]], [["world", "hello"]]],
     ))
     @pytest.mark.parametrize("flip", (True, False))
     def test_doesnt_match_wrong_fields(self, expected, received, flip):
@@ -95,6 +98,58 @@ class TestClientLine:
         [[{"a": "*test"}], [{"a": "*test"}], True],
         [[{"a": "te*st"}], [{"a": "te*st"}], True],
         [[{"a": "test*"}], [{"a": "test*"}], True],
+        # sorted
+        [[{"a{}": [1, 2]}], [{"a": [1, 2]}], True],
+        [[{"a{}": [1, 2]}], [{"a": [2, 1]}], True],
+        [[{"a{}": [1, 2]}], [{"a": [1]}], False],
+        [[{"a{}": [1, 2]}], [{"a": []}], False],
+        [[{"a{}": [1, 2]}], [{"a": [1, 2, 3]}], False],
+        [[{"a{}": [1, 2]}], [{"a": [1, 2, 1]}], False],
+        [[{"a{}": [2, 1]}], [{"a": [1, 2]}], True],
+        [[{"a{}": [2, 1]}], [{"a": [2, 1]}], True],
+        [[{"a{}": [2, 1]}], [{"a": [1]}], False],
+        [[{"a{}": [2, 1]}], [{"a": []}], False],
+        [[{"a{}": [2, 1]}], [{"a": [1, 2, 3]}], False],
+        [[{"a{}": [2, 1]}], [{"a": [1, 2, 1]}], False],
+        [[{"a{}": {"a1": 1, "a2": 2}}], [{"a": {"a1": 1, "a2": 2}}], True],
+        [[{"a{}": {"a1": 1, "a2": 2}}], [{"a": {"a2": 1, "a1": 2}}], False],
+        [[{"a{}": {"a1": 1}}], [{"a": {"a1": 1, "a2": 2}}], False],
+        [[{"a{}": {"a1": 1, "a2": 2}}], [{"a": {"a1": 1}}], False],
+        [[{"a{}": "abc"}], [{"a": "abc"}], True],
+        [[{"a{}": "abc"}], [{"a": "bac"}], False],
+        [[{"a{}": 1}], [{"a": 1}], True],
+        [[{"a{}": 1}], [{"a": 2}], False],
+        [[{"a{}": False}], [{"a": False}], True],
+        [[{"a{}": True}], [{"a": False}], False],
+        [[{"a{}": None}], [{"a": None}], True],
+        [[{"a{}": 1.2}], [{"a": 1.2}], True],
+        [[{"a{}": 1.3}], [{"a": 1.2}], False],
+        # escaping of sorted
+        [[{"a{}": [1, 2]}], [{"a{}": [1, 2]}], False],
+        [[{"a{}{}": [1, 2]}], [{"a{}": [1, 2]}], True],
+        [[{"a{}{}": [1, 2]}], [{"a{}": [2, 1]}], True],
+        [[{"a{}{}": [1, 2]}], [{"a{}{}": [1, 2]}], False],
+        [[{r"a\{\}": [1, 2]}], [{"a{}": [1, 2]}], True],
+        [[{r"a\{\}": [1, 2]}], [{"a{}": [2, 1]}], False],
+        [[{r"a{}\{\}": [1, 2]}], [{"a{}": [1, 2]}], False],
+        [[{r"a{}\{\}": [1, 2]}], [{"a{}{}": [1, 2]}], True],
+        [[{r"a{}\{\}": [1, 2]}], [{"a{}{}": [2, 1]}], False],
+        [[{r"a\{\}\{\}": [1, 2]}], [{"a{}": [1, 2]}], False],
+        [[{r"a\{\}\{\}": [1, 2]}], [{"a{}{}": [1, 2]}], True],
+        [[{r"a\{\}\{\}": [1, 2]}], [{"a{}{}": [2, 1]}], False],
+        [[{r"a\{\}{}": [1, 2]}], [{"a{}": [1, 2]}], True],
+        [[{r"a\{\}{}": [1, 2]}], [{"a{}": [2, 1]}], True],
+        [[{r"a\{\}{}": [1, 2]}], [{"a{}{}": [1, 2]}], False],
+        [[{r"{a}": [1, 2]}], [{"{a}": [1, 2]}], True],
+        [[{r"{a}": [1, 2]}], [{"{a}": [2, 1]}], False],
+        [[{r"a\\{\\}": [1, 2]}], [{r"a\{\}": [1, 2]}], True],
+        [[{r"a\\{\\}": [1, 2]}], [{r"a\{\}": [2, 1]}], False],
+        [[{r"\{a}": [1, 2]}], [{"{a}": [1, 2]}], True],
+        [[{r"\{a}": [1, 2]}], [{"{a}": [2, 1]}], False],
+        [[{r"a\\{\\}": [1, 2]}], [{r"a\{\}": [1, 2]}], True],
+        [[{r"a\\{\\}": [1, 2]}], [{r"a\{\}": [2, 1]}], False],
+        [[{r"a\\{\\\}": [1, 2]}], [{r"a\{\}": [1, 2]}], True],
+        [[{r"a\\{\\\}": [1, 2]}], [{r"a\{\}": [2, 1]}], False],
         # wildcard and optional
         [[{"[a]": "*"}], [{"a": 1}], True],
         [[{"[a]": "*"}], [{"a": "*"}], True],
@@ -104,9 +159,33 @@ class TestClientLine:
         [[{"[a]": "*"}], [{"a": [1, 2]}], True],
         [[{"[a]": "*"}], [{"a": {"b": 1}}], True],
         [[{"[a]": "*"}], [{}], True],
+        # optional and sorted
+        [[{"[a{}]": [1, 2]}], [{"a": [1, 2]}], True],
+        [[{"[a{}]": [1, 2]}], [{"a": [2, 1]}], True],
+        [[{"[a{}]": [1, 2]}], [{}], True],
+        [[{"[a{}]": [1, 2]}], [{"a": [1, 3]}], False],
+        # sorted and wildcard
+        [[{"a{}": "*"}], [{"a": 1}], True],
+        [[{"a{}": "*"}], [{"a": "*"}], True],
+        [[{"a{}": "*"}], [{"a": False}], True],
+        [[{"a{}": "*"}], [{"a": None}], True],
+        [[{"a{}": "*"}], [{"a": 1.2}], True],
+        [[{"a{}": "*"}], [{"a": [1, 2]}], True],
+        [[{"a{}": "*"}], [{"a": {"b": 1}}], True],
+        [[{"a{}": "*"}], [{}], False],
+        # all together now (sorted, optional, wildcard)
+        # if you are really using this, please reconsider your design choices
+        [[{"[a{}]": "*"}], [{"a": 1}], True],
+        [[{"[a{}]": "*"}], [{"a": "*"}], True],
+        [[{"[a{}]": "*"}], [{"a": False}], True],
+        [[{"[a{}]": "*"}], [{"a": None}], True],
+        [[{"[a{}]": "*"}], [{"a": 1.2}], True],
+        [[{"[a{}]": "*"}], [{"a": [1, 2]}], True],
+        [[{"[a{}]": "*"}], [{"a": {"b": 1}}], True],
+        [[{"[a{}]": "*"}], [{}], True],
     ))
     @pytest.mark.parametrize("nested", (None, "list", "dict"))
-    def test_optional_and_wildcard_dict_entries(self, expected, received,
+    def test_optional_wildcard_set_dict_entries(self, expected, received,
                                                 match, nested):
         if nested == "list":
             expected = [expected]

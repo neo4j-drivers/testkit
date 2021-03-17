@@ -179,21 +179,31 @@ class ClientLine(Line):
     @staticmethod
     def dict_match(should, is_):
         accepted_keys = set()
-        for key in should:
-            key_unescaped = re.sub(r"\\([\[\]\\])", r"\1", key)
-            value = should[key]
-            if isinstance(value, str):
-                value_unescaped = re.sub(r"\\([\\*])", r"\1", value)
+        for should_key in should:
+            should_key_unescaped = re.sub(r"\\([\[\]\\\{\}])", r"\1",
+                                          should_key)
+            should_value = should[should_key]
+            if isinstance(should_value, str):
+                should_value_unescaped = re.sub(r"\\([\\*])", r"\1",
+                                                should_value)
             else:
-                value_unescaped = value
-            any_value = value == "*"
-            optional = re.match(r"^\[.*\]$", key)
+                should_value_unescaped = should_value
+            any_value = should_value == "*"
+            optional = re.match(r"^\[.*\]$", should_key)
             if optional:
-                key_unescaped = key_unescaped[1:-1]
-            accepted_keys.add(key_unescaped)
-            if key_unescaped in is_:
+                should_key_unescaped = should_key_unescaped[1:-1]
+            ordered = re.match(r"^(?:\[.*\{\}\]|.*\{\})$", should_key)
+            if ordered:
+                should_key_unescaped = should_key_unescaped[:-2]
+                if isinstance(should_value_unescaped, list):
+                    should_value_unescaped = sorted(should_value_unescaped)
+            accepted_keys.add(should_key_unescaped)
+            if should_key_unescaped in is_:
+                is_value = is_[should_key_unescaped]
+                if ordered and isinstance(is_value, list):
+                    is_value = sorted(is_value)
                 if (not any_value and not ClientLine.field_match(
-                        value_unescaped, is_[key_unescaped]
+                        should_value_unescaped, is_value
                 )):
                     return False
             elif not optional:
