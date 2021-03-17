@@ -3,7 +3,11 @@ import unittest
 from tests.shared import get_driver_name, new_backend
 from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
+from sys import platform
 import nutkit.protocol as types
+import socket
+import fcntl
+import struct
 
 
 def get_extra_hello_props():
@@ -654,6 +658,24 @@ class Routing(unittest.TestCase):
                 break
             sequence.append(next.values[0].value)
         return sequence
+
+    @staticmethod
+    def get_ip_address(NICname):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(
+            s.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', NICname[:15].encode("UTF-8"))
+        )[20:24])
+
+    def get_ip_addresses(self):
+        ip_addresses = []
+        for ix in socket.if_nameindex():
+            name = ix[1]
+            ip = self.get_ip_address(name)
+            if name != "lo":
+                ip_addresses.append(ip)
+        return ip_addresses
 
     def test_should_successfully_get_routing_table_with_context(self):
         # TODO remove this block once all languages work
@@ -1837,6 +1859,36 @@ class Routing(unittest.TestCase):
         self._routingServer3.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
+
+    def test_should_successfully_acquire_rt_when_router_ip_changes(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+            self.skipTest("needs verifyConnectivity support")
+        ip_addresses = []
+        if platform == "linux":
+            ip_addresses = self.get_ip_addresses()
+        if len(ip_addresses) < 2:
+            self.skipTest("at least 2 IP addresses are required for this test "
+                          "and only linux is supported at the moment")
+
+        router_ip_address = ip_addresses[0]
+
+        def domain_name_resolver(ignored):
+            nonlocal router_ip_address
+            return [router_ip_address]
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent,
+                        domainNameResolverFn=domain_name_resolver)
+        self._routingServer1.start(script=self.router_script_with_one_reader_and_exit(), vars=self.get_vars())
+
+        driver.verifyConnectivity()
+        self._routingServer1.done()
+        router_ip_address = ip_addresses[1]
+        self._routingServer1.start(script=self.router_script_with_one_reader_and_exit(), vars=self.get_vars())
+        driver.verifyConnectivity()
+        driver.close()
+
+        self._routingServer1.done()
 
 
 class RoutingV4(Routing):
