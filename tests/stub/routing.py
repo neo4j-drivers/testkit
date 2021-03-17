@@ -1800,9 +1800,6 @@ class Routing(unittest.TestCase):
         # TODO add support and remove this block
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("add resolvers and connection timeout support")
-        # TODO remove this block after java driver changes are merged
-        if get_driver_name() in ['java']:
-            self.skipTest("waiting for java changes to be merged")
 
         resolver_call_num = 0
         domain_name_resolver_call_num = 0
