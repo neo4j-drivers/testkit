@@ -3,7 +3,6 @@
 start : [NLS] (bang_line NLS)* block_list [NLS]
 
 block_list : block (NLS block)*
-//block_list : (nondeterministic_end_block NLS)* deterministic_end_block (NLS (deterministic_end_block | nondeterministic_end_block))*
 
 ?block : client_block
        | server_block
