@@ -93,6 +93,10 @@ class StubServer:
         If the server process is still running after polling it will be killed
           and an exception will be raised.
         """
+        if not self._process:
+            # test was probably skipped failed before the stub server could be
+            # started.
+            return
         polls = 200
         while polls:
             self._process.poll()
