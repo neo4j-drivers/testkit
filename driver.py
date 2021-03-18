@@ -47,17 +47,18 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
 
 
 def start_container(testkit_path, branch_name, driver_name, driver_path,
-                    artifacts_path, network=None):
+                    artifacts_path, network, secondary_network):
     # Path where scripts are that adapts driver to testkit.
     # Both absolute path and path relative to driver container.
     host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
                                                  driver_path)
     image = _ensure_image(testkit_path, host_glue_path,
                           branch_name, driver_name)
+    container_name = "driver"
     # Configure volume map for the driver container
     mount_map = {
-        testkit_path:   "/testkit",
-        driver_path:    "/driver",
+        testkit_path: "/testkit",
+        driver_path: "/driver",
         artifacts_path: "/artifacts"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
@@ -66,13 +67,15 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
-    container = docker.run(
-        image, "driver",
+    docker.create(
+        image, container_name,
         command=["python3", "/testkit/driver/bootstrap.py"],
         mount_map=mount_map,
         port_map={9876: 9876},  # For convenience when debugging
         network=network,
         working_folder="/driver")
+    docker.network_connect(secondary_network, container_name)
+    container = docker.start(container_name)
     return Container(container, driver_glue_path)
 
 

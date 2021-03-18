@@ -24,6 +24,9 @@ class Session:
             if isinstance(res, protocol.ResolverResolutionRequired):
                 addresses = self._driver.resolve(res.address)
                 self._backend.send(protocol.ResolverResolutionCompleted(res.id, addresses))
+            elif isinstance(res, protocol.DomainNameResolutionRequired):
+                addresses = self._driver.resolveDomainName(res.name)
+                self._backend.send(protocol.DomainNameResolutionCompleted(res.id, addresses))
             elif isinstance(res, protocol.Result):
                 return Result(self._backend, res)
             else:
@@ -63,6 +66,9 @@ class Session:
             elif isinstance(res, protocol.ResolverResolutionRequired):
                 addresses = self._driver.resolve(res.address)
                 self._backend.send(protocol.ResolverResolutionCompleted(res.id, addresses))
+            elif isinstance(res, protocol.DomainNameResolutionRequired):
+                addresses = self._driver.resolveDomainName(res.name)
+                self._backend.send(protocol.DomainNameResolutionCompleted(res.id, addresses))
             elif isinstance(res, protocol.RetryableDone):
                 return x
 

@@ -27,7 +27,7 @@ class Standalone:
         self._port = port
         self._edition = edition
 
-    def start(self):
+    def start(self, network):
         # Environment variables passed to the Neo4j docker container
         env_map = {
             "NEO4J_dbms_connector_bolt_advertised__address":
@@ -42,7 +42,7 @@ class Standalone:
             self._image, self._hostname,
             mount_map={logs_path: "/logs"},
             env_map=env_map,
-            network="the-bridge")
+            network=network)
 
     def address(self):
         return (self._hostname, self._port)
@@ -63,7 +63,7 @@ class Cluster:
         self._num_cores = num_cores
         self._cores = []
 
-    def start(self):
+    def start(self, network):
         for i in range(self._num_cores):
             core = Core(i, self._artifacts_path)
             self._cores.append(core)
@@ -71,7 +71,7 @@ class Cluster:
         initial_members = ",".join([c.discover for c in self._cores])
 
         for core in self._cores:
-            core.start(self._image, initial_members, "the-bridge")
+            core.start(self._image, initial_members, network)
 
     def address(self):
         return ("core0", 7687)

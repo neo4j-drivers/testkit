@@ -27,7 +27,7 @@ import runner
 import settings
 
 # TODO: Move to docker.py
-networks = ["the-bridge"]
+networks = ["testkit_1", "testkit_2"]
 
 test_flags = {
     "TESTKIT_TESTS": True,
@@ -212,13 +212,16 @@ def main(settings, configurations):
     # address to be able to start services on the network that the driver
     # connects to (stub server and TLS server).
     subprocess.run([
-        "docker", "network", "create", "the-bridge"
+        "docker", "network", "create", networks[0]
+    ])
+    subprocess.run([
+        "docker", "network", "create", networks[1]
     ])
 
     driver_container = driver.start_container(this_path, testkit_branch,
                                               driver_name, driver_repo,
                                               artifacts_path,
-                                              network="the-bridge")
+                                              network=networks[0], secondary_network=networks[1])
     driver_container.clean_artifacts()
     print("Cleaned up artifacts")
 
@@ -236,7 +239,8 @@ def main(settings, configurations):
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    runner_container = runner.start_container(this_path, testkit_branch)
+    runner_container = runner.start_container(this_path, testkit_branch,
+                                              network=networks[0], secondary_network=networks[1])
 
     if test_flags["STUB_TESTS"]:
         run_fail_wrapper(runner_container.run_stub_tests)
@@ -274,7 +278,7 @@ def main(settings, configurations):
                                       neo4j_artifacts_path,
                                       "neo4jserver", 7687,
                                       neo4j_config.edition)
-        server.start()
+        server.start(networks[0])
         hostname, port = server.address()
 
         # Wait until server is listening before running tests
