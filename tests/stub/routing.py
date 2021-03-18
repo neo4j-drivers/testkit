@@ -1198,6 +1198,9 @@ class Routing(TestkitTestCase):
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
+            else:
+                self.assertEqual('ServiceUnavailableError', e.errorType)
+
             failed = True
         driver.close()
 
@@ -1219,6 +1222,8 @@ class Routing(TestkitTestCase):
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
+            else:
+                self.assertEqual('ServiceUnavailableError', e.errorType)
             failed = True
         driver.close()
 
