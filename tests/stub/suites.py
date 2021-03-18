@@ -14,7 +14,10 @@ import tests.stub.bookmark as bookmark
 import tests.stub.iteration as iteration
 import tests.stub.versions as versions
 from tests.testenv import (
-        get_test_result_class, begin_test_suite, end_test_suite)
+        get_test_result_class,
+        begin_test_suite,
+        end_test_suite,
+)
 
 loader = unittest.TestLoader()
 
