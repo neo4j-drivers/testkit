@@ -626,7 +626,7 @@ class Routing(unittest.TestCase):
 
     def test_should_successfully_get_routing_table_with_context(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['go', 'python', 'javascript']:
             self.skipTest("needs verifyConnectivity support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -1022,7 +1022,7 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_procedure_not_found_failure(), vars=self.get_vars())
@@ -1033,6 +1033,9 @@ class Routing(unittest.TestCase):
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
+            else:
+                self.assertEqual('ServiceUnavailableError', e.errorType)
+
             failed = True
         driver.close()
 
@@ -1041,7 +1044,7 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_discovery_when_router_fails_with_unknown_code(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_unknown_failure(), vars=self.get_vars())
@@ -1052,6 +1055,8 @@ class Routing(unittest.TestCase):
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
+            else:
+                self.assertEqual('ServiceUnavailableError', e.errorType)
             failed = True
         driver.close()
 
@@ -1343,7 +1348,7 @@ class Routing(unittest.TestCase):
 
     def test_should_use_initial_router_for_discovery_when_others_unavailable(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
@@ -1444,7 +1449,7 @@ class Routing(unittest.TestCase):
 
     def test_should_accept_routing_table_without_writers_and_then_rediscover(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
@@ -1620,7 +1625,7 @@ class Routing(unittest.TestCase):
 
     def test_should_successfully_check_if_support_for_multi_db_is_available(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("supportsMultiDb not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
