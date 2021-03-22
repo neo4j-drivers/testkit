@@ -631,10 +631,11 @@ class BlockList(Block):
                 next_block.assert_no_init()
 
     def accepted_messages(self) -> List[ClientLine]:
-        if self.done():
+        if self.has_deterministic_end() and self.done():
             return []
         res = self.blocks[self.index].accepted_messages()
         if (not self.blocks[self.index].has_deterministic_end()
+                and self.blocks[self.index].can_be_skipped()
                 and self.index + 1 <= len(self.blocks)):
             res += self.blocks[self.index + 1].accepted_messages()
         return res

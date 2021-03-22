@@ -471,6 +471,36 @@ def test_lists_alternatives_on_unexpected_message(msg, restarting, concurrent,
     assert "(%i)C: RESET" % (7 + line_offset) in str(server_exc)
 
 
+@pytest.mark.parametrize("block_marker", ("?", "*", "+"))
+@pytest.mark.parametrize("msg", (b"\xb0\x11", b"\xb0\x13"))
+def test_lists_alternatives_on_unexpected_message_with_non_det_block(
+        msg, server_factory, connection_factory, block_marker):
+    script = """
+    !: BOLT 4.3
+
+    {{{}
+        C: RUN
+    {}}}
+    C: RESET
+    S: SUCCESS
+    """.format(block_marker, block_marker)
+    server = server_factory(parse(script))
+    con = connection_factory("localhost", 7687)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(server_version_to_version_request((4, 3)))
+    con.read(4)
+    con.write(b"\x00\x02" + msg + b"\x00\x00")
+    with pytest.raises(BrokenSocket):
+        con.read(6)
+    assert len(server.service.exceptions) == 1
+    server_exc = server.service.exceptions[0]
+    assert "(5)C: RUN" in str(server_exc)
+    if block_marker in ("?", "*"):
+        assert "(7)C: RESET" in str(server_exc)
+    else:
+        assert "(7)C: RESET" not in str(server_exc)
+
+
 def test_unknown_message(server_factory, connection_factory):
     script = """
     !: BOLT 4.3
