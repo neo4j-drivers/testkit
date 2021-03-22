@@ -183,28 +183,20 @@ class ClientLine(Line):
             should_key_unescaped = re.sub(r"\\([\[\]\\\{\}])", r"\1",
                                           should_key)
             should_value = should[should_key]
-            if isinstance(should_value, str):
-                should_value_unescaped = re.sub(r"\\([\\*])", r"\1",
-                                                should_value)
-            else:
-                should_value_unescaped = should_value
-            any_value = should_value == "*"
             optional = re.match(r"^\[.*\]$", should_key)
             if optional:
                 should_key_unescaped = should_key_unescaped[1:-1]
             ordered = re.match(r"^(?:\[.*\{\}\]|.*\{\})$", should_key)
             if ordered:
                 should_key_unescaped = should_key_unescaped[:-2]
-                if isinstance(should_value_unescaped, list):
-                    should_value_unescaped = sorted(should_value_unescaped)
+                if isinstance(should_value, list):
+                    should_value = sorted(should_value)
             accepted_keys.add(should_key_unescaped)
             if should_key_unescaped in is_:
                 is_value = is_[should_key_unescaped]
                 if ordered and isinstance(is_value, list):
                     is_value = sorted(is_value)
-                if (not any_value and not ClientLine.field_match(
-                        should_value_unescaped, is_value
-                )):
+                if not ClientLine.field_match(should_value, is_value):
                     return False
             elif not optional:
                 return False
@@ -212,6 +204,10 @@ class ClientLine(Line):
 
     @staticmethod
     def field_match(should, is_):
+        if isinstance(should, str):
+            if should == "*":
+                return True
+            should = re.sub(r"\\([\\*])", r"\1", should)
         if type(should) != type(is_):
             return False
         if isinstance(should, (list, tuple)):

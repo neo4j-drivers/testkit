@@ -32,8 +32,10 @@ class TestClientLine:
         ["hello", "world"],
         [["hello", "world"]],
     ))
-    def test_matches_fields(self, fields):
-        content = "MSG " + " ".join(map(json.dumps, fields))
+    @pytest.mark.parametrize("wildcard", (True, False))
+    def test_matches_fields(self, fields, wildcard):
+        msg_fields = ["*" if wildcard else f for f in fields]
+        content = "MSG " + " ".join(map(json.dumps, msg_fields))
         line = ClientLine(10, "C: " + content, content)
         msg = TranslatedStructure("MSG", b"\00", *fields)
         assert line.match(msg)
