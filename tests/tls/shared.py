@@ -1,4 +1,9 @@
-import subprocess, platform, os, time, sys
+import os
+import platform
+import subprocess
+import sys
+import time
+
 from tests.shared import *
 from nutkit.frontend import Driver, AuthorizationToken
 

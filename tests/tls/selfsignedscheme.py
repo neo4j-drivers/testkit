@@ -1,25 +1,24 @@
-import unittest
 from tests.shared import *
 from tests.tls.shared import *
 
 schemes = ["neo4j+ssc", "bolt+ssc"]
 
-class TestSelfSignedScheme(unittest.TestCase):
+class TestSelfSignedScheme(TestkitTestCase):
     """ Tests URL scheme neo4j+ssc/bolt+ssc where server is assumed to present a signed server certificate
     but not necessarily signed by an authority recognized by the driver.
     """
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = None
         self._driver = get_driver_name()
 
     def tearDown(self):
         if self._server:
-            # If test raised an exception this will make sure that the stub server
-            # is killed and it's output is dumped for analys.
+            # If test raised an exception this will make sure that the stub
+            # server is killed and it's output is dumped for analysis.
             self._server.reset()
             self._server = None
-        self._backend.close()
+        super().tearDown()
 
     """ A server certificate signed by a trusted CA should be accepted even when configured
     for self signed.

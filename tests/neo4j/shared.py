@@ -14,6 +14,7 @@ env_neo4j_host = "TEST_NEO4J_HOST"
 env_neo4j_user = "TEST_NEO4J_USER"
 env_neo4j_pass = "TEST_NEO4J_PASS"
 
+
 def get_authorization():
     """ Returns default authorization for tests that do not test this aspect
     """

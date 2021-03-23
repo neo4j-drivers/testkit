@@ -1,12 +1,10 @@
-import unittest
-
 from tests.shared import *
 from tests.stub.shared import *
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 
 
-class SessionRun(unittest.TestCase):
+class SessionRun(TestkitTestCase):
     script_pull_all = """
     !: BOLT #VERSION#
     !: AUTO RESET
@@ -63,12 +61,12 @@ class SessionRun(unittest.TestCase):
     """
 
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
 
     def tearDown(self):
-        self._backend.close()
         self._server.reset()
+        super().tearDown()
 
     def _run(self, n, script, end, expectedSequence, expectedError=False):
         uri = "bolt://%s" % self._server.address
@@ -114,7 +112,7 @@ class SessionRun(unittest.TestCase):
         self._run(-1, SessionRun.script_pull_all, "", ["1", "2", "3", "4", "5", "6"])
 
 
-class TxRun(unittest.TestCase):
+class TxRun(TestkitTestCase):
     script_n = """
     !: BOLT #VERSION#
     !: AUTO HELLO
@@ -136,14 +134,13 @@ class TxRun(unittest.TestCase):
     S: SUCCESS {"bookmark": "bm"}
     """
 
-
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
 
     def tearDown(self):
-        self._backend.close()
         self._server.reset()
+        super().tearDown()
 
     def _iterate(self, n, script, expectedSequence, expectedError=False):
         uri = "bolt://%s" % self._server.address

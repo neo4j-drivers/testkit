@@ -1,16 +1,15 @@
-import unittest
-
 import os
+
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
 from tests.neo4j.shared import (
         get_neo4j_host_and_port, env_neo4j_user, env_neo4j_pass)
-from tests.shared import new_backend
+from tests.shared import new_backend, TestkitTestCase
 
 
-class TestAuthenticationBasic(unittest.TestCase):
+class TestAuthenticationBasic(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._host, self._port = get_neo4j_host_and_port()
         self._scheme = "bolt://%s:%d" % (self._host, self._port)
         self._driver = None
@@ -21,7 +20,7 @@ class TestAuthenticationBasic(unittest.TestCase):
             self._session.close()
         if self._driver:
             self._driver.close()
-        self._backend.close()
+        super().tearDown()
 
     def createDriverAndSession(self, token):
         self._driver = Driver(self._backend, self._scheme, token)

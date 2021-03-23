@@ -1,4 +1,4 @@
-import unittest, os
+import os
 
 from tests.shared import *
 from tests.stub.shared import *
@@ -105,19 +105,19 @@ S: SUCCESS {}
 #   Transaction meta data + write mode
 #   Transaction timeout + write mode
 #   Read mode + transaction meta data + transaction timeout + bookmarks
-class TxBeginParameters(unittest.TestCase):
+class TxBeginParameters(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     def _run(self, accessMode, params=None, bookmarks=None, txMeta=None, timeout=None):
         session = self._driver.session(accessMode, bookmarks=bookmarks)

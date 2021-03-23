@@ -17,6 +17,16 @@ in errors.py. See the requests for information on which response they expect.
 """
 
 
+class StartTest:
+    """ Request the backend to confirm to run a specific test. The backend
+    should respond with RunTest if the backend wants the test to be skipped it
+    must respond with SkipTest.
+    """
+
+    def __init__(self, test_name):
+        self.testName = test_name
+
+
 class NewDriver:
     """ Request to create a new driver instance on the backend.
     Backend should respond with a Driver response or an Error response.
@@ -227,10 +237,8 @@ class ResultNext:
 
 class ResultConsume:
     """ Request to close the result and to discard all remaining records back
-    in the response.  Backend should respond with ClosedResult or an Error if
-    an error occured.  If an error occures on the backend while iterating the
-    result for serialization this error should be set in ClosedResult.error
-    and iteration stopped, the ClosedResult should be returned.
+    in the response. Backend should respond with Summary or an Error if an error
+    occured.
     """
 
     def __init__(self, resultId):

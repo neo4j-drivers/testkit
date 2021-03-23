@@ -1,6 +1,4 @@
-import unittest
-
-from tests.shared import get_driver_name, new_backend
+from tests.shared import get_driver_name, new_backend, TestkitTestCase
 from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 from sys import platform
@@ -21,9 +19,9 @@ def get_extra_hello_props():
 # This should be the latest/current version of the protocol.
 # Older protocol that needs to be tested inherits from this and override
 # to handle variations.
-class Routing(unittest.TestCase):
+class Routing(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._routingServer1 = StubServer(9000)
         self._routingServer2 = StubServer(9001)
         self._routingServer3 = StubServer(9002)
@@ -39,7 +37,6 @@ class Routing(unittest.TestCase):
         self._userAgent = "007"
 
     def tearDown(self):
-        self._backend.close()
         self._routingServer1.reset()
         self._routingServer2.reset()
         self._routingServer3.reset()
@@ -49,6 +46,7 @@ class Routing(unittest.TestCase):
         self._writeServer1.reset()
         self._writeServer2.reset()
         self._writeServer3.reset()
+        super().tearDown()
 
     def router_script(self):
         return """
@@ -2826,14 +2824,14 @@ class RoutingV3(Routing):
         pass
 
 
-class NoRouting(unittest.TestCase):
+class NoRouting(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9000)
 
     def tearDown(self):
-        self._backend.close()
         self._server.reset()
+        super().tearDown()
 
     def script(self):
         return """

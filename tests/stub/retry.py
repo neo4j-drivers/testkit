@@ -1,6 +1,4 @@
-import unittest
-
-from tests.shared import new_backend, get_driver_name
+from tests.shared import new_backend, get_driver_name, TestkitTestCase
 from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
@@ -127,17 +125,17 @@ S: <EXIT>
 """
 
 
-class TestRetry(unittest.TestCase):
+class TestRetry(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     def test_read(self):
         self._server.start(script=script_read)
@@ -242,9 +240,10 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
-class TestRetryClustering(unittest.TestCase): 
+
+class TestRetryClustering(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
@@ -252,6 +251,12 @@ class TestRetryClustering(unittest.TestCase):
         self._auth = AuthorizationToken(
                 scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
+
+    def tearDown(self):
+        self._routingServer.reset()
+        self._readServer.reset()
+        self._writeServer.reset()
+        super().tearDown()
 
     def test_read(self):
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
@@ -282,14 +287,14 @@ class TestRetryClustering(unittest.TestCase):
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Database.DatabaseUnavailable")
-    
+
     def test_retry_made_up_transient(self):
         # Driver should retry all transient error (with some exceptions), make
         # up a transient error and the driver should retry.
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Completely.MadeUp")
-    
+
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
@@ -331,7 +336,7 @@ class TestRetryClustering(unittest.TestCase):
 
         self._writeServer.start(script=script_retry_with_fail_after_pull_server1, vars=vars)
         self._readServer.start(script=script_retry_with_fail_after_pull_server2, vars=vars)
-        
+
         num_retries = 0
 
         def twice(tx):
@@ -354,7 +359,6 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
         self._readServer.done()
-
 
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(script=self.router_script(), vars=self.get_vars())
@@ -393,13 +397,6 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
 
-
-    def tearDown(self):
-        self._backend.close()
-        self._routingServer.reset()
-        self._readServer.reset()
-        self._writeServer.reset()
-    
     def router_script(self):
         return """
         !: BOLT #VERSION#
@@ -415,7 +412,7 @@ class TestRetryClustering(unittest.TestCase):
         C: ROUTE #ROUTINGCTX# None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
-    
+
     def router_script_swap_reader_and_writer(self):
         return """
         !: BOLT #VERSION#
@@ -431,8 +428,8 @@ class TestRetryClustering(unittest.TestCase):
         C: ROUTE #ROUTINGCTX# None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
         """
-    
-    def router_script_not_retry(self): 
+
+    def router_script_not_retry(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET

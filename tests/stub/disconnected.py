@@ -1,6 +1,4 @@
-import unittest
-
-from tests.shared import new_backend, get_driver_name
+from tests.shared import new_backend, get_driver_name, TestkitTestCase
 from tests.stub.shared import StubServer
 from nutkit.frontend import Driver, AuthorizationToken
 import nutkit.protocol as types
@@ -36,9 +34,9 @@ S: <EXIT>
 """
 
 
-class SessionRunDisconnected(unittest.TestCase):
+class SessionRunDisconnected(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
         auth = AuthorizationToken(scheme="basic", principal="neo4j",
@@ -49,10 +47,10 @@ class SessionRunDisconnected(unittest.TestCase):
         self._session = self._driver.session("w")
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     # Helper function that runs the sequence and returns the name of the step
     # at which the error happened.

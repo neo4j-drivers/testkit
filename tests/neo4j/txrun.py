@@ -1,12 +1,10 @@
-import unittest
-
 from tests.neo4j.shared import get_driver
-from tests.shared import new_backend, get_driver_name
+from tests.shared import new_backend, get_driver_name, TestkitTestCase
 
 
-class TestTxRun(unittest.TestCase):
+class TestTxRun(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._driver = get_driver(self._backend)
         self._session = None
 
@@ -14,7 +12,7 @@ class TestTxRun(unittest.TestCase):
         if self._session:
             self._session.close()
         self._driver.close()
-        self._backend.close()
+        super().tearDown()
 
     def test_updates_last_bookmark_on_commit(self):
         # Verifies that last bookmark is set on the session upon
