@@ -1,9 +1,10 @@
-import os
-
-from tests.shared import *
-from tests.stub.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script_accessmode_read = """
 !: BOLT 4
@@ -97,9 +98,9 @@ class SessionRunParameters(TestkitTestCase):
         super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = AuthorizationToken()
         uri = "bolt://%s" % self._server.address
-        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        self._driver = Driver(self._backend, uri,
+                              types.AuthorizationToken(scheme="basic"))
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server

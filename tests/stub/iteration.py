@@ -1,7 +1,10 @@
-from tests.shared import *
-from tests.stub.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 
 class SessionRun(TestkitTestCase):
@@ -70,7 +73,8 @@ class SessionRun(TestkitTestCase):
 
     def _run(self, n, script, end, expectedSequence, expectedError=False):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(script=script, vars={"#END#": end, "#VERSION#": "4"})
         session = driver.session("w", fetchSize=n)
         result = session.run("RETURN 1 AS n")
@@ -144,7 +148,8 @@ class TxRun(TestkitTestCase):
 
     def _iterate(self, n, script, expectedSequence, expectedError=False):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(script=script, vars={"#VERSION#": "4"})
         session = driver.session("w", fetchSize=n)
         tx = session.beginTransaction()
@@ -212,7 +217,8 @@ class TxRun(TestkitTestCase):
         if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(script=TxRun.script_nested_n, vars={"#VERSION#": "4"})
         session = driver.session("w", fetchSize=1)
         tx = session.beginTransaction()

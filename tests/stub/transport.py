@@ -1,9 +1,10 @@
-import os
-
-from tests.shared import *
-from tests.stub.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script = """
 !: BOLT $bolt_version
@@ -30,7 +31,8 @@ class Transport(TestkitTestCase):
         super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth)
         self._session = self._driver.session("w")

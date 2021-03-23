@@ -1,11 +1,15 @@
-from tests.shared import get_driver_name, new_backend, TestkitTestCase
-from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
-from sys import platform
-import nutkit.protocol as types
-import socket
 import fcntl
+import socket
 import struct
+from sys import platform
+
+from nutkit.frontend import Driver
+import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 
 def get_extra_hello_props():
@@ -32,7 +36,7 @@ class Routing(TestkitTestCase):
         self._writeServer2 = StubServer(9021)
         self._writeServer3 = StubServer(9022)
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer1.address
-        self._auth = AuthorizationToken(
+        self._auth = types.AuthorizationToken(
             scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
 
@@ -2863,8 +2867,9 @@ class NoRouting(TestkitTestCase):
         uri = "bolt://%s" % self._server.address
         self._server.start(script=self.script(), vars=self.get_vars())
         driver = Driver(self._backend, uri,
-                        AuthorizationToken(scheme="basic", principal="p",
-                                           credentials="c"), userAgent="007")
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
 
         session = driver.session('r', database="adb")
         session.run("RETURN 1 as n")

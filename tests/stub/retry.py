@@ -1,8 +1,10 @@
-from tests.shared import new_backend, get_driver_name, TestkitTestCase
-from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
-
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script_read = """
 !: BOLT 4
@@ -148,8 +150,8 @@ class TestRetry(TestkitTestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                                  credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
@@ -185,8 +187,8 @@ class TestRetry(TestkitTestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                                  credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
@@ -227,7 +229,7 @@ class TestRetry(TestkitTestCase):
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
             result.next()
-        auth = AuthorizationToken(scheme="basic")
+        auth = types.AuthorizationToken(scheme="basic")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
@@ -248,8 +250,8 @@ class TestRetryClustering(TestkitTestCase):
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
-        self._auth = AuthorizationToken(
-                scheme="basic", principal="p", credentials="c")
+        self._auth = types.AuthorizationToken(scheme="basic", principal="p",
+                                              credentials="c")
         self._userAgent = "007"
 
     def tearDown(self):

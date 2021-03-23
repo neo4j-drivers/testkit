@@ -1,5 +1,11 @@
-from tests.shared import get_driver_name, new_backend, TestkitTestCase
-from tests.tls.shared import TlsServer, try_connect
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.tls.shared import (
+    TlsServer,
+    try_connect,
+)
 
 
 class TestTlsVersions(TestkitTestCase):

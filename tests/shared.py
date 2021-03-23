@@ -10,7 +10,6 @@ TEST_BACKEND_PORT  Port on backend host, default is 9876
 
 import os
 import re
-
 import unittest
 
 from nutkit import protocol

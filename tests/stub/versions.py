@@ -1,6 +1,10 @@
-from tests.shared import new_backend, get_driver_name, TestkitTestCase
+from nutkit.frontend import Driver
+from nutkit.protocol import AuthorizationToken
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
 
 
 class ProtocolVersions(TestkitTestCase):

@@ -1,6 +1,5 @@
-from urllib import request
 from os import getenv
-import subprocess
+from urllib import request
 
 
 def download_artifact(build_id, build_spec, path):

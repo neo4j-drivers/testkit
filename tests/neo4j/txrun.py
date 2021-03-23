@@ -1,5 +1,8 @@
 from tests.neo4j.shared import get_driver
-from tests.shared import new_backend, get_driver_name, TestkitTestCase
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
 
 
 class TestTxRun(TestkitTestCase):

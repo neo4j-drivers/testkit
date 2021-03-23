@@ -1,7 +1,7 @@
-from tests.shared import new_backend, TestkitTestCase
+from nutkit.frontend import Driver
+from nutkit.protocol import AuthorizationToken
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
-
 
 # TODO: Tests for 3.5 (no support for PULL n)
 script_commit = """

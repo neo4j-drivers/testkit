@@ -1,5 +1,12 @@
-from tests.shared import *
-from tests.tls.shared import *
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.tls.shared import (
+    TlsServer,
+    try_connect,
+)
+
 
 schemes = ["neo4j", "bolt"]
 

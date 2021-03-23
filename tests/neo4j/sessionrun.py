@@ -1,6 +1,9 @@
 import nutkit.protocol as types
 from tests.neo4j.shared import get_driver
-from tests.shared import get_driver_name, new_backend, TestkitTestCase
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
 
 
 class TestSessionRun(TestkitTestCase):

@@ -7,7 +7,8 @@ TEST_NEO4J_HOST    Neo4j server host, no default, required
 TEST_NEO4J_PORT    Neo4j server port, default is 7687
 """
 import os
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
+from nutkit.protocol import AuthorizationToken
 
 
 env_neo4j_host = "TEST_NEO4J_HOST"
