@@ -22,12 +22,12 @@ For example response to NewDriver request should be sent from backend as:
 
 
 class RunTest:
-    """ Response to StartTest indicating the the test can be started"""
+    """ Response to StartTest indicating that the test can be started"""
     pass
 
 
 class SkipTest:
-    """ Response to StartTest indicating the the test should be skipped"""
+    """ Response to StartTest indicating that the test should be skipped"""
 
     def __init__(self, reason):
         self.reason = reason
