@@ -9,8 +9,3 @@ def evaluate_env_variable():
 
 
 in_teamcity = evaluate_env_variable()
-
-
-
-
-

@@ -253,6 +253,12 @@ class TestRetryClustering(unittest.TestCase):
                 scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
 
+    def tearDown(self):
+        self._backend.close()
+        self._routingServer.reset()
+        self._readServer.reset()
+        self._writeServer.reset()
+
     def test_read(self):
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
         self._readServer.start(script=script_read)
@@ -354,7 +360,6 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
         self._readServer.done()
-
 
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(script=self.router_script(), vars=self.get_vars())

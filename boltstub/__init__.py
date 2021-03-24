@@ -23,7 +23,10 @@ from copy import deepcopy
 from logging import getLogger
 from socketserver import TCPServer, ThreadingMixIn, BaseRequestHandler
 from sys import stdout
-from threading import Thread
+from threading import (
+    Lock,
+    Thread,
+)
 import traceback
 
 from .addressing import Address
@@ -35,8 +38,10 @@ from .parsing import (
     Script,
     ScriptDeviation,
 )
-from .wiring import Wire
-
+from .wiring import (
+    ReadWakeup,
+    Wire,
+)
 
 log = getLogger(__name__)
 
@@ -71,8 +76,6 @@ class BoltStubService:
 
     default_timeout = 30
 
-    thread = None
-
     auth = ("neo4j", "")
 
     @classmethod
@@ -88,6 +91,8 @@ class BoltStubService:
         self.address = Address((listen_addr.host, listen_addr.port_number))
         self.script = script
         self.exceptions = []
+        self.actors = []
+        self.actors_lock = Lock()
         service = self
 
         class BoltStubRequestHandler(BaseRequestHandler):
@@ -96,7 +101,7 @@ class BoltStubService:
             server_address = None
 
             def setup(self):
-                self.wire = Wire(self.request)
+                self.wire = Wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
                 log.info("[#%04X]  S: <ACCEPT> %s -> %s", self.server_address.port_number,
@@ -104,7 +109,9 @@ class BoltStubService:
 
             def handle(self):
                 try:
-                    actor = BoltActor(deepcopy(script), self.wire)
+                    with service.actors_lock:
+                        actor = BoltActor(deepcopy(script), self.wire)
+                        service.actors.append(actor)
                     actor.play()
                 except ServerExit as e:
                     log.info("[#%04X]  S: <EXIT> %s",
@@ -115,6 +122,9 @@ class BoltStubService:
                 except Exception as e:
                     traceback.print_exc()
                     service.exceptions.append(e)
+                finally:
+                    with service.actors_lock:
+                        service.actors.remove(actor)
 
             def finish(self):
                 log.info("[#%04X]  S: <HANGUP>", self.wire.local_address.port_number)
@@ -147,6 +157,24 @@ class BoltStubService:
     def stop_async(self):
         Thread(target=self.stop, daemon=True).start()
 
+    def try_skip_to_end(self):
+        self.stop()
+        with self.actors_lock:
+            for actor in self.actors:
+                actor.try_skip_to_end()
+
+    def try_skip_to_end_async(self):
+        Thread(target=self.try_skip_to_end, daemon=True).start()
+
+    def close_all_connections(self):
+        self.stop()
+        with self.actors_lock:
+            for actor in self.actors:
+                actor.exit()
+
+    def close_all_connections_async(self):
+        Thread(target=self.close_all_connections, daemon=True).start()
+
     @property
     def timed_out(self):
         return self.server.timed_out
@@ -160,18 +188,42 @@ class BoltActor:
             wire, script.context.bolt_version, log_cb=self.log,
             handshake_data=self.script.context.handshake
         )
+        self._exit = False
+        self.script_lock = Lock()
 
     def play(self):
-        self.channel.handshake()
+        while True:
+            try:
+                with self.script_lock:
+                    self.channel.handshake()
+                break
+            except ReadWakeup:
+                continue
         try:
-            self.script.init(self.channel)
-            while not self.script.done():
-                self.script.consume(self.channel)
+            with self.script_lock:
+                self.script.init(self.channel)
+            while True:
+                if self._exit:
+                    raise ServerExit("Actor exit on request")
+                try:
+                    with self.script_lock:
+                        if self.script.done():
+                            break
+                        self.script.consume(self.channel)
+                except ReadWakeup:
+                    continue
         except (ConnectionError, OSError):
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.
             return
+
+    def try_skip_to_end(self):
+        with self.script_lock:
+            self.script.try_skip_to_end()
+
+    def exit(self):
+        self._exit = True
 
     def log(self, text, *args):
         log.info("[#%04X]  " + text,

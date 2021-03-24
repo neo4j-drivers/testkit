@@ -20,17 +20,17 @@ class Channel:
         if self.log:
             self.log(*args, **kwargs)
 
-    def consume_magic_bytes(self):
-        request = self.wire.read(4)
+    def _test_magic_bytes(self, request):
         self._log("C: <MAGIC> %s", hex_repr(request))
         if request != b"\x60\x60\xb0\x17":
             raise ServerExit("Expected the magic header {}, received {}".format(
-                "6060B017", hex_repr(request[:4])
+                "6060B017", hex_repr(request)
             ))
 
     def handshake(self):
-        self.consume_magic_bytes()
-        request = self.wire.read(16)
+        request = self.wire.read(20)
+        self._test_magic_bytes(request[:4])
+        request = request[4:]
         self._log("C: <HANDSHAKE> %s", hex_repr(request))
         if self.handshake_data is not None:
             response = self.handshake_data
@@ -61,7 +61,7 @@ class Channel:
         self.wire.send()
 
     def send_struct(self, struct):
-        self.log("%s", struct)
+        self.log("S: %s", struct)
         self.stream.write_message(struct)
         self.stream.drain()
 

@@ -616,23 +616,27 @@ class PackStream:
 
     def __init__(self, wire):
         self.wire = wire
+        self.data_buffer = []
+        self.next_chunk_size = None
 
     def read_message(self):
         """ Read a chunked message.
 
         :return:
         """
-        data = []
-        more = True
-        while more:
-            chunk_header = self.wire.read(2)
-            chunk_size, = struct_unpack(">H", chunk_header)
-            if chunk_size:
-                chunk_data = self.wire.read(chunk_size)
-                data.append(chunk_data)
+        while True:
+            if self.next_chunk_size is None:
+                chunk_size = self.wire.read(2)
+                self.next_chunk_size, = struct_unpack(">H", chunk_size)
+            if self.next_chunk_size:
+                chunk_data = self.wire.read(self.next_chunk_size)
+                self.next_chunk_size = None
+                self.data_buffer.append(chunk_data)
             else:
-                more = False
-        buffer = UnpackableBuffer(b"".join(data))
+                self.next_chunk_size = None
+                break
+        buffer = UnpackableBuffer(b"".join(self.data_buffer))
+        self.data_buffer = []
         unpacker = Unpacker(buffer)
         return unpacker.unpack()
 

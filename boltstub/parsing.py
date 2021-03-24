@@ -729,6 +729,7 @@ class Script:
         self._consume_bang_lines(bang_lines)
         self.block_list = block_list
         self.filename = filename or ""
+        self._skipped = False
 
     def _consume_bang_lines(self, bang_lines):
         for bl in bang_lines:
@@ -744,9 +745,15 @@ class Script:
                                       channel.peek())
 
     def done(self):
+        if self._skipped:
+            return True
         if self.block_list.has_deterministic_end():
             return self.block_list.done()
         return False
+
+    def try_skip_to_end(self):
+        if self.block_list.can_be_skipped():
+            self._skipped = True
 
 
 class ScriptTransformer(lark.Transformer):

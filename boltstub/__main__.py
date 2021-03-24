@@ -33,6 +33,26 @@ log = getLogger(__name__)
 
 
 def main():
+    sigint_count = 0
+    service = None
+
+    def signal_handler(sig, frame):
+        nonlocal sigint_count
+        if service is None:
+            exit(100)  # process killed way too young :'(
+        sigint_count += 1
+        if sigint_count == 1:
+            print("1st SIGINT received. Trying to finish all running scripts.")
+            service.try_skip_to_end_async()
+        elif sigint_count == 2:
+            print("2nd SIGINT received. Closing all connections.")
+            service.close_all_connections_async()
+        if sigint_count > 3:
+            print("3nd SIGINT received. Hard exit.")
+            exit(130)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = ArgumentParser(description="""\
 Run a Bolt stub server.
 
@@ -65,18 +85,6 @@ useful for Bolt client integration testing.
     scripts = map(parse_file, parsed.script)
     service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
 
-    sigint_count = 0
-
-    def signal_handler(sig, frame):
-        nonlocal sigint_count
-        sigint_count += 1
-        if sigint_count > 1:
-            exit(130)
-        print("SIGINT received. Attempting Graceful shutdown.")
-        service.stop_async()
-
-    signal.signal(signal.SIGINT, signal_handler)
-
     try:
         service.start()
     except Exception as e:
@@ -95,6 +103,8 @@ useful for Bolt client integration testing.
     if service.timed_out:
         print("Timed out")
         exit(2)
+
+    exit(0)
 
 
 if __name__ == "__main__":
