@@ -1781,7 +1781,7 @@ class Routing(unittest.TestCase):
 
     def test_should_request_rt_from_all_initial_routers_until_successful(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("add resolvers and connection timeout support")
         # TODO remove this block after java driver changes are merged
         if get_driver_name() in ['java']:
