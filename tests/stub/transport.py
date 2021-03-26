@@ -35,12 +35,16 @@ class Transport(unittest.TestCase):
         self._driver = Driver(self._backend, uri, auth)
         self._session = self._driver.session("w")
 
+    def tearDown(self):
+        self._backend.close()
+        self._server.reset()
+
     def test_noop(self):
         # Verifies that no op messages sent on bolt chunking layer are ignored. The no op messages
         # are sent from server as a way to notify that the connection is still up.
         # Bolt 4.1 >
         bolt_version = "4.1"
-        self._server.start(script=script, vars = {"$bolt_version": bolt_version})
+        self._server.start(script=script, vars={"$bolt_version": bolt_version})
         result = self._session.run("RETURN 1 as n")
         record = result.next()
         nilrec = result.next()

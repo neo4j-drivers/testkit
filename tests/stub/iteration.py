@@ -212,8 +212,6 @@ class TxRun(unittest.TestCase):
         if get_driver_name() in ['javascript']:
             self.skipTest('It could not guarantee the order of records requests between in the nested transactions')
         # ex JAVA - java completely pulls the first query before running the second
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
-            self.skipTest("Need support for specifying session fetch size in testkit backend")
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
         self._server.start(script=TxRun.script_nested_n, vars={"#VERSION#": "4"})

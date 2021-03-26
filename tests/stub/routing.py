@@ -47,11 +47,12 @@ class Routing(unittest.TestCase):
         self._writeServer2.reset()
         self._writeServer3.reset()
 
-    def router_script(self):
+    def router_script_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
@@ -59,22 +60,37 @@ class Routing(unittest.TestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
-    def router_script_with_two_requests(self):
+    def router_script_default_db(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
-           <EXIT>
+        C: ROUTE #ROUTINGCTX# null
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
-    def router_script_with_procedure_not_found_failure(self):
+    def router_script_connectivity_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+        !: ALLOW RESTART
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        {{
+            C: ROUTE #ROUTINGCTX# null
+        ----
+            C: ROUTE #ROUTINGCTX# "system"
+        }}
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+        """
+
+    def router_script_with_procedure_not_found_failure_connectivity_db(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -82,7 +98,11 @@ class Routing(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
+        {{
+            C: ROUTE #ROUTINGCTX# null
+        ----
+            C: ROUTE #ROUTINGCTX# "system"
+        }}
         S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
         S: IGNORED
         S: <EXIT>
@@ -117,18 +137,6 @@ class Routing(unittest.TestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": [],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]}}
         C: ROUTE #ROUTINGCTX# "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]}}
-        """
-
-    def router_script_default_db(self):
-        return """
-        !: BOLT #VERSION#
-        !: AUTO RESET
-        !: AUTO GOODBYE
-
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# null
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
     def router_script_with_another_router(self):
@@ -207,7 +215,7 @@ class Routing(unittest.TestCase):
         S: SUCCESS {}
         """
 
-    def router_script_with_empty_writers(self):
+    def router_script_with_empty_writers_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -216,6 +224,18 @@ class Routing(unittest.TestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]}}
+        """
+
+    def router_script_with_empty_writers_any_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# "*"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]}}
         """
 
@@ -260,12 +280,20 @@ class Routing(unittest.TestCase):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# "adb"
         S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
-           IGNORED
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
+        {?
+            C: GOODBYE
+            S: <EXIT>
+        ?}
         """
 
     def router_script_with_unreachable_db_and_adb_db(self):
@@ -629,6 +657,9 @@ class Routing(unittest.TestCase):
     def get_db(self):
         return "adb"
 
+    def route_call_count(self, server):
+        return server.count_requests("ROUTE")
+
     @staticmethod
     def collectRecords(result):
         sequence = []
@@ -641,22 +672,24 @@ class Routing(unittest.TestCase):
 
     def test_should_successfully_get_routing_table_with_context(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("needs verifyConnectivity support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_connectivity_db(),
+                                   vars=self.get_vars())
 
         driver.verifyConnectivity()
         driver.close()
 
         self._routingServer1.done()
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Checks that routing is used to connect to correct server and that
     # parameters for session run is passed on to the target server
     # (not the router).
     def test_should_read_successfully_from_reader_using_session_run(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -668,6 +701,7 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -685,11 +719,12 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Same test as for session.run but for transaction run.
     def test_should_read_successfully_from_reader_using_tx_run(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -703,10 +738,11 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -723,13 +759,14 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_round_robin_readers_when_reading_using_session_run(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
         self._readServer2.start(script=self.read_script(), vars=self.get_vars())
 
@@ -745,13 +782,14 @@ class Routing(unittest.TestCase):
         self._readServer1.done()
         self._readServer2.done()
         self.assertEqual([[1], [1]], sequences)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_round_robin_readers_when_reading_using_tx_run(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
         self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
 
@@ -769,43 +807,56 @@ class Routing(unittest.TestCase):
         self._readServer1.done()
         self._readServer2.done()
         self.assertEqual([[1], [1]], sequences)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'javascript', 'go']:
+        if get_driver_name() in ['javascript', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script_with_unexpected_interruption(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
-        session.run("RETURN 1 as n")
         failed = False
         try:
-            session.close()
+            # drivers doing eager loading will fail here
+            session.run("RETURN 1 as n")
         except types.DriverError as e:
-            if get_driver_name() in ['java']:
-                self.assertEqual('org.neo4j.driver.exceptions.SessionExpiredException', e.errorType)
+            session.close()
+            failed = True
+        else:
+            try:
+                # else they should fail here
+                session.close()
+            except types.DriverError as e:
+                if get_driver_name() in ['java']:
+                    self.assertEqual(
+                        'org.neo4j.driver.exceptions.SessionExpiredException',
+                        e.errorType)
             failed = True
         driver.close()
 
         self._routingServer1.done()
         self._readServer1.done()
         self.assertTrue(failed)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
         failed = False
         try:
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
             tx.commit()
         except types.DriverError as e:
             if get_driver_name() in ['java']:
@@ -817,11 +868,12 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertTrue(failed)
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_session_run(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -831,11 +883,12 @@ class Routing(unittest.TestCase):
 
         self._routingServer1.done()
         self._writeServer1.done()
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_tx_run(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -847,10 +900,11 @@ class Routing(unittest.TestCase):
 
         self._routingServer1.done()
         self._writeServer1.done()
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_write_successfully_on_writer_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -864,13 +918,14 @@ class Routing(unittest.TestCase):
 
         self._routingServer1.done()
         self._writeServer1.done()
+        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python']:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent, None)
-        self._routingServer1.start(script=self.router_script_with_two_requests(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_leader_switch_and_retry(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -889,6 +944,7 @@ class Routing(unittest.TestCase):
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertEqual([[1], [1]], sequences)
+        self.assertEqual(self.route_call_count(self._routingServer1), 2)
 
     def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
         # TODO remove this block once all languages work
@@ -954,7 +1010,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_script(), vars=self.get_vars())
 
@@ -973,7 +1029,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
 
@@ -991,21 +1047,31 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'javascript', 'go']:
+        if get_driver_name() in ['javascript', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_unexpected_interruption(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
-        session.run("RETURN 1 as n")
         failed = False
         try:
-            session.close()
+            # drivers doing eager loading will fail here
+            session.run("RETURN 1 as n")
         except types.DriverError as e:
-            if get_driver_name() in ['java']:
-                self.assertEqual('org.neo4j.driver.exceptions.SessionExpiredException', e.errorType)
+            session.close()
             failed = True
+        else:
+            try:
+                # else they should fail here
+                session.close()
+            except types.DriverError as e:
+                if get_driver_name() in ['java']:
+                    self.assertEqual(
+                        'org.neo4j.driver.exceptions.SessionExpiredException',
+                        e.errorType
+                    )
+                failed = True
         driver.close()
 
         self._routingServer1.done()
@@ -1014,17 +1080,19 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
         failed = False
         try:
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
             tx.commit()
         except types.DriverError as e:
             if get_driver_name() in ['java']:
@@ -1039,10 +1107,10 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_procedure_not_found_failure(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_with_procedure_not_found_failure_connectivity_db(), vars=self.get_vars())
 
         failed = False
         try:
@@ -1058,7 +1126,7 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_discovery_when_router_fails_with_unknown_code(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_unknown_failure(), vars=self.get_vars())
@@ -1080,7 +1148,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['dotnet']:
             self.skipTest("consume not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_not_a_leader_failure(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1100,21 +1168,33 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'javascript', 'go']:
+        if get_driver_name() in ['javascript', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_not_a_leader_failure(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
-        session.run("RETURN 1 as n")
         failed = False
+
         try:
-            session.close()
+            # drivers doing eager loading will fail here
+            session.run("RETURN 1 as n")
         except types.DriverError as e:
-            if get_driver_name() in ['java']:
-                self.assertEqual('org.neo4j.driver.exceptions.SessionExpiredException', e.errorType)
+            session.close()
             failed = True
+        else:
+            try:
+                # else they should fail here
+                session.close()
+            except types.DriverError as e:
+                if get_driver_name() in ['java']:
+                    self.assertEqual(
+                        'org.neo4j.driver.exceptions.SessionExpiredException',
+                        e.errorType
+                    )
+                failed = True
+
         driver.close()
 
         self._routingServer1.done()
@@ -1126,7 +1206,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("consume not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_not_a_leader_failure(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1148,17 +1228,19 @@ class Routing(unittest.TestCase):
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code_using_tx_run(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_not_a_leader_failure(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
         tx = session.beginTransaction()
         failed = False
-        tx.run("RETURN 1 as n")
         try:
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
             tx.commit()
         except types.DriverError as e:
             if get_driver_name() in ['java']:
@@ -1173,7 +1255,7 @@ class Routing(unittest.TestCase):
 
     def test_should_use_write_session_mode_and_initial_bookmark_when_writing_using_tx_run(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_bookmarks(), vars=self.get_vars())
 
         session = driver.session('w', bookmarks=["OldBookmark"], database=self.get_db())
@@ -1190,7 +1272,7 @@ class Routing(unittest.TestCase):
 
     def test_should_use_read_session_mode_and_initial_bookmark_when_reading_using_tx_run(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_bookmarks(), vars=self.get_vars())
 
         session = driver.session('r', bookmarks=["OldBookmark"], database=self.get_db())
@@ -1212,7 +1294,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['javascript']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_read_tx_script_with_bookmark(), vars=self.get_vars())
 
         session = driver.session('w', bookmarks=["BookmarkA"], database=self.get_db())
@@ -1239,7 +1321,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
 
@@ -1268,7 +1350,7 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
 
@@ -1298,7 +1380,7 @@ class Routing(unittest.TestCase):
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
         self._readServer3.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1331,7 +1413,7 @@ class Routing(unittest.TestCase):
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
         self._writeServer3.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1430,8 +1512,8 @@ class Routing(unittest.TestCase):
         if get_driver_name() in ['dotnet', 'python', 'go']:
             self.skipTest("consume not implemented in backend or requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_with_empty_writers_adb(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_with_empty_writers_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1461,10 +1543,10 @@ class Routing(unittest.TestCase):
 
     def test_should_accept_routing_table_without_writers_and_then_rediscover(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_with_empty_writers_any_db(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_bookmarks(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_bookmark(), vars=self.get_vars())
 
@@ -1472,7 +1554,7 @@ class Routing(unittest.TestCase):
         session = driver.session('w', bookmarks=["OldBookmark"], database=self.get_db())
         sequences = []
         self._routingServer1.done()
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
 
         def work(tx):
             result = tx.run("RETURN 1 as n")
@@ -1490,30 +1572,35 @@ class Routing(unittest.TestCase):
 
     def test_should_accept_routing_table_with_single_router(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
         self._readServer2.start(script=self.read_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
         result = session.run("RETURN 1 as n")
-        sequence1 = self.collectRecords(result)
-        result = session.run("RETURN 1 as n")
-        sequence2 = self.collectRecords(result)
+        sequence = self.collectRecords(result)
         session.close()
         driver.close()
 
         self._routingServer1.done()
-        self._readServer1.done()
-        self._readServer2.done()
-        self.assertEqual([1], sequence1)
-        self.assertEqual([1], sequence2)
+
+        connection_count_rs1 = self._readServer1.count_responses("<ACCEPT>")
+        connection_count_rs2 = self._readServer2.count_responses("<ACCEPT>")
+        self.assertEqual(connection_count_rs1 + connection_count_rs2, 1)
+        if connection_count_rs1 == 1:
+            self._readServer1.done()
+            self._readServer2.stop()
+        else:
+            self._readServer1.stop()
+            self._readServer2.done()
+        self.assertEqual([1], sequence)
 
     def test_should_successfully_send_multiple_bookmarks(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_multiple_bookmarks(), vars=self.get_vars())
 
         session = driver.session('w',
@@ -1533,12 +1620,12 @@ class Routing(unittest.TestCase):
 
     def test_should_forget_address_on_database_unavailable_error(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python', 'go']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_one_writer(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_database_unavailable_failure(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1580,7 +1667,7 @@ class Routing(unittest.TestCase):
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
         self._routingServer1.start(script=self.router_script_with_reader_support(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1612,7 +1699,7 @@ class Routing(unittest.TestCase):
         self._routingServer1.start(script=self.router_script_with_another_router_and_non_existent_reader(),
                                    vars=self.get_vars())
         self._routingServer2.start(script=self.router_script_with_empty_response(), vars=self.get_vars())
-        self._routingServer3.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer3.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -1641,7 +1728,7 @@ class Routing(unittest.TestCase):
             self.skipTest("supportsMultiDb not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
 
         supports_multi_db = driver.supportsMultiDB()
 
@@ -1659,7 +1746,7 @@ class Routing(unittest.TestCase):
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
         self._routingServer1.start(script=self.router_script_with_empty_response(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -1675,8 +1762,10 @@ class Routing(unittest.TestCase):
 
     def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("add code support")
+        if not self.should_support_multi_db():
+            return
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_db_not_found_failure(), vars=self.get_vars())
@@ -1731,7 +1820,7 @@ class Routing(unittest.TestCase):
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script_with_bookmarks(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db(), bookmarks=["sys:1234", "foo:5678"])
@@ -1748,43 +1837,67 @@ class Routing(unittest.TestCase):
 
 
 class RoutingV4(Routing):
-    def router_script(self):
+    def router_script_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
+        !: ALLOW RESTART
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
+        {+
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            C: PULL {"n": -1}
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+        +}
         """
 
-    def router_script_with_two_requests(self):
+    def router_script_default_db(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
+        !: ALLOW RESTART
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
-           <EXIT>
+        {+
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": null} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            C: PULL {"n": -1}
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+        +}
         """
 
-    def router_script_with_procedure_not_found_failure(self):
+    def router_script_connectivity_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: ALLOW RESTART
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        {+
+            {{
+                C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": null} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            ----
+                C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "system"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            ----
+                C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            }}
+            C: PULL {"n": -1}
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+        +}
+        """
+
+    def router_script_with_procedure_not_found_failure_connectivity_db(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -1907,7 +2020,7 @@ class RoutingV4(Routing):
         S: SUCCESS {}
         """
 
-    def router_script_with_empty_writers(self):
+    def router_script_with_empty_writers_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -1916,6 +2029,25 @@ class RoutingV4(Routing):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def router_script_with_empty_writers_any_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        {{
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        }}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]]
@@ -1977,8 +2109,12 @@ class RoutingV4(Routing):
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
         S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
-           IGNORED
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def router_script_with_unreachable_db_and_adb_db(self):
@@ -2031,6 +2167,12 @@ class RoutingV4(Routing):
             v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
 
         return v
+
+    def route_call_count(self, server):
+        return server.count_requests(
+            'RUN "CALL dbms.routing.getRoutingTable('
+        )
+
     # Ignore this on older protocol versions than 4.3
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         pass
@@ -2067,11 +2209,13 @@ class RoutingV4(Routing):
 
 
 class RoutingV3(Routing):
-    def router_script(self):
+    def router_script_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
+        !: ALLOW RESTART
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
@@ -2081,7 +2225,13 @@ class RoutingV3(Routing):
         S: SUCCESS {"type": "r"}
         """
 
-    def router_script_with_two_requests(self):
+    def router_script_default_db(self):
+        return self.router_script_adb()
+
+    def router_script_connectivity_db(self):
+        return self.router_script_adb()
+
+    def router_script_with_two_requests_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -2101,7 +2251,7 @@ class RoutingV3(Routing):
            <EXIT>
         """
 
-    def router_script_with_procedure_not_found_failure(self):
+    def router_script_with_procedure_not_found_failure_connectivity_db(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -2157,9 +2307,6 @@ class RoutingV3(Routing):
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
         """
-
-    def router_script_default_db(self):
-        return self.router_script()
 
     def router_script_with_another_router(self):
         return """
@@ -2222,7 +2369,7 @@ class RoutingV3(Routing):
         S: SUCCESS {}
         """
 
-    def router_script_with_empty_writers(self):
+    def router_script_with_empty_writers_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -2236,6 +2383,9 @@ class RoutingV3(Routing):
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
+
+    def router_script_with_empty_writers_any_db(self):
+        return self.router_script_with_empty_writers_adb()
 
     def router_script_with_one_writer(self):
         return """
@@ -2280,17 +2430,7 @@ class RoutingV3(Routing):
         """
 
     def router_script_with_db_not_found_failure(self):
-        return """
-        !: BOLT #VERSION#
-        !: AUTO RESET
-        !: AUTO GOODBYE
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
-        C: PULL_ALL
-        S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
-           IGNORED
-        """
+        raise ValueError("No multi db support in V3")
 
     def read_script(self):
         return """
@@ -2612,6 +2752,11 @@ class RoutingV3(Routing):
 
     def get_db(self):
         return None
+
+    def route_call_count(self, server):
+        return server.count_requests(
+            'RUN "CALL dbms.cluster.routing.getRoutingTable('
+        )
 
     def should_support_multi_db(self):
         return False

@@ -218,7 +218,7 @@ class TestRetry(unittest.TestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driverName in ["java", 'python', 'javascript', 'dotnet']:
+        if self._driverName in ["java", 'javascript', 'dotnet']:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(script=script_commit_disconnect)
@@ -241,6 +241,7 @@ class TestRetry(unittest.TestCase):
         session.close()
         driver.close()
         self._server.done()
+
 
 class TestRetryClustering(unittest.TestCase):
     def setUp(self):
@@ -299,8 +300,8 @@ class TestRetryClustering(unittest.TestCase):
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['python']:
-            self.skipTest("Sends ROLLBACK after RESET")
+        # if get_driver_name() in ['python']:
+        #     self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
@@ -309,8 +310,8 @@ class TestRetryClustering(unittest.TestCase):
     def test_retry_NotALeader(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['python']:
-            self.skipTest("Sends ROLLBACK after RESET")
+        # if get_driver_name() in ['python']:
+        #     self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
@@ -320,7 +321,7 @@ class TestRetryClustering(unittest.TestCase):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
         if get_driver_name() in ['python']:
-            self.skipTest("Sends ROLLBACK after RESET")
+            self.skipTest("Closes connection to router after ROUTE")
 
         self._routingServer.start(script=self.router_script_swap_reader_and_writer(), vars=self.get_vars())
         # We could probably use AUTO RESET in the script but this makes the
@@ -398,27 +399,19 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
 
-
-    def tearDown(self):
-        self._backend.close()
-        self._routingServer.reset()
-        self._readServer.reset()
-        self._writeServer.reset()
-
     def router_script(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# null
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# null
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# null
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        {+
+            C: ROUTE #ROUTINGCTX# null
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        +}
         """
 
     def router_script_swap_reader_and_writer(self):
