@@ -1,6 +1,11 @@
-import subprocess, platform, os, time, sys
-from tests.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+import os
+import subprocess
+import sys
+import time
+
+from nutkit.frontend import Driver
+from nutkit.protocol import AuthorizationToken
+
 
 # Retrieve path to the repository containing this script.
 # Use this path as base for locating a whole bunch of other stuff.

@@ -17,12 +17,23 @@ in errors.py. See the requests for information on which response they expect.
 """
 
 
+class StartTest:
+    """ Request the backend to confirm to run a specific test. The backend
+    should respond with RunTest if the backend wants the test to be skipped it
+    must respond with SkipTest.
+    """
+
+    def __init__(self, test_name):
+        self.testName = test_name
+
+
 class NewDriver:
     """ Request to create a new driver instance on the backend.
     Backend should respond with a Driver response or an Error response.
     """
 
-    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False):
+    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False, domainNameResolverRegistered=False,
+                 connectionTimeoutMs=None):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
@@ -30,6 +41,8 @@ class NewDriver:
         # Optional custom user agent string
         self.userAgent = userAgent
         self.resolverRegistered = resolverRegistered
+        self.domainNameResolverRegistered = domainNameResolverRegistered
+        self.connectionTimeoutMs = connectionTimeoutMs
 
 
 class AuthorizationToken:
@@ -68,6 +81,17 @@ class ResolverResolutionCompleted:
     """ Pushes the results of the resolver function resolution back to the backend.
     This must only be sent immediately after the backend requests a new address resolution
     by replying with the ResolverResolutionRequired response.
+    """
+
+    def __init__(self, requestId, addresses):
+        self.requestId = requestId
+        self.addresses = addresses
+
+
+class DomainNameResolutionCompleted:
+    """ Pushes the results of the domain name resolver function resolution back to the backend.
+    This must only be sent immediately after the backend requests a new address resolution
+    by replying with the DomainNameResolutionRequired response.
     """
 
     def __init__(self, requestId, addresses):
@@ -213,10 +237,8 @@ class ResultNext:
 
 class ResultConsume:
     """ Request to close the result and to discard all remaining records back
-    in the response.  Backend should respond with ClosedResult or an Error if
-    an error occured.  If an error occures on the backend while iterating the
-    result for serialization this error should be set in ClosedResult.error
-    and iteration stopped, the ClosedResult should be returned.
+    in the response. Backend should respond with Summary or an Error if an error
+    occured.
     """
 
     def __init__(self, resultId):

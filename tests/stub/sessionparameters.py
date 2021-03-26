@@ -1,9 +1,10 @@
-import unittest, os
-
-from tests.shared import *
-from tests.stub.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script_accessmode_read = """
 !: BOLT 4
@@ -92,20 +93,20 @@ S: SUCCESS {"fields": ["n"]}
 #   Transaction meta data + write mode
 #   Transaction timeout + write mode
 #   Read mode + transaction meta data + transaction timeout + bookmarks
-class SessionRunParameters(unittest.TestCase):
+class SessionRunParameters(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = AuthorizationToken()
         uri = "bolt://%s" % self._server.address
-        self._driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        self._driver = Driver(self._backend, uri,
+                              types.AuthorizationToken(scheme="basic"))
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     def _run(self, accessMode, params=None, bookmarks=None, txMeta=None, timeout=None):
         session = self._driver.session(accessMode, bookmarks=bookmarks)

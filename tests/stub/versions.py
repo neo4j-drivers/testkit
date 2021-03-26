@@ -1,21 +1,24 @@
-import unittest
-from tests.shared import new_backend, get_driver_name
+from nutkit.frontend import Driver
+from nutkit.protocol import AuthorizationToken
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
 
 
-class ProtocolVersions(unittest.TestCase):
+class ProtocolVersions(TestkitTestCase):
     """ Verifies that the driver can connect to a server that speaks a specific
     bolt protocol version.
     """
 
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
 
     def tearDown(self):
-        self._backend.close()
         self._server.done()
+        super().tearDown()
 
     def _run(self, version, pull='PULL {"n": 1000}'):
         script = """

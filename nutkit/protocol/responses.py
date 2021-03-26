@@ -21,6 +21,18 @@ For example response to NewDriver request should be sent from backend as:
 """
 
 
+class RunTest:
+    """ Response to StartTest indicating that the test can be started"""
+    pass
+
+
+class SkipTest:
+    """ Response to StartTest indicating that the test should be skipped"""
+
+    def __init__(self, reason):
+        self.reason = reason
+
+
 class Driver:
     """ Represents a driver instance on the backend
     """
@@ -41,6 +53,19 @@ class ResolverResolutionRequired:
         # Id of callback request
         self.id = id
         self.address = address
+
+
+class DomainNameResolutionRequired:
+    """ Represents a need for new domain name resolution.
+    This means that the backend is expecting the frontend
+    to call the domain name resolver function and submit a new request
+    with the results of it.
+    """
+
+    def __init__(self, id, name):
+        # Id of callback request
+        self.id = id
+        self.name = name
 
 
 class MultiDBSupport:

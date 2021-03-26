@@ -1,4 +1,5 @@
 import os
+
 from teamcity.download import DockerImage
 from teamcity.testresult import TeamCityTestResult, escape
 

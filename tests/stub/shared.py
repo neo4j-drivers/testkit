@@ -4,17 +4,17 @@ Uses environment variables for configuration:
 """
 import os
 import platform
+from queue import (
+    Empty,
+    Queue,
+)
 import re
 import signal
 import subprocess
 import sys
 import tempfile
-import time
 from threading import Thread
-from queue import (
-    Empty,
-    Queue,
-)
+import time
 
 
 class StubServerUncleanExit(Exception):

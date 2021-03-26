@@ -2,15 +2,19 @@
 Defines suites of test to run in different setups
 """
 
-import unittest
 import sys
+import unittest
+
+import tests.neo4j.authentication as authentication
 import tests.neo4j.datatypes as datatypes
 import tests.neo4j.sessionrun as sessionrun
 import tests.neo4j.txfuncrun as txfuncrun
 import tests.neo4j.txrun as txrun
-import tests.neo4j.authentication as authentication
 from tests.testenv import (
-        get_test_result_class, begin_test_suite, end_test_suite)
+    begin_test_suite,
+    end_test_suite,
+    get_test_result_class,
+)
 
 loader = unittest.TestLoader()
 

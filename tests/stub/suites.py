@@ -2,22 +2,24 @@
 Defines stub suites
 """
 
-import unittest
 import sys
-import tests.stub.retry as retry
-import tests.stub.disconnected as disconnected
-import tests.stub.transport as transport
-import tests.stub.sessionparameters as sessionparameters
-import tests.stub.txparameters as txparameters
-import tests.stub.routing as routing
+import unittest
+
 import tests.stub.bookmark as bookmark
+import tests.stub.disconnected as disconnected
 import tests.stub.iteration as iteration
+import tests.stub.retry as retry
+import tests.stub.routing as routing
+import tests.stub.sessionparameters as sessionparameters
+import tests.stub.transport as transport
+import tests.stub.txparameters as txparameters
 import tests.stub.versions as versions
 from tests.testenv import (
-        get_test_result_class,
-        begin_test_suite,
-        end_test_suite,
+    begin_test_suite,
+    end_test_suite,
+    get_test_result_class,
 )
+
 
 loader = unittest.TestLoader()
 

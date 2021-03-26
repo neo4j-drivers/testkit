@@ -1,10 +1,10 @@
-
-import unittest, os
-
-from tests.shared import *
-from tests.stub.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script = """
 !: BOLT $bolt_version
@@ -24,20 +24,27 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "w"}
 """
 
+
 # Low-level network transport tests
-class Transport(unittest.TestCase):
+class Transport(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = AuthorizationToken(scheme="basic", principal="neo4j", credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth)
         self._session = self._driver.session("w")
 
     def tearDown(self):
+<<<<<<< HEAD
         self._backend.close()
         self._server.reset()
+=======
+        self._server.reset()
+        super().tearDown()
+>>>>>>> 4.3
 
     def test_noop(self):
         # Verifies that no op messages sent on bolt chunking layer are ignored. The no op messages

@@ -1,10 +1,10 @@
-import unittest
-
-from tests.shared import new_backend, get_driver_name
-from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
-
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script_read = """
 !: BOLT 4
@@ -127,17 +127,17 @@ S: <EXIT>
 """
 
 
-class TestRetry(unittest.TestCase):
+class TestRetry(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     def test_read(self):
         self._server.start(script=script_read)
@@ -150,8 +150,8 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                                  credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
@@ -187,8 +187,8 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                                  credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
@@ -229,7 +229,7 @@ class TestRetry(unittest.TestCase):
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
             result.next()
-        auth = AuthorizationToken(scheme="basic")
+        auth = types.AuthorizationToken(scheme="basic")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
@@ -243,22 +243,22 @@ class TestRetry(unittest.TestCase):
         self._server.done()
 
 
-class TestRetryClustering(unittest.TestCase):
+class TestRetryClustering(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
-        self._auth = AuthorizationToken(
-                scheme="basic", principal="p", credentials="c")
+        self._auth = types.AuthorizationToken(scheme="basic", principal="p",
+                                              credentials="c")
         self._userAgent = "007"
 
     def tearDown(self):
-        self._backend.close()
         self._routingServer.reset()
         self._readServer.reset()
         self._writeServer.reset()
+        super().tearDown()
 
     def test_read(self):
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
