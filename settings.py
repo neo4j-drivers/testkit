@@ -1,8 +1,8 @@
 """
 Retrieves the information needed to run main, stress or other test suite.
 """
-import os
 import collections
+import os
 
 
 class InvalidArgs(Exception):

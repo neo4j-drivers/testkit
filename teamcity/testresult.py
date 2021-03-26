@@ -1,4 +1,4 @@
-import os, unittest
+import unittest
 
 
 def escape(s):

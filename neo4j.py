@@ -1,6 +1,7 @@
-import docker
 import collections
 from os.path import join
+
+import docker
 
 
 """ Neo4j instance test configuration (no runtime properties)

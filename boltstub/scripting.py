@@ -97,7 +97,7 @@ class BoltScript:
                 request[versionindex + minor_offset],
                 request[versionindex + minor_version_difference_offset])
 
-    def _get_versions(self, request): 
+    def _get_versions(self, request):
         for n in range(0, 4):
             (major, max_minor, minor_difference) = self._get_version_range_defintion(request, n)
             for minor in range(max_minor, max_minor - minor_difference - 1 , -1):

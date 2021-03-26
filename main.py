@@ -12,19 +12,22 @@ orchestrate which suites that are executed in each context.
 import argparse
 import atexit
 import os
-import signal
 import subprocess
 import sys
 import traceback
 
-from tests.testenv import (
-        begin_test_suite, end_test_suite, in_teamcity)
 import docker
-import teamcity
-import neo4j
 import driver
+import neo4j
 import runner
 import settings
+import teamcity
+from tests.testenv import (
+    begin_test_suite,
+    end_test_suite,
+    in_teamcity,
+)
+
 
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]

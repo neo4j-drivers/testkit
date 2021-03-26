@@ -1,9 +1,7 @@
-import unittest
-
-from tests.shared import new_backend
+from nutkit.frontend import Driver
+from nutkit.protocol import AuthorizationToken
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
-
 
 # TODO: Tests for 3.5 (no support for PULL n)
 script_commit = """
@@ -24,19 +22,19 @@ S: SUCCESS {"bookmark": "bm"}
 
 
 # Tests bookmarks from transaction
-class Tx(unittest.TestCase):
+class Tx(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         uri = "bolt://%s" % self._server.address
         auth = AuthorizationToken(scheme="basic")
         self._driver = Driver(self._backend, uri, auth)
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     # Tests that a committed transaction can return the last bookmark
     def test_last_bookmark(self):

@@ -1,5 +1,5 @@
-import nutkit.protocol as protocol
 from .result import Result
+from .. import protocol
 
 
 class Transaction:

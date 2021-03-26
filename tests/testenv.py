@@ -1,5 +1,8 @@
-import unittest
-from teamcity import in_teamcity, TeamCityTestResult, escape
+from teamcity import (
+    escape,
+    in_teamcity,
+    TeamCityTestResult,
+)
 
 
 def begin_test_suite(name):

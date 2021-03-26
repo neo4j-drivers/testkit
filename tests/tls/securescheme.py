@@ -1,25 +1,32 @@
-import unittest
-from tests.shared import *
-from tests.tls.shared import *
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.tls.shared import (
+    TlsServer,
+    try_connect,
+)
+
 
 schemes = ["neo4j+s", "bolt+s"]
 
-class TestSecureScheme(unittest.TestCase):
+
+class TestSecureScheme(TestkitTestCase):
     """ Tests URL scheme neo4j+s/bolt+s where server is assumed to present a server certificate
     signed by a certificate authority recognized by the driver.
     """
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = None
         self._driver = get_driver_name()
 
     def tearDown(self):
         if self._server:
-            # If test raised an exception this will make sure that the stub server
-            # is killed and it's output is dumped for analys.
+            # If test raised an exception this will make sure that the stub
+            # server is killed and it's output is dumped for analysis.
             self._server.reset()
             self._server = None
-        self._backend.close()
+        super().tearDown()
 
     """ Happy path, the server has a valid server certificate signed by a trusted
     certificate authority.

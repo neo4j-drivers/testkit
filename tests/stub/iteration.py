@@ -1,12 +1,13 @@
-import unittest
-
-from tests.shared import *
-from tests.stub.shared import *
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 
-class SessionRun(unittest.TestCase):
+class SessionRun(TestkitTestCase):
     script_pull_all = """
     !: BOLT #VERSION#
     !: AUTO RESET
@@ -63,16 +64,17 @@ class SessionRun(unittest.TestCase):
     """
 
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
 
     def tearDown(self):
-        self._backend.close()
         self._server.reset()
+        super().tearDown()
 
     def _run(self, n, script, end, expectedSequence, expectedError=False):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(script=script, vars={"#END#": end, "#VERSION#": "4"})
         session = driver.session("w", fetchSize=n)
         result = session.run("RETURN 1 AS n")
@@ -114,7 +116,7 @@ class SessionRun(unittest.TestCase):
         self._run(-1, SessionRun.script_pull_all, "", ["1", "2", "3", "4", "5", "6"])
 
 
-class TxRun(unittest.TestCase):
+class TxRun(TestkitTestCase):
     script_n = """
     !: BOLT #VERSION#
     !: AUTO HELLO
@@ -136,18 +138,18 @@ class TxRun(unittest.TestCase):
     S: SUCCESS {"bookmark": "bm"}
     """
 
-
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
 
     def tearDown(self):
-        self._backend.close()
         self._server.reset()
+        super().tearDown()
 
     def _iterate(self, n, script, expectedSequence, expectedError=False):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(script=script, vars={"#VERSION#": "4"})
         session = driver.session("w", fetchSize=n)
         tx = session.beginTransaction()
@@ -215,7 +217,8 @@ class TxRun(unittest.TestCase):
         if get_driver_name() not in ['go', 'dotnet', 'javascript']:
             self.skipTest("Need support for specifying session fetch size in testkit backend")
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(script=TxRun.script_nested_n, vars={"#VERSION#": "4"})
         session = driver.session("w", fetchSize=1)
         tx = session.beginTransaction()

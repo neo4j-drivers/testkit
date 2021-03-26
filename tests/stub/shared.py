@@ -2,10 +2,10 @@
 
 Uses environment variables for configuration:
 """
-import subprocess
 import os
-import tempfile
 import platform
+import subprocess
+import tempfile
 import time
 
 
