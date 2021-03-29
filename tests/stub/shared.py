@@ -69,10 +69,21 @@ class StubServer:
                                          close_fds=True,
                                          encoding='utf-8')
 
+        Thread(target=_poll_pipe,
+               daemon=True,
+               args=(self._process.stdout, self._stdout_buffer)).start()
+        Thread(target=_poll_pipe,
+               daemon=True,
+               args=(self._process.stderr, self._stderr_buffer)).start()
+
         # Wait until something is written to know it started, requires
         polls = 100
-        while polls and self._process.stdout.readline().strip() != "Listening":
+        self._read_pipes()
+        while (self._process.poll() is None
+               and polls
+               and "Listening\n" not in self._stdout_lines):
             time.sleep(0.1)
+            self._read_pipes()
             polls -= 1
 
         # Double check that the process started, a missing script would exit
@@ -81,13 +92,6 @@ class StubServer:
             self._dump()
             self._process = None
             return
-
-        Thread(target=_poll_pipe,
-               daemon=True,
-               args=(self._process.stdout, self._stdout_buffer)).start()
-        Thread(target=_poll_pipe,
-               daemon=True,
-               args=(self._process.stderr, self._stderr_buffer)).start()
 
     def __del__(self):
         if self._process:
