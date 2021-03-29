@@ -91,7 +91,7 @@ class StubServer:
         if self._process.poll():
             self._dump()
             self._process = None
-            return
+            raise StubServerUncleanExit("Stub server crashed on start-up")
 
     def __del__(self):
         if self._process:
