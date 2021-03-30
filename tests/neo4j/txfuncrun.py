@@ -1,3 +1,4 @@
+from nutkit.frontend.session import ApplicationCodeException
 import nutkit.protocol as types
 from tests.neo4j.shared import get_driver
 from tests.shared import (
@@ -96,7 +97,7 @@ class TestTxFuncRun(TestkitTestCase):
         # function rolls back transaction.
         def run(tx):
             tx.run("CREATE (n:SessionNode) RETURN n")
-            raise Exception("No thanks")
+            raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
         try:
@@ -116,7 +117,7 @@ class TestTxFuncRun(TestkitTestCase):
             result = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
             global nodeid
             nodeid = result.next().value
-            raise Exception("No thanks")
+            raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
         try:

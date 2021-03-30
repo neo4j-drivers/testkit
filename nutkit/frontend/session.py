@@ -3,6 +3,10 @@ from .transaction import Transaction
 from .. import protocol
 
 
+class ApplicationCodeException(Exception):
+    pass
+
+
 class Session:
     def __init__(self, driver, backend, session):
         self._driver = driver
@@ -48,12 +52,7 @@ class Session:
                     # interaction, notify backend that we're happy to go.
                     self._backend.send(protocol.RetryablePositive(
                         self._session.id))
-                except Exception as e:
-                    # If the backend failed to handle this, raise for easier
-                    # debugging
-                    if isinstance(e, protocol.BackendError):
-                        raise e
-
+                except (ApplicationCodeException, protocol.DriverError) as e:
                     # If this is an error originating from the driver in the
                     # backend, retrieve the id of the error  and send that,
                     # this saves us from having to recreate errors on backend
