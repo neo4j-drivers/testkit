@@ -300,8 +300,6 @@ class TestRetryClustering(TestkitTestCase):
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        # if get_driver_name() in ['python']:
-        #     self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
@@ -320,8 +318,6 @@ class TestRetryClustering(TestkitTestCase):
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['python']:
-            self.skipTest("Closes connection to router after ROUTE")
 
         self._routingServer.start(script=self.router_script_swap_reader_and_writer(), vars=self.get_vars())
         # We could probably use AUTO RESET in the script but this makes the

@@ -1003,7 +1003,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_leader_change(), vars=self.get_vars())
@@ -1032,7 +1032,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_until_success_with_leader_shutdown_during_tx_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_leader_change(), vars=self.get_vars())
@@ -1373,7 +1373,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_read_tx_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python']:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
@@ -1402,7 +1402,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_tx_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python']:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
@@ -1431,7 +1431,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_read_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python', 'javascript', 'go']:
+        if get_driver_name() in ['dotnet', 'javascript', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
@@ -1464,7 +1464,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python', 'javascript', 'go']:
+        if get_driver_name() in ['dotnet', 'javascript', 'go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
@@ -1497,7 +1497,7 @@ class Routing(TestkitTestCase):
 
     def test_should_use_initial_router_for_discovery_when_others_unavailable(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router_and_fake_reader(),
@@ -1575,7 +1575,7 @@ class Routing(TestkitTestCase):
 
     def test_should_serve_reads_and_fail_writes_when_no_writers_available(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'python', 'go']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("consume not implemented in backend or requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_writers_adb(), vars=self.get_vars())
@@ -1717,7 +1717,7 @@ class Routing(TestkitTestCase):
 
     def test_should_use_resolver_during_rediscovery_when_existing_routers_fail(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
         resolver_invoked = False
 
@@ -1757,7 +1757,7 @@ class Routing(TestkitTestCase):
 
     def test_should_revert_to_initial_router_if_known_router_throws_protocol_errors(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
 
         def resolver(address):
@@ -1793,7 +1793,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_check_if_support_for_multi_db_is_available(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("supportsMultiDb not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -1807,7 +1807,7 @@ class Routing(TestkitTestCase):
 
     def test_should_read_successfully_on_empty_discovery_result_using_session_run(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
 
         def resolver(address):
@@ -1856,7 +1856,7 @@ class Routing(TestkitTestCase):
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'javascript', 'go']:
+        if get_driver_name() in ['javascript', 'go']:
             self.skipTest("requires investigation")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -1906,7 +1906,7 @@ class Routing(TestkitTestCase):
 
     def test_should_request_rt_from_all_initial_routers_until_successful(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
+        if get_driver_name() in ['javascript', 'go', 'dotnet']:
             self.skipTest("add resolvers and connection timeout support")
 
         resolver_call_num = 0
@@ -1967,7 +1967,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("needs verifyConnectivity support")
         ip_addresses = []
         if platform == "linux":
