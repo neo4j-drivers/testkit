@@ -58,7 +58,6 @@ class Routing(TestkitTestCase):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
@@ -66,12 +65,26 @@ class Routing(TestkitTestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
-    def router_script_default_db(self):
+    def router_script_adb_multi(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
         !: ALLOW RESTART
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        {+
+            C: ROUTE #ROUTINGCTX# "adb"
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+        +}
+        """
+
+    def router_script_default_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
@@ -122,7 +135,7 @@ class Routing(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
+        C: ROUTE #ROUTINGCTX# "*"
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
         S: IGNORED
         S: <EXIT>
@@ -134,7 +147,7 @@ class Routing(TestkitTestCase):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: ROUTE #ROUTINGCTX# "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]}}
         C: ROUTE #ROUTINGCTX# "adb"
@@ -161,12 +174,19 @@ class Routing(TestkitTestCase):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+        {?
+            C: ROUTE #ROUTINGCTX# "adb"
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: BEGIN {"mode": "r", "db": "adb"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -200,42 +220,32 @@ class Routing(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
+        {{
+            C: ROUTE #ROUTINGCTX# null
+        ----
+            C: ROUTE #ROUTINGCTX# "system"
+        }}
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9100"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]}}
            <EXIT>
-        """
-
-    def router_script_with_context_and_reader_support(self):
-        return """
-        !: BOLT #VERSION#
-        !: AUTO RESET
-        !: AUTO GOODBYE
-
-        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
-        C: BEGIN {"mode": "r", "db": "adb"}
-        S: SUCCESS {}
-        C: RUN "RETURN 1 as n" {} {}
-        C: PULL {"n": 1000}
-        S: SUCCESS {"fields": ["n"]}
-           RECORD [1]
-           SUCCESS {"type": "r"}
-        C: COMMIT
-        S: SUCCESS {}
         """
 
     def router_script_with_empty_context_and_reader_support(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE {"address": "#HOST#:9000"} "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+        {?
+            C: ROUTE {"address": "#HOST#:9000"} "adb"
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: BEGIN {"mode": "r", "db": "adb"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -284,6 +294,18 @@ class Routing(TestkitTestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
         """
 
+    def router_script_with_the_other_one_writer(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]}}
+        """
+
     def router_script_with_another_router_and_non_existent_reader(self):
         return """
         !: BOLT #VERSION#
@@ -326,7 +348,8 @@ class Routing(TestkitTestCase):
         ?}
         {?
             C: GOODBYE
-            S: <EXIT>
+            S: SUCCESS {}
+               <EXIT>
         ?}
         """
 
@@ -334,12 +357,19 @@ class Routing(TestkitTestCase):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "unreachable"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": []}}
+        {?
+            C: ROUTE #ROUTINGCTX# "unreachable"
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": []}}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: ROUTE #ROUTINGCTX# "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
@@ -671,9 +701,11 @@ class Routing(TestkitTestCase):
         C: BEGIN {"db": "adb"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
+        S: SUCCESS {}
         C: PULL {"n": 1000}
         S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database is busy doing store copy"}
-        S: IGNORED
+        C: RESET
+        S: SUCCESS {}
         """
 
     def get_vars(self):
@@ -737,7 +769,6 @@ class Routing(TestkitTestCase):
         driver.close()
 
         self._routingServer1.done()
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Checks that routing is used to connect to correct server and that
     # parameters for session run is passed on to the target server
@@ -756,7 +787,6 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -774,7 +804,6 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Same test as for session.run but for transaction run.
     def test_should_read_successfully_from_reader_using_tx_run(self):
@@ -793,7 +822,6 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -814,55 +842,6 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
-
-    def test_should_round_robin_readers_when_reading_using_session_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
-            self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
-        self._readServer1.start(script=self.read_script(), vars=self.get_vars())
-        self._readServer2.start(script=self.read_script(), vars=self.get_vars())
-
-        sequences = []
-        for x in range(0, 2):
-            session = driver.session('r', database=self.get_db())
-            result = session.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
-            session.close()
-        driver.close()
-
-        self._routingServer1.done()
-        self._readServer1.done()
-        self._readServer2.done()
-        self.assertEqual([[1], [1]], sequences)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
-
-    def test_should_round_robin_readers_when_reading_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
-            self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
-        self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
-        self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
-
-        sequences = []
-        for x in range(0, 2):
-            session = driver.session('r', database=self.get_db())
-            tx = session.beginTransaction()
-            result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
-            tx.commit()
-            session.close()
-        driver.close()
-
-        self._routingServer1.done()
-        self._readServer1.done()
-        self._readServer2.done()
-        self.assertEqual([[1], [1]], sequences)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
         # TODO remove this block once all languages work
@@ -895,7 +874,6 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertTrue(failed)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(self):
         # TODO remove this block once all languages work
@@ -923,7 +901,6 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertTrue(failed)
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_session_run(self):
@@ -938,7 +915,6 @@ class Routing(TestkitTestCase):
 
         self._routingServer1.done()
         self._writeServer1.done()
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_tx_run(self):
@@ -955,7 +931,6 @@ class Routing(TestkitTestCase):
 
         self._routingServer1.done()
         self._writeServer1.done()
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_write_successfully_on_writer_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -973,14 +948,13 @@ class Routing(TestkitTestCase):
 
         self._routingServer1.done()
         self._writeServer1.done()
-        self.assertEqual(self.route_call_count(self._routingServer1), 1)
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent, None)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb_multi(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_leader_switch_and_retry(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1059,46 +1033,6 @@ class Routing(TestkitTestCase):
         self._writeServer2.done()
         self.assertEqual([[], []], sequences)
         self.assertEqual(2, num_retries)
-
-    def test_should_round_robin_writers_when_writing_using_session_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
-            self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
-        self._writeServer1.start(script=self.write_script(), vars=self.get_vars())
-        self._writeServer2.start(script=self.write_script(), vars=self.get_vars())
-
-        for x in range(0, 2):
-            session = driver.session('w', database=self.get_db())
-            session.run("RETURN 1 as n")
-            session.close()
-        driver.close()
-
-        self._routingServer1.done()
-        self._writeServer1.done()
-        self._writeServer2.done()
-
-    def test_should_round_robin_writers_when_writing_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['python', 'go']:
-            self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
-        self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
-        self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
-
-        for x in range(0, 2):
-            session = driver.session('w', database=self.get_db())
-            tx = session.beginTransaction()
-            tx.run("RETURN 1 as n")
-            tx.commit()
-            session.close()
-        driver.close()
-
-        self._routingServer1.done()
-        self._writeServer1.done()
-        self._writeServer2.done()
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(self):
         # TODO remove this block once all languages work
@@ -1376,9 +1310,16 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
-        self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
-        self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(),
+                                   vars=self.get_vars())
+        self._readServer1.start(
+            script=self.read_tx_script_with_unexpected_interruption(),
+            vars=self.get_vars()
+        )
+        self._readServer2.start(
+            script=self.read_tx_script_with_unexpected_interruption(),
+            vars=self.get_vars()
+        )
 
         session = driver.session('r', database=self.get_db())
         sequences = []
@@ -1387,7 +1328,24 @@ class Routing(TestkitTestCase):
         def work(tx):
             nonlocal try_count
             try_count = try_count + 1
-            result = tx.run("RETURN 1 as n")
+            try:
+                result = tx.run("RETURN 1 as n")
+            except types.DriverError:
+                reader1_con_count = \
+                    self._readServer1.count_responses("<ACCEPT>")
+                reader2_con_count = \
+                    self._readServer2.count_responses("<ACCEPT>")
+                if reader1_con_count == 1 and reader2_con_count == 0:
+                    working_reader = self._readServer2
+                elif reader1_con_count == 0 and reader2_con_count == 1:
+                    working_reader = self._readServer1
+                else:
+                    raise
+                working_reader.reset()
+                working_reader.start(script=self.read_tx_script(),
+                                     vars=self.get_vars())
+                raise
+
             sequences.append(self.collectRecords(result))
 
         session.readTransaction(work)
@@ -1405,9 +1363,16 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
-        self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
-        self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(),
+                                   vars=self.get_vars())
+        self._writeServer1.start(
+            script=self.write_tx_script_with_unexpected_interruption(),
+            vars=self.get_vars()
+        )
+        self._writeServer2.start(
+            script=self.write_tx_script_with_unexpected_interruption(),
+            vars=self.get_vars()
+        )
 
         session = driver.session('w', database=self.get_db())
         sequences = []
@@ -1416,7 +1381,23 @@ class Routing(TestkitTestCase):
         def work(tx):
             nonlocal try_count
             try_count = try_count + 1
-            result = tx.run("RETURN 1 as n")
+            try:
+                result = tx.run("RETURN 1 as n")
+            except types.DriverError:
+                writer1_con_count = \
+                    self._writeServer1.count_responses("<ACCEPT>")
+                writer2_con_count = \
+                    self._writeServer2.count_responses("<ACCEPT>")
+                if writer1_con_count == 1 and writer2_con_count == 0:
+                    working_writer = self._writeServer2
+                elif writer1_con_count == 0 and writer2_con_count == 1:
+                    working_writer = self._writeServer1
+                else:
+                    raise
+                working_writer.reset()
+                working_writer.start(script=self.write_tx_script(),
+                                     vars=self.get_vars())
+                raise
             sequences.append(self.collectRecords(result))
 
         session.writeTransaction(work)
@@ -1506,7 +1487,7 @@ class Routing(TestkitTestCase):
 
         driver.verifyConnectivity()
         self._routingServer1.done()
-        self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
         session = driver.session('r', database=self.get_db())
         sequences = []
 
@@ -1545,16 +1526,14 @@ class Routing(TestkitTestCase):
         driver.close()
 
         self._routingServer1.done()
+        self.assertLessEqual(
+            self._routingServer1.count_responses("<ACCEPT>"), 2
+        )
+        self.assertEqual(self._routingServer1.count_requests("COMMIT"), 1)
         self.assertEqual([[1]], sequences)
 
     def test_should_send_empty_hello(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['python']:
-            self.skipTest("requires investigation")
-        # TODO remove this block once it works
-        if get_driver_name() in ['java']:
-            self.skipTest("java driver uses separate connections for routing and reading, "
-                          "but the stub server does not currently support this")
         driver = Driver(self._backend, "neo4j://%s" % self._routingServer1.address, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_context_and_reader_support(),
                                    vars=self.get_vars())
@@ -1571,6 +1550,7 @@ class Routing(TestkitTestCase):
         driver.close()
 
         self._routingServer1.done()
+        self.assertEqual(self._routingServer1.count_requests("COMMIT"), 1)
         self.assertEqual([[1]], sequences)
 
     def test_should_serve_reads_and_fail_writes_when_no_writers_available(self):
@@ -1691,7 +1671,7 @@ class Routing(TestkitTestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_one_writer(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_database_unavailable_failure(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_with_the_other_one_writer(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
 
         session = driver.session('w', database=self.get_db())
@@ -1797,12 +1777,16 @@ class Routing(TestkitTestCase):
             self.skipTest("supportsMultiDb not implemented in backend")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_adb(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_script_default_db(), vars=self.get_vars())
+        self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
         supports_multi_db = driver.supportsMultiDB()
 
         driver.close()
         self._routingServer1.done()
+        self.assertLessEqual(self._readServer1.count_responses("<ACCEPT>"), 1)
+        self.assertEqual(self._readServer1.count_requests("RUN"), 0)
+        self._readServer1.reset()
         self.assertEqual(self.should_support_multi_db(), supports_multi_db)
 
     def test_should_read_successfully_on_empty_discovery_result_using_session_run(self):
@@ -1875,6 +1859,7 @@ class Routing(TestkitTestCase):
 
         session = driver.session('r', database=self.get_db())
         result = session.run("RETURN 1 as n")
+        self.assertEqual(self.route_call_count(self._routingServer1), 2)
         sequence = self.collectRecords(result)
         session.close()
         driver.close()
@@ -1951,7 +1936,7 @@ class Routing(TestkitTestCase):
                         domainNameResolverFn=domainNameResolver, connectionTimeoutMs=1000)
         self._routingServer1.start(script=self.router_script_with_unknown_failure(), vars=self.get_vars())
         # _routingServer2 is deliberately turned off
-        self._routingServer3.start(script=self.router_script(), vars=self.get_vars())
+        self._routingServer3.start(script=self.router_script_adb(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -2001,6 +1986,21 @@ class RoutingV4(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def router_script_adb_multi(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
         !: ALLOW RESTART
 
         !: AUTO GOODBYE
@@ -2016,21 +2016,24 @@ class RoutingV4(Routing):
         """
 
     def router_script_default_db(self):
+        # The first getRoutingTable variant is less verbose and preferable.
+        # Since this is legacy functionality anyway, we don't enforce it.
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: ALLOW RESTART
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        {+
+        {{
+            C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        ----
             C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": null} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-            C: PULL {"n": -1}
-            S: SUCCESS {"fields": ["ttl", "servers"]}
-            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
-            S: SUCCESS {"type": "r"}
-        +}
+        }}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
         """
 
     def router_script_connectivity_db(self):
@@ -2093,7 +2096,7 @@ class RoutingV4(Routing):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
            PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2135,15 +2138,23 @@ class RoutingV4(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
+        !: ALLOW RESTART
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
+        {?
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            C: PULL {"n": -1}
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: BEGIN {"mode": "r", "db": "adb"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -2164,7 +2175,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -2180,7 +2191,13 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+        {{
+            C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": null} {"[mode]": "r", "db": "system"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "system"} {"[mode]": "r", "db": "system"}
+        }}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9100"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]]
@@ -2192,15 +2209,23 @@ class RoutingV4(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        
+        !: ALLOW RESTART
+
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": {"address": "#HOST#:9000"}, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
+        {?
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": {"address": "#HOST#:9000"}, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            C: PULL {"n": -1}
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: BEGIN {"mode": "r", "db": "adb"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -2217,7 +2242,7 @@ class RoutingV4(Routing):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-        
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
@@ -2236,9 +2261,9 @@ class RoutingV4(Routing):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         {{
-            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        ----
             C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
         }}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2259,6 +2284,21 @@ class RoutingV4(Routing):
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def router_script_with_the_other_one_writer(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
 
@@ -2315,15 +2355,23 @@ class RoutingV4(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
+        !: ALLOW RESTART
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "unreachable"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
-        C: PULL {"n": -1}
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, []]
-        S: SUCCESS {"type": "r"}
+        {?
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "unreachable"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+            C: PULL {"n": -1}
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, []]
+            S: SUCCESS {"type": "r"}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2338,7 +2386,7 @@ class RoutingV4(Routing):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system"%s}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2419,6 +2467,24 @@ class RoutingV3(Routing):
         S: SUCCESS {"type": "r"}
         """
 
+    def router_script_adb_multi(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: ALLOW RESTART
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
+        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        {+
+            C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
+            C: PULL_ALL
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+        +}
+        """
+
     def router_script_default_db(self):
         return self.router_script_adb()
 
@@ -2479,7 +2545,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2520,14 +2586,22 @@ class RoutingV3(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: AUTO GOODBYE
+        !: ALLOW RESTART
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
-        C: PULL_ALL
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
+        {?
+            C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
+            C: PULL_ALL
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: BEGIN {"mode": "r"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -2547,7 +2621,7 @@ class RoutingV3(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9100"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]]
@@ -2562,7 +2636,7 @@ class RoutingV3(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -2574,14 +2648,22 @@ class RoutingV3(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: AUTO GOODBYE
+        !: ALLOW RESTART
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {"[mode]": "r"}
-        C: PULL_ALL
-        S: SUCCESS {"fields": ["ttl", "servers"]}
-        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
-        S: SUCCESS {"type": "r"}
+        {?
+            C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {"[mode]": "r"}
+            C: PULL_ALL
+            S: SUCCESS {"fields": ["ttl", "servers"]}
+            S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+            S: SUCCESS {"type": "r"}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?} 
         C: BEGIN {"mode": "r"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
@@ -2598,7 +2680,7 @@ class RoutingV3(Routing):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-        
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
@@ -2625,6 +2707,21 @@ class RoutingV3(Routing):
         S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
+
+    def router_script_with_the_other_one_writer(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
+        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
+        C: PULL_ALL
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
 
     def router_script_with_another_router_and_non_existent_reader(self):
         return """
@@ -3019,10 +3116,11 @@ class NoRouting(TestkitTestCase):
         """
 
     def get_vars(self):
+        # TODO: '#ROUTING#' is the correct way to go (minimal data transmission)
         return {
             "#VERSION#": "4.1",
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#ROUTING#": ', "routing": null' if get_driver_name() not in ['javascript'] else ''
+            "#ROUTING#": ', "routing": null' if get_driver_name() in ['java', 'dotnet', 'go'] else ''
         }
 
     # Checks that routing is disabled when URI is bolt, no routing in HELLO and
