@@ -97,12 +97,11 @@ class SessionRunDisconnected(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
-        expectedStep = "after first next"
+        expected_step = "after first next"
         if self._driverName in ["go", "python"]:
-            # Go and Python report this error earlier
-            # FIXME: Why, how, and do we want this or the other?
-            expectedStep = "after run"
-        self.assertEqual(step, expectedStep)
+            # Go reports this error earlier
+            expected_step = "after run"
+        self.assertEqual(step, expected_step)
 
     def test_disconnect_on_pull(self):
         # Verifies how the driver handles when server disconnects right after
@@ -113,11 +112,11 @@ class SessionRunDisconnected(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
-        expectedStep = "after first next"
+        expected_step = "after first next"
         if self._driverName in ["go", "python"]:
             # Go reports this error earlier
-            expectedStep = "after run"
-        self.assertEqual(step, expectedStep)
+            expected_step = "after run"
+        self.assertEqual(step, expected_step)
 
     def get_vars(self):
         return {
