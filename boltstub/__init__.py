@@ -192,13 +192,14 @@ class BoltActor:
         self.script_lock = Lock()
 
     def play(self):
-        while True:
-            try:
-                with self.script_lock:
-                    self.channel.handshake()
-                break
-            except ReadWakeup:
-                continue
+        for init_fn in (self.channel.preamble, self.channel.version_handshake):
+            while True:
+                try:
+                    with self.script_lock:
+                        init_fn()
+                    break
+                except ReadWakeup:
+                    continue
         try:
             with self.script_lock:
                 self.script.init(self.channel)
