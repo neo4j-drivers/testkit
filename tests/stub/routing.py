@@ -3030,7 +3030,7 @@ class NoRouting(TestkitTestCase):
         return {
             "#VERSION#": "4.1",
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#ROUTING#": ', "routing": null' if get_driver_name() not in ['javascript'] else ''
+            "#ROUTING#": ', "routing": null' if get_driver_name() in ['java', 'dotnet', 'go'] else ''
         }
 
     # Checks that routing is disabled when URI is bolt, no routing in HELLO and
