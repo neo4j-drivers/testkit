@@ -1334,6 +1334,7 @@ class Routing(TestkitTestCase):
             try_count = try_count + 1
             try:
                 result = tx.run("RETURN 1 as n")
+                sequences.append(self.collectRecords(result))
             except types.DriverError:
                 reader1_con_count = \
                     self._readServer1.count_responses("<ACCEPT>")
@@ -1349,8 +1350,6 @@ class Routing(TestkitTestCase):
                 working_reader.start(script=self.read_tx_script(),
                                      vars=self.get_vars())
                 raise
-
-            sequences.append(self.collectRecords(result))
 
         session.readTransaction(work)
         session.close()
@@ -1387,6 +1386,7 @@ class Routing(TestkitTestCase):
             try_count = try_count + 1
             try:
                 result = tx.run("RETURN 1 as n")
+                sequences.append(self.collectRecords(result))
             except types.DriverError:
                 writer1_con_count = \
                     self._writeServer1.count_responses("<ACCEPT>")
@@ -1402,7 +1402,6 @@ class Routing(TestkitTestCase):
                 working_writer.start(script=self.write_tx_script(),
                                      vars=self.get_vars())
                 raise
-            sequences.append(self.collectRecords(result))
 
         session.writeTransaction(work)
         session.close()
