@@ -794,6 +794,9 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
+        if get_driver_name() in ["python"]:
+            self.skipTest("opens a new connection each time to get a fresh "
+                          "routing table")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_with_bookmarks_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.router_with_bookmarks_script_create_db(), vars=self.get_vars())
