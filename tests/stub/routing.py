@@ -73,17 +73,27 @@ class Routing(TestkitTestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]}}
-        C: BEGIN {"mode": "r", "db": "system"}
-        C: RUN "CREATE database foo" {} {'mode': 'r', 'db': 'system'}
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+        C: ROUTE #ROUTINGCTX# [ "SystemBookmark" ] "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+        """
+
+    def router_with_bookmarks_script_create_db(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: BEGIN {"db": "system"}
+        C: RUN "CREATE database foo" {} {'mode': 'w', 'db': 'system'}
         S: SUCCESS {}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": []}
         S: SUCCESS {"type": "w"}
         C: COMMIT
         S: SUCCESS {"bookmark": "SystemBookmark"}
-        C: ROUTE #ROUTINGCTX# [ "SystemBookmark" ] "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]}}
         C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
@@ -786,8 +796,9 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_with_bookmarks_script(), vars=self.get_vars())
+        self._writeServer1.start(script=self.router_with_bookmarks_script_create_db(), vars=self.get_vars())
 
-        session = driver.session('r', database='system')
+        session = driver.session('w', database='system')
         tx = session.beginTransaction()
         tx.run("CREATE database foo")
         tx.commit()
@@ -801,7 +812,6 @@ class Routing(TestkitTestCase):
 
         self._routingServer1.done()
         self.assertEqual([1], sequence2)
-
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
         # TODO remove this block once all languages work
