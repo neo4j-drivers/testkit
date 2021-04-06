@@ -2205,11 +2205,7 @@ class RoutingV4(Routing):
         !: ALLOW RESTART
 
         !: AUTO GOODBYE
-        {{
-            C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS#}
-        ----
-            C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {} #EXTRA_HELLO_PROPS#}
-        }}
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         {?
             C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": {"address": "#HOST#:9000"}, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
@@ -2647,11 +2643,7 @@ class RoutingV3(Routing):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         {?
-            {{
-                C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {"[mode]": "r"}
-            ----
-                C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {}} {"[mode]": "r"}
-            }}
+            C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {"[mode]": "r"}
             C: PULL_ALL
             S: SUCCESS {"fields": ["ttl", "servers"]}
             S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]

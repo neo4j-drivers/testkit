@@ -38,7 +38,6 @@ class Transport(TestkitTestCase):
         self._session = self._driver.session("w")
 
     def tearDown(self):
-        self._backend.close()
         self._server.reset()
         super().tearDown()
 
