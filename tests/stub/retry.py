@@ -218,7 +218,7 @@ class TestRetry(TestkitTestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driverName in ["java", 'javascript', 'dotnet']:
+        if self._driverName in ["java", 'dotnet']:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(script=script_commit_disconnect)
@@ -448,8 +448,6 @@ class TestRetryClustering(TestkitTestCase):
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
-        if get_driver_name() in ['javascript']:
-            v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
         return v
 
     def get_extra_hello_props(self):

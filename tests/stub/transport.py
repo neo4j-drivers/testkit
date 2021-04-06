@@ -38,13 +38,9 @@ class Transport(TestkitTestCase):
         self._session = self._driver.session("w")
 
     def tearDown(self):
-<<<<<<< HEAD
         self._backend.close()
         self._server.reset()
-=======
-        self._server.reset()
         super().tearDown()
->>>>>>> 4.3
 
     def test_noop(self):
         # Verifies that no op messages sent on bolt chunking layer are ignored. The no op messages

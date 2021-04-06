@@ -211,8 +211,6 @@ class TxRun(TestkitTestCase):
     """
 
     def test_nested(self):
-        if get_driver_name() in ['javascript']:
-            self.skipTest('It could not guarantee the order of records requests between in the nested transactions')
         # ex JAVA - java completely pulls the first query before running the second
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
