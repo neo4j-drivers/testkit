@@ -113,7 +113,7 @@ class TestTxFuncRun(TestkitTestCase):
         def run(tx):
             result = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
             global nodeid
-            nodeid = result.next().value
+            nodeid = result.next().values[0].value
             raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
