@@ -25,9 +25,6 @@ class TestTxFuncRun(TestkitTestCase):
         # >= 4.0 supports multiple result streams on the connection. From this
         # view it is not possible to see that those streams are actually used.
         # (see stub tests for this verification).
-
-        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
-            self.skipTest("Fetchsize not implemented in backend")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Fails for some reason")
 
@@ -109,7 +106,7 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
-        if get_driver_name() in ["javascript", "java"]:
+        if get_driver_name() in ["java"]:
             self.skipTest("Client exceptions not properly handled in backend")
         nodeid = -1
 

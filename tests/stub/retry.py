@@ -262,7 +262,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_read(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript', 'java']:
+        if get_driver_name() in ['dotnet', 'go', 'java']:
             self.skipTest("needs ROUTE bookmark list support")
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
         self._readServer.start(script=script_read)
@@ -289,7 +289,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_retry_database_unavailable(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("needs ROUTE bookmark list support")
 
         # Simple case, correctly classified transient error
@@ -299,7 +299,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_retry_made_up_transient(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("needs ROUTE bookmark list support")
 
         # Driver should retry all transient error (with some exceptions), make
@@ -310,7 +310,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
@@ -321,12 +321,10 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_retry_NotALeader(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        # if get_driver_name() in ['python']:
-        #     self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
@@ -334,7 +332,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
