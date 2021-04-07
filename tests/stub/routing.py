@@ -61,7 +61,7 @@ class Routing(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] "adb"
+        C: ROUTE #ROUTINGCTX# "*" "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
@@ -80,16 +80,23 @@ class Routing(TestkitTestCase):
         +}
         """
 
-    def router_with_bookmarks_script_adb(self):
+    def router_with_bookmarks_script_system_then_adb(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] "adb"
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+        {?
+            C: ROUTE #ROUTINGCTX# [] "system"
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+            {?
+                C: GOODBYE
+                S: SUCCESS {}
+                   <EXIT>
+            ?}
+        ?}
         C: ROUTE #ROUTINGCTX# [ "SystemBookmark" ] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
         """
@@ -103,14 +110,14 @@ class Routing(TestkitTestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: BEGIN {"db": "system"}
-        C: RUN "CREATE database foo" {} {'mode': 'w', 'db': 'system'}
+        C: RUN "CREATE database foo" {} {}
         S: SUCCESS {}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": []}
         S: SUCCESS {"type": "w"}
         C: COMMIT
         S: SUCCESS {"bookmark": "SystemBookmark"}
-        C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
+        C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["SystemBookmark"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
            RECORD [1]
@@ -139,9 +146,9 @@ class Routing(TestkitTestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         {{
-            C: ROUTE #ROUTINGCTX# null
+            C: ROUTE #ROUTINGCTX# [] null
         ----
-            C: ROUTE #ROUTINGCTX# "system"
+            C: ROUTE #ROUTINGCTX# [] "system"
         }}
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
@@ -173,7 +180,6 @@ class Routing(TestkitTestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "*"
-        C: ROUTE #ROUTINGCTX# [] "adb"
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
         S: IGNORED
         S: <EXIT>
@@ -276,7 +282,7 @@ class Routing(TestkitTestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         {?
-            C: ROUTE #ROUTINGCTX# [] "adb"
+            C: ROUTE {"address": "#HOST#:9000"} [] "adb"
             S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
             {?
                 C: GOODBYE
@@ -316,7 +322,7 @@ class Routing(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] "*"
+        C: ROUTE #ROUTINGCTX# "*" "*"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]}}
         """
 
@@ -340,7 +346,7 @@ class Routing(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# "adb"
+        C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]}}
         """
 
@@ -874,7 +880,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_with_bookmarks_script_adb(), vars=self.get_vars())
+        self._routingServer1.start(script=self.router_with_bookmarks_script_system_then_adb(), vars=self.get_vars())
         self._writeServer1.start(script=self.router_with_bookmarks_script_create_adb(), vars=self.get_vars())
 
         session = driver.session('w', database='system')
@@ -3243,6 +3249,7 @@ class RoutingV3(Routing):
 
     def test_should_send_system_bookmark_with_route(self):
         pass
+
 
 class NoRouting(TestkitTestCase):
     def setUp(self):
