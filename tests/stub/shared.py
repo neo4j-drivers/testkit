@@ -144,14 +144,28 @@ class StubServer:
         return False
 
     def done(self):
-        # TODO: update doc string
-        """ Checks if the server stopped nicely (processes exited with 0),
-        if so this method is done.
-        If the server process exited with non 0, an exception will be raised.
-        If the server process is running it will be polled until timeout and
-          proceed as above.
-        If the server process is still running after polling it will be killed
-          and an exception will be raised.
+        """Shut down the server, if running
+
+        If the server was never started, this method does nothing.
+
+        If the server exited nicely (process exited with 0) or the script has
+        been fully played, the server will be shut down gracefully.
+
+        If the server exited with anything but 0, or a connection is open that
+        cannot reach the end of the script, this functions terminates the
+        process, dumps the output of the server and raises StubServerUncleanExit
+
+
+        Note about fully played scripts:
+        If `<EXIT>` is invoked at any point in the script, this counts as
+        finishing the script. Especially noteworthy, if `!AUTO: GOODBYE` is
+        present, the client can reach the end of the script at any time by
+        sending a `GOODBYE` message.
+        Furthermore, for `!ALLOW RESTART` and `!ALLOW CONCURRENT`, this function
+        will check that all open connections have reached the end of the script
+        or can reach the end of the script by skipping over optional blocks and
+        alike. This means, if the client never connects to the server, this also
+        counts as a fully played scripts.
         """
         if not self._process:
             # test was probably skipped or failed before the stub server could
@@ -181,7 +195,7 @@ class StubServer:
         finally:
             if self._process.returncode not in (0, -signal.SIGINT):
                 self._dump()
-                raise Exception(
+                raise StubServerUncleanExit(
                     "Stub server exited unclean ({})".format(
                         self._process.returncode
                     )
