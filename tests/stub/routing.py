@@ -1128,8 +1128,17 @@ class Routing(TestkitTestCase):
         self._routingServer1.done()
         self._writeServer1.done()
         self._writeServer2.done()
+
+        self.assertGreaterEqual(
+            self._routingServer1.count_responses("SUCCESS"), 2
+        )
+        self.assertGreaterEqual(
+            self._writeServer1.count_responses("<EXIT>"), 1
+        )
+        self.assertGreaterEqual(
+            self._writeServer2.count_responses("SUCCESS"), 4
+        )
         self.assertEqual([[], []], sequences)
-        self.assertEqual(2, num_retries)
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(self):
         # TODO remove this block once all languages work
@@ -1564,8 +1573,23 @@ class Routing(TestkitTestCase):
         self._readServer1.done()
         self._readServer2.done()
         self._readServer3.done()
+
+        self.assertGreaterEqual(
+            self._routingServer1.count_responses("SUCCESS"), 2
+        )
+        self.assertGreaterEqual(
+            self._routingServer2.count_responses("SUCCESS"), 2
+        )
+        self.assertGreaterEqual(
+            self._readServer1.count_responses("<EXIT>"), 1
+        )
+        self.assertGreaterEqual(
+            self._readServer2.count_responses("RECORD"), 1
+        )
+        self.assertGreaterEqual(
+            self._readServer3.count_responses("<EXIT>"), 1
+        )
         self.assertEqual([[1]], sequences)
-        self.assertEqual(3, try_count)
 
     def test_should_retry_write_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
@@ -1599,8 +1623,22 @@ class Routing(TestkitTestCase):
         self._writeServer1.done()
         self._writeServer2.done()
         self._writeServer3.done()
+        self.assertGreaterEqual(
+            self._routingServer1.count_responses("SUCCESS"), 2
+        )
+        self.assertGreaterEqual(
+            self._routingServer2.count_responses("SUCCESS"), 2
+        )
+        self.assertGreaterEqual(
+            self._writeServer1.count_responses("<EXIT>"), 1
+        )
+        self.assertGreaterEqual(
+            self._writeServer2.count_responses("SUCCESS"), 4
+        )
+        self.assertGreaterEqual(
+            self._writeServer3.count_responses("<EXIT>"), 1
+        )
         self.assertEqual([[]], sequences)
-        self.assertEqual(3, try_count)
 
     def test_should_use_initial_router_for_discovery_when_others_unavailable(self):
         # TODO add support and remove this block
@@ -2003,7 +2041,8 @@ class Routing(TestkitTestCase):
         session = driver.session('r', database="unreachable")
         failed_on_unreachable = False
         try:
-            session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 as n")
+            self.collectRecords(result)
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
@@ -2012,8 +2051,8 @@ class Routing(TestkitTestCase):
 
         session = driver.session('r', database=self.get_db())
         result = session.run("RETURN 1 as n")
-        self.assertEqual(self.route_call_count(self._routingServer1), 2)
         sequence = self.collectRecords(result)
+        self.assertEqual(self.route_call_count(self._routingServer1), 2)
         session.close()
         driver.close()
 
