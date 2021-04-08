@@ -1931,9 +1931,9 @@ class Routing(TestkitTestCase):
 
         driver.close()
         self._routingServer1.done()
+        self._readServer1.reset()
         self.assertLessEqual(self._readServer1.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._readServer1.count_requests("RUN"), 0)
-        self._readServer1.reset()
         self.assertEqual(self.should_support_multi_db(), supports_multi_db)
 
     def test_should_read_successfully_on_empty_discovery_result_using_session_run(self):

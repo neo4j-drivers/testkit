@@ -92,6 +92,7 @@ class BoltStubService:
         self.script = script
         self.exceptions = []
         self.actors = []
+        self.ever_acted = False
         self.actors_lock = Lock()
         service = self
 
@@ -112,6 +113,7 @@ class BoltStubService:
                     with service.actors_lock:
                         actor = BoltActor(deepcopy(script), self.wire)
                         service.actors.append(actor)
+                        service.ever_acted = True
                     actor.play()
                 except ServerExit as e:
                     log.info("[#%04X]  S: <EXIT> %s",

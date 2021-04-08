@@ -104,6 +104,10 @@ useful for Bolt client integration testing.
         print("Timed out")
         exit(2)
 
+    if not service.ever_acted:
+        print("Script never started")
+        exit(3)
+
     exit(0)
 
 

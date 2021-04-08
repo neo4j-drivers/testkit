@@ -161,11 +161,6 @@ class StubServer:
         finishing the script. Especially noteworthy, if `!AUTO: GOODBYE` is
         present, the client can reach the end of the script at any time by
         sending a `GOODBYE` message.
-        Furthermore, for `!ALLOW RESTART` and `!ALLOW CONCURRENT`, this function
-        will check that all open connections have reached the end of the script
-        or can reach the end of the script by skipping over optional blocks and
-        alike. This means, if the client never connects to the server, this also
-        counts as a fully played scripts.
         """
         if not self._process:
             # test was probably skipped or failed before the stub server could
@@ -183,7 +178,6 @@ class StubServer:
                 self._process.wait()
                 raise StubServerUncleanExit("Stub server hanged.")
             if self._process.returncode not in (0, -signal.SIGINT):
-                self._dump()
                 raise StubServerUncleanExit(
                     "Stub server exited unclean ({})".format(
                         self._process.returncode
@@ -193,13 +187,6 @@ class StubServer:
             self._dump()
             raise
         finally:
-            if self._process.returncode not in (0, -signal.SIGINT):
-                self._dump()
-                raise StubServerUncleanExit(
-                    "Stub server exited unclean ({})".format(
-                        self._process.returncode
-                    )
-                )
             self._read_pipes()
             self._process = None
 
