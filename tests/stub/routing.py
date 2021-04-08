@@ -65,6 +65,18 @@ class Routing(TestkitTestCase):
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
 
+    def router_script_with_reader2(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: ROUTE #ROUTINGCTX# "*" "adb"
+        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]}}
+        """
+
     def router_script_adb_multi(self):
         return """
         !: BOLT #VERSION#
@@ -1540,7 +1552,7 @@ class Routing(TestkitTestCase):
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_with_reader2(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
         self._readServer3.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1575,7 +1587,7 @@ class Routing(TestkitTestCase):
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
-        self._routingServer2.start(script=self.router_script_adb(), vars=self.get_vars())
+        self._routingServer2.start(script=self.router_script_with_reader2(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
         self._writeServer3.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -2003,7 +2015,8 @@ class Routing(TestkitTestCase):
         session = driver.session('r', database="unreachable")
         failed_on_unreachable = False
         try:
-            session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 as n")
+            self.collectRecords(result)
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.ServiceUnavailableException', e.errorType)
@@ -2012,8 +2025,8 @@ class Routing(TestkitTestCase):
 
         session = driver.session('r', database=self.get_db())
         result = session.run("RETURN 1 as n")
-        self.assertEqual(self.route_call_count(self._routingServer1), 2)
         sequence = self.collectRecords(result)
+        self.assertEqual(self.route_call_count(self._routingServer1), 2)
         session.close()
         driver.close()
 
@@ -2154,6 +2167,21 @@ class RoutingV4(Routing):
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def router_script_with_reader2(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+
+        !: AUTO GOODBYE
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
+        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        C: PULL {"n": -1}
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
 
@@ -2624,6 +2652,22 @@ class RoutingV3(Routing):
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+        S: SUCCESS {"type": "r"}
+        """
+
+    def router_script_with_reader2(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO RESET
+        !: AUTO GOODBYE
+        !: ALLOW RESTART
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
+        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
+        C: PULL_ALL
+        S: SUCCESS {"fields": ["ttl", "servers"]}
+        S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
         """
 
