@@ -718,7 +718,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_get_routing_table_with_context(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go', 'python', 'javascript']:
             self.skipTest("needs verifyConnectivity support")
@@ -735,7 +735,7 @@ class Routing(TestkitTestCase):
     # (not the router).
     def test_should_read_successfully_from_reader_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -753,7 +753,7 @@ class Routing(TestkitTestCase):
 
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_default_db(), vars=self.get_vars())
@@ -772,7 +772,7 @@ class Routing(TestkitTestCase):
     # Same test as for session.run but for transaction run.
     def test_should_read_successfully_from_reader_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -792,7 +792,7 @@ class Routing(TestkitTestCase):
 
     def test_should_send_system_bookmark_with_route(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ["python"]:
             self.skipTest("opens a new connection each time to get a fresh "
@@ -818,7 +818,7 @@ class Routing(TestkitTestCase):
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -841,7 +841,7 @@ class Routing(TestkitTestCase):
 
     def test_should_round_robin_readers_when_reading_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -865,7 +865,7 @@ class Routing(TestkitTestCase):
 
     def test_should_round_robin_readers_when_reading_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -891,7 +891,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
@@ -916,7 +916,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -944,7 +944,7 @@ class Routing(TestkitTestCase):
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -961,7 +961,7 @@ class Routing(TestkitTestCase):
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -979,7 +979,7 @@ class Routing(TestkitTestCase):
 
     def test_should_write_successfully_on_writer_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -999,7 +999,7 @@ class Routing(TestkitTestCase):
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
@@ -1026,7 +1026,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
             self.skipTest("requires investigation")
@@ -1057,7 +1057,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_until_success_with_leader_shutdown_during_tx_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
             self.skipTest("requires investigation")
@@ -1089,7 +1089,7 @@ class Routing(TestkitTestCase):
 
     def test_should_round_robin_writers_when_writing_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -1110,7 +1110,7 @@ class Routing(TestkitTestCase):
 
     def test_should_round_robin_writers_when_writing_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -1133,7 +1133,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
@@ -1158,7 +1158,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -1185,7 +1185,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -1209,7 +1209,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_discovery_when_router_fails_with_unknown_code(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -1232,7 +1232,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -1256,7 +1256,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
@@ -1281,7 +1281,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go']:
             self.skipTest("consume not implemented in backend")
@@ -1308,7 +1308,7 @@ class Routing(TestkitTestCase):
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code_using_tx_run(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -1335,7 +1335,7 @@ class Routing(TestkitTestCase):
 
     def test_should_use_write_session_mode_and_initial_bookmark_when_writing_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -1355,7 +1355,7 @@ class Routing(TestkitTestCase):
 
     def test_should_use_read_session_mode_and_initial_bookmark_when_reading_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -1377,7 +1377,7 @@ class Routing(TestkitTestCase):
 
     def test_should_pass_bookmark_from_tx_to_tx_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['javascript']:
             self.skipTest("requires investigation")
@@ -1406,7 +1406,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_read_tx_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
@@ -1437,7 +1437,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_tx_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
@@ -1468,7 +1468,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_read_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'javascript', 'go']:
             self.skipTest("requires investigation")
@@ -1503,7 +1503,7 @@ class Routing(TestkitTestCase):
 
     def test_should_retry_write_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'javascript', 'go']:
             self.skipTest("requires investigation")
@@ -1538,7 +1538,7 @@ class Routing(TestkitTestCase):
 
     def test_should_use_initial_router_for_discovery_when_others_unavailable(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['go', 'javascript']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -1567,7 +1567,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_read_from_readable_router_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
@@ -1594,7 +1594,7 @@ class Routing(TestkitTestCase):
 
     def test_should_send_empty_hello(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
@@ -1622,7 +1622,7 @@ class Routing(TestkitTestCase):
 
     def test_should_serve_reads_and_fail_writes_when_no_writers_available(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'go']:
             self.skipTest("consume not implemented in backend or requires investigation")
@@ -1658,7 +1658,7 @@ class Routing(TestkitTestCase):
 
     def test_should_accept_routing_table_without_writers_and_then_rediscover(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -1689,7 +1689,7 @@ class Routing(TestkitTestCase):
 
     def test_should_accept_routing_table_with_single_router(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
@@ -1714,7 +1714,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_send_multiple_bookmarks(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -1737,7 +1737,7 @@ class Routing(TestkitTestCase):
 
     def test_should_forget_address_on_database_unavailable_error(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'go']:
             self.skipTest("requires investigation")
@@ -1770,7 +1770,7 @@ class Routing(TestkitTestCase):
 
     def test_should_use_resolver_during_rediscovery_when_existing_routers_fail(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
@@ -1812,7 +1812,7 @@ class Routing(TestkitTestCase):
 
     def test_should_revert_to_initial_router_if_known_router_throws_protocol_errors(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
@@ -1850,7 +1850,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_check_if_support_for_multi_db_is_available(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("supportsMultiDb not implemented in backend")
@@ -1866,7 +1866,7 @@ class Routing(TestkitTestCase):
 
     def test_should_read_successfully_on_empty_discovery_result_using_session_run(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
@@ -1892,7 +1892,7 @@ class Routing(TestkitTestCase):
 
     def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("add code support")
@@ -1917,7 +1917,7 @@ class Routing(TestkitTestCase):
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
@@ -1952,7 +1952,7 @@ class Routing(TestkitTestCase):
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
@@ -1972,7 +1972,7 @@ class Routing(TestkitTestCase):
 
     def test_should_request_rt_from_all_initial_routers_until_successful(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("add resolvers and connection timeout support")
@@ -2035,7 +2035,7 @@ class Routing(TestkitTestCase):
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['dotnet', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
             self.skipTest("needs verifyConnectivity support")
