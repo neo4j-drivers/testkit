@@ -32,7 +32,7 @@ class Session:
                 addresses = self._driver.resolveDomainName(res.name)
                 self._backend.send(protocol.DomainNameResolutionCompleted(res.id, addresses))
             elif isinstance(res, protocol.Result):
-                return Result(self._backend, res)
+                return Result(self._backend, res, self._driver)
             else:
                 raise Exception("Should be Result or ResolverResolutionRequired but was: %s" % res)
 
@@ -42,7 +42,7 @@ class Session:
         while True:
             res = self._backend.receive()
             if isinstance(res, protocol.RetryableTry):
-                tx = Transaction(self._backend, res.id)
+                tx = Transaction(self._backend, res.id, self._driver)
                 try:
                     # Invoke the frontend test function until we succeed, note
                     # that the frontend test function makes calls to the
@@ -89,7 +89,7 @@ class Session:
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
             raise Exception("Should be Transaction but was: %s" % res)
-        return Transaction(self._backend, res.id)
+        return Transaction(self._backend, res.id, self._driver)
 
     def lastBookmarks(self):
         req = protocol.SessionLastBookmarks(self._session.id)
