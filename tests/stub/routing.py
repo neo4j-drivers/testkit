@@ -1157,7 +1157,9 @@ class Routing(TestkitTestCase):
         failed = False
         try:
             # drivers doing eager loading will fail here
-            session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 as n")
+            # drivers doing lazy loading should fail here
+            result.next()
         except types.DriverError as e:
             session.close()
             failed = True
@@ -1289,7 +1291,9 @@ class Routing(TestkitTestCase):
 
         try:
             # drivers doing eager loading will fail here
-            session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 as n")
+            # drivers doing lazy loading should fail here
+            result.next()
         except types.DriverError as e:
             session.close()
             failed = True
