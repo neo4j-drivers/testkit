@@ -1989,7 +1989,8 @@ class Routing(TestkitTestCase):
         session = driver.session('r', database=self.get_db())
         failed = False
         try:
-            session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 as n")
+            result.next()
         except types.DriverError as e:
             if get_driver_name() in ['java']:
                 self.assertEqual('org.neo4j.driver.exceptions.FatalDiscoveryException', e.errorType)
