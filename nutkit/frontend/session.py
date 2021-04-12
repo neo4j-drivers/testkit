@@ -1,6 +1,6 @@
-import nutkit.protocol as protocol
 from .result import Result
 from .transaction import Transaction
+from .. import protocol
 
 
 class Session:

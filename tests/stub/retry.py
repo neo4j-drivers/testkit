@@ -1,10 +1,10 @@
-import unittest
-
-from tests.shared import new_backend, get_driver_name
-from tests.stub.shared import StubServer
-from nutkit.frontend import Driver, AuthorizationToken
+from nutkit.frontend import Driver
 import nutkit.protocol as types
-
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
+from tests.stub.shared import StubServer
 
 script_read = """
 !: BOLT 4
@@ -127,17 +127,17 @@ S: <EXIT>
 """
 
 
-class TestRetry(unittest.TestCase):
+class TestRetry(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
 
     def tearDown(self):
-        self._backend.close()
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analys.
+        # is killed and it's output is dumped for analysis.
         self._server.reset()
+        super().tearDown()
 
     def test_read(self):
         self._server.start(script=script_read)
@@ -150,8 +150,8 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                                  credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
@@ -187,8 +187,8 @@ class TestRetry(unittest.TestCase):
             record = result.next()
             return record.values[0]
 
-        auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                                  credentials="pass")
+        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                        credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
@@ -229,7 +229,7 @@ class TestRetry(unittest.TestCase):
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
             result.next()
-        auth = AuthorizationToken(scheme="basic")
+        auth = types.AuthorizationToken(scheme="basic")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
@@ -242,18 +242,28 @@ class TestRetry(unittest.TestCase):
         driver.close()
         self._server.done()
 
-class TestRetryClustering(unittest.TestCase): 
+
+class TestRetryClustering(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._routingServer = StubServer(9001)
         self._readServer = StubServer(9002)
         self._writeServer = StubServer(9003)
         self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer.address
-        self._auth = AuthorizationToken(
-                scheme="basic", principal="p", credentials="c")
+        self._auth = types.AuthorizationToken(scheme="basic", principal="p",
+                                              credentials="c")
         self._userAgent = "007"
 
+    def tearDown(self):
+        self._routingServer.reset()
+        self._readServer.reset()
+        self._writeServer.reset()
+        super().tearDown()
+
     def test_read(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'javascript', 'java']:
+            self.skipTest("needs ROUTE bookmark list support")
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
         self._readServer.start(script=script_read)
         num_retries = 0
@@ -278,19 +288,30 @@ class TestRetryClustering(unittest.TestCase):
         self._routingServer.done()
 
     def test_retry_database_unavailable(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+            self.skipTest("needs ROUTE bookmark list support")
+
         # Simple case, correctly classified transient error
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Database.DatabaseUnavailable")
-    
+
     def test_retry_made_up_transient(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+            self.skipTest("needs ROUTE bookmark list support")
+
         # Driver should retry all transient error (with some exceptions), make
         # up a transient error and the driver should retry.
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Completely.MadeUp")
-    
+
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
         if get_driver_name() in ['python']:
@@ -301,6 +322,9 @@ class TestRetryClustering(unittest.TestCase):
                 "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
 
     def test_retry_NotALeader(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
         if get_driver_name() in ['python']:
@@ -311,6 +335,9 @@ class TestRetryClustering(unittest.TestCase):
                 "Neo.ClientError.Cluster.NotALeader")
 
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
         if get_driver_name() in ['python']:
@@ -331,7 +358,7 @@ class TestRetryClustering(unittest.TestCase):
 
         self._writeServer.start(script=script_retry_with_fail_after_pull_server1, vars=vars)
         self._readServer.start(script=script_retry_with_fail_after_pull_server2, vars=vars)
-        
+
         num_retries = 0
 
         def twice(tx):
@@ -354,7 +381,6 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
         self._readServer.done()
-
 
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(script=self.router_script(), vars=self.get_vars())
@@ -393,13 +419,6 @@ class TestRetryClustering(unittest.TestCase):
         self._writeServer.done()
         self._routingServer.done()
 
-
-    def tearDown(self):
-        self._backend.close()
-        self._routingServer.reset()
-        self._readServer.reset()
-        self._writeServer.reset()
-    
     def router_script(self):
         return """
         !: BOLT #VERSION#
@@ -408,14 +427,14 @@ class TestRetryClustering(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
-    
+
     def router_script_swap_reader_and_writer(self):
         return """
         !: BOLT #VERSION#
@@ -424,15 +443,15 @@ class TestRetryClustering(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
         """
-    
-    def router_script_not_retry(self): 
+
+    def router_script_not_retry(self):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
@@ -440,7 +459,7 @@ class TestRetryClustering(unittest.TestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# None
+        C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 

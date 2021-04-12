@@ -1,13 +1,18 @@
-import unittest
+import os
 
+from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.neo4j.shared import *
-from tests.shared import *
+from tests.neo4j.shared import (
+    env_neo4j_pass,
+    env_neo4j_user,
+    get_neo4j_host_and_port,
+)
+from tests.shared import TestkitTestCase
 
 
-class TestDataTypes(unittest.TestCase):
+class TestDataTypes(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._host, self._port = get_neo4j_host_and_port()
         self._scheme = "bolt://%s:%d" % (self._host, self._port)
         self._session = None
@@ -18,12 +23,14 @@ class TestDataTypes(unittest.TestCase):
             self._session.close()
         if self._driver:
             self._driver.close()
-        self._backend.close()
+        super().tearDown()
 
     def createDriverAndSession(self):
-        auth_token = AuthorizationToken(scheme="basic",
-                                        principal=os.environ.get(env_neo4j_user, "neo4j"),
-                                        credentials=os.environ.get(env_neo4j_pass, "pass"))
+        auth_token = types.AuthorizationToken(
+            scheme="basic",
+            principal=os.environ.get(env_neo4j_user, "neo4j"),
+            credentials=os.environ.get(env_neo4j_pass, "pass")
+        )
         self._driver = Driver(self._backend, self._scheme, auth_token)
         self._session = self._driver.session("w")
 

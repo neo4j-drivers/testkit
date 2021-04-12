@@ -1,4 +1,4 @@
-import nutkit.protocol as protocol
+from .. import protocol
 
 
 class Result:

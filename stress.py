@@ -11,8 +11,8 @@ import urllib.parse
 
 import docker
 import driver
-import settings
 import neo4j
+import settings
 
 
 def run(settings):

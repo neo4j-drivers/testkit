@@ -1,13 +1,14 @@
-import unittest
-
 import nutkit.protocol as types
 from tests.neo4j.shared import get_driver
-from tests.shared import get_driver_name, new_backend
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
 
 
-class TestSessionRun(unittest.TestCase):
+class TestSessionRun(TestkitTestCase):
     def setUp(self):
-        self._backend = new_backend()
+        super().setUp()
         self._driver = get_driver(self._backend)
         self._session = None
 
@@ -15,7 +16,7 @@ class TestSessionRun(unittest.TestCase):
         if self._session:
             self._session.close()
         self._driver.close()
-        self._backend.close()
+        super().tearDown()
 
     def test_iteration_smaller_than_fetch_size(self):
         if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:

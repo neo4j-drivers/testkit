@@ -1,6 +1,5 @@
-import nutkit.protocol as protocol
-
 from .session import Session
+from .. import protocol
 
 
 class Driver:
