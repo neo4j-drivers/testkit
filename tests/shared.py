@@ -38,8 +38,9 @@ class TestkitTestCase(unittest.TestCase):
         super().setUp()
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
         self._backend = new_backend()
-        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+        self.addCleanup(self._backend.close)
         try:
+            response = self._backend.sendAndReceive(protocol.StartTest(id_))
             if isinstance(response, protocol.SkipTest):
                 self.skipTest(response.reason)
             elif not isinstance(response, protocol.RunTest):
@@ -49,7 +50,3 @@ class TestkitTestCase(unittest.TestCase):
         except Exception:
             self._backend.close()
             raise
-
-    def tearDown(self):
-        self._backend.close()
-        super().tearDown()
