@@ -1670,6 +1670,7 @@ class Routing(TestkitTestCase):
         driver.close()
 
         self._routingServer1.done()
+        # TODO: it's not a gold badge to connect more than once.
         self.assertLessEqual(
             self._routingServer1.count_responses("<ACCEPT>"), 2
         )
@@ -2070,7 +2071,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("add resolvers and connection timeout support")
 
-        resolver_call_num = 0
+        resolver_calls = {}
         domain_name_resolver_call_num = 0
         resolved_addresses = [
             "host1:%s" % self._routingServer1.port,
@@ -2085,11 +2086,11 @@ class Routing(TestkitTestCase):
 
         # The resolver is used to convert the original address to multiple fake domain names.
         def resolver(address):
-            nonlocal resolver_call_num
+            nonlocal resolver_calls
             nonlocal resolved_addresses
-            self.assertEqual(0, resolver_call_num)
-            self.assertEqual(self._routingServer1.address, address)
-            resolver_call_num += 1
+            resolver_calls[address] = resolver_calls.get(address, 0) + 1
+            if address != self._routingServer1.address:
+                return [address]
             return resolved_addresses
 
         # The domain name resolver is used to verify that the fake domain names are given to it
@@ -2125,6 +2126,9 @@ class Routing(TestkitTestCase):
         self._routingServer3.done()
         self._readServer1.done()
         self.assertEqual([1], sequence)
+        self.assertGreaterEqual(resolver_calls.items(),
+                                {self._routingServer1.address: 1}.items())
+        self.assertTrue(all(count == 1 for count in resolver_calls.values()))
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
