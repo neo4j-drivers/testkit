@@ -4,8 +4,7 @@ import sys
 import time
 
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken
-
+from nutkit.protocol import AuthorizationToken, DriverError
 
 # Retrieve path to the repository containing this script.
 # Use this path as base for locating a whole bunch of other stuff.
@@ -93,8 +92,8 @@ def try_connect(backend, server, scheme, host):
     driver = Driver(backend, url, auth)
     session = driver.session("r")
     try:
-        result = session.run("RETURN 1 as n")
-    except:
+        session.run("RETURN 1 as n")
+    except DriverError:
         pass
     session.close()
     driver.close()
