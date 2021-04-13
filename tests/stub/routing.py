@@ -35,7 +35,11 @@ class Routing(TestkitTestCase):
         self._writeServer1 = StubServer(9020)
         self._writeServer2 = StubServer(9021)
         self._writeServer3 = StubServer(9022)
-        self._uri = "neo4j://%s?region=china&policy=my_policy" % self._routingServer1.address
+        self._uri_template = "neo4j://%s:%d"
+        self._uri_template_with_context = \
+            self._uri_template + "?region=china&policy=my_policy"
+        self._uri_with_context = self._uri_template_with_context % (
+            self._routingServer1.host, self._routingServer1.port)
         self._auth = types.AuthorizationToken(
             scheme="basic", principal="p", credentials="c")
         self._userAgent = "007"
@@ -670,8 +674,9 @@ class Routing(TestkitTestCase):
         S: IGNORED
         """
 
-    def get_vars(self):
-        host = self._routingServer1.host
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routingServer1.host
         v = {
             "#VERSION#": "4.3",
             "#HOST#": host,
@@ -722,7 +727,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go', 'python', 'javascript']:
             self.skipTest("needs verifyConnectivity support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
 
         driver.verifyConnectivity()
@@ -737,7 +742,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
@@ -755,7 +760,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_default_db(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
@@ -774,7 +779,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
@@ -797,7 +802,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ["python"]:
             self.skipTest("opens a new connection each time to get a fresh "
                           "routing table")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_with_bookmarks_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.router_with_bookmarks_script_create_db(), vars=self.get_vars())
 
@@ -820,7 +825,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
 
@@ -845,7 +850,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
         self._readServer2.start(script=self.read_script(), vars=self.get_vars())
@@ -869,7 +874,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
         self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
@@ -895,7 +900,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script_with_unexpected_interruption(), vars=self.get_vars())
 
@@ -920,7 +925,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
 
@@ -946,7 +951,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script(), vars=self.get_vars())
 
@@ -963,7 +968,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
 
@@ -981,7 +986,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
 
@@ -1003,7 +1008,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent, None)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent, None)
         self._routingServer1.start(script=self.router_script_with_two_requests(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_leader_switch_and_retry(), vars=self.get_vars())
 
@@ -1030,7 +1035,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_leader_change(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
@@ -1061,7 +1066,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_leader_change(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_database_unavailable_failure_on_commit(),
                                  vars=self.get_vars())
@@ -1093,7 +1098,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_script(), vars=self.get_vars())
@@ -1114,7 +1119,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
@@ -1137,7 +1142,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_unexpected_interruption(), vars=self.get_vars())
 
@@ -1162,7 +1167,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
 
@@ -1189,7 +1194,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_procedure_not_found_failure(), vars=self.get_vars())
 
         failed = False
@@ -1213,7 +1218,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_unknown_failure(), vars=self.get_vars())
 
         failed = False
@@ -1235,7 +1240,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_not_a_leader_failure(), vars=self.get_vars())
 
@@ -1260,7 +1265,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_not_a_leader_failure(), vars=self.get_vars())
 
@@ -1285,7 +1290,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go']:
             self.skipTest("consume not implemented in backend")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_not_a_leader_failure(), vars=self.get_vars())
 
@@ -1312,7 +1317,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_not_a_leader_failure(), vars=self.get_vars())
 
@@ -1337,7 +1342,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_bookmarks(), vars=self.get_vars())
 
@@ -1357,7 +1362,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_bookmarks(), vars=self.get_vars())
 
@@ -1381,7 +1386,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['javascript']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_read_tx_script_with_bookmark(), vars=self.get_vars())
 
@@ -1410,7 +1415,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._readServer2.start(script=self.read_tx_script(), vars=self.get_vars())
@@ -1441,7 +1446,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
         self._writeServer2.start(script=self.write_tx_script(), vars=self.get_vars())
@@ -1472,7 +1477,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'javascript', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1507,7 +1512,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'javascript', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_unexpected_interruption(), vars=self.get_vars())
@@ -1542,7 +1547,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("verifyConnectivity not implemented in backend")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_another_router_and_fake_reader(),
                                    vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
@@ -1565,18 +1570,28 @@ class Routing(TestkitTestCase):
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
 
-    def test_should_successfully_read_from_readable_router_using_tx_function(self):
+    def test_should_successfully_read_from_readable_router_using_tx_function(
+            self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
-        # TODO remove this block once it works
-        if get_driver_name() in ['java']:
-            self.skipTest("java driver uses separate connections for routing and reading, "
-                          "but the stub server does not currently support this")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_reader_support(), vars=self.get_vars())
+        # Some drivers (for instance, java) may use separate connections for
+        # readers and writers when they are addressed by domain names in routing
+        # table. Since this test is not for testing DNS resolution, it has been
+        # switched to IP-based address model.
+        ip_addresses = []
+        if platform == "linux":
+            ip_addresses = self.get_ip_addresses()
+        if len(ip_addresses) < 1:
+            self.skipTest("only linux is supported at the moment")
+        ip_address = ip_addresses[0]
+        driver = Driver(self._backend, self._uri_template_with_context % (
+            ip_address, self._routingServer1.port), self._auth, self._userAgent)
+        self._routingServer1.start(
+            script=self.router_script_with_reader_support(),
+            vars=self.get_vars(host=ip_address))
 
         session = driver.session('r', database=self.get_db())
         sequences = []
@@ -1598,13 +1613,21 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
-        # TODO remove this block once it works
-        if get_driver_name() in ['java']:
-            self.skipTest("java driver uses separate connections for routing and reading, "
-                          "but the stub server does not currently support this")
-        driver = Driver(self._backend, "neo4j://%s" % self._routingServer1.address, self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_empty_context_and_reader_support(),
-                                   vars=self.get_vars())
+        # Some drivers (for instance, java) may use separate connections for
+        # readers and writers when they are addressed by domain names in routing
+        # table. Since this test is not for testing DNS resolution, it has been
+        # switched to IP-based address model.
+        ip_addresses = []
+        if platform == "linux":
+            ip_addresses = self.get_ip_addresses()
+        if len(ip_addresses) < 1:
+            self.skipTest("only linux is supported at the moment")
+        ip_address = ip_addresses[0]
+        driver = Driver(self._backend, self._uri_template % (
+            ip_address, self._routingServer1.port), self._auth, self._userAgent)
+        self._routingServer1.start(
+            script=self.router_script_with_empty_context_and_reader_support(),
+            vars=self.get_vars(host=ip_address))
 
         session = driver.session('r', database=self.get_db())
         sequences = []
@@ -1626,7 +1649,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'go']:
             self.skipTest("consume not implemented in backend or requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script(), vars=self.get_vars())
@@ -1662,7 +1685,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_empty_writers(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_bookmarks(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_script_with_bookmark(), vars=self.get_vars())
@@ -1693,7 +1716,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
         self._readServer2.start(script=self.read_script(), vars=self.get_vars())
@@ -1716,7 +1739,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_multiple_bookmarks(), vars=self.get_vars())
 
@@ -1741,7 +1764,7 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet', 'python', 'go']:
             self.skipTest("requires investigation")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_one_writer(), vars=self.get_vars())
         self._writeServer1.start(script=self.write_tx_script_with_database_unavailable_failure(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
@@ -1786,7 +1809,7 @@ class Routing(TestkitTestCase):
                 return [self._routingServer2.address]
             self.fail("unexpected")
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent, resolver)
         self._routingServer1.start(script=self.router_script_with_one_reader_and_exit(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_tx_script_with_exit(), vars=self.get_vars())
@@ -1821,7 +1844,7 @@ class Routing(TestkitTestCase):
             self.assertEqual(self._routingServer1.address, address)
             return [self._routingServer1.address, self._routingServer3.address]
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent, resolver)
         self._routingServer1.start(script=self.router_script_with_another_router_and_non_existent_reader(),
                                    vars=self.get_vars())
         self._routingServer2.start(script=self.router_script_with_empty_response(), vars=self.get_vars())
@@ -1855,7 +1878,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("supportsMultiDb not implemented in backend")
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
 
         supports_multi_db = driver.supportsMultiDB()
@@ -1874,7 +1897,7 @@ class Routing(TestkitTestCase):
         def resolver(address):
             return [self._routingServer1.address, self._routingServer2.address]
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolver)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent, resolver)
         self._routingServer1.start(script=self.router_script_with_empty_response(), vars=self.get_vars())
         self._routingServer2.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
@@ -1897,7 +1920,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['python', 'javascript', 'go', 'dotnet']:
             self.skipTest("add code support")
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_db_not_found_failure(), vars=self.get_vars())
 
         session = driver.session('r', database=self.get_db())
@@ -1922,7 +1945,7 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['python', 'javascript', 'go']:
             self.skipTest("requires investigation")
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_unreachable_db_and_adb_db(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script(), vars=self.get_vars())
 
@@ -1954,7 +1977,7 @@ class Routing(TestkitTestCase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script_with_bookmarks(), vars=self.get_vars())
 
@@ -2015,7 +2038,7 @@ class Routing(TestkitTestCase):
             domain_name_resolver_call_num += 1
             return [resolved_domain_name_address]
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent, resolverFn=resolver,
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent, resolverFn=resolver,
                         domainNameResolverFn=domainNameResolver, connectionTimeoutMs=1000)
         self._routingServer1.start(script=self.router_script_with_unknown_failure(), vars=self.get_vars())
         # _routingServer2 is deliberately turned off
@@ -2052,7 +2075,7 @@ class Routing(TestkitTestCase):
             nonlocal router_ip_address
             return [router_ip_address]
 
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent,
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent,
                         domainNameResolverFn=domain_name_resolver)
         self._routingServer1.start(script=self.router_script_with_one_reader_and_exit(), vars=self.get_vars())
 
@@ -2139,7 +2162,7 @@ class RoutingV4(Routing):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
            PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2238,7 +2261,7 @@ class RoutingV4(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-        
+
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
@@ -2263,7 +2286,7 @@ class RoutingV4(Routing):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-        
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
@@ -2360,7 +2383,7 @@ class RoutingV4(Routing):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system", 'bookmarks': ['sys:1234', 'foo:5678']}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2368,8 +2391,9 @@ class RoutingV4(Routing):
         S: SUCCESS {"type": "r", "bookmark": "sys:2234"}
         """
 
-    def get_vars(self):
-        host = self._routingServer1.host
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routingServer1.host
         v = {
             "#VERSION#": 4.1,
             "#HOST#": host,
@@ -2396,7 +2420,7 @@ class RoutingV4(Routing):
         pass
 
     def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
-        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        driver = Driver(self._backend, self._uri_with_context, self._auth, self._userAgent)
         self._routingServer1.start(script=self.router_script_with_bookmarks(), vars=self.get_vars())
         self._readServer1.start(script=self.read_script_with_bookmarks(), vars=self.get_vars())
 
@@ -2485,7 +2509,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO HELLO
         !: AUTO GOODBYE
-        
+
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2607,7 +2631,7 @@ class RoutingV3(Routing):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
-        
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
         S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
@@ -2970,8 +2994,9 @@ class RoutingV3(Routing):
         S: IGNORED
         """
 
-    def get_vars(self):
-        host = self._routingServer1.host
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routingServer1.host
         v = {
             "#VERSION#": 3,
             "#HOST#": host,
@@ -3008,6 +3033,7 @@ class RoutingV3(Routing):
 
     def test_should_send_system_bookmark_with_route(self):
         pass
+
 
 class NoRouting(TestkitTestCase):
     def setUp(self):
