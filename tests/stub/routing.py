@@ -36,7 +36,8 @@ class Routing(TestkitTestCase):
         self._writeServer2 = StubServer(9021)
         self._writeServer3 = StubServer(9022)
         self._uri_template = "neo4j://%s:%d"
-        self._uri_template_with_context = self._uri_template + "?region=china&policy=my_policy"
+        self._uri_template_with_context = \
+            self._uri_template + "?region=china&policy=my_policy"
         self._uri_with_context = self._uri_template_with_context % (
             self._routingServer1.host, self._routingServer1.port)
         self._auth = types.AuthorizationToken(
@@ -1569,24 +1570,28 @@ class Routing(TestkitTestCase):
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
 
-    def test_should_successfully_read_from_readable_router_using_tx_function(self):
+    def test_should_successfully_read_from_readable_router_using_tx_function(
+            self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
-        # Some drivers (for instance, java) may use separate connections for readers and writers when they are addressed
-        # by domain names in routing table. Since this test is not for testing DNS resolution, it has been switched to
-        # IP-based address model.
+        # Some drivers (for instance, java) may use separate connections for
+        # readers and writers when they are addressed by domain names in routing
+        # table. Since this test is not for testing DNS resolution, it has been
+        # switched to IP-based address model.
         ip_addresses = []
         if platform == "linux":
             ip_addresses = self.get_ip_addresses()
         if len(ip_addresses) < 1:
             self.skipTest("only linux is supported at the moment")
         ip_address = ip_addresses[0]
-        driver = Driver(self._backend, self._uri_template_with_context % (ip_address, self._routingServer1.port),
-                        self._auth, self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_reader_support(), vars=self.get_vars(ip_address))
+        driver = Driver(self._backend, self._uri_template_with_context % (
+            ip_address, self._routingServer1.port), self._auth, self._userAgent)
+        self._routingServer1.start(
+            script=self.router_script_with_reader_support(),
+            vars=self.get_vars(host=ip_address))
 
         session = driver.session('r', database=self.get_db())
         sequences = []
@@ -1608,19 +1613,21 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['python']:
             self.skipTest("requires investigation")
-        # Some drivers (for instance, java) may use separate connections for readers and writers when they are addressed
-        # by domain names in routing table. Since this test is not for testing DNS resolution, it has been switched to
-        # IP-based address model.
+        # Some drivers (for instance, java) may use separate connections for
+        # readers and writers when they are addressed by domain names in routing
+        # table. Since this test is not for testing DNS resolution, it has been
+        # switched to IP-based address model.
         ip_addresses = []
         if platform == "linux":
             ip_addresses = self.get_ip_addresses()
         if len(ip_addresses) < 1:
             self.skipTest("only linux is supported at the moment")
         ip_address = ip_addresses[0]
-        driver = Driver(self._backend, self._uri_template % (ip_address, self._routingServer1.port), self._auth,
-                        self._userAgent)
-        self._routingServer1.start(script=self.router_script_with_empty_context_and_reader_support(),
-                                   vars=self.get_vars(ip_address))
+        driver = Driver(self._backend, self._uri_template % (
+            ip_address, self._routingServer1.port), self._auth, self._userAgent)
+        self._routingServer1.start(
+            script=self.router_script_with_empty_context_and_reader_support(),
+            vars=self.get_vars(host=ip_address))
 
         session = driver.session('r', database=self.get_db())
         sequences = []
