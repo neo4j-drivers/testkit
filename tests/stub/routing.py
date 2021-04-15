@@ -63,7 +63,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
@@ -75,7 +75,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
         C: ROUTE #ROUTINGCTX# [ "SystemBookmark" ] "adb"
@@ -89,7 +89,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: BEGIN {"db": "system"}
         C: RUN "CREATE database foo" {} {'mode': 'w', 'db': 'system'}
         S: SUCCESS {}
@@ -112,7 +112,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
         C: ROUTE #ROUTINGCTX# [] "adb"
@@ -127,7 +127,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
         S: IGNORED
@@ -141,7 +141,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
         S: IGNORED
@@ -172,7 +172,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] None
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         """
@@ -184,7 +184,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9012"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]}}
         """
@@ -196,7 +196,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         C: BEGIN {"mode": "r", "db": "adb"}
@@ -218,7 +218,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
            <EXIT>
@@ -231,7 +231,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9100"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]}}
            <EXIT>
@@ -244,7 +244,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         C: BEGIN {"mode": "r", "db": "adb"}
@@ -265,7 +265,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE {"address": "#HOST#:9000"} [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
         C: BEGIN {"mode": "r", "db": "adb"}
@@ -286,7 +286,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]}}
            <EXIT>
@@ -299,7 +299,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
         """
@@ -311,7 +311,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9099"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
            <EXIT>
@@ -324,7 +324,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": []}}
         """
@@ -336,7 +336,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "adb"
         S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
            IGNORED
@@ -349,7 +349,7 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: ROUTE #ROUTINGCTX# [] "unreachable"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": []}}
         C: ROUTE #ROUTINGCTX# [] "adb"
@@ -363,6 +363,21 @@ class Routing(TestkitTestCase):
         !: AUTO GOODBYE
         !: AUTO RESET
 
+        C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r"}
+        """
+
+    def read_script_with_explicit_hello(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO GOODBYE
+        !: AUTO RESET
+
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
@@ -680,6 +695,7 @@ class Routing(TestkitTestCase):
         v = {
             "#VERSION#": "4.3",
             "#HOST#": host,
+            "#SERVER_AGENT#": "Neo4j/4.0.0",
             "#ROUTINGCTX#": '{"address": "' + host + ':9000", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
         }
@@ -2088,6 +2104,57 @@ class Routing(TestkitTestCase):
 
         self._routingServer1.done()
 
+    def test_should_successfully_get_server_protocol_version(self):
+        # TODO remove this block and make server info mandatory in
+        # TODO responses.Summary once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript',
+                                 'java']:
+            self.skipTest("the summary message must include server info")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        userAgent=self._userAgent)
+        self._routingServer1.start(script=self.router_script(),
+                                   vars=self.get_vars())
+        script_vars = self.get_vars()
+        self._readServer1.start(script=self.read_script(), vars=script_vars)
+
+        session = driver.session('r', database=self.get_db())
+        summary = session.run("RETURN 1 as n").consume()
+        protocol_version = summary.server_info.protocol_version
+        session.close()
+        driver.close()
+
+        expected_protocol_version = script_vars["#VERSION#"]
+        # the server info returns protocol versions in x.y format
+        if expected_protocol_version == 3:
+            expected_protocol_version = '3.0'
+        self.assertEqual(expected_protocol_version, protocol_version)
+        self._routingServer1.done()
+        self._readServer1.done()
+
+    def test_should_successfully_get_server_agent(self):
+        # TODO remove this block and make server info mandatory in
+        # TODO responses.Summary once all languages work
+        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript',
+                                 'java']:
+            self.skipTest("the summary message must include server info")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        userAgent=self._userAgent)
+        script_vars = self.get_vars()
+        self._routingServer1.start(script=self.router_script(),
+                                   vars=script_vars)
+        self._readServer1.start(script=self.read_script_with_explicit_hello(),
+                                vars=self.get_vars())
+
+        session = driver.session('r', database=self.get_db())
+        summary = session.run("RETURN 1 as n").consume()
+        agent = summary.server_info.agent
+        session.close()
+        driver.close()
+
+        self.assertEqual(script_vars["#SERVER_AGENT#"], agent)
+        self._routingServer1.done()
+        self._readServer1.done()
+
 
 class RoutingV4(Routing):
     def router_script(self):
@@ -2097,7 +2164,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2112,7 +2179,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2133,7 +2200,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
@@ -2148,7 +2215,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
@@ -2192,7 +2259,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2207,7 +2274,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2232,7 +2299,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2248,7 +2315,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2264,7 +2331,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": {"address": "#HOST#:9000"}, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2288,7 +2355,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2304,7 +2371,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2319,7 +2386,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2335,7 +2402,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2350,7 +2417,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
@@ -2364,7 +2431,7 @@ class RoutingV4(Routing):
 
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
-        S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "unreachable"} {#ROUTINGMODE# "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2395,8 +2462,9 @@ class RoutingV4(Routing):
         if host is None:
             host = self._routingServer1.host
         v = {
-            "#VERSION#": 4.1,
+            "#VERSION#": "4.1",
             "#HOST#": host,
+            "#SERVER_AGENT#": "Neo4j/4.0.0",
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9000", "region": "china", "policy": "my_policy"}',
@@ -2447,7 +2515,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2461,7 +2529,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2481,7 +2549,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
@@ -2495,7 +2563,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
@@ -2541,7 +2609,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2555,7 +2623,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2579,7 +2647,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2594,7 +2662,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2609,7 +2677,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": {"address": "#HOST#:9000"}} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2633,7 +2701,7 @@ class RoutingV3(Routing):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2648,7 +2716,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2662,7 +2730,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2677,7 +2745,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
@@ -2691,7 +2759,7 @@ class RoutingV3(Routing):
         !: AUTO RESET
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
-        S: SUCCESS {"server": "Neo4j/3.5.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {#ROUTINGMODE#}
         C: PULL_ALL
         S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
@@ -2704,6 +2772,20 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
         !: AUTO RESET
+        C: RUN "RETURN 1 as n" {} {"mode": "r"}
+        C: PULL_ALL
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r"}
+        """
+
+    def read_script_with_explicit_hello(self):
+        return """
+        !: BOLT #VERSION#
+        !: AUTO GOODBYE
+        !: AUTO RESET
+        C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "RETURN 1 as n" {} {"mode": "r"}
         C: PULL_ALL
         S: SUCCESS {"fields": ["n"]}
@@ -3000,6 +3082,7 @@ class RoutingV3(Routing):
         v = {
             "#VERSION#": 3,
             "#HOST#": host,
+            "#SERVER_AGENT#": "Neo4j/3.5.0",
             "#ROUTINGMODE#": "",
             "#ROUTINGCTX#": '{"address": "' + host + ':9000", "region": "china", "policy": "my_policy"}',
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
@@ -3051,7 +3134,7 @@ class NoRouting(TestkitTestCase):
         !: AUTO GOODBYE
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #ROUTING# #EXTRA_HELLO_PROPS#}
-        S: SUCCESS {"server": "Neo4j/4.1.0", "connection_id": "bolt-123456789"}
+        S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
@@ -3062,6 +3145,7 @@ class NoRouting(TestkitTestCase):
     def get_vars(self):
         return {
             "#VERSION#": "4.1",
+            "#SERVER_AGENT#": "Neo4j/4.1.0",
             "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#ROUTING#": ', "routing": null' if get_driver_name() in ['java', 'dotnet', 'go'] else ''
         }
