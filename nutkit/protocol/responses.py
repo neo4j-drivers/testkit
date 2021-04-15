@@ -167,8 +167,17 @@ class Summary:
     """ Represents summary returned from a ResultConsume request.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, serverInfo):
+        self.server_info = ServerInfo(**serverInfo)
+
+
+class ServerInfo:
+    """ Represents server info that is included within Summary response.
+    """
+
+    def __init__(self, protocolVersion, agent):
+        self.protocol_version = protocolVersion
+        self.agent = agent
 
 
 class Bookmarks:
