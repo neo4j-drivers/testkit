@@ -167,8 +167,10 @@ class Summary:
     """ Represents summary returned from a ResultConsume request.
     """
 
-    def __init__(self, serverInfo):
-        self.server_info = ServerInfo(**serverInfo)
+    def __init__(self, **data):
+        # TODO make this mandatory once all drivers provide server info
+        if data:
+            self.server_info = ServerInfo(**data["serverInfo"])
 
 
 class ServerInfo:
