@@ -35,6 +35,19 @@ C: PULL {"n": 1000}
 S: <EXIT>
 """
 
+script_on_reset = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {}
+C: RESET
+S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to reset"}
+"""
 
 class SessionRunDisconnected(TestkitTestCase):
     def setUp(self):
@@ -117,6 +130,20 @@ class SessionRunDisconnected(TestkitTestCase):
             # Go reports this error earlier
             expected_step = "after run"
         self.assertEqual(step, expected_step)
+
+    def test_fail_on_reset(self):
+        self._server.start(script=script_on_reset)
+        step = self._run()
+        self._session.close()
+        accept_count = self._server.count_responses("<ACCEPT>")
+        hangup_count = self._server.count_responses("<HANGUP>")
+        active_connections = accept_count - hangup_count
+        self._driver.close()
+        self._server.done()
+        self.assertEqual(step, "success")
+        self.assertEqual(accept_count, 1)
+        self.assertEqual(hangup_count, 1)
+        self.assertEqual(active_connections, 0)
 
     def get_vars(self):
         return {
