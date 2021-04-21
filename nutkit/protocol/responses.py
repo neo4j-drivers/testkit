@@ -267,4 +267,4 @@ class BackendError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return "BackendError : " + self.msg
+        return "BackendError : %s" % self.msg

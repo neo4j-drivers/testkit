@@ -50,3 +50,12 @@ class TestkitTestCase(unittest.TestCase):
         except Exception:
             self._backend.close()
             raise
+
+    def assertThrows(self, exception, callable):
+        try:
+            callable()
+        except Exception as e:
+            if not isinstance(e, exception):
+                self.fail("%s is not instance of %s" % (e, exception))
+        else:
+            self.fail("Expect to throw an exception")

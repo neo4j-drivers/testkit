@@ -104,6 +104,30 @@ class TestDataTypes(TestkitTestCase):
         self.createDriverAndSession()
         self.verifyCanEcho(types.CypherList(test_lists))
 
+    def testShouldEchoListOfMaps(self):
+        test_list = [
+            types.CypherMap({
+                "a": types.CypherInt(1),
+                "b": types.CypherInt(2)
+            }),
+            types.CypherMap({
+                "c": types.CypherInt(3),
+                "d": types.CypherInt(4)
+            })
+        ]
+
+        self.createDriverAndSession()
+        self.verifyCanEcho(types.CypherList(test_list))
+
+    def testShouldEchoMapOfLists(self):
+        test_map = {
+            'a': types.CypherList([types.CypherInt(1)]),
+            'b': types.CypherList([types.CypherInt(2)])
+        }
+
+        self.createDriverAndSession()
+        self.verifyCanEcho(types.CypherMap(test_map))
+
     def testShouldEchoNode(self):
         self.createDriverAndSession()
 
