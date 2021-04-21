@@ -262,7 +262,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_read(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'java']:
+        if get_driver_name() in ['java']:
             self.skipTest("needs ROUTE bookmark list support")
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
         self._readServer.start(script=script_read)
@@ -288,20 +288,12 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
 
     def test_retry_database_unavailable(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
-            self.skipTest("needs ROUTE bookmark list support")
-
         # Simple case, correctly classified transient error
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Database.DatabaseUnavailable")
 
     def test_retry_made_up_transient(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
-            self.skipTest("needs ROUTE bookmark list support")
-
         # Driver should retry all transient error (with some exceptions), make
         # up a transient error and the driver should retry.
         self._run_with_transient_error(
@@ -309,9 +301,6 @@ class TestRetryClustering(TestkitTestCase):
                 "Neo.TransientError.Completely.MadeUp")
 
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
 
@@ -320,9 +309,6 @@ class TestRetryClustering(TestkitTestCase):
                 "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
 
     def test_retry_NotALeader(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
 
@@ -331,9 +317,6 @@ class TestRetryClustering(TestkitTestCase):
                 "Neo.ClientError.Cluster.NotALeader")
 
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
 
