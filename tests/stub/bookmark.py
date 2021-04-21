@@ -43,7 +43,7 @@ send_and_receive_bookmark_write_tx = """
 !: AUTO RESET
 !: AUTO GOODBYE
 
-C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx42"]}
+C: BEGIN {"bookmarks": #BOOKMARKS# }
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
    PULL {"n": 1000}
 S: SUCCESS {}
@@ -69,7 +69,7 @@ S: SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
 
-C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx4242"], "mode": "r"}
+C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx4242"]}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
    PULL {"n": 1000}
 S: SUCCESS {}
@@ -128,7 +128,10 @@ class Tx(TestkitTestCase):
 
     def test_send_and_receive_bookmarks_write_tx(self):
         self._server.start(
-            script=send_and_receive_bookmark_write_tx
+            script=send_and_receive_bookmark_write_tx,
+            vars={
+                "#BOOKMARKS#": '["neo4j:bookmark:v1:tx42"]'
+            }
         )
         session = self._driver.session(
             accessMode="w",
@@ -143,9 +146,9 @@ class Tx(TestkitTestCase):
         self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx4242"])
         self._server.done()
 
-    def sequecing_writing_and_reading_tx(self):
+    def test_sequece_of_writing_and_reading_tx(self):
         self._server.start(
-            script=send_and_receive_bookmark_write_tx
+            script=sequecing_writing_and_reading_tx
         )
         session = self._driver.session(
             accessMode="w",
@@ -159,9 +162,7 @@ class Tx(TestkitTestCase):
         bookmarks = session.lastBookmarks()
         self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx4242"])
 
-        txRead = session.beginTransaction(txMeta={
-            mode: "r"
-        })
+        txRead = session.beginTransaction()
         result = txRead.run('MATCH (n) RETURN n.name AS name')
         result.next()
         txRead.commit()
@@ -169,4 +170,28 @@ class Tx(TestkitTestCase):
         bookmarks = session.lastBookmarks()
         self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx424242"])
 
+        self._server.done()
+
+    def test_send_and_receive_multiple_bookmarks_write_tx(self):
+        self._server.start(
+            script=send_and_receive_bookmark_write_tx,
+            vars={
+                "#BOOKMARKS#":
+                '["neo4j:bookmark:v1:tx42", "neo4j:bookmark:v1:tx43"]'
+            }
+        )
+        session = self._driver.session(
+            accessMode="w",
+            bookmarks=[
+                "neo4j:bookmark:v1:tx42",
+                "neo4j:bookmark:v1:tx43"
+            ]
+        )
+        tx = session.beginTransaction()
+        result = tx.run('MATCH (n) RETURN n.name AS name')
+        result.next()
+        tx.commit()
+        bookmarks = session.lastBookmarks()
+
+        self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx4242"])
         self._server.done()
