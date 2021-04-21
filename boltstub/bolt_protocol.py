@@ -1,20 +1,49 @@
 import json
 
-from .errors import ServerExit
+from .errors import (
+    BoltMissingVersion,
+    BoltUnknownMessage,
+    BoltUnknownVersion,
+    ServerExit
+)
 from .packstream import Structure
 from .util import recursive_subclasses, hex_repr
 
 
-class BoltProtocolError(Exception):
-    pass
-
-
 def get_bolt_protocol(version):
+    if version is None:
+        raise BoltMissingVersion()
     for sub in recursive_subclasses(BoltProtocol):
         if (version == sub.protocol_version
                 or version in sub.version_aliases):
             return sub
-    raise BoltProtocolError("unsupported bolt version {}".format(version))
+    raise BoltUnknownVersion("unsupported bolt version {}".format(version))
+
+
+def verify_script_messages(script):
+    protocol = get_bolt_protocol(script.context.bolt_version)
+    for line in script.client_lines:
+        if line.parsed[0] not in protocol.messages["C"].values():
+            raise BoltUnknownMessage(
+                "Unsupported client message {} for BOLT version {}. "
+                "Must be one of {}".format(
+                    line.parsed[0], script.context.bolt_version,
+                    list(protocol.messages["C"].values())
+                ),
+                line
+            )
+    for line in script.server_lines:
+        if line.parsed[0] is None:
+            continue  # this server line contains a command, not a message
+        if line.parsed[0] not in protocol.messages["S"].values():
+            raise BoltUnknownMessage(
+                "Unsupported server message {} for BOLT version {}. "
+                "Must be one of {}".format(
+                    line.parsed[0], script.context.bolt_version,
+                    list(protocol.messages["S"].values())
+                ),
+                line
+            )
 
 
 class TranslatedStructure(Structure):

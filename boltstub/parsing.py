@@ -1,4 +1,5 @@
 import abc
+from copy import deepcopy
 import json
 from os import path
 import re
@@ -12,7 +13,13 @@ import warnings
 
 import lark
 
-from .errors import ServerExit
+from .bolt_protocol import verify_script_messages
+from .errors import (
+    BoltMissingVersion,
+    BoltUnknownMessage,
+    BoltUnknownVersion,
+    ServerExit,
+)
 
 
 def load_parser():
@@ -28,6 +35,7 @@ parser = load_parser()
 class LineError(lark.GrammarError):
     def __init__(self, line, *args, **kwargs):
         assert isinstance(line, Line)
+        self.line = line
         if args and isinstance(args[0], str):
             args = (args[0] + ": {}".format(line),) + args[1:]
         else:
@@ -137,22 +145,27 @@ class BangLine(Line):
                     'Specified AUTO for "{}" multiple times'.format(self._arg)
                 )
             ctx.auto.add(self._arg)
+            ctx.bang_lines["auto"][self._arg] = self
         elif self._type == BangLine.TYPE_BOLT:
             if ctx.bolt_version is not None:
                 raise LineError(self, "repeated definition of bolt version")
             ctx.bolt_version = self._arg
+            ctx.bang_lines["bolt_version"] = self
         elif self._type == BangLine.TYPE_RESTART:
             if ctx.restarting:
                 warnings.warn('Specified "!: ALLOW RESTART" multiple times')
             ctx.restarting = True
+            ctx.bang_lines["restarting"] = self
         elif self._type == BangLine.TYPE_CONCURRENT:
             if ctx.concurrent:
                 warnings.warn('Specified "!: ALLOW CONCURRENT" multiple times')
             ctx.concurrent = True
+            ctx.bang_lines["concurrent"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE:
             if ctx.handshake:
                 warnings.warn('Specified "!: HANDSHAKE" multiple times')
             ctx.handshake = self._arg
+            ctx.bang_lines["handshake"] = self
         if ctx.restarting and ctx.concurrent:
             warnings.warn(
                 'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
@@ -228,7 +241,34 @@ class ServerLine(Line):
             obj.parsed = cls.parse_line(obj)
         else:
             obj.parsed = None, []
+            cls._verify_command(obj)
         return obj
+
+    @staticmethod
+    def _verify_command(obj):
+        if obj.command_match:
+            tag, args = obj.command_match.groups()
+            args = args.strip()
+            if tag == "EXIT":
+                if args:
+                    raise LineError(obj, "EXIT takes no arguments")
+            elif tag == "NOOP":
+                if args:
+                    raise LineError(obj, "NOOP takes no arguments")
+            elif tag == "RAW":
+                try:
+                    bytearray(int(_, 16) for _ in wrap(args, 2))
+                except ValueError as e:
+                    raise LineError(obj, "Invalid raw data") from e
+            elif tag == "SLEEP":
+                try:
+                    f = float(args)
+                    if f < 0:
+                        raise LineError(obj, "Duration must be non-negative")
+                except ValueError as e:
+                    raise LineError(obj, "Invalid duration") from e
+            else:
+                raise LineError(obj, "Unknown command %r" % (tag,))
 
     def canonical(self):
         if self.parsed is None:
@@ -303,6 +343,21 @@ class Block(abc.ABC):
     def try_consume(self, channel) -> bool:
         pass
 
+    @property
+    @abc.abstractmethod
+    def all_lines(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def client_lines(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def server_lines(self):
+        pass
+
 
 class ClientBlock(Block):
     def __init__(self, lines: List[ClientLine], line_number: int):
@@ -345,6 +400,18 @@ class ClientBlock(Block):
             self._consume(channel)
             return True
         return False
+
+    @property
+    def all_lines(self):
+        yield from map(deepcopy, self.lines)
+
+    @property
+    def client_lines(self):
+        yield from map(deepcopy, self.lines)
+
+    @property
+    def server_lines(self):
+        yield from ()
 
 
 class ServerBlock(Block):
@@ -390,6 +457,18 @@ class ServerBlock(Block):
 
     def try_consume(self, channel) -> bool:
         return False
+
+    @property
+    def all_lines(self):
+        yield from map(deepcopy, self.lines)
+
+    @property
+    def client_lines(self):
+        yield from ()
+
+    @property
+    def server_lines(self):
+        yield from map(deepcopy, self.lines)
 
 
 class AlternativeBlock(Block):
@@ -445,6 +524,21 @@ class AlternativeBlock(Block):
                 return True
         return False
 
+    @property
+    def all_lines(self):
+        for block_list in self.block_lists:
+            yield from block_list.all_lines
+
+    @property
+    def client_lines(self):
+        for block_list in self.block_lists:
+            yield from block_list.client_lines
+
+    @property
+    def server_lines(self):
+        for block_list in self.block_lists:
+            yield from block_list.server_lines
+
 
 class ParallelBlock(Block):
     def __init__(self, block_lists: List["BlockList"], line_number: int):
@@ -486,6 +580,21 @@ class ParallelBlock(Block):
             if block.try_consume(channel):
                 return True
         return False
+
+    @property
+    def all_lines(self):
+        for block_list in self.block_lists:
+            yield from block_list.all_lines
+
+    @property
+    def client_lines(self):
+        for block_list in self.block_lists:
+            yield from block_list.client_lines
+
+    @property
+    def server_lines(self):
+        for block_list in self.block_lists:
+            yield from block_list.server_lines
 
 
 class OptionalBlock(Block):
@@ -539,6 +648,18 @@ class OptionalBlock(Block):
             self.started = True
             return True
         return False
+
+    @property
+    def all_lines(self):
+        return self.block_list.all_lines
+
+    @property
+    def client_lines(self):
+        return self.block_list.client_lines
+
+    @property
+    def server_lines(self):
+        return self.block_list.server_lines
 
 
 class _RepeatBlock(Block, abc.ABC):
@@ -607,6 +728,18 @@ class _RepeatBlock(Block, abc.ABC):
         if self.block_list.has_deterministic_end():
             return self._try_consume_deterministic(channel)
         return self._try_consume_nondeterministic(channel)
+
+    @property
+    def all_lines(self):
+        return self.block_list.all_lines
+
+    @property
+    def client_lines(self):
+        return self.block_list.client_lines
+
+    @property
+    def server_lines(self):
+        return self.block_list.server_lines
 
 
 class Repeat0Block(_RepeatBlock):
@@ -696,6 +829,21 @@ class BlockList(Block):
                 break
         return False
 
+    @property
+    def all_lines(self):
+        for block in self.blocks:
+            yield from block.all_lines
+
+    @property
+    def client_lines(self):
+        for block in self.blocks:
+            yield from block.client_lines
+
+    @property
+    def server_lines(self):
+        for block in self.blocks:
+            yield from block.server_lines
+
 
 class ScriptDeviation(RuntimeError):
     def __init__(self, expected_lines: List[Line], received: Line):
@@ -720,6 +868,13 @@ class ScriptContext:
         self.restarting = False
         self.concurrent = False
         self.handshake = None
+        self.bang_lines = {
+            "bolt_version": None,
+            "auto": {},
+            "restarting": None,
+            "concurrent": None,
+            "handshake": None,
+        }
 
 
 class Script:
@@ -730,6 +885,21 @@ class Script:
         self.block_list = block_list
         self.filename = filename or ""
         self._skipped = False
+        self._verify_script()
+
+    def _verify_script(self):
+        try:
+            verify_script_messages(self)
+        except BoltMissingVersion as e:
+            raise lark.GrammarError(
+                'Missing bolt version bang line (e.g. "!: BOLT 4.3")'
+            ) from e
+        except BoltUnknownMessage as e:
+            raise LineError(e.line, e.msg) from e
+        except BoltUnknownVersion as e:
+            raise LineError(
+                self.context.bang_lines["bolt_version"], *e.args[:1]
+            ) from e
 
     def _consume_bang_lines(self, bang_lines):
         for bl in bang_lines:
@@ -754,6 +924,18 @@ class Script:
     def try_skip_to_end(self):
         if self.block_list.can_be_skipped():
             self._skipped = True
+
+    @property
+    def all_lines(self):
+        return self.block_list.all_lines
+
+    @property
+    def client_lines(self):
+        return self.block_list.client_lines
+
+    @property
+    def server_lines(self):
+        return self.block_list.server_lines
 
 
 class ScriptTransformer(lark.Transformer):

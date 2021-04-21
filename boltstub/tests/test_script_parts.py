@@ -6,6 +6,7 @@ from ..bolt_protocol import TranslatedStructure
 from ..errors import ServerExit
 from ..parsing import (
     ClientLine,
+    LineError,
     ServerLine,
 )
 
@@ -226,23 +227,40 @@ class TestServerLine:
         with pytest.raises(ServerExit):
             line.try_run_command(channel_mock)
 
+    def test_exit_server_line_with_arg(self):
+        content = "<EXIT> 1"
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)
+
     def test_noop_server_line(self, channel_mock):
         content = "<NOOP>"
         line = ServerLine(10, "S: " + content, content)
         assert line.try_run_command(channel_mock)
         assert channel_mock.buffer == b"\x00\x00"
 
+    def test_noop_server_line_with_arg(self):
+        content = "<NOOP> 1"
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)
+
     @pytest.mark.parametrize(("string", "bytes_"), (
         ["fF 12", b"\xff\x12"],
         ["fF12", b"\xff\x12"],
         ["fF 1 2", b"\xff\x01\x02"],
         ["fF1 2", b"\xff\x01\x02"],
+        [" ", b""],
     ))
-    def test_noop_server_line(self, string, bytes_, channel_mock):
+    def test_raw_server_line(self, string, bytes_, channel_mock):
         content = "<RAW> " + string
         line = ServerLine(10, "S: " + content, content)
         assert line.try_run_command(channel_mock)
         assert bytes(channel_mock.buffer) == bytes_
+
+    @pytest.mark.parametrize("string", ("nope", "-1", "-f", "None", "1.2"))
+    def test_raw_server_line_with_invalid_arg(self, string):
+        content = "<RAW> " + string
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)
 
     @pytest.mark.parametrize("duration", (0, 0.5, 1.5, 200))
     def test_sleep_server_line(self, duration, channel_mock, mocker):
@@ -252,3 +270,9 @@ class TestServerLine:
             line = ServerLine(10, "S: " + content, content)
             assert line.try_run_command(channel_mock)
             patched_sleep.assert_called_once_with(duration)
+
+    @pytest.mark.parametrize("string", ("", "-1", "a", "None"))
+    def test_sleep_server_line_with_invalid_arg(self, string):
+        content = "<SLEEP> " + string
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)

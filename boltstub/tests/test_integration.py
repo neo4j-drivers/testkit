@@ -7,59 +7,11 @@ import traceback
 from .. import BoltStubService
 from ..parsing import parse
 from ..util import hex_repr
-
-
-ALL_SERVER_VERSIONS = (1,), (2,), (3,), (4, 1), (4, 2), (4, 3)
-
-
-ALL_REQUESTS_PER_VERSION = tuple((
-    *(((major,), tag, name)
-      for major in (1, 2)
-      for (tag, name) in (
-          (b"\x01", "INIT"),
-          (b"\x0E", "ACK_FAILURE"),
-          (b"\x0F", "RESET"),
-          (b"\x10", "RUN"),
-          (b"\x2F", "DISCARD_ALL"),
-          (b"\x3F", "PULL_ALL"),
-      )),
-
-    ((3,), b"\x01", "HELLO"),
-    ((3,), b"\x02", "GOODBYE"),
-    ((3,), b"\x0F", "RESET"),
-    ((3,), b"\x10", "RUN"),
-    ((3,), b"\x2F", "DISCARD_ALL"),
-    ((3,), b"\x3F", "PULL_ALL"),
-    ((3,), b"\x11", "BEGIN"),
-    ((3,), b"\x12", "COMMIT"),
-    ((3,), b"\x13", "ROLLBACK"),
-
-    *(((4, minor), tag, name)
-      for minor in range(4)
-      for (tag, name) in (
-          (b"\x01", "HELLO"),
-          (b"\x02", "GOODBYE"),
-          (b"\x0F", "RESET"),
-          (b"\x10", "RUN"),
-          (b"\x2F", "DISCARD"),
-          (b"\x3F", "PULL"),
-          (b"\x11", "BEGIN"),
-          (b"\x12", "COMMIT"),
-          (b"\x13", "ROLLBACK"),
-      ))
-))
-
-
-ALL_RESPONSES_PER_VERSION = tuple((
-    *((version, tag, name)
-      for version in ALL_SERVER_VERSIONS
-      for (tag, name) in (
-          (b"\x70", "SUCCESS"),
-          (b"\x7E", "IGNORED"),
-          (b"\x7F", "FAILURE"),
-          (b"\x71", "RECORD"),
-      )),
-))
+from ._common import (
+    ALL_REQUESTS_PER_VERSION,
+    ALL_RESPONSES_PER_VERSION,
+    ALL_SERVER_VERSIONS
+)
 
 
 def server_version_to_version_response(server_version):
@@ -178,7 +130,7 @@ def test_magic_bytes(server_version, magic_bytes, server_factory, fail,
     script = parse("""
     !: BOLT {}
 
-    C: NOMATCH
+    C: RUN
     """.format(".".join(map(str, server_version))))
     server = server_factory(script)
     con = connection_factory("localhost", 7687)
@@ -241,7 +193,7 @@ def test_handshake_auto(client_version, server_version, matches,
     script = parse("""
     !: BOLT {}
     
-    C: NOMATCH
+    C: RUN
     """.format(".".join(map(str, server_version))))
 
     server = server_factory(script)
@@ -268,7 +220,7 @@ def test_custom_handshake_auto(custom_handshake, client_version, server_version,
     !: BOLT {}
     !: HANDSHAKE {}
 
-    C: NOMATCH
+    C: RUN
     """.format(".".join(map(str, server_version)), hex_repr(custom_handshake)))
 
     server = server_factory(script)
@@ -285,12 +237,15 @@ def test_custom_handshake_auto(custom_handshake, client_version, server_version,
                          ALL_REQUESTS_PER_VERSION)
 def test_auto_replies(server_version, request_tag, request_name,
                       server_factory, connection_factory):
+    another_client_msg = next(n for v, _, n in ALL_REQUESTS_PER_VERSION
+                              if v == server_version and n != request_name)
     script = parse("""
     !: BOLT {}
     !: AUTO {}
 
-    C: NOMATCH
-    """.format(".".join(map(str, server_version)), request_name))
+    C: {}
+    """.format(".".join(map(str, server_version)), request_name,
+               another_client_msg))
 
     server = server_factory(script)
     con = connection_factory("localhost", 7687)

@@ -1,3 +1,4 @@
+from collections import defaultdict
 import lark
 import pytest
 from typing import (
@@ -6,7 +7,21 @@ from typing import (
     Tuple,
 )
 
-from .. import parsing
+from .. import (
+    errors,
+    parsing,
+    Script,
+)
+from ._common import (
+    ALL_REQUESTS_PER_VERSION,
+    ALL_RESPONSES_PER_VERSION,
+    ALL_SERVER_VERSIONS
+)
+
+
+@pytest.fixture()
+def unverified_script(monkeypatch):
+    monkeypatch.setattr(Script, "_verify_script", lambda *args, **kwargs: None)
 
 
 def assert_client_block(block, lines=None):
@@ -115,14 +130,14 @@ BANG_EFFECTS = (
 
 
 @pytest.mark.parametrize("whitespaces", whitespace_generator(1, {0}, set()))
-def test_empty_script_is_invalid(whitespaces):
+def test_empty_script_is_invalid(whitespaces, unverified_script):
     with pytest.raises(lark.ParseError):
         parsing.parse(whitespaces[0])
 
 
 @pytest.mark.parametrize("whitespaces", whitespace_generator(2, {0, 1}, set()))
 @pytest.mark.parametrize("bang", VALID_BANGS)
-def test_only_bang_script_is_invalid(whitespaces, bang):
+def test_only_bang_script_is_invalid(whitespaces, bang, unverified_script):
     with pytest.raises(lark.ParseError):
         parsing.parse(whitespaces[0] + bang + whitespaces[1])
 
@@ -154,7 +169,7 @@ bad_fields = (
 ))
 @pytest.mark.parametrize("line_type", ("C:", "S:"))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, None, {0, 1, 2}))
-def test_message_fields(line_type, fields, fail, extra_ws):
+def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
     if len(fields) == 1:
         script = "%s" + line_type + " MSG %s" + fields[0] + "%s"
     elif len(fields) == 2:
@@ -175,14 +190,14 @@ def test_message_fields(line_type, fields, fail, extra_ws):
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(5, {0, 4}, {1, 3}))
-def test_simple_dialogue(extra_ws):
+def test_simple_dialogue(extra_ws, unverified_script):
     script = "%sC:%sMSG1%sS:%sMSG2%s" % extra_ws
     script = parsing.parse(script)
     assert_dialogue_blocks_block_list(script.block_list, ["C: MSG1", "S: MSG2"])
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
-def test_simple_alternative_block(extra_ws):
+def test_simple_alternative_block(extra_ws, unverified_script):
     script = "%s{{%sC:MSG1%s----%sC:MSG2%s}}%s" % extra_ws
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 1
@@ -194,7 +209,7 @@ def test_simple_alternative_block(extra_ws):
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
-def test_simple_parallel_block(extra_ws):
+def test_simple_parallel_block(extra_ws, unverified_script):
     script = "%s{{%sC:MSG1%s++++%sC:MSG2%s}}%s" % extra_ws
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 1
@@ -206,7 +221,7 @@ def test_simple_parallel_block(extra_ws):
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
-def test_simple_optional_block(extra_ws):
+def test_simple_optional_block(extra_ws, unverified_script):
     script = "%s{?%sC:MSG1%s?}%s" % extra_ws
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 1
@@ -216,7 +231,7 @@ def test_simple_optional_block(extra_ws):
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
-def test_simple_0_loop(extra_ws):
+def test_simple_0_loop(extra_ws, unverified_script):
     script = "%s{*%sC:MSG1%s*}%s" % extra_ws
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 1
@@ -226,7 +241,7 @@ def test_simple_0_loop(extra_ws):
 
 
 @pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
-def test_simple_1_loop(extra_ws):
+def test_simple_1_loop(extra_ws, unverified_script):
     script = "%s{+%sC:MSG1%s+}%s" % extra_ws
     script = parsing.parse(script)
     assert len(script.block_list.blocks) == 1
@@ -237,7 +252,7 @@ def test_simple_1_loop(extra_ws):
 
 @pytest.mark.parametrize("bang", zip(VALID_BANGS, BANG_EFFECTS))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0, 2}, set()))
-def test_simple_bang_line(bang, extra_ws):
+def test_simple_bang_line(bang, extra_ws, unverified_script):
     bang, bang_effect = bang
     expected_context = BANG_DEFAULTS.copy()
     expected_context.update(dict((bang_effect,)))
@@ -245,18 +260,20 @@ def test_simple_bang_line(bang, extra_ws):
     script = ("%s" + bang + "%sC: MSG%s") % extra_ws
     script = parsing.parse(script)
     assert_client_block_block_list(script.block_list, ["C: MSG"])
-    assert script.context.__dict__ == expected_context
+    result = {k: v for k, v in script.context.__dict__.items()
+              if k in expected_context}
+    assert result == expected_context
 
 
 @pytest.mark.parametrize("bang", INVALID_BANGS)
-def test_invalid_bangs_raise(bang):
+def test_invalid_bangs_raise(bang, unverified_script):
     script = (bang + "\n\nC: MSG")
     with pytest.raises(lark.GrammarError):
         parsing.parse(script)
 
 
 @pytest.mark.parametrize("bang", VALID_BANGS)
-def test_bang_must_come_first(bang):
+def test_bang_must_come_first(bang, unverified_script):
     with pytest.raises(lark.LarkError):
         parsing.parse("C: MSG\n" + bang)
 
@@ -275,7 +292,7 @@ def test_bang_must_come_first(bang):
     (parsing.Repeat0Block, "{*", "*}"),
     (parsing.Repeat1Block, "{+", "+}")
 ))
-def test_nested_blocks(outer, inner):
+def test_nested_blocks(outer, inner, unverified_script):
     script = "S: MSG1\n" + outer[1] + "\n" + inner[1] + "\n"
     if len(inner) == 4:
         script += "C: MSG2.1\n" + inner[2] + "\nC: MSG2.2\n"
@@ -323,7 +340,8 @@ def test_nested_blocks(outer, inner):
     ("C: YIP", False),
     ("S: NOPE", True),
 ))
-def test_line_after_nondeterministic_end_block(block_parts, end_line, fail):
+def test_line_after_nondeterministic_end_block(block_parts, end_line, fail,
+                                               unverified_script):
     script = """C: MSG1
     %s
         C: MSG2
@@ -347,7 +365,8 @@ def test_line_after_nondeterministic_end_block(block_parts, end_line, fail):
     (parsing.ParallelBlock, "{{", "++++", "}}")
 ))
 @pytest.mark.parametrize("end_line", ("C: YIP", "S: FINE_TOO"))
-def test_line_after_deterministic_end_block(block_parts, end_line):
+def test_line_after_deterministic_end_block(block_parts, end_line,
+                                            unverified_script):
     script = """C: MSG1
     %s
         C: MSG2
@@ -374,7 +393,7 @@ def test_line_after_deterministic_end_block(block_parts, end_line):
     (parsing.AlternativeBlock, "{{", "----", "}}"),
     (parsing.ParallelBlock, "{{", "++++", "}}")
 ))
-def test_long_multi_blocks(block_parts):
+def test_long_multi_blocks(block_parts, unverified_script):
     script = block_parts[1] + "\n"
     for i in range(98):
         script += ("    C: MSG%i\n" % (i + 1)) + block_parts[2] + "\n"
@@ -399,7 +418,8 @@ def test_long_multi_blocks(block_parts):
     ((parsing.Repeat0Block, "{*", "*}"), False),
     ((parsing.Repeat1Block, "{+", "+}"), False),
 ))
-def test_block_cant_start_with_server_line(block_parts, swap):
+def test_block_cant_start_with_server_line(block_parts, swap,
+                                           unverified_script):
     script = block_parts[1] + "\n"
     if len(block_parts) == 4:
         if swap:
@@ -414,14 +434,14 @@ def test_block_cant_start_with_server_line(block_parts, swap):
         parsing.parse(script)
 
 
-def test_script_can_start_with_server_line():
+def test_script_can_start_with_server_line(unverified_script):
     script = parsing.parse("S: MSG\nC: MSG2")
     assert_dialogue_blocks_block_list(script.block_list, ["S: MSG", "C: MSG2"])
 
 
 @pytest.mark.parametrize("extra_ws",
                          whitespace_generator(15, {0, 14}, {1, 4, 6, 8, 12},))
-def test_implicit_line_type(extra_ws):
+def test_implicit_line_type(extra_ws, unverified_script):
     raw_script = (
         "{}S:{}SMSG1{}"
         "SMSG2{}"
@@ -445,3 +465,114 @@ def test_implicit_line_type(extra_ws):
         "C: MSG5",
         "C: MSG6",
     ])
+
+
+def test_expects_bolt_version():
+    script = """{}
+
+    C: RUN
+    S: SUCCESS""".format(
+        "\n".join(bl for bl in VALID_BANGS if not bl.startswith("!: BOLT "))
+    )
+    with pytest.raises(lark.GrammarError) as exc:
+        parsing.parse(script)
+    assert isinstance(exc.value.__cause__, errors.BoltMissingVersion)
+
+
+@pytest.mark.parametrize(("version", "exists"), (
+    *((v, True) for v in ALL_SERVER_VERSIONS),
+    ((0,), False),
+    ((0, 1), False),
+    ((2, 1), False),
+))
+def test_checks_bolt_version(version, exists):
+    raw_script = """!: BOLT {}
+
+    {}"""
+    try:
+        msg = "C: " \
+              + next(n for v, _, n in ALL_REQUESTS_PER_VERSION if v == version)
+    except StopIteration:
+        msg = "C: FOOBAR"
+    script = raw_script.format(".".join(map(str, version)), msg)
+    if exists:
+        parsing.parse(script)
+    else:
+        with pytest.raises(parsing.LineError) as exc:
+            parsing.parse(script)
+        assert exc.value.line.line_number == 1
+        assert isinstance(exc.value.__cause__, errors.BoltUnknownVersion)
+
+
+client_msg_names = defaultdict(set)
+server_msg_names = defaultdict(set)
+
+
+def set_name_dicts():
+    global client_msg_names, server_msg_names
+    for v, _, n in ALL_REQUESTS_PER_VERSION:
+        assert n != "FOOBAR"  # will be used as example of non-existent message
+        client_msg_names[v].add(n)
+    for v, _, n in ALL_RESPONSES_PER_VERSION:
+        assert n != "FOOBAR"  # will be used as example of non-existent message
+        server_msg_names[v].add(n)
+
+
+set_name_dicts()
+
+
+@pytest.mark.parametrize(("version", "message", "exists"), (
+    *(
+          (v, "C: " + n, True)
+          for v in client_msg_names for n in client_msg_names[v]
+    ),
+    *(
+          (v, "C: " + n, False)
+          for v in server_msg_names
+          for n in server_msg_names[v] - client_msg_names[v]
+    ),
+    *((v, "C: FOOBAR", False) for v in ALL_SERVER_VERSIONS),
+    *(
+          (v, "S: " + n, True)
+          for v in server_msg_names for n in server_msg_names[v]
+    ),
+    *(
+          (v, "S: " + n, False)
+          for v in client_msg_names
+          for n in client_msg_names[v] - server_msg_names[v]
+    ),
+    *((v, "S: FOOBAR", False) for v in ALL_SERVER_VERSIONS),
+))
+def test_message_tags_are_verified(version, message, exists):
+    raw_script = """!: BOLT {}
+
+    {}"""
+    script = raw_script.format(".".join(map(str, version)), message)
+    if exists:
+        parsing.parse(script)
+    else:
+        with pytest.raises(parsing.LineError) as exc:
+            parsing.parse(script)
+        assert exc.value.line.line_number == 3
+        assert isinstance(exc.value.__cause__, errors.BoltUnknownMessage)
+
+
+@pytest.mark.parametrize("version", ALL_SERVER_VERSIONS)
+@pytest.mark.parametrize(("command", "exists"), (
+    ("<EXIT>", True),
+    ("<NOOP>", True),
+    ("<RAW> FF", True),
+    ("<SLEEP> 1", True),
+    ("<FOOBAR> 1", False),
+))
+def test_checks_command_server_lines(version, command, exists):
+    raw_script = """!: BOLT {}
+
+    S: {}"""
+    script = raw_script.format(".".join(map(str, version)), command)
+    if exists:
+        parsing.parse(script)
+    else:
+        with pytest.raises(parsing.LineError) as exc:
+            parsing.parse(script)
+        assert exc.value.line.line_number == 3
