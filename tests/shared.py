@@ -39,14 +39,10 @@ class TestkitTestCase(unittest.TestCase):
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
         self._backend = new_backend()
         self.addCleanup(self._backend.close)
-        try:
-            response = self._backend.sendAndReceive(protocol.StartTest(id_))
-            if isinstance(response, protocol.SkipTest):
-                self.skipTest(response.reason)
-            elif not isinstance(response, protocol.RunTest):
-                raise Exception("Should be SkipTest or RunTest, "
-                                "received {}: {}".format(type(response),
-                                                         response))
-        except Exception:
-            self._backend.close()
-            raise
+        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+        if isinstance(response, protocol.SkipTest):
+            self.skipTest(response.reason)
+        elif not isinstance(response, protocol.RunTest):
+            raise Exception("Should be SkipTest or RunTest, "
+                            "received {}: {}".format(type(response),
+                                                     response))
