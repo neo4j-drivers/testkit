@@ -815,12 +815,18 @@ class Routing(TestkitTestCase):
 
     @staticmethod
     def get_ip_address(NICname):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return socket.inet_ntoa(fcntl.ioctl(
-            s.fileno(),
-            0x8915,  # SIOCGIFADDR
-            struct.pack('256s', NICname[:15].encode("UTF-8"))
-        )[20:24])
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            return socket.inet_ntoa(fcntl.ioctl(
+                s.fileno(),
+                0x8915,  # SIOCGIFADDR
+                struct.pack('256s', NICname[:15].encode("UTF-8"))
+            )[20:24])
+        finally:
+            try:
+                s.close()
+            except (OSError, NameError):
+                pass
 
     def get_ip_addresses(self):
         ip_addresses = []
