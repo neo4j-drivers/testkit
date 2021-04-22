@@ -2026,15 +2026,17 @@ class Routing(TestkitTestCase):
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
-        resolver_invoked = False
+        resolver_invoked = 0
 
         def resolver(address):
             nonlocal resolver_invoked
-            address_tokens = address.split(':')
-            if not resolver_invoked:
-                resolver_invoked = True
+            if address != self._routingServer1.address:
                 return [address]
-            elif self._routingServer1.host == address_tokens[0] and self._routingServer1.port == int(address_tokens[1]):
+
+            resolver_invoked += 1
+            if resolver_invoked == 1:
+                return [address]
+            elif resolver_invoked == 2:
                 return [self._routingServer2.address]
             self.fail("unexpected")
 
