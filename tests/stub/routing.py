@@ -1,4 +1,7 @@
-import fcntl
+try:
+    import fcntl
+except ImportError:  # e.g. on Windows
+    fcntl = None
 import json
 import socket
 import struct
@@ -815,8 +818,8 @@ class Routing(TestkitTestCase):
 
     @staticmethod
     def get_ip_address(NICname):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             return socket.inet_ntoa(fcntl.ioctl(
                 s.fileno(),
                 0x8915,  # SIOCGIFADDR
@@ -825,11 +828,13 @@ class Routing(TestkitTestCase):
         finally:
             try:
                 s.close()
-            except (OSError, NameError):
+            except OSError:
                 pass
 
     def get_ip_addresses(self):
         ip_addresses = []
+        if fcntl is None:
+            return ip_addresses
         for ix in socket.if_nameindex():
             name = ix[1]
             ip = self.get_ip_address(name)
