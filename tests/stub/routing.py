@@ -267,7 +267,7 @@ class Routing(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] "adb"
+        C: ROUTE #ROUTINGCTX# [] "*"
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]}}
            <EXIT>
         """
@@ -1873,7 +1873,7 @@ class Routing(TestkitTestCase):
 
     def test_should_accept_routing_table_without_writers_and_then_rediscover(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet',]:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -2377,11 +2377,11 @@ class Routing(TestkitTestCase):
     def test_should_successfully_get_server_protocol_version(self):
         # TODO remove this block and make server info mandatory in
         # TODO responses.Summary once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("the summary message must include server info")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
-        self._routingServer1.start(script=self.router_script(),
+        self._routingServer1.start(script=self.router_script_adb(),
                                    vars=self.get_vars())
         script_vars = self.get_vars()
         self._readServer1.start(script=self.read_script(), vars=script_vars)
@@ -2403,12 +2403,12 @@ class Routing(TestkitTestCase):
     def test_should_successfully_get_server_agent(self):
         # TODO remove this block and make server info mandatory in
         # TODO responses.Summary once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'python', 'javascript']:
+        if get_driver_name() in ['dotnet', 'go', 'javascript']:
             self.skipTest("the summary message must include server info")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
         script_vars = self.get_vars()
-        self._routingServer1.start(script=self.router_script(),
+        self._routingServer1.start(script=self.router_script_adb(),
                                    vars=script_vars)
         self._readServer1.start(script=self.read_script_with_explicit_hello(),
                                 vars=self.get_vars())
@@ -2526,7 +2526,13 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        {{
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": null} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "system"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        }}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
         S: IGNORED
@@ -2541,7 +2547,11 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        {{
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
+        }}
         C: PULL {"n": -1}
         S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
         S: IGNORED
@@ -2633,7 +2643,7 @@ class RoutingV4(Routing):
         !: AUTO GOODBYE
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system"}
+        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system"}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]

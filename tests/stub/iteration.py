@@ -212,6 +212,10 @@ class TxRun(TestkitTestCase):
 
     def test_nested(self):
         # ex JAVA - java completely pulls the first query before running the second
+        if get_driver_name() in ["java"]:
+            self.skipTest(
+                "completely pulls the first query before running the second"
+            )
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken(scheme="basic"))
