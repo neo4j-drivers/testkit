@@ -2033,7 +2033,7 @@ class Routing(TestkitTestCase):
             self.fail("unexpected")
 
         driver = Driver(self._backend, self._uri_with_context, self._auth,
-                        self._userAgent, resolver)
+                        self._userAgent, resolverFn=resolver)
         self._routingServer1.start(
             script=self.router_script_with_one_reader_and_exit(),
             vars=self.get_vars()
@@ -2349,7 +2349,7 @@ class Routing(TestkitTestCase):
 
         router_ip_address = ip_addresses[0]
 
-        def domain_name_resolver(ignored):
+        def domain_name_resolver(_):
             nonlocal router_ip_address
             return [router_ip_address]
 
