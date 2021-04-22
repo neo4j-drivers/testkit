@@ -927,6 +927,7 @@ class Routing(TestkitTestCase):
         driver.close()
 
         self._routingServer1.done()
+        self._writeServer1.done()
         self.assertEqual([1], sequence2)
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
@@ -2125,7 +2126,6 @@ class Routing(TestkitTestCase):
 
         driver.close()
         self._routingServer1.done()
-        self._readServer1.reset()
         self.assertLessEqual(self._readServer1.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._readServer1.count_requests("RUN"), 0)
         self.assertEqual(self.should_support_multi_db(), supports_multi_db)

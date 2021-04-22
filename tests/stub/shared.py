@@ -43,6 +43,12 @@ class StubServer:
         if self._process:
             raise Exception("Stub server in use")
 
+        self._stdout_buffer = Queue()
+        self._stdout_lines = []
+        self._stderr_buffer = Queue()
+        self._stderr_lines = []
+        self._pipes_closed = False
+
         if platform.system() == "Windows":
             python_command = "python"
         else:
@@ -128,7 +134,8 @@ class StubServer:
     def _kill(self):
         self._process.kill()
         self._process.wait()
-        self._dump()
+        if self._process.returncode > 0:
+            self._dump()
         self._process = None
 
     def _interrupt(self, timeout=5.):
