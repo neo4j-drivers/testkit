@@ -139,9 +139,8 @@ class StubServer:
         self._read_pipes()
         self._process = None
 
-    def _interrupt(self, timeout=5.):
+    def _poll(self, timeout):
         polls = int(timeout * 10)
-        self._process.send_signal(signal.SIGINT)
         while polls:
             self._process.poll()
             if self._process.returncode is None:
@@ -150,6 +149,10 @@ class StubServer:
             else:
                 return True
         return False
+
+    def _interrupt(self, timeout=5.):
+        self._process.send_signal(signal.SIGINT)
+        return self._poll(timeout)
 
     def done(self):
         """Shut down the server, if running
@@ -208,8 +211,9 @@ class StubServer:
         output."""
         if self._process:
             # briefly try to get a shutdown that will dump script mismatches
-            self._interrupt(0)
-            self._interrupt(1)
+            self._poll(1)
+            self._interrupt()
+            self._interrupt(.5)
             self._kill()
 
     def count_requests_re(self, pattern):
