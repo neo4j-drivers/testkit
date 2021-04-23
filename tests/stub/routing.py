@@ -1947,9 +1947,9 @@ class Routing(TestkitTestCase):
         self.assertEqual(connection_count_rs1 + connection_count_rs2, 1)
         if connection_count_rs1 == 1:
             self._readServer1.done()
-            self._readServer2.stop()
+            self._readServer2.reset()
         else:
-            self._readServer1.stop()
+            self._readServer1.reset()
             self._readServer2.done()
         self.assertEqual([1], sequence)
 

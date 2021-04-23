@@ -136,6 +136,7 @@ class StubServer:
         self._process.wait()
         if self._process.returncode > 0:
             self._dump()
+        self._read_pipes()
         self._process = None
 
     def _interrupt(self, timeout=5.):
@@ -197,24 +198,14 @@ class StubServer:
             self._read_pipes()
             self._process = None
 
-    def stop(self):
-        if not self._process:
-            # test was probably skipped or failed before the stub server could
-            # be started.
-            return
-        running = True
-        for _ in range(3):
-            if self._interrupt(1):
-                running = False
-                break
-        if running:
-            self._process.kill()
-            self._process.wait()
-            raise StubServerUncleanExit("Stub server hanged.")
-        self._read_pipes()
-        self._process = None
-
     def reset(self):
+        """Make sure the sever is stopped and ready to start a new script.
+
+        This method gives the server little time to gracefully shutdown, before
+        sending a SIGKILL.
+
+        If the server exited unexpectedly (e.g., script mismatch), dump the
+        output."""
         if self._process:
             # briefly try to get a shutdown that will dump script mismatches
             self._interrupt(0)
@@ -263,6 +254,21 @@ class StubServer:
             else:
                 count += line.startswith(pattern)
         return count
+
+    @property
+    def stdout(self):
+        self._read_pipes()
+        return "\n".join(self._stdout_lines)
+
+    @property
+    def stderr(self):
+        self._read_pipes()
+        return "\n".join(self._stderr_lines)
+
+    @property
+    def pipes(self):
+        self._read_pipes()
+        return "\n".join(self._stdout_lines), "\n".join(self._stderr_lines)
 
 
 scripts_path = os.path.join(
