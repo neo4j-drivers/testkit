@@ -17,7 +17,7 @@ class ProtocolVersions(TestkitTestCase):
         self._server = StubServer(9001)
 
     def tearDown(self):
-        self._server.reset()
+        self._server.done()
         super().tearDown()
 
     def _run(self, version, pull='PULL {"n": 1000}'):

@@ -20,6 +20,7 @@ from tests.testenv import (
     get_test_result_class,
 )
 
+
 loader = unittest.TestLoader()
 
 stub_suite = unittest.TestSuite()

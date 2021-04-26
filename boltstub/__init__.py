@@ -19,16 +19,29 @@
 # limitations under the License.
 
 
+from copy import deepcopy
 from logging import getLogger
-from socketserver import TCPServer, BaseRequestHandler
+from socketserver import TCPServer, ThreadingMixIn, BaseRequestHandler
 from sys import stdout
+from threading import (
+    Lock,
+    Thread,
+)
+import traceback
 
-from boltstub.addressing import Address
-from boltstub.packstream import PackStream
-from boltstub.scripting import ServerExit, ScriptMismatch, BoltScript, \
-    ClientMessageLine
-from boltstub.wiring import Wire
-
+from .addressing import Address
+from .channel import Channel
+from .errors import ServerExit
+from .packstream import PackStream
+from .parsing import (
+    parse_file,
+    Script,
+    ScriptDeviation,
+)
+from .wiring import (
+    ReadWakeup,
+    Wire,
+)
 
 log = getLogger(__name__)
 
@@ -53,33 +66,34 @@ class BoltStubServer(TCPServer):
         stdout.flush()
 
 
+class ThreadedBoltStubServer(ThreadingMixIn, BoltStubServer):
+    pass
+
+
 class BoltStubService:
 
     default_base_port = 17687
 
     default_timeout = 30
 
-    thread = None
-
     auth = ("neo4j", "")
 
     @classmethod
     def load(cls, *script_filenames, **kwargs):
-        return cls(*map(BoltScript.load, script_filenames), **kwargs)
+        return cls(*map(parse_file, script_filenames), **kwargs)
 
-    def __init__(self, script, listen_addr=None, exit_on_disconnect=True, timeout=None):
+    def __init__(self, script: Script, listen_addr=None, timeout=None):
         if listen_addr:
             listen_addr = Address.parse(listen_addr)
         else:
             listen_addr = Address(("localhost", self.default_base_port))
-        self.exit_on_disconnect = exit_on_disconnect
         self.host = listen_addr.host
-        if script.port:
-            self.address = Address((listen_addr.host, script.port))
-        else:
-            self.address = Address((listen_addr.host, listen_addr.port_number))
+        self.address = Address((listen_addr.host, listen_addr.port_number))
         self.script = script
         self.exceptions = []
+        self.actors = []
+        self.ever_acted = False
+        self.actors_lock = Lock()
         service = self
 
         class BoltStubRequestHandler(BaseRequestHandler):
@@ -88,7 +102,7 @@ class BoltStubService:
             server_address = None
 
             def setup(self):
-                self.wire = Wire(self.request)
+                self.wire = Wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
                 log.info("[#%04X]  S: <ACCEPT> %s -> %s", self.server_address.port_number,
@@ -96,19 +110,23 @@ class BoltStubService:
 
             def handle(self):
                 try:
-                    request = self.wire.read(20)
-                    log.info("[#%04X]  C: <HANDSHAKE> %r", self.server_address.port_number, request)
-                    response = script.on_handshake(request)
-                    log.info("[#%04X]  S: <HANDSHAKE> %r", self.server_address.port_number, response)
-                    self.wire.write(response)
-                    self.wire.send()
-                    actor = BoltActor(script, self.wire)
+                    with service.actors_lock:
+                        actor = BoltActor(deepcopy(script), self.wire)
+                        service.actors.append(actor)
+                        service.ever_acted = True
                     actor.play()
-                except ServerExit:
-                    pass
-                except Exception as e:
-                    print(e)
+                except ServerExit as e:
+                    log.info("[#%04X]  S: <EXIT> %s",
+                             self.wire.local_address.port_number, e)
+                except ScriptDeviation as e:
+                    e.script = script
                     service.exceptions.append(e)
+                except Exception as e:
+                    traceback.print_exc()
+                    service.exceptions.append(e)
+                finally:
+                    with service.actors_lock:
+                        service.actors.remove(actor)
 
             def finish(self):
                 log.info("[#%04X]  S: <HANGUP>", self.wire.local_address.port_number)
@@ -119,11 +137,45 @@ class BoltStubService:
                 except AttributeError:
                     pass
 
-        self.server = BoltStubServer(self.address, BoltStubRequestHandler)
+        if self.script.context.concurrent:
+            server_cls = ThreadedBoltStubServer
+        else:
+            server_cls = BoltStubServer
+        self.server = server_cls(self.address, BoltStubRequestHandler)
         self.server.timeout = timeout or self.default_timeout
 
     def start(self):
-        self.server.handle_request()
+        if self.script.context.restarting or self.script.context.concurrent:
+            self.server.serve_forever()
+        else:
+            self.server.handle_request()
+            self.server.server_close()
+
+    def stop(self):
+        if self.script.context.restarting or self.script.context.concurrent:
+            self.server.shutdown()
+        self.server.socket.close()
+
+    def stop_async(self):
+        Thread(target=self.stop, daemon=True).start()
+
+    def try_skip_to_end(self):
+        self.stop()
+        with self.actors_lock:
+            for actor in self.actors:
+                actor.try_skip_to_end()
+
+    def try_skip_to_end_async(self):
+        Thread(target=self.try_skip_to_end, daemon=True).start()
+
+    def close_all_connections(self):
+        self.stop()
+        with self.actors_lock:
+            for actor in self.actors:
+                actor.exit()
+
+    def close_all_connections_async(self):
+        Thread(target=self.close_all_connections, daemon=True).start()
 
     @property
     def timed_out(self):
@@ -132,38 +184,56 @@ class BoltStubService:
 
 class BoltActor:
 
-    def __init__(self, script, wire):
+    def __init__(self, script: Script, wire):
         self.script = script
-        self.wire = wire
-        self.stream = PackStream(wire)
-
-    @property
-    def server_address(self):
-        return self.wire.local_address
+        self.channel = Channel(
+            wire, script.context.bolt_version, log_cb=self.log,
+            handshake_data=self.script.context.handshake
+        )
+        self._exit = False
+        self.script_lock = Lock()
 
     def play(self):
-        protocol_version = self.script.protocol_version
-        try:
-            for line in self.script:
-                if not line.is_compatible(protocol_version):
-                    raise ValueError("Script line %s is not compatible "
-                                     "with protocol version %r" % (line, protocol_version))
+        for init_fn in (self.channel.preamble, self.channel.version_handshake):
+            while True:
                 try:
-                    line.action(self)
-                except ScriptMismatch as error:
-                    # Attach context information and re-raise
-                    error.script = self.script
-                    error.line_no = line.line_no
-                    raise
-            ClientMessageLine.default_action(self)
+                    with self.script_lock:
+                        init_fn()
+                    break
+                except ReadWakeup:
+                    continue
+        try:
+            with self.script_lock:
+                self.script.init(self.channel)
+            while True:
+                if self._exit:
+                    raise ServerExit("Actor exit on request")
+                try:
+                    with self.script_lock:
+                        if self.script.done():
+                            break
+                        self.script.consume(self.channel)
+                except ReadWakeup:
+                    continue
         except (ConnectionError, OSError):
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.
             return
 
+    def try_skip_to_end(self):
+        with self.script_lock:
+            self.script.try_skip_to_end()
+
+    def exit(self):
+        self._exit = True
+
     def log(self, text, *args):
-        log.info("[#%04X]  " + text, self.server_address.port_number, *args)
+        log.info("[#%04X]  " + text,
+                 self.channel.wire.local_address.port_number,
+                 *args)
 
     def log_error(self, text, *args):
-        log.error("[#%04X]  " + text, self.server_address.port_number, *args)
+        log.error("[#%04X]  " + text,
+                  self.channel.wire.local_address.port_number,
+                  *args)

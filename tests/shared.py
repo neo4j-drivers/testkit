@@ -38,18 +38,11 @@ class TestkitTestCase(unittest.TestCase):
         super().setUp()
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
         self._backend = new_backend()
+        self.addCleanup(self._backend.close)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
-        try:
-            if isinstance(response, protocol.SkipTest):
-                self.skipTest(response.reason)
-            elif not isinstance(response, protocol.RunTest):
-                raise Exception("Should be SkipTest or RunTest, "
-                                "received {}: {}".format(type(response),
-                                                         response))
-        except Exception:
-            self._backend.close()
-            raise
-
-    def tearDown(self):
-        self._backend.close()
-        super().tearDown()
+        if isinstance(response, protocol.SkipTest):
+            self.skipTest(response.reason)
+        elif not isinstance(response, protocol.RunTest):
+            raise Exception("Should be SkipTest or RunTest, "
+                            "received {}: {}".format(type(response),
+                                                     response))

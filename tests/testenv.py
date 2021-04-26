@@ -23,4 +23,3 @@ def get_test_result_class():
     if not in_teamcity:
         return None
     return TeamCityTestResult
-

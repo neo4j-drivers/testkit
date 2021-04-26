@@ -1,3 +1,4 @@
+from nutkit.frontend.session import ApplicationCodeException
 import nutkit.protocol as types
 from tests.neo4j.shared import get_driver
 from tests.shared import (
@@ -24,9 +25,6 @@ class TestTxFuncRun(TestkitTestCase):
         # >= 4.0 supports multiple result streams on the connection. From this
         # view it is not possible to see that those streams are actually used.
         # (see stub tests for this verification).
-
-        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
-            self.skipTest("Fetchsize not implemented in backend")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Fails for some reason")
 
@@ -96,7 +94,7 @@ class TestTxFuncRun(TestkitTestCase):
         # function rolls back transaction.
         def run(tx):
             tx.run("CREATE (n:SessionNode) RETURN n")
-            raise Exception("No thanks")
+            raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
         try:
@@ -108,15 +106,15 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
-        if get_driver_name() in ["javascript", "java"]:
+        if get_driver_name() in ["java"]:
             self.skipTest("Client exceptions not properly handled in backend")
         nodeid = -1
 
         def run(tx):
             result = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
             global nodeid
-            nodeid = result.next().value
-            raise Exception("No thanks")
+            nodeid = result.next().values[0].value
+            raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
         try:
