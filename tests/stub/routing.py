@@ -1523,7 +1523,7 @@ class Routing(TestkitTestCase):
         self.assertEqual(["BookmarkB"], first_bookmark)
         self.assertEqual(["BookmarkC"], second_bookmark)
 
-    def test_should_retry_read_tx_until_success(self):
+    def test_should_retry_read_tx_until_success_on_error(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
@@ -1576,7 +1576,59 @@ class Routing(TestkitTestCase):
         self.assertEqual([[1]], sequences)
         self.assertEqual(2, try_count)
 
-    def test_should_retry_write_tx_until_success(self):
+    def test_should_retry_read_tx_until_success_on_no_connection(self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self._routingServer1.start(script=self.router_script_adb(),
+                                   vars=self.get_vars())
+        self._readServer1.start(
+            script=self.read_tx_script(),
+            vars=self.get_vars()
+        )
+        self._readServer2.start(
+            script=self.read_tx_script(),
+            vars=self.get_vars()
+        )
+
+        session = driver.session('r', database=self.get_db())
+        sequences = []
+        try_count = 0
+
+        def work(tx):
+            nonlocal try_count
+            try_count = try_count + 1
+            result = tx.run("RETURN 1 as n")
+            sequences.append(self.collectRecords(result))
+
+        session.readTransaction(work)
+        self._routingServer1.done()
+        connection_counts = (
+            self._readServer1.count_responses("<ACCEPT>"),
+            self._readServer2.count_responses("<ACCEPT>")
+        )
+        self.assertIn(connection_counts, {(0, 1), (1, 0)})
+        if connection_counts == (1, 0):
+            self._readServer1.done()
+        else:
+            self._readServer2.done()
+        self.assertEqual([[1]], sequences)
+        self.assertEqual(1, try_count)
+
+        session.readTransaction(work)
+        session.close()
+        driver.close()
+
+        self._readServer1.done()
+        self._readServer2.done()
+        self.assertEqual([[1], [1]], sequences)
+        # Drivers might or might not try the first server again
+        self.assertLessEqual(try_count, 3)
+        # TODO: Design a test that makes sure the driver doesn't run the tx func
+        #       if it can't establish a working connection to the server. So
+        #       that `try_count == 2`. When doing so be aware that drivers could
+        #       do round robin, e.g. Java.
+
+    def test_should_retry_write_tx_until_success_on_error(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet']:
             self.skipTest("requires investigation")
@@ -1628,6 +1680,58 @@ class Routing(TestkitTestCase):
         self._writeServer2.done()
         self.assertEqual([[]], sequences)
         self.assertEqual(2, try_count)
+
+    def test_should_retry_write_tx_until_success_on_no_connection(self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self._routingServer1.start(script=self.router_script_adb(),
+                                   vars=self.get_vars())
+        self._writeServer1.start(
+            script=self.write_tx_script(),
+            vars=self.get_vars()
+        )
+        self._writeServer2.start(
+            script=self.write_tx_script(),
+            vars=self.get_vars()
+        )
+
+        session = driver.session('r', database=self.get_db())
+        sequences = []
+        try_count = 0
+
+        def work(tx):
+            nonlocal try_count
+            try_count = try_count + 1
+            result = tx.run("RETURN 1 as n")
+            sequences.append(self.collectRecords(result))
+
+        session.writeTransaction(work)
+        self._routingServer1.done()
+        connection_counts = (
+            self._writeServer1.count_responses("<ACCEPT>"),
+            self._writeServer2.count_responses("<ACCEPT>")
+        )
+        self.assertIn(connection_counts, {(0, 1), (1, 0)})
+        if connection_counts == (1, 0):
+            self._writeServer1.done()
+        else:
+            self._writeServer2.done()
+        self.assertEqual([[]], sequences)
+        self.assertEqual(1, try_count)
+
+        session.writeTransaction(work)
+        session.close()
+        driver.close()
+
+        self._writeServer1.done()
+        self._writeServer2.done()
+        self.assertEqual([[], []], sequences)
+        # Drivers might or might not try the first server again
+        self.assertLessEqual(try_count, 3)
+        # TODO: Design a test that makes sure the driver doesn't run the tx func
+        #       if it can't establish a working connection to the server. So
+        #       that `try_count == 2`. When doing so be aware that drivers could
+        #       do round robin, e.g. Java.
 
     def test_should_retry_read_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
