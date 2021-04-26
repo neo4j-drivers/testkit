@@ -27,10 +27,10 @@ send_and_receive_bookmark_read_tx = """
 !: AUTO GOODBYE
 
 C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx42"], "mode": "r"}
+S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
    PULL {"n": 1000}
-S: SUCCESS {}
-   SUCCESS {"fields": ["name"]}
+S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
@@ -44,10 +44,10 @@ send_and_receive_bookmark_write_tx = """
 !: AUTO GOODBYE
 
 C: BEGIN {"bookmarks": #BOOKMARKS# }
+S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
    PULL {"n": 1000}
-S: SUCCESS {}
-   SUCCESS {"fields": ["name"]}
+S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
@@ -61,19 +61,19 @@ sequecing_writing_and_reading_tx = """
 !: AUTO GOODBYE
 
 C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx42"]}
+S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
    PULL {"n": 1000}
-S: SUCCESS {}
-   SUCCESS {"fields": ["name"]}
+S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
 
 C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx4242"]}
+S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
    PULL {"n": 1000}
-S: SUCCESS {}
-   SUCCESS {"fields": ["name"]}
+S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
