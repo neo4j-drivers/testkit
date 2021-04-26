@@ -1,3 +1,4 @@
+from collections import defaultdict
 try:
     import fcntl
 except ImportError:  # e.g. on Windows
@@ -2008,6 +2009,12 @@ class Routing(TestkitTestCase):
                                  database=self.get_db())
         sequences = []
         self._routingServer1.done()
+        try:
+            driver.verifyConnectivity()
+        except types.DriverError:
+            # make sure the driver noticed that its old connection to
+            # _routingServer1 is dead
+            pass
         self._routingServer1.start(script=self.router_script_adb(),
                                    vars=self.get_vars())
 
@@ -2187,9 +2194,14 @@ class Routing(TestkitTestCase):
         if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("resolver not implemented in backend")
 
+        resolver_calls = defaultdict(lambda: 0)
+
         def resolver(address):
-            self.assertEqual(self._routingServer1.address, address)
-            return [self._routingServer1.address, self._routingServer3.address]
+            resolver_calls[address] += 1
+            if address == self._routingServer1.address:
+                return [self._routingServer1.address,
+                        self._routingServer3.address]
+            return [address]
 
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, resolver)
@@ -2222,6 +2234,30 @@ class Routing(TestkitTestCase):
         self._routingServer3.done()
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
+        if len(resolver_calls) == 1:
+            # driver that calls resolver function only on initial router address
+            self.assertEqual(resolver_calls.keys(),
+                             {self._routingServer1.address})
+            # depending on whether the resolve result is treated equally to a
+            # RT table entry or is discarded after an RT has been retrieved
+            # successfully.
+            self.assertIn(resolver_calls[self._routingServer1.address], {1, 2})
+        else:
+            fake_reader_address = self._routingServer1.host + ":9099"
+            # driver that calls resolver function for ever address (initial
+            # router and server addresses returned in routing table
+            self.assertLessEqual(resolver_calls.keys(),
+                                 {self._routingServer1.address,
+                                  fake_reader_address,
+                                  self._routingServer2.address,
+                                  self._readServer1.address,
+                                  # readServer2 isn't part of this test but is
+                                  # in the RT of router_script_adb by default
+                                  self._readServer2.address})
+            self.assertIn(resolver_calls[self._routingServer1.address], {1, 2})
+
+            self.assertEqual(resolver_calls[fake_reader_address], 1)
+            self.assertEqual(resolver_calls[self._readServer1.address], 1)
 
     def should_support_multi_db(self):
         return True
@@ -2255,7 +2291,10 @@ class Routing(TestkitTestCase):
             self.skipTest("resolver not implemented in backend")
 
         def resolver(address):
-            return [self._routingServer1.address, self._routingServer2.address]
+            if address == self._routingServer1.address:
+                return (self._routingServer1.address,
+                        self._routingServer2.address)
+            return address,
 
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, resolver)
@@ -2756,11 +2795,15 @@ class RoutingV4(Routing):
         return """
         !: BOLT #VERSION#
         !: AUTO RESET
-
         !: AUTO GOODBYE
+
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS# }
         S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-        C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system"}
+        {{
+            C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system"}
+        ----
+            C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "*"} {"[mode]": "r", "db": "system"}
+        }}
         C: PULL {"n": -1}
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
@@ -3150,22 +3193,22 @@ class RoutingV3(Routing):
         !: AUTO HELLO
         !: AUTO GOODBYE
 
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": [],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
            SUCCESS {}
-        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {}
+        C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
            PULL_ALL
         S: SUCCESS {"fields": ["ttl", "servers"]}
            RECORD [9223372036854775807, [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"},{"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
