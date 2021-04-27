@@ -25,7 +25,7 @@ class TestDataTypes(TestkitTestCase):
             self._driver.close()
         super().tearDown()
 
-    def createDriverAndSession(self):
+    def create_driver_and_session(self):
         auth_token = types.AuthorizationToken(
             scheme="basic",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
@@ -34,12 +34,12 @@ class TestDataTypes(TestkitTestCase):
         self._driver = Driver(self._backend, self._scheme, auth_token)
         self._session = self._driver.session("w")
 
-    def verifyCanEcho(self, val):
+    def verify_can_echo(self, val):
         result = self._session.run("RETURN $x as y", params={"x": val})
         record = result.next()
         self.assertEqual(record, types.Record(values=[val]))
 
-    def testShouldEchoBack(self):
+    def test_should_echo_back(self):
         vals = [
             types.CypherBool(True),
             types.CypherBool(False),
@@ -63,11 +63,11 @@ class TestDataTypes(TestkitTestCase):
             types.CypherString(""),
         ]
 
-        self.createDriverAndSession()
+        self.create_driver_and_session()
         for val in vals:
-            self.verifyCanEcho(val)
+            self.verify_can_echo(val)
 
-    def testShouldEchoVeryLongList(self):
+    def test_should_echo_very_long_list(self):
         vals = [
             types.CypherNull(),
             types.CypherInt(1),
@@ -76,21 +76,21 @@ class TestDataTypes(TestkitTestCase):
             types.CypherBool(True),
         ]
 
-        self.createDriverAndSession()
+        self.create_driver_and_session()
 
         for val in vals:
             long_list = []
             for i in range(1000):
                 long_list.append(val)
-            self.verifyCanEcho(types.CypherList(long_list))
+            self.verify_can_echo(types.CypherList(long_list))
 
-    def testShouldEchoVeryLongString(self):
+    def test_should_echo_very_long_string(self):
 
-        self.createDriverAndSession()
+        self.create_driver_and_session()
         long_string = "*" * 10000
-        self.verifyCanEcho(types.CypherString(long_string))
+        self.verify_can_echo(types.CypherString(long_string))
 
-    def testShouldEchoNestedLists(self):
+    def test_should_echo_nested_lists(self):
 
         test_lists = [
             types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
@@ -101,10 +101,10 @@ class TestDataTypes(TestkitTestCase):
             types.CypherList([types.CypherNull(None), types.CypherBool(True), types.CypherString("Hello world"), types.CypherInt(-1234567890), types.CypherFloat(123.456)])
                      ]
 
-        self.createDriverAndSession()
-        self.verifyCanEcho(types.CypherList(test_lists))
+        self.create_driver_and_session()
+        self.verify_can_echo(types.CypherList(test_lists))
 
-    def testShouldEchoListOfMaps(self):
+    def test_should_echo_list_of_maps(self):
         test_list = [
             types.CypherMap({
                 "a": types.CypherInt(1),
@@ -116,20 +116,20 @@ class TestDataTypes(TestkitTestCase):
             })
         ]
 
-        self.createDriverAndSession()
-        self.verifyCanEcho(types.CypherList(test_list))
+        self.create_driver_and_session()
+        self.verify_can_echo(types.CypherList(test_list))
 
-    def testShouldEchoMapOfLists(self):
+    def test_should_echo_map_of_lists(self):
         test_map = {
             'a': types.CypherList([types.CypherInt(1)]),
             'b': types.CypherList([types.CypherInt(2)])
         }
 
-        self.createDriverAndSession()
-        self.verifyCanEcho(types.CypherMap(test_map))
+        self.create_driver_and_session()
+        self.verify_can_echo(types.CypherMap(test_map))
 
-    def testShouldEchoNode(self):
-        self.createDriverAndSession()
+    def test_should_echo_node(self):
+        self.create_driver_and_session()
 
         result = self._session.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
         record = result.next()
@@ -141,7 +141,7 @@ class TestDataTypes(TestkitTestCase):
         self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
 
     # Work in progress
-    def testShouldEchoVeryLongMap(self):
+    def test_should_echo_very_long_map(self):
 
         test_list = [
                        types.CypherNull(None),
@@ -151,16 +151,16 @@ class TestDataTypes(TestkitTestCase):
                        types.CypherBool(True)
                     ]
 
-        self.createDriverAndSession()
+        self.create_driver_and_session()
 
         long_map = {}
         for cypherType in test_list:
             long_map.clear()
             for i in range(1000):
                 long_map[str(i)] = cypherType
-            self.verifyCanEcho(types.CypherMap(long_map))
+            self.verify_can_echo(types.CypherMap(long_map))
 
-    def testShouldEchoNestedMap(self):
+    def test_should_echo_nested_map(self):
 
         test_maps = {
             "a": types.CypherMap({"a": types.CypherInt(1),
@@ -185,8 +185,8 @@ class TestDataTypes(TestkitTestCase):
 
         }
 
-        self.createDriverAndSession()
-        self.verifyCanEcho(types.CypherMap(test_maps))
+        self.create_driver_and_session()
+        self.verify_can_echo(types.CypherMap(test_maps))
 
     # def test_path(self):
         # todo: need to implement the cypher path type to do this test.
