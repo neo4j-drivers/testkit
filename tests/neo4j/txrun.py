@@ -141,15 +141,21 @@ class TestTxRun(TestkitTestCase):
         result = tx1.run('CREATE ()')
         result.consume()
         tx1.commit()
-        unreachableBookmark = self._session.lastBookmarks()[0] + "0"
+        lastBookmark = self._session.lastBookmarks()[0]
+        unreachableBookmark = lastBookmark[:-1] + "0"
         self._session.close()
         self._session = self._driver.session(
             "w",
             bookmarks=[unreachableBookmark]
         )
-        tx2 = self._session.beginTransaction()
-        self.assertThrows(
-            Exception,
-            lambda: tx2.run("CREATE ()").consume()
-        )
-        tx2.rollback()
+
+        def run_tx2():
+            tx2 = None
+            try:
+                tx2 = self._session.beginTransaction()
+                tx2.run("CREATE ()").consume()
+            finally:
+                if tx2:
+                    tx2.rollback()
+
+        self.assertThrows(Exception, run_tx2)
