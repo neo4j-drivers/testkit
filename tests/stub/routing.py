@@ -129,8 +129,8 @@ class Routing(TestkitTestCase):
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         C: BEGIN {"db": "system"}
-        C: RUN "CREATE database foo" {} {}
         S: SUCCESS {}
+        C: RUN "CREATE database foo" {} {}
         C: PULL {"n": 1000}
         S: SUCCESS {"fields": []}
         S: SUCCESS {"type": "w"}
