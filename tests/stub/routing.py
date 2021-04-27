@@ -2009,12 +2009,6 @@ class Routing(TestkitTestCase):
                                  database=self.get_db())
         sequences = []
         self._routingServer1.done()
-        try:
-            driver.verifyConnectivity()
-        except types.DriverError:
-            # make sure the driver noticed that its old connection to
-            # _routingServer1 is dead
-            pass
         self._routingServer1.start(script=self.router_script_adb(),
                                    vars=self.get_vars())
 
@@ -2241,10 +2235,10 @@ class Routing(TestkitTestCase):
             # depending on whether the resolve result is treated equally to a
             # RT table entry or is discarded after an RT has been retrieved
             # successfully.
-            self.assertIn(resolver_calls[self._routingServer1.address], {1, 2})
+            self.assertEqual(resolver_calls[self._routingServer1.address], 2)
         else:
             fake_reader_address = self._routingServer1.host + ":9099"
-            # driver that calls resolver function for ever address (initial
+            # driver that calls resolver function for every address (initial
             # router and server addresses returned in routing table
             self.assertLessEqual(resolver_calls.keys(),
                                  {self._routingServer1.address,
@@ -2254,7 +2248,7 @@ class Routing(TestkitTestCase):
                                   # readServer2 isn't part of this test but is
                                   # in the RT of router_script_adb by default
                                   self._readServer2.address})
-            self.assertIn(resolver_calls[self._routingServer1.address], {1, 2})
+            self.assertEqual(resolver_calls[self._routingServer1.address], 2)
 
             self.assertEqual(resolver_calls[fake_reader_address], 1)
             self.assertEqual(resolver_calls[self._readServer1.address], 1)
