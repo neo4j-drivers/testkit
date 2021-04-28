@@ -1,4 +1,5 @@
 %ignore WS
+%ignore COMMENT
 
 start : [NLS] (bang_line NLS)* block_list [NLS]
 
@@ -40,8 +41,9 @@ explicit_server_line : SERVER_MARKER LINE    -> server_line
 implicit_server_line.-1: LINE                -> server_line
 
 WS : /[ \t\f\r]/+
+COMMENT: /^/m WS* /#[^\n]*/m [NLS]
 // this is ugly but needed to avoid unprocessable amounts of ambiguity in the grammar
-LINE : /(?!\s*(!:|S:|C:|{{|----|\+\+\+\+|}}|{[?*+]|[?*+]\}))[^\n]+/
+LINE : /(?!\s*(!:|S:|C:|#|{{|----|\+\+\+\+|}}|{[?*+]|[?*+]\}))[^\n]+/
 
 BANG_MARKER : "!:"
 CLIENT_MARKER : "C:"
