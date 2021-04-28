@@ -16,7 +16,7 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 C: BEGIN {"mode": "r", "db": "adb"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
-C: PULL {"n": 1000}
+   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}

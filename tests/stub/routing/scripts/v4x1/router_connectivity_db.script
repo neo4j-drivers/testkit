@@ -1,8 +1,8 @@
 !: BOLT #VERSION#
 !: AUTO RESET
 !: ALLOW RESTART
-
 !: AUTO GOODBYE
+
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS# }
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 # TODO: There is no repeat block here for v4.3. Why?

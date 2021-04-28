@@ -4,7 +4,7 @@
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {"db": "adb"}
-C: PULL {"n": 1000}
+   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}

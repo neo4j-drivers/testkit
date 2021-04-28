@@ -10,5 +10,5 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
     C: ROUTE #ROUTINGCTX# [] "system"
 }}
 S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
-S: IGNORED
-S: <EXIT>
+   IGNORED
+   <EXIT>

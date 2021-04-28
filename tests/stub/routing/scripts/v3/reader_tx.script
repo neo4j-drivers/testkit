@@ -2,6 +2,7 @@
 !: AUTO HELLO
 !: AUTO GOODBYE
 !: AUTO RESET
+
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
