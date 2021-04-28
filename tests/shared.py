@@ -8,6 +8,7 @@ TEST_BACKEND_HOST  Hostname of backend, default is localhost
 TEST_BACKEND_PORT  Port on backend host, default is 9876
 """
 
+import inspect
 import os
 import re
 import unittest
@@ -42,7 +43,18 @@ class TestkitTestCase(unittest.TestCase):
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
+
+        # TODO: remove this compatibility layer when all drivers are adapted
+        id_ = re.sub(r"stub.routing\.[^.]+\.", "stub.routing.", id_)
+        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+        if isinstance(response, protocol.SkipTest):
+            self.skipTest(response.reason)
+
         elif not isinstance(response, protocol.RunTest):
             raise Exception("Should be SkipTest or RunTest, "
                             "received {}: {}".format(type(response),
                                                      response))
+
+    def script_path(self, *path):
+        base_path = os.path.dirname(inspect.getfile(self.__class__))
+        return os.path.join(base_path, "scripts", *path)
