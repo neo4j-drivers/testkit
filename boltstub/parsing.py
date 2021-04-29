@@ -970,8 +970,7 @@ class ScriptTransformer(lark.Transformer):
     def block_list(self, tree):
         blocks = []
         for child in tree.children:
-            if ((isinstance(child, lark.Tree) and child.data == "comment_block")
-                    or isinstance(child, lark.Token)):
+            if isinstance(child, lark.Token):
                 continue
             if (blocks
                     and ((isinstance(child, ClientBlock)
