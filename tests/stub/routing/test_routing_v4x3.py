@@ -3,143 +3,21 @@ try:
     import fcntl
 except ImportError:  # e.g. on Windows
     fcntl = None
-import inspect
-import json
-import os
-import socket
-import struct
 from sys import platform
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
-from tests.stub.shared import StubServer
+from tests.shared import get_driver_name
+from ._routing import RoutingBase
 
 
-def get_extra_hello_props():
-    if get_driver_name() in ["java"]:
-        return ', "realm": ""'
-    elif get_driver_name() in ["javascript"]:
-        return ', "realm": "", "ticket": ""'
-    return ""
-
-
-# This should be the latest/current version of the protocol.
-# Older protocol that needs to be tested inherits from this and override
-# to handle variations.
-class Routing(TestkitTestCase):
-    def setUp(self):
-        super().setUp()
-        self._routingServer1 = StubServer(9000)
-        self._routingServer2 = StubServer(9001)
-        self._routingServer3 = StubServer(9002)
-        self._readServer1 = StubServer(9010)
-        self._readServer2 = StubServer(9011)
-        self._readServer3 = StubServer(9012)
-        self._writeServer1 = StubServer(9020)
-        self._writeServer2 = StubServer(9021)
-        self._writeServer3 = StubServer(9022)
-        self._uri_template = "neo4j://%s:%d"
-        self._uri_template_with_context = \
-            self._uri_template + "?region=china&policy=my_policy"
-        self._uri_with_context = self._uri_template_with_context % (
-            self._routingServer1.host, self._routingServer1.port)
-        self._auth = types.AuthorizationToken(
-            scheme="basic", principal="p", credentials="c")
-        self._userAgent = "007"
-
-    def tearDown(self):
-        self._routingServer1.reset()
-        self._routingServer2.reset()
-        self._routingServer3.reset()
-        self._readServer1.reset()
-        self._readServer2.reset()
-        self._readServer3.reset()
-        self._writeServer1.reset()
-        self._writeServer2.reset()
-        self._writeServer3.reset()
-        super().tearDown()
-
-    def start_server(self, server, script_fn, vars_=None):
-        if vars_ is None:
-            vars_ = self.get_vars()
-        classes = (self.__class__, *inspect.getmro(self.__class__))
-        tried_locations = []
-        for cls in classes:
-            if hasattr(cls, "bolt_version"):
-                version_folder = \
-                    "v{}".format(cls.bolt_version.replace(".", "x"))
-                script_path = self.script_path(version_folder, script_fn)
-                tried_locations.append(script_path)
-                if os.path.exists(script_path):
-                    server.start(path=script_path, vars=vars_)
-                    return
-        raise FileNotFoundError("{!r} tried {!r}".format(
-            script_fn, ", ".join(tried_locations)
-        ))
-
+class RoutingV4x3(RoutingBase):
     bolt_version = "4.3"
     server_agent = "Neo4j/4.3.0"
-
-    def get_vars(self, host=None):
-        if host is None:
-            host = self._routingServer1.host
-        v = {
-            "#VERSION#": self.bolt_version,
-            "#HOST#": host,
-            "#SERVER_AGENT#": self.server_agent,
-            "#ROUTINGCTX#": (
-                '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}')
-            ,
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-        }
-
-        return v
-
     adb = "adb"
 
     def route_call_count(self, server):
         return server.count_requests("ROUTE")
-
-    @staticmethod
-    def collectRecords(result):
-        sequence = []
-        while True:
-            next = result.next()
-            if isinstance(next, types.NullRecord):
-                break
-            sequence.append(next.values[0].value)
-        return sequence
-
-    @staticmethod
-    def get_ip_address(NICname):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            return socket.inet_ntoa(fcntl.ioctl(
-                s.fileno(),
-                0x8915,  # SIOCGIFADDR
-                struct.pack('256s', NICname[:15].encode("UTF-8"))
-            )[20:24])
-        finally:
-            try:
-                s.close()
-            except OSError:
-                pass
-
-    def get_ip_addresses(self):
-        ip_addresses = []
-        if fcntl is None:
-            return ip_addresses
-        for ix in socket.if_nameindex():
-            name = ix[1]
-            ip = self.get_ip_address(name)
-            if name != "lo":
-                ip_addresses.append(ip)
-        return ip_addresses
 
     def test_should_successfully_get_routing_table_with_context(self):
         # TODO remove this block once all languages work
@@ -1700,7 +1578,8 @@ class Routing(TestkitTestCase):
             self._routingServer3.host
         ]
 
-        # The resolver is used to convert the original address to multiple fake domain names.
+        # The resolver is used to convert the original address to multiple fake
+        # domain names.
         def resolver(address):
             nonlocal resolver_calls
             nonlocal resolved_addresses
@@ -1709,19 +1588,22 @@ class Routing(TestkitTestCase):
                 return [address]
             return resolved_addresses
 
-        # The domain name resolver is used to verify that the fake domain names are given to it
-        # and to convert them to routing server addresses.
+        # The domain name resolver is used to verify that the fake domain names
+        # are given to it and to convert them to routing server addresses.
         # This resolver is expected to be called multiple times.
-        # The combined use of resolver and domain name resolver allows to host multiple initial routers on a single IP.
+        # The combined use of resolver and domain name resolver allows to host
+        # multiple initial routers on a single IP.
         def domainNameResolver(name):
             nonlocal domain_name_resolver_call_num
             nonlocal resolved_addresses
             nonlocal resolved_domain_name_addresses
             if domain_name_resolver_call_num >= len(resolved_addresses):
                 return [name]
-            expected_name = resolved_addresses[domain_name_resolver_call_num].split(":")[0]
+            expected_name = \
+                resolved_addresses[domain_name_resolver_call_num].split(":")[0]
             self.assertEqual(expected_name, name)
-            resolved_domain_name_address = resolved_domain_name_addresses[domain_name_resolver_call_num]
+            resolved_domain_name_address = \
+                resolved_domain_name_addresses[domain_name_resolver_call_num]
             domain_name_resolver_call_num += 1
             return [resolved_domain_name_address]
 
@@ -1824,7 +1706,8 @@ class Routing(TestkitTestCase):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(self._readServer1, "reader_with_explicit_hello.script")
+        self.start_server(self._readServer1,
+                          "reader_with_explicit_hello.script")
 
         session = driver.session('r', database=self.adb)
         summary = session.run("RETURN 1 as n").consume()
@@ -1835,162 +1718,3 @@ class Routing(TestkitTestCase):
         self.assertEqual(self.server_agent, agent)
         self._routingServer1.done()
         self._readServer1.done()
-
-
-class RoutingV4(Routing):
-    bolt_version = "4.1"
-    server_agent = "Neo4j/4.1.0"
-
-    def get_vars(self, host=None):
-        if host is None:
-            host = self._routingServer1.host
-        v = {
-            "#VERSION#": self.bolt_version,
-            "#HOST#": host,
-            "#SERVER_AGENT#": self.server_agent,
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#ROUTINGCTX#": (
-                '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}'
-            ),
-        }
-
-        return v
-
-    def route_call_count(self, server):
-        return server.count_requests(
-            'RUN "CALL dbms.routing.getRoutingTable('
-        )
-
-    # Ignore this on older protocol versions than 4.3
-    def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
-        pass
-
-    def test_should_send_system_bookmark_with_route(self):
-        pass
-
-    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
-        # passing bookmarks of the system db when fetching the routing table
-        # makes sure that newly (asynchronously) created databases exist.
-        # (causal consistency on database existence)
-        bookmarks = ["sys:1234", "foo:5678"]
-
-        driver = Driver(self._backend, self._uri_with_context, self._auth,
-                        self._userAgent)
-        self.start_server(
-            self._routingServer1, "router_with_bookmarks.script",
-            vars_={
-                "#BOOKMARKS#": ', "bookmarks{}": ' + json.dumps(bookmarks),
-                **self.get_vars()
-            }
-        )
-        self.start_server(self._readServer1, "reader_with_bookmarks.script")
-
-        session = driver.session('r', database=self.adb,
-                                 bookmarks=bookmarks)
-        result = session.run("RETURN 1 as n")
-        sequence = self.collectRecords(result)
-        last_bookmarks = session.lastBookmarks()
-        session.close()
-        driver.close()
-
-        self._routingServer1.done()
-        self._readServer1.done()
-        self.assertEqual([1], sequence)
-        self.assertEqual(["foo:6678"], last_bookmarks)
-
-    def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
-        pass
-
-
-class RoutingV3(Routing):
-    bolt_version = "3"
-    server_agent = "Neo4j/3.5.0"
-
-    def get_vars(self, host=None):
-        if host is None:
-            host = self._routingServer1.host
-        v = {
-            "#VERSION#": self.bolt_version,
-            "#HOST#": host,
-            "#SERVER_AGENT#": self.server_agent,
-            "#ROUTINGCTX#": (
-                '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}'
-            ),
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#EXTR_HELLO_ROUTING_PROPS#": "",
-            "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#": ""
-        }
-
-        if get_driver_name() in ['java']:
-            v["#EXTR_HELLO_ROUTING_PROPS#"] = \
-                ', "routing": ' + v['#ROUTINGCTX#']
-            v["#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#"] = \
-                ', "routing": {"address": "' + host + ':9000"}'
-
-        return v
-
-    adb = None
-
-    def route_call_count(self, server):
-        return server.count_requests(
-            'RUN "CALL dbms.cluster.routing.getRoutingTable('
-        )
-
-    def should_support_multi_db(self):
-        return False
-
-    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
-        pass
-
-    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
-        pass
-
-    def test_should_send_system_bookmark_with_route(self):
-        pass
-
-
-class NoRouting(TestkitTestCase):
-    def setUp(self):
-        super().setUp()
-        self._server = StubServer(9000)
-
-    def tearDown(self):
-        self._server.reset()
-        super().tearDown()
-
-    def get_vars(self):
-        # TODO: "#ROUTING#": "" is the correct way to go
-        #       (minimal data transmission)
-        routing = ""
-        if get_driver_name() in ['java', 'dotnet', 'go']:
-            routing = ', "routing": null'
-        return {
-            "#VERSION#": "4.1",
-            "#SERVER_AGENT#": "Neo4j/4.1.0",
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
-            "#ROUTING#": routing
-        }
-
-    # Checks that routing is disabled when URI is bolt, no routing in HELLO and
-    # no call to retrieve routing table. From bolt >= 4.1 the routing context
-    # is used to disable/enable server side routing.
-    def test_should_read_successfully_using_session_run(self):
-        # Driver is configured to talk to "routing" stub server
-        uri = "bolt://%s" % self._server.address
-        self._server.start(
-            path=self.script_path("v4x1_no_routing", "reader.script"),
-            vars=self.get_vars()
-        )
-        driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
-                                                 credentials="c"),
-                        userAgent="007")
-
-        session = driver.session('r', database="adb")
-        session.run("RETURN 1 as n")
-        session.close()
-        driver.close()
-
-        self._server.done()

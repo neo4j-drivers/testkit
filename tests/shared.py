@@ -45,7 +45,12 @@ class TestkitTestCase(unittest.TestCase):
             self.skipTest(response.reason)
 
         # TODO: remove this compatibility layer when all drivers are adapted
-        id_ = re.sub(r"stub.routing\.[^.]+\.", "stub.routing.", id_)
+        for exp, sub in (
+            (r"^stub.routing\.[^.]+\.", "stub.routing."),
+            (r"^stub.routing.RoutingV4x1.", "stub.routing.RoutingV4."),
+            (r"^stub.routing.RoutingV4x3.", "stub.routing.Routing.")
+        ):
+            id_ = re.sub(exp, sub, id_)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
