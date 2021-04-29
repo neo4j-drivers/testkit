@@ -87,6 +87,7 @@ class AuthorizationTests(TestkitTestCase):
         !: BOLT #VERSION#
         !: AUTO HELLO
         !: AUTO GOODBYE
+        !: AUTO RESET
 
         C: BEGIN {"mode": "r", "db": "adb"}
         S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
@@ -178,6 +179,11 @@ class AuthorizationTests(TestkitTestCase):
             self.assertEqual(
                 'org.neo4j.driver.exceptions.AuthorizationExpiredException',
                 error.errorType)
+        elif driver in ['javascript']:
+            self.assertEqual(
+                'Neo.ClientError.Security.AuthorizationExpired',
+                error.code
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -194,7 +200,7 @@ class AuthorizationTests(TestkitTestCase):
     def test_should_fail_with_auth_expired_on_pull_using_session_run(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'python', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'python', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -217,7 +223,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_begin_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'python', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'python', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -240,7 +246,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_run_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'python', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'python', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -264,7 +270,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_pull_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'python', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'python', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -288,7 +294,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_commit_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'python', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'python', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -313,7 +319,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_rollback_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'python', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'python', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -566,6 +572,7 @@ class AuthorizationTestsV3(AuthorizationTests):
         !: BOLT #VERSION#
         !: AUTO HELLO
         !: AUTO GOODBYE
+        !: AUTO RESET
 
         C: BEGIN {"mode": "r"}
         S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
