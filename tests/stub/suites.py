@@ -10,6 +10,7 @@ import tests.stub.retry as retry
 import tests.stub.transport.test_transport as transport
 import tests.stub.tx_begin_parameters.test_tx_begin_parameters as txparameters
 from tests.stub import authorization
+import tests.stub.serversiderouting as serversiderouting
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -24,6 +25,7 @@ stub_suite.addTests(loader.loadTestsFromModule(authorization))
 stub_suite.addTests(loader.loadTestsFromModule(retry))
 stub_suite.addTests(loader.loadTestsFromModule(transport))
 stub_suite.addTests(loader.loadTestsFromModule(txparameters))
+stub_suite.addTests(loader.loadTestsFromModule(serversiderouting))
 
 stub_suite.addTest(loader.discover(
     "tests.stub",
