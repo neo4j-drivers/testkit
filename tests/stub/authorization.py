@@ -76,6 +76,10 @@ class AuthorizationTests(TestkitTestCase):
            SUCCESS {"type": "r"}
         C: COMMIT
         S: SUCCESS {}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def read_tx_script_with_auth_expired_on_begin(self):
@@ -486,6 +490,10 @@ class AuthorizationTestsV4(AuthorizationTests):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def get_vars(self, host=None):
@@ -512,6 +520,10 @@ class AuthorizationTestsV3(AuthorizationTests):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def read_script_with_auth_expired_on_pull(self):
@@ -543,6 +555,10 @@ class AuthorizationTestsV3(AuthorizationTests):
            SUCCESS {"type": "r"}
         C: COMMIT
         S: SUCCESS {}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def read_tx_script_with_auth_expired_on_begin(self):
