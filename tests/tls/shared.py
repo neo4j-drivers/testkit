@@ -4,8 +4,7 @@ import sys
 import time
 
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken
-
+from nutkit.protocol import AuthorizationToken, DriverError
 
 # Retrieve path to the repository containing this script.
 # Use this path as base for locating a whole bunch of other stuff.
@@ -61,16 +60,19 @@ class TlsServer:
         raise Exception("Timeout")
 
     def _dump(self):
-        print("")
+        sys.stdout.flush()
         print(">>>> Captured TLS server stdout")
         for line in self._process.stdout:
-            sys.stdout.write(line)
+            print(line, end="")
         print("<<<< Captured TLS server stdout")
+
         print(">>>> Captured TLS server stderr")
         for line in self._process.stderr:
-            sys.stdout.write(line)
+            print(line, end="")
         print("<<<< Captured TLS server stderr")
+
         self._close_pipes()
+        sys.stdout.flush()
 
     def _kill(self):
         self._process.kill()
@@ -90,8 +92,8 @@ def try_connect(backend, server, scheme, host):
     driver = Driver(backend, url, auth)
     session = driver.session("r")
     try:
-        result = session.run("RETURN 1 as n")
-    except:
+        session.run("RETURN 1 as n")
+    except DriverError:
         pass
     session.close()
     driver.close()

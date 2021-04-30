@@ -1,7 +1,7 @@
-import json
 import inspect
-import socket
+import json
 import os
+import socket
 
 import nutkit.protocol as protocol
 
@@ -53,11 +53,11 @@ class Backend:
         self._socket.close()
 
     def send(self, req):
-        reqJson = self._encoder.encode(req)
+        req_json = self._encoder.encode(req)
         if debug:
-            print("Request: %s" % reqJson)
+            print("Request: %s" % req_json)
         self._writer.write("#request begin\n")
-        self._writer.write(reqJson+"\n")
+        self._writer.write(req_json+"\n")
         self._writer.write("#request end\n")
         self._writer.flush()
 

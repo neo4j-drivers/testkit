@@ -29,6 +29,7 @@ from socket import (
     socket,
     SOL_SOCKET,
     SO_KEEPALIVE,
+    timeout,
     AF_INET,
     AF_INET6,
 )
@@ -36,6 +37,10 @@ from socketserver import BaseRequestHandler
 
 
 BOLT_PORT_NUMBER = 7687
+
+
+class ReadWakeup(timeout):
+    pass
 
 
 class Address(tuple):
@@ -140,19 +145,10 @@ class Wire(object):
 
     __broken = False
 
-    @classmethod
-    def open(cls, address, timeout=None, keep_alive=False):
-        """ Open a connection to a given network :class:`.Address`.
-        """
-        s = socket(family=address.family)
-        if keep_alive:
-            s.setsockopt(SOL_SOCKET, SO_KEEPALIVE, 1)
-        s.settimeout(timeout)
-        s.connect(address)
-        return cls(s)
-
-    def __init__(self, s):
-        s.settimeout(None)  # ensure wrapped socket is in blocking mode
+    def __init__(self, s, read_wake_up=False):
+        # ensure wrapped socket is in blocking mode but wakes up occasionally
+        # if wake_up == True
+        s.settimeout(.1 if read_wake_up else None)
         self.__socket = s
         self.__input = bytearray()
         self.__output = bytearray()
@@ -182,6 +178,8 @@ class Wire(object):
             requested = max(required, 8192)
             try:
                 received = self.__socket.recv(requested)
+            except timeout:
+                raise ReadWakeup
             except (IOError, OSError):
                 self.__broken = True
                 raise BrokenWireError("Broken")
@@ -211,6 +209,8 @@ class Wire(object):
         while self.__output:
             try:
                 n = self.__socket.send(self.__output)
+            except timeout:
+                continue
             except (IOError, OSError):
                 self.__broken = True
                 raise BrokenWireError("Broken")

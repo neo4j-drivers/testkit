@@ -6,6 +6,7 @@ RUN apt-get update && \
         git \
         tzdata \
         python3 \
+        python3-pip \
         golang \
     && rm -rf /var/lib/apt/lists/*
 

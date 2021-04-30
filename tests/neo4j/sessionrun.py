@@ -19,8 +19,6 @@ class TestSessionRun(TestkitTestCase):
         super().tearDown()
 
     def test_iteration_smaller_than_fetch_size(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
-            self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can
         # handle that.
@@ -40,8 +38,6 @@ class TestSessionRun(TestkitTestCase):
             self.assertEqual(rec, exp)
 
     def test_iteration_larger_than_fetch_size(self):
-        if get_driver_name() not in ['go', 'dotnet', 'javascript', 'java']:
-            self.skipTest("Fetchsize not implemented in backend")
         # Verifies that correct number of records are retrieved and that the
         # parameter is respected. Uses parameter to generate a long list of
         # records.  Typical fetch size is 1000, selected value should be a bit
@@ -62,8 +58,6 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Nested results not working in 4.2 and earlier. "
                           "FIX AND ENABLE in 4.3")
-        if get_driver_name() not in ['go', 'dotnet', 'javascript']:
-            self.skipTest("Fetchsize not implemented in backend")
         # Verifies that it is possible to nest results with small fetch sizes.
         # Auto-commit results does not (as of 4.x) support multiple results on
         # the same connection but that isn't visible when testing at
@@ -132,8 +126,6 @@ class TestSessionRun(TestkitTestCase):
             result.next(), types.Record(values=[types.CypherInt(1)]))
 
     def test_updates_last_bookmark(self):
-        if not get_driver_name() in ['go', 'javascript', 'dotnet']:
-            self.skipTest("result.consume not implemented in backend")
         self._session = self._driver.session("w")
         result = self._session.run("CREATE (n:SessionNode) RETURN n")
         result.consume()

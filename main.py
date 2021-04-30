@@ -251,6 +251,12 @@ def main(settings, configurations):
     if test_flags["TLS_TESTS"]:
         run_fail_wrapper(runner_container.run_tls_tests)
 
+    if not (test_flags["TESTKIT_TESTS"]
+            or test_flags["STRESS_TESTS"]
+            or test_flags["INTEGRATION_TESTS"]):
+        # no need to download any snapshots or start any servers
+        return
+
     """
     Neo4j server test matrix
     """

@@ -18,21 +18,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import signal
 from sys import exit
 
 from argparse import ArgumentParser
 from logging import getLogger, INFO
 
-from boltstub import BoltStubService
-from boltstub.scripting import BoltScript
-from boltstub.watcher import watch
+from . import BoltStubService
+from .parsing import parse_file
+from .watcher import watch
 
 
 log = getLogger(__name__)
 
 
 def main():
+    sigint_count = 0
+    service = None
+
+    def signal_handler(sig, frame):
+        nonlocal sigint_count
+        if service is None:
+            exit(100)  # process killed way too young :'(
+        sigint_count += 1
+        if sigint_count == 1:
+            print("1st SIGINT received. Trying to finish all running scripts.")
+            service.try_skip_to_end_async()
+        elif sigint_count == 2:
+            print("2nd SIGINT received. Closing all connections.")
+            service.close_all_connections_async()
+        if sigint_count > 3:
+            print("3nd SIGINT received. Hard exit.")
+            exit(130)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = ArgumentParser(description="""\
 Run a Bolt stub server.
 
@@ -62,12 +82,11 @@ useful for Bolt client integration testing.
     if parsed.verbose:
         watch("boltstub", INFO)
 
-    scripts = map(BoltScript.load, parsed.script)
+    scripts = map(parse_file, parsed.script)
     service = BoltStubService(*scripts, listen_addr=parsed.listen_addr, timeout=parsed.timeout)
+
     try:
         service.start()
-    except KeyboardInterrupt:
-        exit(130)
     except Exception as e:
         log.error(" ".join(map(str, e.args)))
         log.error("\r\n")
@@ -78,14 +97,18 @@ useful for Bolt client integration testing.
             extra = ""
             if hasattr(error, 'script') and error.script.filename:
                 extra += " in {!r}".format(error.script.filename)
-            if hasattr(error, 'line_no') and error.line_no:
-                extra += " at line {}".format(error.line_no)
             print("Script mismatch{}:\n{}".format(extra, error))
         exit(1)
 
     if service.timed_out:
         print("Timed out")
         exit(2)
+
+    if not service.ever_acted:
+        print("Script never started")
+        exit(3)
+
+    exit(0)
 
 
 if __name__ == "__main__":

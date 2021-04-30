@@ -218,7 +218,7 @@ class TestRetry(TestkitTestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driverName in ["java", 'python', 'javascript', 'dotnet']:
+        if self._driverName in ["java", 'dotnet']:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(script=script_commit_disconnect)
@@ -262,7 +262,7 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_read(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'java']:
+        if get_driver_name() in ['java']:
             self.skipTest("needs ROUTE bookmark list support")
         self._routingServer.start(script=self.router_script_not_retry(), vars=self.get_vars())
         self._readServer.start(script=script_read)
@@ -288,20 +288,12 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
 
     def test_retry_database_unavailable(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
-            self.skipTest("needs ROUTE bookmark list support")
-
         # Simple case, correctly classified transient error
         self._run_with_transient_error(
                 script_retry_with_fail_after_commit,
                 "Neo.TransientError.Database.DatabaseUnavailable")
 
     def test_retry_made_up_transient(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
-            self.skipTest("needs ROUTE bookmark list support")
-
         # Driver should retry all transient error (with some exceptions), make
         # up a transient error and the driver should retry.
         self._run_with_transient_error(
@@ -309,39 +301,24 @@ class TestRetryClustering(TestkitTestCase):
                 "Neo.TransientError.Completely.MadeUp")
 
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['python']:
-            self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
                 "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase")
 
     def test_retry_NotALeader(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['python']:
-            self.skipTest("Sends ROLLBACK after RESET")
 
         self._run_with_transient_error(
                 script_retry_with_fail_after_pull,
                 "Neo.ClientError.Cluster.NotALeader")
 
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
-        if get_driver_name() in ['python']:
-            self.skipTest("Sends ROLLBACK after RESET")
 
         self._routingServer.start(script=self.router_script_swap_reader_and_writer(), vars=self.get_vars())
         # We could probably use AUTO RESET in the script but this makes the
@@ -424,15 +401,14 @@ class TestRetryClustering(TestkitTestCase):
         !: BOLT #VERSION#
         !: AUTO RESET
         !: AUTO GOODBYE
+        !: ALLOW RESTART
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] None
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# [] None
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# [] None
-        S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        {+
+            C: ROUTE #ROUTINGCTX# [] null
+            S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
+        +}
         """
 
     def router_script_swap_reader_and_writer(self):
@@ -443,11 +419,11 @@ class TestRetryClustering(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] None
+        C: ROUTE #ROUTINGCTX# [] null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
-        C: ROUTE #ROUTINGCTX# [] None
+        C: ROUTE #ROUTINGCTX# [] null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
-        C: ROUTE #ROUTINGCTX# [] None
+        C: ROUTE #ROUTINGCTX# [] null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
         """
 
@@ -459,7 +435,7 @@ class TestRetryClustering(TestkitTestCase):
 
         C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
         S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-        C: ROUTE #ROUTINGCTX# [] None
+        C: ROUTE #ROUTINGCTX# [] null
         S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}
         """
 
@@ -473,8 +449,6 @@ class TestRetryClustering(TestkitTestCase):
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
-        if get_driver_name() in ['javascript']:
-            v["#HELLO_ROUTINGCTX#"] = '{"region": "china", "policy": "my_policy"}'
         return v
 
     def get_extra_hello_props(self):
@@ -483,5 +457,3 @@ class TestRetryClustering(TestkitTestCase):
         elif get_driver_name() in ["javascript"]:
             return ', "realm": "", "ticket": ""'
         return ""
-
-

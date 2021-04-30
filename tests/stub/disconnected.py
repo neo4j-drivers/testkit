@@ -25,6 +25,7 @@ script_on_run = """
 C: RUN "RETURN 1 as n" {} {}
 S: <EXIT>
 """
+
 script_on_pull = """
 !: BOLT 4
 !: AUTO HELLO
@@ -33,6 +34,20 @@ script_on_pull = """
 C: RUN "RETURN 1 as n" {} {}
 C: PULL {"n": 1000}
 S: <EXIT>
+"""
+
+script_on_reset = """
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {}
+C: RESET
+S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to reset"}
 """
 
 
@@ -77,8 +92,6 @@ class SessionRunDisconnected(TestkitTestCase):
     def test_disconnect_on_hello(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt HELLO message.
-        if self._driverName in ['python']:
-            self.skipTest("No support for custom user-agent in backend")
         self._server.start(script=script_on_hello, vars=self.get_vars())
         step = self._run()
         self._session.close()
@@ -86,43 +99,52 @@ class SessionRunDisconnected(TestkitTestCase):
         self._server.done()
 
         expectedStep = "after first next"
-        if self._driverName in ["go", "java", "dotnet"]:
+        if self._driverName in ["go", "java", "dotnet", "python"]:
             expectedStep = "after run"
         self.assertEqual(step, expectedStep)
 
     def test_disconnect_on_run(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt run message.
-        if self._driverName in ['python']:
-            self.skipTest("Too raw error handling")
         self._server.start(script=script_on_run)
         step = self._run()
         self._session.close()
         self._driver.close()
         self._server.done()
 
-        expectedStep = "after first next"
-        if self._driverName in ["go"]:
+        expected_step = "after first next"
+        if self._driverName in ["go", "python"]:
             # Go reports this error earlier
-            expectedStep = "after run"
-        self.assertEqual(step, expectedStep)
+            expected_step = "after run"
+        self.assertEqual(step, expected_step)
 
     def test_disconnect_on_pull(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt PULL message.
-        if self._driverName in ['python']:
-            self.skipTest("Too raw error handling")
         self._server.start(script=script_on_pull)
         step = self._run()
         self._session.close()
         self._driver.close()
         self._server.done()
 
-        expectedStep = "after first next"
-        if self._driverName in ["go"]:
+        expected_step = "after first next"
+        if self._driverName in ["go", "python"]:
             # Go reports this error earlier
-            expectedStep = "after run"
-        self.assertEqual(step, expectedStep)
+            expected_step = "after run"
+        self.assertEqual(step, expected_step)
+
+    def test_fail_on_reset(self):
+        self._server.start(script=script_on_reset)
+        step = self._run()
+        self._session.close()
+        accept_count = self._server.count_responses("<ACCEPT>")
+        hangup_count = self._server.count_responses("<HANGUP>")
+        active_connections = accept_count - hangup_count
+        self._server.done()
+        self.assertEqual(step, "success")
+        self.assertEqual(accept_count, 1)
+        self.assertEqual(hangup_count, 1)
+        self.assertEqual(active_connections, 0)
 
     def get_vars(self):
         return {
