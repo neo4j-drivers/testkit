@@ -14,6 +14,9 @@ def get_extra_hello_props():
         return ', "realm": "", "ticket": ""'
     return ""
 
+# TODO: find a way to test that driver ditches all open connection in the pool
+#       when encountering Neo.ClientError.Security.AuthorizationExpired
+
 
 class AuthorizationTests(TestkitTestCase):
     def setUp(self):
