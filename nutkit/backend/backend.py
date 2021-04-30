@@ -52,7 +52,11 @@ class Backend:
         self._socket.shutdown(socket.SHUT_RDWR)
         self._socket.close()
 
-    def send(self, req):
+    def send(self, req, hooks=None):
+        if hooks:
+            hook = hooks.get("on_send_" + req.__class__.__name__, None)
+            if callable(hook):
+                hook(req)
         req_json = self._encoder.encode(req)
         if debug:
             print("Request: %s" % req_json)
@@ -61,7 +65,7 @@ class Backend:
         self._writer.write("#request end\n")
         self._writer.flush()
 
-    def receive(self, timeout=default_timeout):
+    def receive(self, timeout=default_timeout, hooks=None):
         self._socket.settimeout(timeout)
         response = ""
         in_response = False
@@ -83,6 +87,11 @@ class Backend:
                 except json.decoder.JSONDecodeError:
                     raise Exception("Failed to decode: %s" % response)
 
+                if hooks:
+                    hook = hooks.get("on_receive_" + res.__class__.__name__,
+                                     None)
+                    if callable(hook):
+                        hook(res)
                 # All received errors are raised as exceptions
                 if isinstance(res, protocol.BaseError):
                     raise res
@@ -104,6 +113,6 @@ class Backend:
                     elif debug:
                         print("[BACKEND]: %s" % line)
 
-    def sendAndReceive(self, req, timeout=default_timeout):
-        self.send(req)
-        return self.receive(timeout)
+    def sendAndReceive(self, req, timeout=default_timeout, hooks=None):
+        self.send(req, hooks=hooks)
+        return self.receive(timeout, hooks=hooks)
