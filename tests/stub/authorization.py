@@ -76,6 +76,10 @@ class AuthorizationTests(TestkitTestCase):
            SUCCESS {"type": "r"}
         C: COMMIT
         S: SUCCESS {}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def read_tx_script_with_auth_expired_on_begin(self):
@@ -83,6 +87,7 @@ class AuthorizationTests(TestkitTestCase):
         !: BOLT #VERSION#
         !: AUTO HELLO
         !: AUTO GOODBYE
+        !: AUTO RESET
 
         C: BEGIN {"mode": "r", "db": "adb"}
         S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
@@ -180,6 +185,9 @@ class AuthorizationTests(TestkitTestCase):
             self.assertEqual(
                 "<class 'neo4j.exceptions.TransientError'>", error.errorType
             )
+        elif driver in ['javascript']:
+            # only test for code
+            pass
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -208,7 +216,7 @@ class AuthorizationTests(TestkitTestCase):
     def test_should_fail_with_auth_expired_on_pull_using_session_run(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -232,7 +240,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_begin_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -259,7 +267,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_run_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -284,7 +292,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_pull_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -309,7 +317,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_commit_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -335,7 +343,7 @@ class AuthorizationTests(TestkitTestCase):
 
     def test_should_fail_with_auth_expired_on_rollback_using_tx_run(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -471,7 +479,6 @@ class AuthorizationTests(TestkitTestCase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collectRecords(result))
 
-
         session.readTransaction(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), self.read_tx_script()
@@ -542,6 +549,10 @@ class AuthorizationTestsV4(AuthorizationTests):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def get_vars(self, host=None):
@@ -568,6 +579,10 @@ class AuthorizationTestsV3(AuthorizationTests):
         S: SUCCESS {"fields": ["ttl", "servers"]}
         S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
         S: SUCCESS {"type": "r"}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def read_script_with_auth_expired_on_pull(self):
@@ -599,6 +614,10 @@ class AuthorizationTestsV3(AuthorizationTests):
            SUCCESS {"type": "r"}
         C: COMMIT
         S: SUCCESS {}
+        {?
+            C: RESET
+            S: SUCCESS {}
+        ?}
         """
 
     def read_tx_script_with_auth_expired_on_begin(self):
@@ -606,6 +625,7 @@ class AuthorizationTestsV3(AuthorizationTests):
         !: BOLT #VERSION#
         !: AUTO HELLO
         !: AUTO GOODBYE
+        !: AUTO RESET
 
         C: BEGIN {"mode": "r"}
         S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}

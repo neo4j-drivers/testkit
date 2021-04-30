@@ -2527,7 +2527,7 @@ class Routing(TestkitTestCase):
     def test_should_successfully_get_server_protocol_version(self):
         # TODO remove this block and make server info mandatory in
         # TODO responses.Summary once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['go']:
             self.skipTest("the summary message must include server info")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
@@ -2553,7 +2553,7 @@ class Routing(TestkitTestCase):
     def test_should_successfully_get_server_agent(self):
         # TODO remove this block and make server info mandatory in
         # TODO responses.Summary once all languages work
-        if get_driver_name() in ['dotnet', 'go', 'javascript']:
+        if get_driver_name() in ['go']:
             self.skipTest("the summary message must include server info")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
