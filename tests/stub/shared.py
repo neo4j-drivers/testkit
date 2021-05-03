@@ -38,6 +38,7 @@ class StubServer:
         self._stderr_buffer = Queue()
         self._stderr_lines = []
         self._pipes_closed = False
+        self._script_path = None
 
     def start(self, path=None, script=None, vars=None):
         if self._process:
@@ -54,14 +55,25 @@ class StubServer:
         else:
             python_command = "python3"
 
+        if path and script:
+            raise ValueError("Specify either path or script.")
+
+        script_fn = "temp.script"
+        if vars:
+            if path:
+                script_fn = os.path.basename(path)
+                with open(path, "r") as f:
+                    script = f.read()
+            for v in vars:
+                script = script.replace(v, str(vars[v]))
         if script:
             tempdir = tempfile.gettempdir()
-            path = os.path.join(tempdir, "temp.script")
-            if vars is not None:
-                for v in vars:
-                    script = script.replace(v, str(vars[v]))
+            path = os.path.join(tempdir, script_fn)
             with open(path, "w") as f:
                 f.write(script)
+                f.flush()
+                os.fsync(f)
+            self._script_path = path
 
         self._process = subprocess.Popen([python_command,
                                           "-m",
@@ -94,14 +106,30 @@ class StubServer:
 
         # Double check that the process started, a missing script would exit
         # process immediately
-        if self._process.poll():
-            self._dump()
-            self._process = None
-            raise StubServerUncleanExit("Stub server crashed on start-up")
+        try:
+            if self._process.poll():
+                self._dump()
+                self._clean_up()
+                raise StubServerUncleanExit("Stub server crashed on start-up")
+        finally:
+            self._rm_tmp_script()
 
     def __del__(self):
+        self._clean_up()
+
+    def _rm_tmp_script(self):
+        if self._script_path:
+            try:
+                os.remove(self._script_path)
+            except OSError:
+                pass
+            self._script_path = None
+
+    def _clean_up(self):
         if self._process:
             self._process.kill()
+        self._process = None
+        self._rm_tmp_script()
 
     def _read_pipes(self):
         while True:
@@ -137,7 +165,7 @@ class StubServer:
         if self._process.returncode > 0:
             self._dump()
         self._read_pipes()
-        self._process = None
+        self._clean_up()
 
     def _poll(self, timeout):
         polls = int(timeout * 10)
@@ -199,7 +227,7 @@ class StubServer:
             raise
         finally:
             self._read_pipes()
-            self._process = None
+            self._clean_up()
 
     def reset(self):
         """Make sure the sever is stopped and ready to start a new script.

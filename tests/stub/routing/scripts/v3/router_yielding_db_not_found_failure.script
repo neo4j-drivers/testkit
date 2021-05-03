@@ -1,0 +1,2 @@
+# Empty script that will cause an error if loaded!
+# Reason: No multi db support in Bolt v3
