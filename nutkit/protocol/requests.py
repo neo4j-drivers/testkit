@@ -27,6 +27,13 @@ class StartTest:
         self.testName = test_name
 
 
+class GetFeatures:
+    """ Request the backend to the list of features supported by the driver.
+    The backend should respond with FeatureList.
+    """
+    pass
+
+
 class NewDriver:
     """ Request to create a new driver instance on the backend.
     Backend should respond with a Driver response or an Error response.

@@ -15,6 +15,7 @@ import unittest
 
 from nutkit import protocol
 from nutkit.backend import Backend
+import warnings
 
 
 def get_backend_host_and_port():
@@ -30,6 +31,62 @@ def new_backend():
     return Backend(host, port)
 
 
+def driver_feature(feature):
+    if not isinstance(feature, protocol.Feature):
+        raise Exception('The argument should be instance of Feature')
+
+    def get_valid_test_case(*args, **kwargs):
+        if not args or not isinstance(args[0], TestkitTestCase):
+            raise Exception('Should only decorate TestkitTestCase methods')
+        return args[0]
+
+    def driver_feature_decorator(func):
+        def wrapper(*args, **kwargs):
+            test_case = get_valid_test_case(*args, **kwargs)
+            if (feature.value not in test_case._driver_features):
+                test_case.skipTest("Needs support for %s" % feature.value)
+            return func(*args, **kwargs)
+        return wrapper
+    return driver_feature_decorator
+
+
+class MemoizedSupplier:
+    """ Momoize the function it annotates.
+    This way the decorated function will always return the
+    same value of the first interaction independent of the
+    supplied params.
+    """
+
+    def __init__(self, func):
+        self._func = func
+        self._memo = None
+
+    def __call__(self, *args, **kwargs):
+        if self._memo is None:
+            self._memo = self._func(*args, **kwargs)
+        return self._memo
+
+
+@MemoizedSupplier
+def get_driver_features(backend):
+    # TODO Remove when dotnet implements the GetFeature message
+    if get_driver_name() in ['dotnet']:
+        warnings.warn("Driver does not implements GetFeatures.")
+        features = ()
+        return features
+
+    try:
+        response = backend.sendAndReceive(protocol.GetFeatures())
+        if not isinstance(response, protocol.FeatureList):
+            raise Exception("Response is not instance of FeatureList")
+        features = tuple(response.features)
+    except Exception as e:
+        warnings.warn("Could not fetch FeatureList: %s" % e)
+        features = ()
+
+    return features
+
+
 def get_driver_name():
     return os.environ['TEST_DRIVER_NAME']
 
@@ -40,6 +97,7 @@ class TestkitTestCase(unittest.TestCase):
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
         self._backend = new_backend()
         self.addCleanup(self._backend.close)
+        self._driver_features = get_driver_features(self._backend)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
