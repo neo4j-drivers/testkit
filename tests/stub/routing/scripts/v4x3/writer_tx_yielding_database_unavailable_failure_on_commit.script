@@ -1,0 +1,14 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"db": "adb"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database shut down."}
+   <EXIT>

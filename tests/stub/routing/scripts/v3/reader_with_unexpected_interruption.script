@@ -1,0 +1,8 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: RUN "RETURN 1 as n" {} {"mode": "r"}
+   PULL_ALL
+S: <EXIT>

@@ -373,7 +373,7 @@ class AuthorizationTests(TestkitTestCase):
     def test_should_retry_on_auth_expired_on_begin_using_tx_function(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go','dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -415,7 +415,7 @@ class AuthorizationTests(TestkitTestCase):
     def test_should_retry_on_auth_expired_on_run_using_tx_function(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -457,7 +457,7 @@ class AuthorizationTests(TestkitTestCase):
     def test_should_retry_on_auth_expired_on_pull_using_tx_function(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -499,7 +499,7 @@ class AuthorizationTests(TestkitTestCase):
     def test_should_retry_on_auth_expired_on_commit_using_tx_function(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)

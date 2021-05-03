@@ -1,0 +1,10 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: RUN "RETURN 1 as n" {} {"db": "adb"}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "w"}

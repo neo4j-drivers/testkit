@@ -43,6 +43,10 @@ class Backend:
         try:
             self._socket.connect((address, port))
         except ConnectionRefusedError:
+            try:
+                self._socket.close()
+            except OSError:
+                pass
             raise Exception("Driver backend is not running or is not listening on port %d or is just refusing connections" % port)
         self._encoder = Encoder()
         self._reader = self._socket.makefile(mode='r', encoding='utf-8')
