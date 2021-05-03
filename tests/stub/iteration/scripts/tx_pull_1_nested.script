@@ -1,0 +1,30 @@
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "CYPHER" {} {}
+   PULL {"n": 1}
+S: SUCCESS {"fields": ["x"], "qid": 1}
+   RECORD ["1_1"]
+   SUCCESS {"has_more": true}
+C: RUN "CYPHER" {} {}
+   PULL {"n": 1}
+S: SUCCESS {"fields": ["x"], "qid": 2}
+   RECORD ["2_1"]
+   SUCCESS {"has_more": true}
+C: PULL {"n": 1, "qid": 2}
+S: RECORD ["2_2"]
+   SUCCESS {"has_more": false}
+C: PULL {"n": 1, "qid": 1}
+S: RECORD ["1_2"]
+   SUCCESS {"has_more": false}
+C: RUN "CYPHER" {} {}
+   PULL {"n": 1}
+S: SUCCESS {"fields": ["x"], "qid": 3}
+   RECORD ["3_1"]
+   SUCCESS {"has_more": false}
+C: COMMIT
+S: SUCCESS {"bookmark": "bm"}
