@@ -1164,6 +1164,12 @@ class RoutingV4x3(RoutingBase):
                                  database=self.adb)
         sequences = []
         self._routingServer1.done()
+        try:
+            driver.verifyConnectivity()
+        except types.DriverError:
+            # make sure the driver noticed that its old connection to
+            # _routingServer1 is dead
+            pass
         self.start_server(self._routingServer1, "router_adb.script")
 
         def work(tx):
