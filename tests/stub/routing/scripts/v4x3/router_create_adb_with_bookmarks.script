@@ -5,9 +5,9 @@
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 C: BEGIN {"db": "system"}
-   RUN "CREATE database foo" {} {}
 S: SUCCESS {}
-C: PULL {"n": 1000}
+C: RUN "CREATE database foo" {} {}
+   PULL {"n": 1000}
 S: SUCCESS {"fields": []}
    SUCCESS {"type": "w"}
 C: COMMIT

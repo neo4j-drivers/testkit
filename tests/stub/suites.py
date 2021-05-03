@@ -14,6 +14,7 @@ import tests.stub.sessionparameters as sessionparameters
 import tests.stub.transport as transport
 import tests.stub.txparameters as txparameters
 import tests.stub.versions as versions
+from tests.stub import authorization
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -24,6 +25,7 @@ from tests.testenv import (
 loader = unittest.TestLoader()
 
 stub_suite = unittest.TestSuite()
+stub_suite.addTests(loader.loadTestsFromModule(authorization))
 stub_suite.addTests(loader.loadTestsFromModule(retry))
 stub_suite.addTests(loader.loadTestsFromModule(transport))
 stub_suite.addTests(loader.loadTestsFromModule(disconnected))
