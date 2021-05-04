@@ -576,3 +576,33 @@ def test_checks_command_server_lines(version, command, exists):
         with pytest.raises(parsing.LineError) as exc:
             parsing.parse(script)
         assert exc.value.line.line_number == 3
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(3, None, {1}))
+def test_comments(extra_ws):
+    script = "!: BOLT 4.3\nC: HELLO%s#%sCOMMENT !%sS: SUCCESS" % extra_ws
+    script = parsing.parse(script)
+    assert_dialogue_blocks_block_list(script.block_list,
+                                      ["C: HELLO", "S: SUCCESS"])
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(3, {2}, {1}))
+def test_comments_at_end(extra_ws):
+    script = "!: BOLT 4.3\nC: HELLO\nS: SUCCESS%s#%sCOMMENT !%s" % extra_ws
+    script = parsing.parse(script)
+    assert_dialogue_blocks_block_list(script.block_list,
+                                      ["C: HELLO", "S: SUCCESS"])
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0}, {1}))
+def test_comment_before_bang_line(extra_ws):
+    script = "%s#%sCOMMENT !%s!: BOLT 4.3\nC: HELLO" % extra_ws
+    script = parsing.parse(script)
+    assert_dialogue_blocks_block_list(script.block_list, ["C: HELLO"])
+
+
+def test_comment_like_field(unverified_script):
+    script = 'C: MSG "# NOT a comment"'
+    script = parsing.parse(script)
+    assert_dialogue_blocks_block_list(script.block_list,
+                                      ['C: MSG "# NOT a comment"'])

@@ -1,0 +1,13 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {"db": "adb"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
+   IGNORED
+C: RESET
+S: SUCCESS {}
