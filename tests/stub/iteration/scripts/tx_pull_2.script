@@ -1,0 +1,18 @@
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "CYPHER" {} {}
+   PULL {"n": 2}
+S: SUCCESS {"fields": ["x"], "qid": 7}
+   RECORD [1]
+   RECORD [2]
+   SUCCESS {"has_more": true}
+C: PULL {"n": 2, "qid": 7}
+S: RECORD [3]
+   SUCCESS {"has_more": false}
+C: COMMIT
+S: SUCCESS {"bookmark": "bm"}

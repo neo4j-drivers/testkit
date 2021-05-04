@@ -10,48 +10,8 @@ from tests.stub.shared import StubServer
 # Indirectly tests implementation of custom user-agent
 customUserAgent = "Modesty"
 
-# Scripts that disconnects on different parts of a session
-script_on_hello = """
-!: BOLT 4
 
-C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass" #EXTRA_HELLO_PARAMS# }
-S: <EXIT>
-"""
-script_on_run = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
-
-C: RUN "RETURN 1 as n" {} {}
-S: <EXIT>
-"""
-
-script_on_pull = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
-
-C: RUN "RETURN 1 as n" {} {}
-C: PULL {"n": 1000}
-S: <EXIT>
-"""
-
-script_on_reset = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO GOODBYE
-!: AUTO RESET
-C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
-   SUCCESS {}
-C: RESET
-S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to reset"}
-"""
-
-
-class SessionRunDisconnected(TestkitTestCase):
+class TestDisconnects(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
@@ -92,7 +52,8 @@ class SessionRunDisconnected(TestkitTestCase):
     def test_disconnect_on_hello(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt HELLO message.
-        self._server.start(script=script_on_hello, vars=self.get_vars())
+        self._server.start(path=self.script_path("exit_after_hello.script"),
+                           vars=self.get_vars())
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -106,7 +67,7 @@ class SessionRunDisconnected(TestkitTestCase):
     def test_disconnect_on_run(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt run message.
-        self._server.start(script=script_on_run)
+        self._server.start(path=self.script_path("exit_after_run.script"))
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -121,7 +82,7 @@ class SessionRunDisconnected(TestkitTestCase):
     def test_disconnect_on_pull(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt PULL message.
-        self._server.start(script=script_on_pull)
+        self._server.start(path=self.script_path("exit_after_pull.script"))
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -133,8 +94,12 @@ class SessionRunDisconnected(TestkitTestCase):
             expected_step = "after run"
         self.assertEqual(step, expected_step)
 
+    # FIXME: This test doesn't really fit here. It tests FAILURE handling, not
+    #        handling sudden loss of connectivity.
     def test_fail_on_reset(self):
-        self._server.start(script=script_on_reset)
+        self._server.start(path=self.script_path(
+            "failure_on_reset_after_success.script"
+        ))
         step = self._run()
         self._session.close()
         accept_count = self._server.count_responses("<ACCEPT>")
