@@ -1679,8 +1679,6 @@ class RoutingV4x3(RoutingBase):
         # TODO responses.Summary once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("the summary message must include server info")
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("returns wrong protocol version")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -1705,8 +1703,6 @@ class RoutingV4x3(RoutingBase):
         # TODO responses.Summary once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("the summary message must include server info")
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("returns wrong server version")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         userAgent=self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
