@@ -45,30 +45,32 @@ class TestkitTestCase(unittest.TestCase):
             self.skipTest(response.reason)
 
         # TODO: remove this compatibility layer when all drivers are adapted
-        for exp, sub in (
-            (r"^stub\.bookmarks\.test_bookmarks\.TestBookmarks",
-             "stub.bookmark.Tx"),
-            (r"^stub\.disconnects\.test_disconnects\.TestDisconnects",
-             "stub.disconnected. SessionRunDisconnected"),
-            (r"^stub\.iteration\.[^.]+\.TestIterationSessionRun",
-             "stub.iteration.SessionRun"),
-            (r"^stub\.iteration\.[^.]+\.TestIterationTxRun",
-             "stub.iteration.TxRun"),
-            (r"^stub\.retry\.[^.]+\.", "stub.retry."),
-            (r"^stub\.routing\.[^.]+\.", "stub.routing."),
-            (r"^stub\.routing\.RoutingV4x1\.", "stub.routing.RoutingV4."),
-            (r"^stub\.routing\.RoutingV4x3\.", "stub.routing.Routing."),
-            (r"^stub\.session_run_parameters\."
-             r"[^.]+\.TestSessionRunParameters\.",
-             "stub.sessionparameters.SessionRunParameters."),
-            (r"^stub\.tx_begin_parameters\.[^.]+\.TestTxBeginParameters\.",
-             "stub.txparameters.TxBeginParameters."),
-            (r"^stub\.versions\.[^.]+\.TestProtocolVersions",
-             "stub.versions.ProtocolVersions"),
-            (r"^stub\.transport\.[^.]+\.TestTransport\.",
-             "stub.transport.Transport."),
-        ):
-            id_ = re.sub(exp, sub, id_)
+        if get_driver_name() in ("python", "java", "javascript",
+                                 "go", "dotnet"):
+            for exp, sub in (
+                (r"^stub\.bookmarks\.test_bookmarks\.TestBookmarks",
+                 "stub.bookmark.Tx"),
+                (r"^stub\.disconnects\.test_disconnects\.TestDisconnects.",
+                 "stub.disconnected.SessionRunDisconnected."),
+                (r"^stub\.iteration\.[^.]+\.TestIterationSessionRun",
+                 "stub.iteration.SessionRun"),
+                (r"^stub\.iteration\.[^.]+\.TestIterationTxRun",
+                 "stub.iteration.TxRun"),
+                (r"^stub\.retry\.[^.]+\.", "stub.retry."),
+                (r"^stub\.routing\.[^.]+\.", "stub.routing."),
+                (r"^stub\.routing\.RoutingV4x1\.", "stub.routing.RoutingV4."),
+                (r"^stub\.routing\.RoutingV4x3\.", "stub.routing.Routing."),
+                (r"^stub\.session_run_parameters\."
+                 r"[^.]+\.TestSessionRunParameters\.",
+                 "stub.sessionparameters.SessionRunParameters."),
+                (r"^stub\.tx_begin_parameters\.[^.]+\.TestTxBeginParameters\.",
+                 "stub.txparameters.TxBeginParameters."),
+                (r"^stub\.versions\.[^.]+\.TestProtocolVersions",
+                 "stub.versions.ProtocolVersions"),
+                (r"^stub\.transport\.[^.]+\.TestTransport\.",
+                 "stub.transport.Transport."),
+            ):
+                id_ = re.sub(exp, sub, id_)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
