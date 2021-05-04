@@ -1,0 +1,9 @@
+!: BOLT 4.0
+!: AUTO RESET
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: RUN "RETURN 1 AS n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n.name"]}
+   SUCCESS {"type": "w"}

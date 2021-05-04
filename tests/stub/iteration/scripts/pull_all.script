@@ -1,0 +1,15 @@
+!: BOLT 4
+!: AUTO RESET
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: RUN "RETURN 1 AS n" {} {}
+   PULL { "n": -1 }
+S: SUCCESS {"fields": ["n.name"]}
+   RECORD ["1"]
+   RECORD ["2"]
+   RECORD ["3"]
+   RECORD ["4"]
+   RECORD ["5"]
+   RECORD ["6"]
+   SUCCESS {"type": "w"}

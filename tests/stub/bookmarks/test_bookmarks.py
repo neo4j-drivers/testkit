@@ -1,79 +1,15 @@
+import json
+
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
+
 # TODO: Tests for 3.5 (no support for PULL n)
-script_commit = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO GOODBYE
-!: AUTO RESET
-C: BEGIN {}
-S: SUCCESS {}
-C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["n"]}
-   SUCCESS {"type": "w"}
-C: COMMIT
-S: SUCCESS {"bookmark": "bm"}
-"""
-
-send_and_receive_bookmark_read_tx = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
-!: AUTO GOODBYE
-C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx42"], "mode": "r"}
-S: SUCCESS {}
-C: RUN "MATCH (n) RETURN n.name AS name" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["name"]}
-   SUCCESS {}
-C: COMMIT
-S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
-"""
-
-send_and_receive_bookmark_write_tx = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
-!: AUTO GOODBYE
-C: BEGIN {"bookmarks": #BOOKMARKS# }
-S: SUCCESS {}
-C: RUN "MATCH (n) RETURN n.name AS name" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["name"]}
-   SUCCESS {}
-C: COMMIT
-S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
-"""
-
-sequecing_writing_and_reading_tx = """
-!: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
-!: AUTO GOODBYE
-C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx42"]}
-S: SUCCESS {}
-C: RUN "MATCH (n) RETURN n.name AS name" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["name"]}
-   SUCCESS {}
-C: COMMIT
-S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
-C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx4242"]}
-S: SUCCESS {}
-C: RUN "MATCH (n) RETURN n.name AS name" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["name"]}
-   SUCCESS {}
-C: COMMIT
-S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
-"""
 
 # Tests bookmarks from transaction
-class Tx(TestkitTestCase):
+class TestBookmarks(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
@@ -89,8 +25,9 @@ class Tx(TestkitTestCase):
 
     # Tests that a committed transaction can return the last bookmark
     def test_last_bookmark(self):
-
-        self._server.start(script=script_commit)
+        self._server.start(
+            path=self.script_path("send_bookmark_write_tx.script")
+        )
         session = self._driver.session("w")
         tx = session.beginTransaction()
         tx.run("RETURN 1 as n")
@@ -104,7 +41,7 @@ class Tx(TestkitTestCase):
 
     def test_send_and_receive_bookmarks_read_tx(self):
         self._server.start(
-            script=send_and_receive_bookmark_read_tx
+            path=self.script_path("send_and_receive_bookmark_read_tx.script")
         )
         session = self._driver.session(
             accessMode="r",
@@ -121,7 +58,7 @@ class Tx(TestkitTestCase):
 
     def test_send_and_receive_bookmarks_write_tx(self):
         self._server.start(
-            script=send_and_receive_bookmark_write_tx,
+            path=self.script_path("send_and_receive_bookmark_write_tx.script"),
             vars={
                 "#BOOKMARKS#": '["neo4j:bookmark:v1:tx42"]'
             }
@@ -140,9 +77,9 @@ class Tx(TestkitTestCase):
         self._server.done()
 
     def test_sequece_of_writing_and_reading_tx(self):
-        self._server.start(
-            script=sequecing_writing_and_reading_tx
-        )
+        self._server.start(path=self.script_path(
+            "send_and_receive_bookmark_two_write_tx.script"
+        ))
         session = self._driver.session(
             accessMode="w",
             bookmarks=["neo4j:bookmark:v1:tx42"]
@@ -167,7 +104,7 @@ class Tx(TestkitTestCase):
 
     def test_send_and_receive_multiple_bookmarks_write_tx(self):
         self._server.start(
-            script=send_and_receive_bookmark_write_tx,
+            path=self.script_path("send_and_receive_bookmark_write_tx.script"),
             vars={
                 "#BOOKMARKS#":
                 '["neo4j:bookmark:v1:tx42", "neo4j:bookmark:v1:tx43"]'
