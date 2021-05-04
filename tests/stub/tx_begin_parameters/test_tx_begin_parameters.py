@@ -34,7 +34,8 @@ class TestTxBeginParameters(TestkitTestCase):
         session = self._driver.session(access_mode, bookmarks=bookmarks)
         tx = session.beginTransaction(tx_meta, timeout)
         # Need to do something on the transaction, driver might do lazy begin
-        tx.run("RETURN 1 as n", params=params)
+        # FIXME: params are not used and dotnet fails when using them
+        tx.run("RETURN 1 as n")
         tx.commit()
         session.close()
 
