@@ -730,7 +730,7 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
         self._server.reset()
         super().tearDown()
 
-    def read_return_1_failure_return_2_succeed_script(self):
+    def read_return_1_failure_return_2_and_3_succeed_script(self):
         return """
         !: BOLT 4
         !: AUTO HELLO
@@ -747,7 +747,23 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
                 S: <EXIT>
             ----
                 C: RUN "RETURN 2 as n" {} {"mode": "r"}
-                C: PULL {"n": 1000}
+                S: SUCCESS {"fields": ["n"]}
+                {+
+                    C: PULL {"n": 1}
+                    S: RECORD [1]
+                    SUCCESS {"type": "r", "has_more": true}
+                +}
+                {{
+                    C: DISCARD {"n": -1}
+                    S: SUCCESS {}
+                ----
+                    C: PULL {"n": -1}
+                    S: RECORD [1]
+                       SUCCESS {}
+                }}
+            ----
+                C: RUN "RETURN 3 as n" {} {"mode": "r"}
+                C: PULL {"n": "*"}
                 S: SUCCESS {"fields": ["n"]}
                    RECORD [1]
                    SUCCESS {"type": "r"}
@@ -759,12 +775,12 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
     @driver_feature(types.Feature.AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_drop_connection_after_AuthorizationExpired(self):
         self._server.start(
-            script=self.read_return_1_failure_return_2_succeed_script()
+            script=self.read_return_1_failure_return_2_and_3_succeed_script()
         )
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
 
-        session1 = driver.session('r')
+        session1 = driver.session('r', fetchSize=1)
         session2 = driver.session('r')
 
         session1.run('RETURN 2 as n').next()
@@ -782,25 +798,26 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
         # fetching another connection and run a query to force
         # drivers which lazy close the connection do it
         session3 = driver.session('r')
-        session3.run('RETURN 2 as n').next()
+        session3.run('RETURN 3 as n').next()
         session3.close()
 
         hangup_count = self._server.count_responses("<HANGUP>")
 
         self.assertEqual(accept_count, hangup_count)
+        self.assertGreaterEqual(accept_count, 2)
 
         driver.close()
 
     @driver_feature(types.Feature.AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(self):
         self._server.start(
-            script=self.read_return_1_failure_return_2_succeed_script()
+            script=self.read_return_1_failure_return_2_and_3_succeed_script()
         )
 
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
 
-        session1 = driver.session('r')
+        session1 = driver.session('r', fetchSize=1)
         session2 = driver.session('r')
 
         session1.run('RETURN 2 as n').next()
