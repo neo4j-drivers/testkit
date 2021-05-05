@@ -2,6 +2,8 @@
 
 Uses environment variables for configuration:
 """
+
+import errno
 import os
 import platform
 from queue import (
@@ -15,6 +17,16 @@ import sys
 import tempfile
 from threading import Thread
 import time
+
+
+if platform.system() == "Windows":
+    INTERRUPT = signal.CTRL_BREAK_EVENT
+    INTERRUPT_EXIT_CODE = 3221225786  # oh Windows, you absolute beauty
+    POPEN_EXTRA_KWARGS = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+else:
+    INTERRUPT = signal.SIGINT
+    INTERRUPT_EXIT_CODE = -signal.SIGINT
+    POPEN_EXTRA_KWARGS = {}
 
 
 class StubServerUncleanExit(Exception):
@@ -50,11 +62,6 @@ class StubServer:
         self._stderr_lines = []
         self._pipes_closed = False
 
-        if platform.system() == "Windows":
-            python_command = "python"
-        else:
-            python_command = "python3"
-
         if path and script:
             raise ValueError("Specify either path or script.")
 
@@ -75,17 +82,15 @@ class StubServer:
                 os.fsync(f)
             self._script_path = path
 
-        self._process = subprocess.Popen([python_command,
-                                          "-m",
-                                          "boltstub",
-                                          "-l",
-                                          "0.0.0.0:%d" % self.port,
-                                          "-v",
-                                          path],
-                                         stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         close_fds=True,
-                                         encoding='utf-8')
+        self._process = subprocess.Popen(
+            [
+                sys.executable, "-m", "boltstub", "-l",
+                "0.0.0.0:%d" % self.port, "-v", path
+            ],
+            **POPEN_EXTRA_KWARGS,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True,
+            encoding='utf-8'
+        )
 
         Thread(target=_poll_pipe,
                daemon=True,
@@ -169,17 +174,28 @@ class StubServer:
 
     def _poll(self, timeout):
         polls = int(timeout * 10)
-        while polls:
+        while True:
             self._process.poll()
             if self._process.returncode is None:
-                time.sleep(0.1)
-                polls -= 1
+                if polls > 0:
+                    polls -= 1
+                    time.sleep(0.1)
+                else:
+                    break
             else:
                 return True
         return False
 
     def _interrupt(self, timeout=5.):
-        self._process.send_signal(signal.SIGINT)
+        try:
+            os.kill(self._process.pid, INTERRUPT)
+        except OSError as e:
+            if e.errno == errno.ESRCH:  # No such process
+                # Process already dead
+                # Note: Windows won't complain if there is no such process
+                return True
+            else:
+                raise
         return self._poll(timeout)
 
     def done(self):
@@ -216,7 +232,7 @@ class StubServer:
                 self._process.kill()
                 self._process.wait()
                 raise StubServerUncleanExit("Stub server hanged.")
-            if self._process.returncode not in (0, -signal.SIGINT):
+            if self._process.returncode not in (0, INTERRUPT_EXIT_CODE):
                 raise StubServerUncleanExit(
                     "Stub server exited unclean ({})".format(
                         self._process.returncode
