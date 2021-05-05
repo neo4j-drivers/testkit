@@ -748,18 +748,16 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
             ----
                 C: RUN "RETURN 2 as n" {} {"mode": "r"}
                 S: SUCCESS {"fields": ["n"]}
-                {+
-                    C: PULL {"n": 1}
-                    S: RECORD [1]
-                    SUCCESS {"type": "r", "has_more": true}
-                +}
+                C: PULL {"n": 1}
+                S: RECORD [1]
+                   SUCCESS {"type": "r", "has_more": true}
                 {{
                     C: DISCARD {"n": -1}
                     S: SUCCESS {}
                 ----
-                    C: PULL {"n": -1}
+                    C: PULL {"n": "*"}
                     S: RECORD [1]
-                       SUCCESS {}
+                       SUCCESS {"type": "r"}
                 }}
             ----
                 C: RUN "RETURN 3 as n" {} {"mode": "r"}
