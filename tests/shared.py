@@ -98,9 +98,6 @@ class TestkitTestCase(unittest.TestCase):
         self._backend = new_backend()
         self.addCleanup(self._backend.close)
         self._driver_features = get_driver_features(self._backend)
-        response = self._backend.sendAndReceive(protocol.StartTest(id_))
-        if isinstance(response, protocol.SkipTest):
-            self.skipTest(response.reason)
 
         # TODO: remove this compatibility layer when all drivers are adapted
         if get_driver_name() in ("python", "java", "javascript",
