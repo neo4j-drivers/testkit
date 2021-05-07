@@ -1,17 +1,8 @@
 from abc import abstractmethod
 from collections import defaultdict
-try:
-    import fcntl
-except ImportError:  # e.g. on Windows
-    fcntl = None
 import inspect
-import json
 import os
-import socket
-import struct
-from sys import platform
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
     get_driver_name,
@@ -126,29 +117,3 @@ class RoutingBase(TestkitTestCase):
                 break
             sequence.append(next.values[0].value)
         return sequence
-
-    @staticmethod
-    def get_ip_address(NICname):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            return socket.inet_ntoa(fcntl.ioctl(
-                s.fileno(),
-                0x8915,  # SIOCGIFADDR
-                struct.pack('256s', NICname[:15].encode("UTF-8"))
-            )[20:24])
-        finally:
-            try:
-                s.close()
-            except OSError:
-                pass
-
-    def get_ip_addresses(self):
-        ip_addresses = []
-        if fcntl is None:
-            return ip_addresses
-        for ix in socket.if_nameindex():
-            name = ix[1]
-            ip = self.get_ip_address(name)
-            if name != "lo":
-                ip_addresses.append(ip)
-        return ip_addresses
