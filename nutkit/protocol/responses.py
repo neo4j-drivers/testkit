@@ -26,6 +26,15 @@ class RunTest:
     pass
 
 
+class FeatureList:
+    """ Response to GetFeatures indication the features supported
+    by the driver"""
+    def __init__(self, features=None):
+        if features is None:
+            features = []
+        self.features = features
+
+
 class SkipTest:
     """ Response to StartTest indicating that the test should be skipped"""
 
