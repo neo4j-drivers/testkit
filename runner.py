@@ -72,3 +72,6 @@ class Container:
         self._container.exec([
             "python3", "-m", "tests.neo4j.suites", suite],
             env_map=self._env)
+
+    def run_selected_tests(self, testpattern):
+        self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
