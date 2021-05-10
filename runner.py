@@ -29,7 +29,7 @@ def start_container(testkit_path, branch_name, network, secondary_network):
     for varName in os.environ:
         if varName.startswith("TEST_"):
             env[varName] = os.environ[varName]
-    docker.create(
+    docker.create_or_replace(
         image, "runner",
         command=["python3", "/testkit/driver/bootstrap.py"],
         mount_map={testkit_path: "/testkit"},
