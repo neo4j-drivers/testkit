@@ -69,11 +69,6 @@ class MemoizedSupplier:
 
 @MemoizedSupplier
 def get_driver_features(backend):
-    # TODO Remove when dotnet implements the GetFeature message
-    if get_driver_name() in ['dotnet', 'java']:
-        warnings.warn("Driver does not implements GetFeatures.")
-        features = ()
-        return features
 
     try:
         response = backend.sendAndReceive(protocol.GetFeatures())
