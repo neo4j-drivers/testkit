@@ -37,6 +37,7 @@ test_flags = {
     "UNIT_TESTS": True,
     "INTEGRATION_TESTS": True,
     "STUB_TESTS": True,
+    "RUN_SELECTED_TESTS": False,
     "STRESS_TESTS": True,
     "TLS_TESTS": True
 }
@@ -116,12 +117,9 @@ def initialise_configurations():
 
 
 def set_test_flags(requested_list):
-    if not requested_list:
-        requested_list = test_flags
-
-    for item in test_flags:
-        if item not in requested_list:
-            test_flags[item] = False
+    if requested_list:
+        for item in test_flags:
+            test_flags[item] = item in requested_list
 
     print("Tests that will be run:")
     for item in test_flags:
@@ -247,6 +245,12 @@ def main(settings, configurations):
 
     if test_flags["STUB_TESTS"]:
         run_fail_wrapper(runner_container.run_stub_tests)
+
+    if test_flags["RUN_SELECTED_TESTS"]:
+        run_fail_wrapper(
+            runner_container.run_selected_tests,
+            os.environ.get("TEST_SELECTOR")
+        )
 
     if test_flags["TLS_TESTS"]:
         run_fail_wrapper(runner_container.run_tls_tests)
