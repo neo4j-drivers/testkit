@@ -39,8 +39,10 @@ class Container:
         del _running[self.name]
 
 
-def create(image, name, command=None, mount_map=None, host_map=None, port_map=None,
-           env_map=None, working_folder=None, network=None, aliases=None):
+def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
+                      port_map=None, env_map=None, working_folder=None,
+                      network=None, aliases=None):
+    subprocess.run(["docker", "rm", "-fv", name], check=True)
     cmd = ["docker", "create", "--name", name]
     if mount_map is not None:
         for k in mount_map:

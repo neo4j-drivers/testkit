@@ -66,7 +66,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
-    docker.create(
+    docker.create_or_replace(
         image, container_name,
         command=["python3", "/testkit/driver/bootstrap.py"],
         mount_map=mount_map,
