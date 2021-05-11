@@ -73,5 +73,23 @@ class Container:
             "python3", "-m", "tests.neo4j.suites", suite],
             env_map=self._env)
 
-    def run_selected_tests(self, testpattern):
+    def run_selected_stub_tests(self, testpattern):
         self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
+
+    def run_selected_tls_tests(self, testpattern):
+        # Build TLS server
+        self._container.exec(
+                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+        self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
+
+    def run_selected_neo4j_tests(
+            self, testpattern, hostname, username, password):
+        self._env.update({
+            # Hostname of Docker container running db
+            "TEST_NEO4J_HOST": hostname,
+            "TEST_NEO4J_USER": username,
+            "TEST_NEO4J_PASS": password,
+        })
+        self._container.exec([
+            "python3", "-m", "unittest", "-v", testpattern],
+            env_map=self._env)
