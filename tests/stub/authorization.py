@@ -238,7 +238,8 @@ class AuthorizationTests(BaseAuthorizationTests):
 
         session = driver.session('r', database=self.get_db())
         try:
-            session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 as n")
+            result.consume()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
         session.close()
@@ -290,7 +291,8 @@ class AuthorizationTests(BaseAuthorizationTests):
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
         try:
-            tx.run("RETURN 1 as n").consume()
+            result = tx.run("RETURN 1 as n")
+            result.consume()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
         session.close()
@@ -315,7 +317,8 @@ class AuthorizationTests(BaseAuthorizationTests):
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
         try:
-            tx.run("RETURN 1 as n").consume()
+            result = tx.run("RETURN 1 as n")
+            result.consume()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
         session.close()
@@ -339,7 +342,8 @@ class AuthorizationTests(BaseAuthorizationTests):
 
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n").consume()
+        result = tx.run("RETURN 1 as n")
+        result.consume()
         try:
             tx.commit()
         except types.DriverError as e:

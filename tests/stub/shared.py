@@ -18,6 +18,8 @@ import tempfile
 from threading import Thread
 import time
 
+import ifaddr
+
 
 if platform.system() == "Windows":
     INTERRUPT = signal.CTRL_BREAK_EVENT
@@ -320,4 +322,28 @@ class StubServer:
 
 
 scripts_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "scripts")
+        os.path.dirname(os.path.abspath(__file__)), "scripts"
+)
+
+
+def get_ip_addresses(exclude_loopback=True):
+    def pick_address(adapter_):
+        ip6 = None
+        for address_ in adapter_.ips:
+            if address_.is_IPv4:
+                return address_.ip
+            elif ip6 is None:
+                ip6 = address_.ip
+        return ip6
+
+    ips = []
+    for adapter in ifaddr.get_adapters():
+        if exclude_loopback:
+            name = adapter.nice_name.lower()
+            if name == "lo" or "loopback" in name:
+                continue
+        address = pick_address(adapter)
+        if address:
+            ips.append(address)
+
+    return ips

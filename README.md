@@ -80,7 +80,8 @@ To run integration tests you need to:
     python3 -m unittest tests.neo4j.datatypes.TestDataTypes.testShouldEchoBack
     ```
   
-  * Alternatively, It's possible to use the option `--tests RUN_SELECTED_TESTS` to build the driver backend and run the tested in the `TEST_SELECTOR` environment variable. It's specialy useful during the development of new tests when it's used in combination with `run_all.py` enabling to run one specific test against all known drivers.
+  * Alternatively, it's possible to use the option `--tests RUN_SELECTED_TESTS` to build the driver backend and run the tested in the `TEST_SELECTOR` environment variable. This will start all dependencies needed (such as neo4j or tls servers). It's especially useful during the development of new tests when used in combination with `run_all.py` enabling to run one specific test against all known drivers.
+    * The command-line param `--run-only-selected <test_selector>` is a shortcut for setting the `TEST_SELECTOR` environment variable and running the command with `--tests RUN_SELECTED_TESTS`.
 
 Running stub tests locally is simpler than running the integration tests:
   * Start the drivers testkit backend, see above.

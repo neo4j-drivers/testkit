@@ -177,9 +177,7 @@ class Summary:
     """
 
     def __init__(self, **data):
-        # TODO make this mandatory once all drivers provide server info
-        if data:
-            self.server_info = ServerInfo(**data["serverInfo"])
+        self.server_info = ServerInfo(**data["serverInfo"])
 
 
 class ServerInfo:
