@@ -292,6 +292,7 @@ class AuthorizationTests(BaseAuthorizationTests):
         tx = session.beginTransaction()
         try:
             result = tx.run("RETURN 1 as n")
+            # TODO remove consume() once all drivers report the error on run
             result.consume()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
@@ -342,8 +343,7 @@ class AuthorizationTests(BaseAuthorizationTests):
 
         session = driver.session('r', database=self.get_db())
         tx = session.beginTransaction()
-        result = tx.run("RETURN 1 as n")
-        result.consume()
+        tx.run("RETURN 1 as n")
         try:
             tx.commit()
         except types.DriverError as e:
