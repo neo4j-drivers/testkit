@@ -660,7 +660,6 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(["NewBookmark"], last_bookmarks)
 
     def test_should_pass_bookmark_from_tx_to_tx_using_tx_run(self):
-        # TODO remove this block once all languages work
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -1543,9 +1542,6 @@ class RoutingV4x3(RoutingBase):
         pass
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -1642,9 +1638,8 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['dotnet', 'go']:
+
+        if get_driver_name() in ['go']:
             self.skipTest("needs verifyConnectivity support")
         ip_addresses = []
         if platform == "linux":

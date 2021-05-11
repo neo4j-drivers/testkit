@@ -79,6 +79,8 @@ To run integration tests you need to:
     export TEST_NEO4J_HOST=localhost
     python3 -m unittest tests.neo4j.datatypes.TestDataTypes.testShouldEchoBack
     ```
+  
+  * Alternatively, It's possible to use the option `--tests RUN_SELECTED_TESTS` to build the driver backend and run the tested in the `TEST_SELECTOR` environment variable. It's specialy useful during the development of new tests when it's used in combination with `run_all.py` enabling to run one specific test against all known drivers.
 
 Running stub tests locally is simpler than running the integration tests:
   * Start the drivers testkit backend, see above.
@@ -138,4 +140,3 @@ Environment variables:
     Username used to connect, defaults to neo4j
   * TEST_NEO4J_PASS
     Password used to connect
-
