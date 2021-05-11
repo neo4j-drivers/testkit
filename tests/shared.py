@@ -31,9 +31,12 @@ def new_backend():
     return Backend(host, port)
 
 
-def driver_feature(feature):
-    if not isinstance(feature, protocol.Feature):
-        raise Exception('The argument should be instance of Feature')
+def driver_feature(*features):
+    features = set(features)
+
+    for feature in features:
+        if not isinstance(feature, protocol.Feature):
+            raise Exception('The arguments must be instances of Feature')
 
     def get_valid_test_case(*args, **kwargs):
         if not args or not isinstance(args[0], TestkitTestCase):
@@ -43,8 +46,11 @@ def driver_feature(feature):
     def driver_feature_decorator(func):
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
-            if (feature.value not in test_case._driver_features):
-                test_case.skipTest("Needs support for %s" % feature.value)
+            needed = set(map(lambda f: f.value, features))
+            supported = test_case._driver_features
+            missing = needed - supported
+            if missing:
+                test_case.skipTest("Needs support for %s" % ", ".join(missing))
             return func(*args, **kwargs)
         return wrapper
     return driver_feature_decorator
@@ -69,17 +75,14 @@ class MemoizedSupplier:
 
 @MemoizedSupplier
 def get_driver_features(backend):
-
     try:
         response = backend.sendAndReceive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
             raise Exception("Response is not instance of FeatureList")
-        features = tuple(response.features)
-    except Exception as e:
+        return set(response.features)
+    except (OSError, protocol.BaseError) as e:
         warnings.warn("Could not fetch FeatureList: %s" % e)
-        features = ()
-
-    return features
+        return set()
 
 
 def get_driver_name():

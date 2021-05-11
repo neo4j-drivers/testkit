@@ -16,11 +16,12 @@ class TestIterationTxRun(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def _iterate(self, n, script_fn, expected_sequence, expected_error=False):
+    def _iterate(self, n, script_fn, expected_sequence, expected_error=False,
+                 protocol_version="v4x0"):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken(scheme="basic"))
-        self._server.start(path=self.script_path(script_fn))
+        self._server.start(path=self.script_path(protocol_version, script_fn))
         session = driver.session("w", fetchSize=n)
         tx = session.beginTransaction()
         result = tx.run("CYPHER")
@@ -41,8 +42,19 @@ class TestIterationTxRun(TestkitTestCase):
         self.assertEqual(expected_sequence, sequence)
         self.assertEqual(expected_error, got_error)
 
-    def test_all(self):
+    def test_batch(self):
         self._iterate(2, "tx_pull_2.script", [1, 2, 3])
+
+    def test_all(self):
+        self._iterate(-1, "tx_pull_all.script", [1, 2, 3])
+
+    def test_batch_v3(self):
+        # there is no incremental pulling for BOLTv3
+        self._iterate(2, "tx_pull_all.script", [1, 2, 3], protocol_version="v3")
+
+    def test_all_v3(self):
+        self._iterate(-1, "tx_pull_all.script", [1, 2, 3],
+                      protocol_version="v3")
 
     def test_nested(self):
         # ex JAVA - java completely pulls the first query before running the second
@@ -53,7 +65,8 @@ class TestIterationTxRun(TestkitTestCase):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken(scheme="basic"))
-        self._server.start(path=self.script_path("tx_pull_1_nested.script"))
+        self._server.start(path=self.script_path("v4x0",
+                                                 "tx_pull_1_nested.script"))
         session = driver.session("w", fetchSize=1)
         tx = session.beginTransaction()
         res1 = tx.run("CYPHER")

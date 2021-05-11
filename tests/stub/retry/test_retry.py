@@ -1,6 +1,9 @@
+from warnings import warn
+
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -123,3 +126,44 @@ class TestRetry(TestkitTestCase):
         session.close()
         driver.close()
         self._server.done()
+
+    def test_no_retry_on_syntax_error(self):
+        # Should NOT retry when error isn't transient
+        def _test():
+            self._server.start(
+                path=self.script_path(mode + "_syntax_error.script")
+            )
+            num_retries = 0
+            exception = None
+
+            def once(tx):
+                nonlocal exception
+                nonlocal num_retries
+                num_retries = num_retries + 1
+                with self.assertRaises(types.DriverError) as exc_:
+                    result = tx.run("RETURN 1")
+                    result.next()
+                exception = exc_.exception
+                raise exception
+
+            auth = types.AuthorizationToken(scheme="basic")
+            driver = Driver(self._backend,
+                            "bolt://%s" % self._server.address, auth)
+            session = driver.session(mode[0])
+
+            with self.assertRaises(types.DriverError):  # TODO: check further
+                session.__getattribute__(mode + "Transaction")(once)
+            # TODO: remove the condition when go sends the error code
+            if get_driver_name() not in ["go"]:
+                self.assertEqual(exception.code,
+                                 "Neo.ClientError.Statement.SyntaxError")
+
+            self.assertEqual(num_retries, 1)
+            session.close()
+            driver.close()
+            self._server.done()
+
+        for mode in ("read", "write"):
+            with self.subTest(mode):
+                _test()
+            self._server.reset()

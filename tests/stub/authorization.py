@@ -1,9 +1,9 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
-    driver_feature
 )
 from tests.stub.shared import StubServer
 
@@ -776,7 +776,7 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
         +}
         """
 
-    @driver_feature(types.Feature.AUTHORIZATION_EXPIRED_TREATMENT)
+    @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_drop_connection_after_AuthorizationExpired(self):
         self._server.start(
             script=self.read_return_1_failure_return_2_and_3_succeed_script()
@@ -812,7 +812,7 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
 
         driver.close()
 
-    @driver_feature(types.Feature.AUTHORIZATION_EXPIRED_TREATMENT)
+    @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(self):
         self._server.start(
             script=self.read_return_1_failure_return_2_and_3_succeed_script()

@@ -6,13 +6,11 @@
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "CYPHER" {} {}
-   PULL {"n": 2}
+   PULL {"n": -1}
 S: SUCCESS {"fields": ["x"], "qid": 7}
    RECORD [1]
    RECORD [2]
-   SUCCESS {"has_more": true}
-C: PULL {"n": 2, "qid": 7}
-S: RECORD [3]
-   SUCCESS {"has_more": false}
+   RECORD [3]
+   SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "bm"}

@@ -6,6 +6,7 @@ from tests.shared import (
 )
 from tests.stub.shared import StubServer
 
+
 # Low-level network transport tests
 class TestTransport(TestkitTestCase):
     def setUp(self):
@@ -40,4 +41,3 @@ class TestTransport(TestkitTestCase):
         # Indirectly verifies that we got a record
         self.assertEqual(record.values[0].value, 1)
         self.assertIsInstance(null_record, types.NullRecord)
-

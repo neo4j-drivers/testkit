@@ -23,6 +23,20 @@ class TestBookmarks(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
+    def test_bookmarks_can_be_set(self):
+        def test():
+            bookmarks = ["bm:%i" % (i + 1) for i in range(bm_count)]
+            session = self._driver.session(mode[0], bookmarks=bookmarks)
+            self.assertEqual(session.lastBookmarks(), bookmarks)
+            session.close()
+
+        for mode in ("read", "write"):
+            # TODO: decide what we expect to happen when multiple bookmarks are
+            #       passed in: return all or only the last one?
+            for bm_count in (0, 1):
+                with self.subTest(mode + "_%i_bookmarks" % bm_count):
+                    test()
+
     # Tests that a committed transaction can return the last bookmark
     def test_last_bookmark(self):
         self._server.start(
