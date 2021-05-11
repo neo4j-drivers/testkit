@@ -116,7 +116,11 @@ def initialise_configurations():
     return configurations
 
 
-def set_test_flags(requested_list):
+def set_test_flags(requested_list, selected_test_list):
+    if selected_test_list and selected_test_list[0]:
+        requested_list = ['RUN_SELECTED_TESTS']
+        os.environ['TEST_SELECTOR'] = selected_test_list[0]
+
     if requested_list:
         for item in test_flags:
             test_flags[item] = item in requested_list
@@ -151,16 +155,19 @@ def parse_command_line(configurations, argv):
     for config in configurations:
         servers_help += config.name + ", "
 
+    run_only_help = "Runs only the selected tests (see https://docs.python.org/3/library/unittest.html#command-line-interface)"
+
     # add arguments
     parser.add_argument(
-            "--tests", nargs='*', required=False, help=tests_help)
+        "--tests", nargs='*', required=False, help=tests_help)
     parser.add_argument(
-            "--configs", nargs='*', required=False, help=servers_help)
+        "--configs", nargs='*', required=False, help=servers_help)
+    parser.add_argument(
+        "--run-only-selected", nargs=1, required=False, help=run_only_help)
 
     # parse the arguments
     args = parser.parse_args()
-
-    set_test_flags(args.tests)
+    set_test_flags(args.tests, args.run_only_selected)
     configs = construct_configuration_list(configurations, args.configs)
     print("Accepted configurations:")
     for item in configs:
@@ -176,6 +183,31 @@ def cleanup(*_, **__):
         subprocess.run(["docker", "network", "rm", n],
                        check=False, stdout=subprocess.DEVNULL,
                        stderr=subprocess.DEVNULL)
+
+
+def is_stub_test_selected_to_run():
+    return (
+        test_flags["RUN_SELECTED_TESTS"] and
+        get_selected_tests().startswith("tests.stub")
+    )
+
+
+def is_neo4j_test_selected_to_run():
+    return (
+        test_flags["RUN_SELECTED_TESTS"] and
+        get_selected_tests().startswith("tests.neo4j")
+    )
+
+
+def is_tls_test_selected_to_run():
+    return (
+        test_flags["RUN_SELECTED_TESTS"] and
+        get_selected_tests().startswith("tests.tls")
+    )
+
+
+def get_selected_tests():
+    return os.environ.get("TEST_SELECTOR", "")
 
 
 def main(settings, configurations):
@@ -246,18 +278,27 @@ def main(settings, configurations):
     if test_flags["STUB_TESTS"]:
         run_fail_wrapper(runner_container.run_stub_tests)
 
-    if test_flags["RUN_SELECTED_TESTS"]:
-        run_fail_wrapper(
-            runner_container.run_selected_tests,
-            os.environ.get("TEST_SELECTOR")
-        )
-
     if test_flags["TLS_TESTS"]:
         run_fail_wrapper(runner_container.run_tls_tests)
 
+    # Running selected STUB tests
+    if is_stub_test_selected_to_run():
+        run_fail_wrapper(
+            runner_container.run_selected_stub_tests,
+            get_selected_tests()
+        )
+
+    # Running selected TLS tests
+    if is_tls_test_selected_to_run():
+        run_fail_wrapper(
+            runner_container.run_selected_tls_tests,
+            get_selected_tests()
+        )
+
     if not (test_flags["TESTKIT_TESTS"]
             or test_flags["STRESS_TESTS"]
-            or test_flags["INTEGRATION_TESTS"]):
+            or test_flags["INTEGRATION_TESTS"]
+            or is_neo4j_test_selected_to_run()):
         # no need to download any snapshots or start any servers
         return
 
@@ -337,6 +378,13 @@ def main(settings, configurations):
                 )
             else:
                 print("Skipping integration tests for %s" % server_name)
+
+        # Running selected NEO4J tests
+        if is_neo4j_test_selected_to_run():
+            run_fail_wrapper(
+                runner_container.run_selected_neo4j_tests,
+                get_selected_tests(), hostname, neo4j.username, neo4j.password
+            )
 
         # Check that all connections to Neo4j has been closed.
         # Each test suite should close drivers, sessions properly so any
