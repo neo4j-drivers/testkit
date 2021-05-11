@@ -238,7 +238,8 @@ class AuthorizationTests(BaseAuthorizationTests):
 
         session = driver.session('r', database=self.get_db())
         try:
-            session.run("RETURN 1 as n")
+            res = session.run("RETURN 1 as n")
+            res.next()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
         session.close()

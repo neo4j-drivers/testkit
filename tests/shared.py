@@ -69,7 +69,11 @@ class MemoizedSupplier:
 
 @MemoizedSupplier
 def get_driver_features(backend):
-
+    # TODO: remove this as soon as java supports GetFeatures
+    if get_driver_name() in ["java"]:
+        # JAVA backend closes connection of receiving unknown message
+        warnings.warn("GetFeatures message not implemented in backend")
+        return ()
     try:
         response = backend.sendAndReceive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
