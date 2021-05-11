@@ -12,6 +12,7 @@ orchestrate which suites that are executed in each context.
 import argparse
 import atexit
 import os
+import shutil
 import subprocess
 import sys
 import traceback
@@ -228,11 +229,25 @@ def main(settings, configurations):
     driver_name = settings.driver_name
     testkit_branch = settings.branch
     driver_repo = settings.driver_repo
-    #  this_path, driver_name, testkit_branch, driver_repo):
-    # Prepare collecting of artifacts, collected to ./artifcats/
-    artifacts_path = os.path.abspath(os.path.join(".", "artifacts"))
-    if not os.path.exists(artifacts_path):
-        os.makedirs(artifacts_path)
+    # Prepare collecting of artifacts, collected to ARTIFACTS_DIR
+    # (default ./artifcats/)
+    artifacts_path = os.path.abspath(
+        os.environ.get("ARTIFACTS_DIR", os.path.join(".", "artifacts"))
+    )
+    driver_run_artifacts_path = os.path.join(artifacts_path, "driver_run")
+    driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
+    runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
+    docker_artifacts_path = os.path.join(artifacts_path, "docker")
+    # wipe artifacts path
+    try:
+        shutil.rmtree(artifacts_path)
+    except OSError:
+        pass
+    os.makedirs(artifacts_path)
+    os.makedirs(driver_run_artifacts_path)
+    os.makedirs(driver_build_artifacts_path)
+    os.makedirs(runner_build_artifacts_path)
+    os.makedirs(docker_artifacts_path)
     print("Putting artifacts in %s" % artifacts_path)
 
     # Important to stop all docker images upon exit
@@ -251,15 +266,14 @@ def main(settings, configurations):
         "docker", "network", "create", networks[1]
     ])
 
-    driver_container = driver.start_container(this_path, testkit_branch,
-                                              driver_name, driver_repo,
-                                              artifacts_path,
-                                              network=networks[0], secondary_network=networks[1])
-    driver_container.clean_artifacts()
-    print("Cleaned up artifacts")
+    driver_container = driver.start_container(
+        this_path, testkit_branch, driver_name, driver_repo,
+        driver_run_artifacts_path, docker_artifacts_path,
+        networks[0], networks[1]
+    )
 
     print("Build driver and test backend in driver container")
-    driver_container.build_driver_and_backend()
+    driver_container.build_driver_and_backend(driver_build_artifacts_path)
     print("Finished building driver and test backend")
 
     if test_flags["UNIT_TESTS"]:
@@ -272,8 +286,11 @@ def main(settings, configurations):
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
-    runner_container = runner.start_container(this_path, testkit_branch,
-                                              network=networks[0], secondary_network=networks[1])
+    runner_container = runner.start_container(
+        this_path, testkit_branch,
+        networks[0], networks[1],
+        docker_artifacts_path, runner_build_artifacts_path
+    )
 
     if test_flags["STUB_TESTS"]:
         run_fail_wrapper(runner_container.run_stub_tests)

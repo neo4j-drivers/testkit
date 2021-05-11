@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 
 
@@ -17,12 +18,28 @@ class Container:
             for k in env_map:
                 cmd.extend(["-e", "%s=%s" % (k, env_map[k])])
 
-    def exec(self, command, workdir=None, env_map=None):
+    def exec(self, command, workdir=None, env_map=None, log_path=None):
         cmd = ["docker", "exec"]
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
         cmd.extend(command)
-        subprocess.run(cmd, check=True)
+        if not log_path:
+            subprocess.run(cmd, check=True)
+        else:
+            out_path = os.path.join(log_path, "out.log")
+            err_path = os.path.join(log_path, "err.log")
+            with open(out_path, "a") as out_fd:
+                with open(err_path, "a") as err_fd:
+                    out_fd.write(str(cmd) + "\n")
+                    out_fd.flush()
+                    err_fd.write(str(cmd) + "\n")
+                    err_fd.flush()
+                    subprocess.run(cmd, check=True,
+                                   stdout=out_fd, stderr=err_fd)
+                    out_fd.write("\n")
+                    out_fd.flush()
+                    err_fd.write("\n")
+                    err_fd.flush()
 
     def exec_detached(self, command, workdir=None, env_map=None):
         cmd = ["docker", "exec", "--detach"]
@@ -130,12 +147,22 @@ def load(readable):
         raise Exception("Failed to load docker image")
 
 
-def build_and_tag(tag_name, dockerfile_path, cwd=None):
+def build_and_tag(tag_name, dockerfile_path, cwd=None, log_path=None):
     print("Building runner Docker image %s from %s" % (tag_name,
                                                        dockerfile_path))
-    subprocess.check_call([
-        "docker", "build", "--tag", tag_name, dockerfile_path
-    ], cwd=cwd)
+    if not log_path:
+        subprocess.check_call([
+            "docker", "build", "--tag", tag_name, dockerfile_path
+        ], cwd=cwd)
+    else:
+        clean_tag = re.sub(r"\W", "_", tag_name)
+        out_path = os.path.join(log_path, "build_{}_out.log".format(clean_tag))
+        err_path = os.path.join(log_path, "build_{}_err.log".format(clean_tag))
+        with open(out_path, "w") as out_fd:
+            with open(err_path, "w") as err_fd:
+                subprocess.check_call([
+                    "docker", "build", "--tag", tag_name, dockerfile_path
+                ], cwd=cwd, stdout=out_fd, stderr=err_fd)
     _created_tags.add(tag_name)
     remove_dangling()
 

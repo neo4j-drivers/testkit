@@ -153,6 +153,8 @@ def clone_repo(driver, branch, path):
 def update_environment(driver, repo_path):
     os.environ['TEST_DRIVER_REPO'] = os.path.abspath(repo_path)
     os.environ['TEST_DRIVER_NAME'] = driver.get('name')
+    os.environ['ARTIFACTS_DIR'] = os.path.join(".", "artifacts",
+                                               driver.get("name"))
 
 
 def run():
