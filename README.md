@@ -7,24 +7,26 @@ Requirements on host:
   * Docker 19.03 >=
 
 Environment variables:
-  * TEST_DRIVER_NAME
+  * `TEST_DRIVER_NAME`  
     Set to the name of the driver in lowercase, should match any of the drivers in drivers folder.
-  * TEST_DRIVER_REPO
+  * `TEST_DRIVER_REPO`  
     Path to driver repository
-  * TEST_BRANCH
+  * `TEST_BRANCH`  
     Name of testkit branch. When running locally, this defaults to 'local'.
-  * TEST_BUILD_CACHE_ENABLED
+  * `TEST_BUILD_CACHE_ENABLED`  
     Set to `true` to enable build cache persistence via Docker Volumes for supported build systems. Only Maven is supported at the moment and it stores its data in `testkit-m2` volume.
-  * TEST_RUN_ALL_TESTS
+  * `TEST_RUN_ALL_TESTS`  
     Set to `true` to make sure all tests are run even if some fail. Testkit will
     still exit with a non-zero exit code if any test failed.
-  * TEST_DOCKER_USER
+  * `TEST_DOCKER_USER`  
     If specified, all docker containers are run as the specified user. Value is
     directly passed to docker, if present. See `docker run -u` for more details.
-  * TEST_DOCKER_RMI
+  * `TEST_DOCKER_RMI`  
     Set to `true` to make testkit remove all tags it created/overwrote after
     they are not needed anymore. If said tag is the only tag of that image,
     docker will remove the image and all intermediate parent images.
+  * `ARTIFACTS_DIR`  
+    Name of the directory into which logs and similar debug output is placed.
 
 ```console
 export TEST_DRIVER_NAME=go
@@ -89,20 +91,20 @@ Running stub tests locally is simpler than running the integration tests:
     tests.stub instead of tests.neo4j
 
 Environment variables used to control how tests are executed:
-  * TEST_NEO4J_HOST
+  * `TEST_NEO4J_HOST`  
     Host or ip where Neo4j server is running.
     Should normally be set to localhost.
-  * TEST_NEO4J_USER
+  * `TEST_NEO4J_USER`  
     Username used to connect to Neo4j server.
     Defaults to 'neo4j'
-  * TEST_NEO4J_PASS
+  * `TEST_NEO4J_PASS`  
     Password used to connect to Neo4j server.
     Defaults to 'pass'
-  * TEST_NEO4J_PORT
+  * `TEST_NEO4J_PORT`  
     Defaults to Bolt port 7687, normally not needed.
-  * TEST_BACKEND_HOST
+  * `TEST_BACKEND_HOST`  
     Defaults to localhost, normally not needed.
-  * TEST_BACKEND_PORT
+  * `TEST_BACKEND_PORT`  
     Defaults to 9876, normally not needed.
 All of these variables are normally set by the main runner.
 
@@ -116,9 +118,9 @@ Requirements on host:
   * Docker 19.03 >=
 
 Environment variables:
-  * TEST_DRIVER_BRANCH
+  * `TEST_DRIVER_BRANCH`  
     Branch to be tested in all drivers. Default: 4.3
-  * TEST_RUN_ALL_DRIVERS
+  * `TEST_RUN_ALL_DRIVERS`  
     Set to `true` to make sure all drivers are tested even if some fail. The
     program will still exit with a non-zero exit code if any test failed.
 
@@ -134,10 +136,10 @@ This test runner will build the driver and its testkit backend, setup the enviro
 and invoke the driver native stress test suite.
 
 Environment variables:
-  * TEST_NEO4J_URI
+  * `TEST_NEO4J_URI`  
     Full URI for connecting to running Neo4j instance, for example:
       neo4j+s://somewhere.com:7687
-  * TEST_NEO4J_USER
+  * `TEST_NEO4J_USER`  
     Username used to connect, defaults to neo4j
-  * TEST_NEO4J_PASS
+  * `TEST_NEO4J_PASS`  
     Password used to connect

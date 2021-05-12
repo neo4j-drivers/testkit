@@ -23,7 +23,8 @@ def _get_glue(thisPath, driverName, driverRepo):
     raise Exception("No glue found for %s" % driverName)
 
 
-def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
+def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
+                  artifacts_path):
     """ Ensures that an up to date Docker image exists for the driver.
     """
     # Construct Docker image name from driver name (i.e drivers-go) and
@@ -40,25 +41,26 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name):
     shutil.copytree(cas_source_path, cas_path)
 
     # This will use the driver folder as build context.
-    docker.build_and_tag(image_name, docker_image_path)
+    docker.build_and_tag(image_name, docker_image_path, log_path=artifacts_path)
 
     return image_name
 
 
 def start_container(testkit_path, branch_name, driver_name, driver_path,
-                    artifacts_path, network, secondary_network):
+                    artifacts_path_run, artifacts_path_build, network,
+                    secondary_network):
     # Path where scripts are that adapts driver to testkit.
     # Both absolute path and path relative to driver container.
     host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
                                                  driver_path)
     image = _ensure_image(testkit_path, host_glue_path,
-                          branch_name, driver_name)
+                          branch_name, driver_name, artifacts_path_build)
     container_name = "driver"
     # Configure volume map for the driver container
     mount_map = {
         testkit_path: "/testkit",
         driver_path: "/driver",
-        artifacts_path: "/artifacts"
+        artifacts_path_run: "/artifacts"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
         if driver_name == "java":
@@ -121,20 +123,12 @@ class Container:
 
         return env
 
-    def clean_artifacts(self):
-        """ We let the driver container clean the artifacts due to problem
-        with removing files created by containers from host. If we fix the
-        user accounts used for the images this can be done from host
-        instead.
-        """
+    def build_driver_and_backend(self, artifacts_path):
         self._container.exec(
-                ["python3", "/testkit/driver/clean_artifacts.py"],
-                env_map=self._default_env())
+            ["python3", self._gluePath + "build.py"],
+            env_map=self._default_env(), log_path=artifacts_path
 
-    def build_driver_and_backend(self):
-        self._container.exec(
-                ["python3", self._gluePath + "build.py"],
-                env_map=self._default_env())
+        )
 
     def run_unit_tests(self):
         self._container.exec(

@@ -3,19 +3,20 @@ import os
 import docker
 
 
-def _ensure_image(testkit_path, branch_name):
+def _ensure_image(testkit_path, branch_name, artifacts_path):
     """ Ensures that an up to date Docker image exists.
     """
     # Construct Docker image name from branch name
     image_name = "runner:%s" % branch_name
     image_path = os.path.join(testkit_path, "runner_image")
-    docker.build_and_tag(image_name, image_path)
+    docker.build_and_tag(image_name, image_path, log_path=artifacts_path)
 
     return image_name
 
 
-def start_container(testkit_path, branch_name, network, secondary_network):
-    image = _ensure_image(testkit_path, branch_name)
+def start_container(testkit_path, branch_name, network, secondary_network,
+                    docker_artifacts_path, build_artifacts_path):
+    image = _ensure_image(testkit_path, branch_name, docker_artifacts_path)
     container_name = "runner"
     env = {
         # Runner connects to backend in driver container
@@ -38,19 +39,22 @@ def start_container(testkit_path, branch_name, network, secondary_network):
         aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS
     docker.network_connect(secondary_network, container_name)
     container = docker.start(container_name)
-    return Container(container, env)
+    return Container(container, env, build_artifacts_path)
 
 
 class Container:
-    def __init__(self, container, env):
+    def __init__(self, container, env, build_artifacts_path):
         self._container = container
         self._env = env
+        self._build_artifacts_path = build_artifacts_path
         self._init_container()
 
     def _init_container(self):
-        self._container.exec(["pip3", "install", "-U", "pip"])
+        self._container.exec(["pip3", "install", "-U", "pip"],
+                             log_path=self._build_artifacts_path)
         self._container.exec(["pip3", "install", "-Ur",
-                              "/testkit/requirements.txt"])
+                              "/testkit/requirements.txt"],
+                             log_path=self._build_artifacts_path)
 
     def run_stub_tests(self):
         self._container.exec(["python3", "-m", "tests.stub.suites"])
