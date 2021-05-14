@@ -66,12 +66,13 @@ class Container:
         self._container.exec(
                 ["python3", "-m", "tests.tls.suites"])
 
-    def run_neo4j_tests(self, suite, hostname, username, password):
+    def run_neo4j_tests(self, suite, hostname, username, password, scheme):
         self._env.update({
             # Hostname of Docker container running db
             "TEST_NEO4J_HOST": hostname,
             "TEST_NEO4J_USER": username,
             "TEST_NEO4J_PASS": password,
+            "TEST_NEO4J_SCHEME": scheme
         })
         self._container.exec([
             "python3", "-m", "tests.neo4j.suites", suite],
@@ -87,12 +88,13 @@ class Container:
         self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
 
     def run_selected_neo4j_tests(
-            self, testpattern, hostname, username, password):
+            self, testpattern, hostname, username, password, scheme):
         self._env.update({
             # Hostname of Docker container running db
             "TEST_NEO4J_HOST": hostname,
             "TEST_NEO4J_USER": username,
             "TEST_NEO4J_PASS": password,
+            "TEST_NEO4J_SCHEME": scheme
         })
         self._container.exec([
             "python3", "-m", "unittest", "-v", testpattern],

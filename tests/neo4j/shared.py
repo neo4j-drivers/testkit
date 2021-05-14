@@ -14,6 +14,7 @@ from nutkit.protocol import AuthorizationToken
 env_neo4j_host = "TEST_NEO4J_HOST"
 env_neo4j_user = "TEST_NEO4J_USER"
 env_neo4j_pass = "TEST_NEO4J_PASS"
+env_neo4j_sheme = "TEST_NEO4J_SCHEME"
 
 
 def get_authorization():
@@ -32,10 +33,15 @@ def get_neo4j_host_and_port():
     return (host, port)
 
 
+def get_neo4j_scheme():
+    scheme = os.environ.get(env_neo4j_sheme, "bolt")
+    return scheme
+
+
 def get_driver(backend):
     """ Returns default driver for tests that do not test this aspect
     """
+    scheme = get_neo4j_scheme()
     host, port = get_neo4j_host_and_port()
-    scheme = "bolt://%s:%d" % (host, port)
-    return Driver(backend, scheme, get_authorization())
-
+    uri = "%s://%s:%d" % (scheme, host, port)
+    return Driver(backend, uri, get_authorization())
