@@ -1,4 +1,5 @@
 import abc
+from collections import OrderedDict
 from copy import deepcopy
 import json
 from os import path
@@ -306,6 +307,10 @@ class Block(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        pass
+
+    @abc.abstractmethod
     def assert_no_init(self):
         """ raise error if init would send messages """
 
@@ -368,6 +373,9 @@ class ClientBlock(Block):
     def accepted_messages(self) -> List[ClientLine]:
         return self.lines[self.index:(self.index + 1)]
 
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        return self.lines[0:1]
+
     def assert_no_init(self):
         return
 
@@ -421,6 +429,9 @@ class ServerBlock(Block):
         self.index = 0
 
     def accepted_messages(self) -> List[ClientLine]:
+        return []
+
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
         return []
 
     def assert_no_init(self):
@@ -482,6 +493,11 @@ class AlternativeBlock(Block):
         if self.selection is None:
             return sum((b.accepted_messages() for b in self.block_lists), [])
         return self.block_lists[self.selection].accepted_messages()
+
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        return sum((b.accepted_messages_after_reset()
+                    for b in self.block_lists),
+                   [])
 
     def assert_no_init(self):
         for block in self.block_lists:
@@ -549,6 +565,11 @@ class ParallelBlock(Block):
     def accepted_messages(self) -> List[ClientLine]:
         return sum((b.accepted_messages() for b in self.block_lists), [])
 
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        return sum((b.accepted_messages_after_reset()
+                    for b in self.block_lists),
+                   [])
+
     def assert_no_init(self):
         for b in self.block_lists:
             b.assert_no_init()
@@ -606,6 +627,9 @@ class OptionalBlock(Block):
 
     def accepted_messages(self) -> List[ClientLine]:
         return self.block_list.accepted_messages()
+
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        return self.block_list.accepted_messages_after_reset()
 
     def assert_no_init(self):
         self.block_list.assert_no_init()
@@ -671,7 +695,16 @@ class _RepeatBlock(Block, abc.ABC):
         self.assert_no_init()
 
     def accepted_messages(self) -> List[ClientLine]:
-        return self.block_list.accepted_messages()
+        res = OrderedDict((m, True)
+                          for m in self.block_list.accepted_messages())
+        if ((self.has_deterministic_end() and self.done())
+                or self.block_list.can_be_skipped()):
+            res.update((m, True)
+                       for m in self.block_list.accepted_messages_after_reset())
+        return list(res.keys())
+
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        return self.block_list.accepted_messages_after_resets()
 
     def assert_no_init(self):
         self.block_list.assert_no_init()
@@ -764,13 +797,25 @@ class BlockList(Block):
                 next_block.assert_no_init()
 
     def accepted_messages(self) -> List[ClientLine]:
-        if self.has_deterministic_end() and self.done():
-            return []
-        res = self.blocks[self.index].accepted_messages()
-        if (not self.blocks[self.index].has_deterministic_end()
-                and self.blocks[self.index].can_be_skipped()
-                and self.index + 1 <= len(self.blocks)):
-            res += self.blocks[self.index + 1].accepted_messages()
+        res = []
+        if self.index >= len(self.blocks):
+            return res
+
+        for i in range(self.index, len(self.blocks)):
+            res += self.blocks[i].accepted_messages()
+            if not self.blocks[i].can_be_skipped():
+                break
+        return res
+
+    def accepted_messages_after_reset(self) -> List[ClientLine]:
+        res = []
+        if not self.blocks:
+            return res
+
+        for i in range(len(self.blocks)):
+            res += self.blocks[i].accepted_messages_after_reset()
+            if not self.blocks[i].can_be_skipped():
+                break
         return res
 
     def assert_no_init(self):
