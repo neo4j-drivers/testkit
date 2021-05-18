@@ -164,5 +164,27 @@ class TestDataTypes(TestkitTestCase):
         self.create_driver_and_session()
         self.verify_can_echo(types.CypherMap(test_maps))
 
+    def test_should_echo_list_of_maps(self):
+        test_list = [
+            types.CypherMap({
+                "a": types.CypherInt(1),
+                "b": types.CypherInt(2)
+            }),
+            types.CypherMap({
+                "c": types.CypherInt(3),
+                "d": types.CypherInt(4)
+            })
+        ]
+        self.create_driver_and_session()
+        self.verify_can_echo(types.CypherList(test_list))
+
+    def test_should_echo_map_of_lists(self):
+        test_map = {
+            'a': types.CypherList([types.CypherInt(1)]),
+            'b': types.CypherList([types.CypherInt(2)])
+        }
+        self.create_driver_and_session()
+        self.verify_can_echo(types.CypherMap(test_map))
+
     # def test_path(self):
         # todo: need to implement the cypher path type to do this test.
