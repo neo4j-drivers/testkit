@@ -16,11 +16,12 @@ class TestIterationSessionRun(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def _run(self, n, script_fn, expected_sequence, expected_error=False):
+    def _run(self, n, script_fn, expected_sequence, expected_error=False,
+             protocol_version="v4x0"):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken(scheme="basic"))
-        self._server.start(path=self.script_path(script_fn))
+        self._server.start(path=self.script_path(protocol_version, script_fn))
         session = driver.session("w", fetchSize=n)
         result = session.run("RETURN 1 AS n")
         got_error = False
@@ -59,3 +60,8 @@ class TestIterationSessionRun(TestkitTestCase):
     # Support -1, not batched at all
     def test_all(self):
         self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"])
+
+    # Support -1, not batched at all for BOLTv3
+    def test_all_v3(self):
+        self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"],
+                  protocol_version="v3")

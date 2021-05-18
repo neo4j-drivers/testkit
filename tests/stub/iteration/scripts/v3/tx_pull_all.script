@@ -1,0 +1,16 @@
+!: BOLT 3
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "CYPHER" {} {}
+S: SUCCESS {"fields": ["x"]}
+C: PULL_ALL
+S: RECORD [1]
+   RECORD [2]
+   RECORD [3]
+   SUCCESS {}
+C: COMMIT
+S: SUCCESS {"bookmark": "bm"}
