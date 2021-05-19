@@ -271,9 +271,11 @@ class StubServer:
         self._read_pipes()
         count = 0
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#2328]  "
+            # lines start with something like "10:08:33  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
-            line = line[30:-1]
+            line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
+            line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
+                          line)
             if not line.startswith("C: "):
                 continue
             line = line[3:]
@@ -292,9 +294,11 @@ class StubServer:
         self._read_pipes()
         count = 0
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#2328]  "
+            # lines start with something like "10:08:33  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
-            line = line[30:-1]
+            line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
+            line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
+                          line)
             match = re.match(r"^(S: )|(\(\d+\)S: )|(\(\d+\)\s+)", line)
             if not match:
                 continue
