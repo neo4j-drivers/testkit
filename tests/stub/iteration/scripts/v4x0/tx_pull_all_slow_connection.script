@@ -1,0 +1,17 @@
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "CYPHER" {} {}
+S: SUCCESS {"fields": ["x"], "qid": 7}
+C: PULL {"n": -1}
+S: <SLEEP> 1
+   RECORD [1]
+   RECORD [2]
+   RECORD [3]
+   SUCCESS {}
+C: COMMIT
+S: SUCCESS {"bookmark": "bm"}

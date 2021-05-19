@@ -3,5 +3,6 @@
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {}
 C: PULL {"n": 1000}
 S: <EXIT>

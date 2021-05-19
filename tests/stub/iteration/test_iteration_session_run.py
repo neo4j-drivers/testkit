@@ -61,7 +61,40 @@ class TestIterationSessionRun(TestkitTestCase):
     def test_all(self):
         self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"])
 
+    def test_all_slow_connection(self):
+        self._run(-1, "pull_all_slow_connection.script",
+                  ["1", "2", "3", "4", "5", "6"])
+
     # Support -1, not batched at all for BOLTv3
     def test_all_v3(self):
         self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"],
                   protocol_version="v3")
+
+    def test_discards_on_session_close(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['java']:
+            self.skipTest("Eagerly pulls more results")
+
+        def test():
+            uri = "bolt://%s" % self._server.address
+            driver = Driver(self._backend, uri,
+                            types.AuthorizationToken(scheme="basic"))
+            self._server.start(
+                path=self.script_path(version, script),
+                vars={"#MODE#": mode[0]}
+            )
+            try:
+                session = driver.session(mode[0], fetchSize=2)
+                session.run("RETURN 1 AS n").next()
+                self.assertEqual(self._server.count_requests("DISCARD"), 0)
+                session.close()
+                self._server.done()
+                driver.close()
+            finally:
+                self._server.reset()
+
+        for version, script in (("v3", "pull_all_any_mode.script"),
+                                ("v4x0", "pull_2_then_discard.script")):
+            for mode in ("write", "read"):
+                with self.subTest(version + "-" + mode):
+                    test()

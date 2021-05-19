@@ -46,11 +46,7 @@ def driver_feature(*features):
     def driver_feature_decorator(func):
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
-            needed = set(map(lambda f: f.value, features))
-            supported = test_case._driver_features
-            missing = needed - supported
-            if missing:
-                test_case.skipTest("Needs support for %s" % ", ".join(missing))
+            test_case.skip_if_missing_driver_features(*features)
             return func(*args, **kwargs)
         return wrapper
     return driver_feature_decorator
@@ -135,6 +131,19 @@ class TestkitTestCase(unittest.TestCase):
             raise Exception("Should be SkipTest or RunTest, "
                             "received {}: {}".format(type(response),
                                                      response))
+
+    def driver_missing_features(self, *features):
+        needed = set(map(lambda f: f.value, features))
+        supported = self._driver_features
+        return needed - supported
+
+    def driver_supports_features(self, *features):
+        return not self.driver_missing_features(*features)
+
+    def skip_if_missing_driver_features(self, *features):
+        missing = self.driver_missing_features(*features)
+        if missing:
+            self.skipTest("Needs support for %s" % ", ".join(missing))
 
     def script_path(self, *path):
         base_path = os.path.dirname(inspect.getfile(self.__class__))

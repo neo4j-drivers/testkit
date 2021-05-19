@@ -59,10 +59,27 @@ class TestDisconnects(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
-        expectedStep = "after first next"
+        expected_step = "after first next"
         if self._driverName in ["go", "java", "dotnet", "python"]:
-            expectedStep = "after run"
-        self.assertEqual(step, expectedStep)
+            expected_step = "after run"
+        self.assertEqual(step, expected_step)
+
+    def test_disconnect_after_hello(self):
+        # Verifies how the driver handles when server disconnects right after
+        # acknowledging a HELLO message with SUCCESS.
+        self._server.start(
+            path=self.script_path("exit_after_hello_success.script"),
+            vars=self.get_vars()
+        )
+        step = self._run()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after first next"
+        if self._driverName in ["go", "dotnet", "python"]:
+            expected_step = "after run"
+        self.assertEqual(step, expected_step)
 
     def test_disconnect_on_run(self):
         # Verifies how the driver handles when server disconnects right after
@@ -89,9 +106,6 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after first next"
-        if self._driverName in ["go", "python"]:
-            # Go reports this error earlier
-            expected_step = "after run"
         self.assertEqual(step, expected_step)
 
     # FIXME: This test doesn't really fit here. It tests FAILURE handling, not
@@ -110,6 +124,16 @@ class TestDisconnects(TestkitTestCase):
         self.assertEqual(accept_count, 1)
         self.assertEqual(hangup_count, 1)
         self.assertEqual(active_connections, 0)
+
+    def test_client_says_goodbye(self):
+        self._server.start(path=self.script_path("return_1.script"))
+        result = self._session.run("RETURN 1 AS n")
+        result.next()
+        self._session.close()
+        self.assertEqual(self._server.count_requests("GOODBYE"), 0)
+        self._driver.close()
+        self._server.done()
+        self.assertEqual(self._server.count_requests("GOODBYE"), 1)
 
     def get_vars(self):
         return {

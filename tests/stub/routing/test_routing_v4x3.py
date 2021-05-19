@@ -158,7 +158,7 @@ class RoutingV4x3(RoutingBase):
                     self.assertEqual(
                         'org.neo4j.driver.exceptions.SessionExpiredException',
                         e.errorType)
-            failed = True
+                failed = True
         driver.close()
 
         self._routingServer1.done()
@@ -443,6 +443,11 @@ class RoutingV4x3(RoutingBase):
             if get_driver_name() in ['java']:
                 self.assertEqual(
                     'org.neo4j.driver.exceptions.ServiceUnavailableException',
+                    e.errorType
+                )
+            elif get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.ServiceUnavailable'>",
                     e.errorType
                 )
             failed = True
