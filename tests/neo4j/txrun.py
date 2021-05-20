@@ -117,9 +117,9 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
 
-    def test_should_fail_to_run_query_for_unreacheable_bookmark(self):
+    def test_should_fail_to_run_query_for_invalid_bookmark(self):
         if get_driver_name() in ["go", "python"]:
-            self.skipTest("Does not throw exception on run with unreachable bm")
+            self.skipTest("Does not throws exception on run with invalid bm")
         session = self._driver.session("w")
         tx1 = session.beginTransaction()
         result = tx1.run('CREATE ()')
@@ -128,9 +128,9 @@ class TestTxRun(TestkitTestCase):
         lastBookmarks = session.lastBookmarks()
         assert len(lastBookmarks) == 1
         lastBookmark = lastBookmarks[0]
-        unreachableBookmark = lastBookmark[:-1] + "0"
+        invalidBookmark = lastBookmark[:-1] + "-"
         session.close()
-        session = self._driver.session("w", [unreachableBookmark])
+        session = self._driver.session("w", [invalidBookmark])
 
         with self.assertRaises(types.responses.DriverError):
             tx2 = session.beginTransaction()
