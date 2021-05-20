@@ -130,10 +130,7 @@ class TestTxRun(TestkitTestCase):
         lastBookmark = lastBookmarks[0]
         unreachableBookmark = lastBookmark[:-1] + "0"
         session.close()
-        session = self._driver.session(
-            accessMode="w",
-            bookmarks=[unreachableBookmark]
-        )
+        session = self._driver.session("w", [unreachableBookmark])
 
         with self.assertRaises(types.responses.DriverError):
             tx2 = session.beginTransaction()
