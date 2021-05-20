@@ -93,7 +93,7 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             self.skipTest('Could not rollback transaction')
 
-        session = self._driver.session(accessMode="w")
+        session = self._driver.session("w")
         tx = session.beginTransaction()
         with self.assertRaises(types.responses.DriverError):
             tx.run("NOT CYPHER").consume()
