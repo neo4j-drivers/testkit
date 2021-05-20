@@ -55,6 +55,7 @@ class TestTxRun(TestkitTestCase):
         tx = session.beginTransaction()
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN").next()
+        tx.rollback()
 
     def test_should_not_rollback_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
