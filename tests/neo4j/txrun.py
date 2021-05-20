@@ -119,7 +119,7 @@ class TestTxRun(TestkitTestCase):
 
     def test_should_fail_to_run_query_for_unreacheable_bookmark(self):
         if get_driver_name() in ["go", "python"]:
-            self.skipTest("Does not throws exception on run unreachable bm")
+            self.skipTest("Does not throw exception on run with unreachable bm")
         session = self._driver.session("w")
         tx1 = session.beginTransaction()
         result = tx1.run('CREATE ()')
