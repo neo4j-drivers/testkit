@@ -104,7 +104,7 @@ class TestTxRun(TestkitTestCase):
         tx.rollback()
 
     def test_should_fail_run_in_a_commited_tx(self):
-        self._session = self._driver.session(accessMode="w")
+        self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
         tx.commit()
         with self.assertRaises(types.responses.DriverError):
