@@ -105,7 +105,9 @@ class BoltStubService:
                 self.wire = Wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
-                log.info("[#%04X]  S: <ACCEPT> %s -> %s", self.server_address.port_number,
+                log.info("[#%04X>#%04X]  S: <ACCEPT> %s -> %s",
+                         self.client_address.port_number,
+                         self.server_address.port_number,
                          self.client_address, self.server_address)
 
             def handle(self):
@@ -116,8 +118,9 @@ class BoltStubService:
                         service.ever_acted = True
                     actor.play()
                 except ServerExit as e:
-                    log.info("[#%04X]  S: <EXIT> %s",
-                             self.wire.local_address.port_number, e)
+                    log.info("[#%04X>#%04X]  S: <EXIT> %s",
+                             self.client_address.port_number,
+                             self.server_address.port_number, e)
                 except ScriptDeviation as e:
                     e.script = script
                     service.exceptions.append(e)
@@ -129,7 +132,9 @@ class BoltStubService:
                         service.actors.remove(actor)
 
             def finish(self):
-                log.info("[#%04X]  S: <HANGUP>", self.wire.local_address.port_number)
+                log.info("[#%04X>#%04X]  S: <HANGUP>",
+                         self.client_address.port_number,
+                         self.server_address.port_number)
                 try:
                     self.wire.close()
                 except OSError:
@@ -229,11 +234,13 @@ class BoltActor:
         self._exit = True
 
     def log(self, text, *args):
-        log.info("[#%04X]  " + text,
+        log.info("[#%04X>#%04X]  " + text,
+                 self.channel.wire.remote_address.port_number,
                  self.channel.wire.local_address.port_number,
                  *args)
 
     def log_error(self, text, *args):
-        log.error("[#%04X]  " + text,
+        log.error("[#%04X>#%04X]  " + text,
+                  self.channel.wire.remote_address.port_number,
                   self.channel.wire.local_address.port_number,
                   *args)
