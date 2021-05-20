@@ -125,7 +125,9 @@ class TestTxRun(TestkitTestCase):
         result = tx1.run('CREATE ()')
         result.consume()
         tx1.commit()
-        lastBookmark = session.lastBookmarks()[0]
+        lastBookmarks = session.lastBookmarks()
+        assert len(lastBookmarks) == 1
+        lastBookmark = lastBookmarks[0]
         unreachableBookmark = lastBookmark[:-1] + "0"
         session.close()
         session = self._driver.session(
