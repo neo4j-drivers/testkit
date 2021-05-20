@@ -59,7 +59,7 @@ class TestTxRun(TestkitTestCase):
     def test_should_not_rollback_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
-        self._session = self._driver.session(accessMode="w")
+        self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
         tx.run('CREATE (:TXNode1)').consume()
         tx.rollback()
