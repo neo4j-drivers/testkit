@@ -60,7 +60,7 @@ class TestTxRun(TestkitTestCase):
     def test_should_not_rollback_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
-        self._session = self._driver.session(accessMode="w")
+        self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
         tx.run('CREATE (:TXNode1)').consume()
         tx.rollback()
@@ -70,7 +70,7 @@ class TestTxRun(TestkitTestCase):
     def test_should_not_rollback_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
-        session = self._driver.session(accessMode="w")
+        session = self._driver.session("w")
         tx = session.beginTransaction()
         tx.run('CREATE (:TXNode1)').consume()
         tx.commit()
@@ -80,7 +80,7 @@ class TestTxRun(TestkitTestCase):
     def test_should_not_commit_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise exception')
-        self._session = self._driver.session(accessMode="w")
+        self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
         tx.run('CREATE (:TXNode1)').consume()
         tx.commit()
