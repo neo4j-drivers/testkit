@@ -754,17 +754,13 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
             ----
                 C: RUN "RETURN 2 as n" {} {"mode": "r"}
                 S: SUCCESS {"fields": ["n"]}
-                C: PULL {"n": 1}
-                S: RECORD [1]
-                   SUCCESS {"type": "r", "has_more": true}
-                {{
-                    C: DISCARD {"n": -1}
-                    S: SUCCESS {}
-                ----
-                    C: PULL {"n": "*"}
+                {+
+                    C: PULL {"n": 1}
                     S: RECORD [1]
-                       SUCCESS {"type": "r"}
-                }}
+                       SUCCESS {"type": "r", "has_more": true}
+                +}
+                C: DISCARD {"n": -1}
+                S: SUCCESS {}
             ----
                 C: RUN "RETURN 3 as n" {} {"mode": "r"}
                 C: PULL {"n": "*"}
@@ -824,7 +820,7 @@ class NoRoutingAuthorizationTests(BaseAuthorizationTests):
         session1 = driver.session('r', fetchSize=1)
         session2 = driver.session('r')
 
-        session1.run('RETURN 2 as n').next()
+        session1.run('RETURN 3 as n').consume()
 
         try:
             session2.run('RETURN 1 as n').next()
