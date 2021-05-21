@@ -118,8 +118,6 @@ class TestTxRun(TestkitTestCase):
             tx.run("RETURN 42").next()
 
     def test_should_fail_to_run_query_for_invalid_bookmark(self):
-        if get_driver_name() in ["go", "python"]:
-            self.skipTest("Does not throws exception on run with invalid bm")
         session = self._driver.session("w")
         tx1 = session.beginTransaction()
         result = tx1.run('CREATE ()')
