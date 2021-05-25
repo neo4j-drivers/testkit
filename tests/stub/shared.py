@@ -171,7 +171,8 @@ class StubServer:
         self._process.wait()
         if self._process.returncode > 0:
             self._dump()
-        self._read_pipes()
+        else:
+            self._read_pipes()
         self._clean_up()
 
     def _poll(self, timeout):
@@ -257,9 +258,8 @@ class StubServer:
         output."""
         if self._process:
             # briefly try to get a shutdown that will dump script mismatches
-            self._poll(1)
-            self._interrupt()
-            self._interrupt(.5)
+            self._interrupt(.3)
+            self._interrupt(0)
             self._kill()
 
     def count_requests_re(self, pattern):
