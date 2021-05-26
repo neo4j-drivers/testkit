@@ -503,9 +503,12 @@ class AlternativeBlock(Block):
         for block in self.block_lists:
             block.assert_no_init()
 
+    def can_be_skipped(self):
+        if self.selection is None:
+            return any(b.can_be_skipped() for b in self.block_lists)
+        return self.block_lists[self.selection].can_be_skipped()
+
     def can_consume(self, channel) -> bool:
-        if self.done():
-            return False
         if self.selection is None:
             return any(b.can_consume(channel) for b in self.block_lists)
         return self.block_lists[self.selection].can_consume(channel)
@@ -530,8 +533,6 @@ class AlternativeBlock(Block):
             block.reset()
 
     def try_consume(self, channel) -> bool:
-        if self.done():
-            return False
         if self.selection is not None:
             return self.block_lists[self.selection].try_consume(channel)
         for i in range(len(self.block_lists)):
@@ -577,9 +578,10 @@ class ParallelBlock(Block):
     def done(self) -> bool:
         return all(b.done() for b in self.block_lists)
 
+    def can_be_skipped(self):
+        return all(b.can_be_skipped() for b in self.block_lists)
+
     def can_consume(self, channel) -> bool:
-        if self.done():
-            return False
         return any(b.can_consume(channel) for b in self.block_lists)
 
     def can_consume_after_reset(self, channel) -> bool:

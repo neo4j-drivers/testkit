@@ -151,6 +151,38 @@ class TestAlternativeBlock:
             ], 1
         )
 
+    @pytest.fixture()
+    def block_with_non_det_end(self):
+        return AlternativeBlock([
+            BlockList([
+                ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2),
+                ServerBlock([ServerLine(3, "S: SMSG1", "SMSG1")], 3),
+                OptionalBlock(BlockList([
+                    ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
+                    ServerBlock([ServerLine(6, "S: SMSG2", "SMSG2")], 6)
+                ], 5), 4),
+            ], 2),
+            BlockList([
+                ClientBlock([ClientLine(8, "C: MSG3", "MSG3")], 8),
+                ServerBlock([ServerLine(9, "S: SMSG3", "SMSG3")], 9),
+            ], 7)
+        ], 1)
+
+    @pytest.fixture()
+    def block_with_non_det_block(self):
+        return AlternativeBlock([
+            BlockList([
+                OptionalBlock(BlockList([
+                    ClientBlock([ClientLine(3, "C: MSG1", "MSG1")], 3),
+                    ServerBlock([ServerLine(4, "S: SMSG1", "SMSG1")], 4)
+                ], 3), 2),
+            ], 2),
+            BlockList([
+                ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
+                ServerBlock([ServerLine(7, "S: SMSG2", "SMSG2")], 7),
+            ], 5)
+        ], 1)
+
     @pytest.mark.parametrize("branch", range(2))
     def test_block_read(self, block_read, branch):
         msg1_channel = channel_factory(["MSG1", "NOMATCH"])
@@ -202,6 +234,32 @@ class TestAlternativeBlock:
         with branch_channel.assert_consume():
             assert block_read.try_consume(branch_channel)
         assert block_read.done()
+
+    @pytest.mark.parametrize("messages", (("1", "2"), ("1",), ("3",)))
+    def test_non_det_ending_alternative(self, block_with_non_det_end, messages):
+        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+        for i in range(len(messages)):
+            assert block_with_non_det_end.try_consume(channel)
+            assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
+        assert len(channel.msg_buffer) == len(messages)
+        assert not block_with_non_det_end.can_consume(channel)
+        if block_with_non_det_end.has_deterministic_end():
+            assert block_with_non_det_end.done()
+        else:
+            assert block_with_non_det_end.can_be_skipped()
+
+    @pytest.mark.parametrize("messages", (("1",), ("2",), ()))
+    def test_non_det_alternative(self, block_with_non_det_block, messages):
+        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+        for i in range(len(messages)):
+            assert block_with_non_det_block.try_consume(channel)
+            assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
+        assert len(channel.msg_buffer) == len(messages)
+        assert not block_with_non_det_block.can_consume(channel)
+        if block_with_non_det_block.has_deterministic_end():
+            assert block_with_non_det_block.done()
+        else:
+            assert block_with_non_det_block.can_be_skipped()
 
 
 class TestBlockList:
@@ -468,6 +526,38 @@ class TestParallelBlock:
             ], 1
         )
 
+    @pytest.fixture()
+    def block_with_non_det_end(self):
+        return ParallelBlock([
+            BlockList([
+                ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2),
+                ServerBlock([ServerLine(3, "S: SMSG1", "SMSG1")], 3),
+                OptionalBlock(BlockList([
+                    ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
+                    ServerBlock([ServerLine(6, "S: SMSG2", "SMSG2")], 6)
+                ], 5), 4),
+            ], 2),
+            BlockList([
+                ClientBlock([ClientLine(8, "C: MSG3", "MSG3")], 8),
+                ServerBlock([ServerLine(9, "S: SMSG3", "SMSG3")], 9),
+            ], 7)
+        ], 1)
+
+    @pytest.fixture()
+    def block_with_non_det_block(self):
+        return ParallelBlock([
+            BlockList([
+                OptionalBlock(BlockList([
+                    ClientBlock([ClientLine(3, "C: MSG1", "MSG1")], 3),
+                    ServerBlock([ServerLine(4, "S: SMSG1", "SMSG1")], 4)
+                ], 3), 2),
+            ], 2),
+            BlockList([
+                ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
+                ServerBlock([ServerLine(7, "S: SMSG2", "SMSG2")], 7),
+            ], 5)
+        ], 1)
+
     @pytest.mark.parametrize("order", itertools.permutations((0, 0, 1, 1), 4))
     def test_block_read(self, block_read, order):
         msg1 = ["MSG11", "MSG12"]
@@ -517,6 +607,36 @@ class TestParallelBlock:
         messages = [(msg1, msg2)[idx].pop(0) for idx in order] + ["NOMATCH"]
         channel = channel_factory(messages)
         _test_block_reset_deterministic_end(block_read, channel, reset_idx)
+
+    @pytest.mark.parametrize("messages", (
+        ("1", "2", "3"), ("1", "3"),
+    ))
+    def test_non_det_ending_alternative(self, block_with_non_det_end, messages):
+        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+        for i in range(len(messages)):
+            assert block_with_non_det_end.try_consume(channel)
+            assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
+        assert len(channel.msg_buffer) == len(messages)
+        assert not block_with_non_det_end.can_consume(channel)
+        if block_with_non_det_end.has_deterministic_end():
+            assert block_with_non_det_end.done()
+        else:
+            assert block_with_non_det_end.can_be_skipped()
+
+    @pytest.mark.parametrize("messages", (
+        ("1", "2"), ("2",),
+    ))
+    def test_non_det_alternative(self, block_with_non_det_block, messages):
+        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+        for i in range(len(messages)):
+            assert block_with_non_det_block.try_consume(channel)
+            assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
+        assert len(channel.msg_buffer) == len(messages)
+        assert not block_with_non_det_block.can_consume(channel)
+        if block_with_non_det_block.has_deterministic_end():
+            assert block_with_non_det_block.done()
+        else:
+            assert block_with_non_det_block.can_be_skipped()
 
 
 class TestClientBlock:
