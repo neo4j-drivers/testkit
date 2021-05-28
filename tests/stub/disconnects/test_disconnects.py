@@ -145,5 +145,7 @@ class TestDisconnects(TestkitTestCase):
             return ', "realm": "", "ticket": ""'
         elif self._driverName == "java":
             return ', "realm": "", "routing": null'
+        elif self._driverName == "dotnet":
+            return ', "routing": null'
         else:
             return ""
