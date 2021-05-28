@@ -126,7 +126,7 @@ class TestDisconnects(TestkitTestCase):
         self.assertEqual(active_connections, 0)
 
     def test_client_says_goodbye(self):
-        self._server.start(path=self.script_path("return_1.script"))
+        self._server.start(path=self.script_path("explicit_goodbye_after_run.script"))
         result = self._session.run("RETURN 1 AS n")
         result.next()
         self._session.close()
