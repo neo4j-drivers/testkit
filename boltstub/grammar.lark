@@ -35,10 +35,10 @@ LOOP1_END_L : "+}"
 bang_line : BANG_MARKER WS* LINE
 client_block : explicit_client_line (NLS implicit_client_line)*
 explicit_client_line : CLIENT_MARKER WS* LINE  -> client_line
-implicit_client_line.-1: LINE                  -> client_line
+implicit_client_line.-1: WS* LINE              -> client_line
 server_block : explicit_server_line (NLS implicit_server_line)*
 explicit_server_line : SERVER_MARKER WS* LINE  -> server_line
-implicit_server_line.-1: LINE                  -> server_line
+implicit_server_line.-1: WS* LINE              -> server_line
 
 WS : /[ \t\f\r]/+
 COMMENT: /^/m WS* /#[^\n]*/m [NLS]

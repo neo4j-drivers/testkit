@@ -75,9 +75,12 @@ class Channel:
             self.stream.read_message()
         )
 
-    def consume(self):
+    def consume(self, line_no=None):
         if self._buffered_msg is not None:
-            self.log("C: %s", self._buffered_msg)
+            if line_no:
+                self.log("(%3i) C: %s", line_no, self._buffered_msg)
+            else:
+                self.log("(%3i) C: %s", self._buffered_msg)
             msg = self._buffered_msg
             self._buffered_msg = None
             return msg

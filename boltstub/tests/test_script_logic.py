@@ -46,7 +46,7 @@ class MockChannel:
     def msg_buffer_names(self):
         return [msg.name for msg in self.msg_buffer]
 
-    def consume(self):
+    def consume(self, line_no):
         self.index += 1
         return self.messages[self.index - 1]
 
