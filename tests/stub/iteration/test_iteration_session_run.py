@@ -71,10 +71,6 @@ class TestIterationSessionRun(TestkitTestCase):
                   protocol_version="v3")
 
     def test_discards_on_session_close(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['java']:
-            self.skipTest("Eagerly pulls more results")
-
         def test():
             uri = "bolt://%s" % self._server.address
             driver = Driver(self._backend, uri,
@@ -89,6 +85,9 @@ class TestIterationSessionRun(TestkitTestCase):
                 self.assertEqual(self._server.count_requests("DISCARD"), 0)
                 session.close()
                 self._server.done()
+                if version == "v4x0" and get_driver_name() not in ["java"]:
+                    # assert only JAVA pulls results eagerly.
+                    self.assertEqual(self._server.count_requests("PULL"), 1)
                 driver.close()
             finally:
                 self._server.reset()

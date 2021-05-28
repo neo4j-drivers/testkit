@@ -12,6 +12,14 @@ C: PULL {"n": 2}
 S: RECORD ["1"]
    RECORD ["2"]
    SUCCESS {"has_more": true}
+{?
+    # some driver are eager to pull more results
+    # e.g., JAVA implements a watermarks approach
+    C: PULL {"n": 2}
+    S: RECORD ["1"]
+       RECORD ["2"]
+       SUCCESS {"has_more": true}
+?}
 C: DISCARD {"n": -1}
 S: SUCCESS {"type": "#MODE#"}
 {*
