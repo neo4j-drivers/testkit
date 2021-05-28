@@ -27,6 +27,7 @@ from threading import (
     Lock,
     Thread,
 )
+import time
 import traceback
 
 from .addressing import Address
@@ -111,11 +112,11 @@ class BoltStubService:
                          self.client_address, self.server_address)
 
             def handle(self):
+                with service.actors_lock:
+                    actor = BoltActor(deepcopy(script), self.wire)
+                    service.actors.append(actor)
+                    service.ever_acted = True
                 try:
-                    with service.actors_lock:
-                        actor = BoltActor(deepcopy(script), self.wire)
-                        service.actors.append(actor)
-                        service.ever_acted = True
                     actor.play()
                 except ServerExit as e:
                     log.info("[#%04X>#%04X]  S: <EXIT> %s",
@@ -196,39 +197,45 @@ class BoltActor:
             handshake_data=self.script.context.handshake
         )
         self._exit = False
-        self.script_lock = Lock()
 
     def play(self):
         for init_fn in (self.channel.preamble, self.channel.version_handshake):
             while True:
+                if self._exit:
+                    raise ServerExit("Actor exit on request")
                 try:
-                    with self.script_lock:
-                        init_fn()
+                    init_fn()
                     break
                 except ReadWakeup:
                     continue
         try:
-            with self.script_lock:
-                self.script.init(self.channel)
+            self.script.init(self.channel)
             while True:
                 if self._exit:
                     raise ServerExit("Actor exit on request")
+                if self.script.done():
+                    break
                 try:
-                    with self.script_lock:
-                        if self.script.done():
-                            break
-                        self.script.consume(self.channel)
+                    self.script.consume(self.channel)
                 except ReadWakeup:
+                    # The `Script` class does some locking to protect its state
+                    # which can be changed concurrently for example by
+                    # `try_skip_to_end` being called from the interrupt handler
+                    # in `__main__.py` which spawns a new thread. Without this
+                    # `sleep`, the main thread that keeps calling
+                    # `script.consume` only releases Script's internal lock only
+                    # so briefly that `try_skip_to_end` hangs unnecessarily long
+                    time.sleep(0.000001)
                     continue
         except (ConnectionError, OSError):
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.
             return
+        self.log("Script finished")
 
     def try_skip_to_end(self):
-        with self.script_lock:
-            self.script.try_skip_to_end()
+        self.script.try_skip_to_end()
 
     def exit(self):
         self._exit = True

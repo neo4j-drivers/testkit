@@ -5,6 +5,7 @@ import json
 from os import path
 import re
 from textwrap import wrap
+import threading
 from time import sleep
 from typing import (
     List,
@@ -31,6 +32,26 @@ def load_parser():
 
 
 parser = load_parser()
+
+
+class CopyableRLock:
+    def __init__(self):
+        self._l = threading.RLock()
+
+    def __deepcopy__(self, memodict=None):
+        return CopyableRLock()
+
+    def acquire(self, blocking=True, timeout=-1):
+        return self._l.acquire(blocking=blocking, timeout=timeout)
+
+    def release(self):
+        return self._l.release()
+
+    def __enter__(self):
+        return self._l.__enter__()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return self._l.__exit__(exc_type, exc_val, exc_tb)
 
 
 class LineError(lark.GrammarError):
@@ -657,9 +678,7 @@ class OptionalBlock(Block):
     def has_deterministic_end(self) -> bool:
         if not self.started:
             return False
-        if self.block_list.has_deterministic_end():
-            return True
-        return False
+        return self.block_list.has_deterministic_end()
 
     def init(self, channel):
         # self.assert_no_init()
@@ -933,6 +952,7 @@ class Script:
         self.filename = filename or ""
         self._skipped = False
         self._verify_script()
+        self._lock = CopyableRLock()
 
     def _verify_script(self):
         try:
@@ -953,24 +973,28 @@ class Script:
             bl.update_context(self.context)
 
     def init(self, channel):
-        self.block_list.init(channel)
+        with self._lock:
+            self.block_list.init(channel)
 
     def consume(self, channel):
-        if not self.block_list.try_consume(channel):
-            if not channel.try_auto_consume(self.context.auto):
-                raise ScriptDeviation(self.block_list.accepted_messages(),
-                                      channel.peek())
+        with self._lock:
+            if not self.block_list.try_consume(channel):
+                if not channel.try_auto_consume(self.context.auto):
+                    raise ScriptDeviation(self.block_list.accepted_messages(),
+                                          channel.peek())
 
     def done(self):
-        if self._skipped:
-            return True
-        if self.block_list.has_deterministic_end():
-            return self.block_list.done()
-        return False
+        with self._lock:
+            if self._skipped:
+                return True
+            if self.block_list.has_deterministic_end():
+                return self.block_list.done()
+            return False
 
     def try_skip_to_end(self):
-        if self.block_list.can_be_skipped():
-            self._skipped = True
+        with self._lock:
+            if self.block_list.can_be_skipped():
+                self._skipped = True
 
     @property
     def all_lines(self):
