@@ -44,16 +44,16 @@ class TestProtocolVersions(TestkitTestCase):
             :param version: e.g. "4x3" or "3"
             :type version: string
             :param server_agent: Set a specific server agent and check that the
-                                 summery list the correct one.
+                                 summary list the correct one.
             :type server_agent: str, optional
-            :param check_version: Check if the summery contains the correct bolt
+            :param check_version: Check if the summary contains the correct bolt
                                   version
             :type check_version: bool
             :param rejected_agent:
                 True: Expect the driver to fail by rejecting the server agent
                 False: Expect the driver not to fail
             :type rejected_agent: bool
-            :param check_server_address: Check if the summery contains the right
+            :param check_server_address: Check if the summary contains the right
                                          server-address
             :type check_server_address: bool
         """
