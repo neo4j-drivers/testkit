@@ -85,8 +85,9 @@ class TestIterationSessionRun(TestkitTestCase):
                 self.assertEqual(self._server.count_requests("DISCARD"), 0)
                 session.close()
                 self._server.done()
-                if version == "v4x0" and get_driver_name() not in ["java"]:
-                    # assert only JAVA pulls results eagerly.
+                if (version == "v4x0"
+                        and get_driver_name() not in ["java", "javascript"]):
+                    # assert only JAVA and JS pulls results eagerly.
                     self.assertEqual(self._server.count_requests("PULL"), 1)
                 driver.close()
             finally:
