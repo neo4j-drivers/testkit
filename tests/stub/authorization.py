@@ -225,9 +225,6 @@ class AuthorizationTests(BaseAuthorizationTests):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_pull_using_session_run(
             self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -251,9 +248,6 @@ class AuthorizationTests(BaseAuthorizationTests):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_begin_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -279,9 +273,6 @@ class AuthorizationTests(BaseAuthorizationTests):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_run_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -307,9 +298,6 @@ class AuthorizationTests(BaseAuthorizationTests):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_pull_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -334,9 +322,6 @@ class AuthorizationTests(BaseAuthorizationTests):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_commit_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -361,9 +346,6 @@ class AuthorizationTests(BaseAuthorizationTests):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_rollback_using_tx_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -389,9 +371,6 @@ class AuthorizationTests(BaseAuthorizationTests):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_begin_using_tx_function(
             self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -432,9 +411,6 @@ class AuthorizationTests(BaseAuthorizationTests):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_run_using_tx_function(
             self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -475,9 +451,6 @@ class AuthorizationTests(BaseAuthorizationTests):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_pull_using_tx_function(
             self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
@@ -518,9 +491,6 @@ class AuthorizationTests(BaseAuthorizationTests):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_commit_using_tx_function(
             self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['go']:
-            self.skipTest("requires authorization expired response support")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self._routing_server1.start(script=self.router_script(),
