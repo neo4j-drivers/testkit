@@ -269,7 +269,6 @@ class StubServer:
 
     def count_requests(self, pattern):
         self._read_pipes()
-        print("".join(self._stdout_lines))
         count = 0
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
