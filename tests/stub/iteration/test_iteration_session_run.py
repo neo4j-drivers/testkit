@@ -93,6 +93,9 @@ class TestIterationSessionRun(TestkitTestCase):
             finally:
                 self._server.reset()
 
+        if get_driver_name() in ["go"]:
+            self.skipTest('sends `"qid": -1` in DISCARD (invalid BOLT for auto-'
+                          'commit transactions)')
         for version, script in (("v3", "pull_all_any_mode.script"),
                                 ("v4x0", "pull_2_then_discard.script")):
             for mode in ("write", "read"):
