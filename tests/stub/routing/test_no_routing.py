@@ -46,8 +46,10 @@ class NoRouting(TestkitTestCase):
                         userAgent="007")
 
         session = driver.session('r', database="adb")
-        session.run("RETURN 1 as n")
+        res = session.run("RETURN 1 as n")
+        summary = res.consume()
         session.close()
         driver.close()
 
+        self.assertEqual(summary.server_info.address, self._server.address)
         self._server.done()

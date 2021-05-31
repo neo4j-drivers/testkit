@@ -5,7 +5,7 @@
 
 C: RUN "RETURN 1 as n" {} {}
    PULL_ALL
-S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
+S: FAILURE #FAILURE#
    IGNORED
 C: RESET
 S: SUCCESS {}

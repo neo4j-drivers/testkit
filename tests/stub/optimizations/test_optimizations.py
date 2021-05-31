@@ -12,11 +12,13 @@ class TestOptimizations(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
+        self._router = StubServer(9000)
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
         # is killed and it's output is dumped for analysis.
         self._server.reset()
+        self._router.reset()
         super().tearDown()
 
     @driver_feature(types.Feature.OPT_PULL_PIPELINING)
@@ -51,15 +53,21 @@ class TestOptimizations(TestkitTestCase):
                     test()
                 self._server.reset()
 
-    def double_read(self, mode, new_session, use_tx, check_single_connection,
-                    check_no_reset):
+    def double_read(self, mode, new_session, use_tx, routing,
+                    check_single_connection, check_no_reset):
         script = "run_twice{}.script".format("_tx" if use_tx else "")
         self._server.start(path=self.script_path(script),
                            vars={"#TYPE#": mode[0]})
+        if routing:
+            self._router.start(path=self.script_path("router.script"),
+                               vars={"#HOST#": self._router.host})
         auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                         credentials="pass")
-        driver = Driver(self._backend, "bolt://%s" % self._server.address,
-                        auth)
+        if routing:
+            uri = "neo4j://%s" % self._router.address
+        else:
+            uri = "bolt://%s" % self._server.address
+        driver = Driver(self._backend, uri, auth)
 
         results = []
         session = None
@@ -86,26 +94,27 @@ class TestOptimizations(TestkitTestCase):
         driver.close()
         self.assertEqual(results, [[1], [2]])
         self._server.done()
+        self._router.reset()
         if check_single_connection:
             self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
         if check_no_reset:
-            # print("=" * 80)
-            # print(self._server.count_requests("RESET"))
-            # print("=" * 80, flush=True)
-            # exit(1)
             self.assertEqual(self._server.count_requests("RESET"), 0)
 
     @driver_feature(types.Feature.OPT_CONNECTION_REUSE)
     def test_reuses_connection(self):
-        for mode in ("read", "write"):
-            for use_tx in (True, False):
-                for new_session in (True, False):
-                    with self.subTest(mode
-                                      + ("_tx" if use_tx else "")
-                                      + ("_one_shot_session" if new_session
-                                         else"_reuse_session")):
-                        self.double_read(mode, new_session, use_tx, True, False)
-                    self._server.reset()
+        for routing in (False, True):
+            for mode in ("read", "write"):
+                for use_tx in (True, False):
+                    for new_session in (True, False):
+                        with self.subTest(mode
+                                          + ("_tx" if use_tx else "")
+                                          + ("_one_shot_session" if new_session
+                                             else "_reuse_session")
+                                          + ("_routing" if routing
+                                             else "_direct")):
+                            self.double_read(mode, new_session, use_tx, routing,
+                                             True, False)
+                        self._server.reset()
 
     @driver_feature(types.Feature.OPT_MINIMAL_RESETS)
     def test_no_reset_on_clean_connection(self):
@@ -116,7 +125,8 @@ class TestOptimizations(TestkitTestCase):
                                   + ("_tx" if use_tx else "")
                                   + ("_one_shot_session" if new_session
                                      else"_reuse_session")):
-                    self.double_read(mode, new_session, use_tx, False, True)
+                    self.double_read(mode, new_session, use_tx, False,
+                                     False, True)
                 self._server.reset()
 
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)

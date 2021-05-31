@@ -178,10 +178,24 @@ class Summary:
 
     def __init__(self, **data):
         # TODO: remove block when all drivers support the address field
+        # ----------------------------------------------------------------------
+        class AnyAddress:
+            """Fake address that will match anything"""
+            def __eq__(self, _):
+                return True
+
         from tests.shared import get_driver_name
         if get_driver_name() in ["python", "java", "javascript", "go",
                                  "dotnet"]:
-            data["serverInfo"]["address"] = data["serverInfo"].get("address")
+            if "address" in data["serverInfo"]:
+                import warnings
+                warnings.warn(
+                    "Backend supports address field in Summary.serverInfo. "
+                    "Remove the backwards compatibility check!"
+                )
+            else:
+                data["serverInfo"]["address"] = AnyAddress()
+        # ----------------------------------------------------------------------
         self.server_info = ServerInfo(**data["serverInfo"])
 
 
@@ -221,6 +235,20 @@ class RetryableDone:
 
     def __init__(self):
         pass
+
+
+class RoutingTable:
+    def __init__(self, database, ttl, routers, readers, writers):
+        """ Sent from the backend in response to GetRoutingTable.
+
+        routers, readers, and writers are all supposed to be lists of addresses
+        as strings.
+        """
+        self.database = database
+        self.ttl = ttl
+        self.routers = routers
+        self.readers = readers
+        self.writers = writers
 
 
 class BaseError(Exception):
