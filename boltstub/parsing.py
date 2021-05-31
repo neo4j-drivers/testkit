@@ -76,7 +76,7 @@ class Line(str, abc.ABC):
         return obj
 
     def __str__(self):
-        return "({}){}".format(self.line_number, super(Line, self).__str__())
+        return "({:3}) {}".format(self.line_number, super(Line, self).__str__())
 
     def __repr__(self):
         return "<{}>{}".format(self.__class__.__name__, self.__str__())
@@ -409,7 +409,7 @@ class ClientBlock(Block):
         return self.lines and self.lines[0].match(channel.peek())
 
     def _consume(self, channel):
-        channel.consume()
+        channel.consume(self.lines[self.index].line_number)
         self.index += 1
 
     def done(self):

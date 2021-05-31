@@ -269,6 +269,7 @@ class StubServer:
 
     def count_requests(self, pattern):
         self._read_pipes()
+        print("".join(self._stdout_lines))
         count = 0
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
@@ -276,9 +277,10 @@ class StubServer:
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
             line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
                           line)
-            if not line.startswith("C: "):
+            match = re.match(r"^(C: )|(\(\s*\d+\) C: )", line)
+            if not match:
                 continue
-            line = line[3:]
+            line = line[match.end():]
             if isinstance(pattern, re.Pattern):
                 count += bool(pattern.match(line))
             else:
@@ -299,7 +301,7 @@ class StubServer:
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
             line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
                           line)
-            match = re.match(r"^(S: )|(\(\d+\)S: )|(\(\d+\)\s+)", line)
+            match = re.match(r"^(S: )|(\(\s*\d+\) S: )|(\(\s*\d+\)\s+)", line)
             if not match:
                 continue
             line = line[match.end():]

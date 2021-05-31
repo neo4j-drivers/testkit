@@ -422,8 +422,8 @@ def test_lists_alternatives_on_unexpected_message(msg, restarting, concurrent,
     assert len(server.service.exceptions) == 1
     server_exc = server.service.exceptions[0]
     line_offset = restarting + concurrent
-    assert "(%i)C: RUN" % (5 + line_offset) in str(server_exc)
-    assert "(%i)C: RESET" % (7 + line_offset) in str(server_exc)
+    assert "(%3i) C: RUN" % (5 + line_offset) in str(server_exc)
+    assert "(%3i) C: RESET" % (7 + line_offset) in str(server_exc)
 
 
 @pytest.mark.parametrize("block_marker", ("?", "*", "+"))
@@ -449,11 +449,11 @@ def test_lists_alternatives_on_unexpected_message_with_non_det_block(
         con.read(6)
     assert len(server.service.exceptions) == 1
     server_exc = server.service.exceptions[0]
-    assert "(5)C: RUN" in str(server_exc)
+    assert "(  5) C: RUN" in str(server_exc)
     if block_marker in ("?", "*"):
-        assert "(7)C: RESET" in str(server_exc)
+        assert "(  7) C: RESET" in str(server_exc)
     else:
-        assert "(7)C: RESET" not in str(server_exc)
+        assert "(  7) C: RESET" not in str(server_exc)
 
 
 def test_unknown_message(server_factory, connection_factory):
