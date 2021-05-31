@@ -320,6 +320,7 @@ class TestBlockList:
         assert not channel.msg_buffer
         for i in range(3):
             assert not block_det.done()
+            assert not block_det.can_be_skipped()
             _assert_accepted_messages(block_det, [messages[i]])
             with channel.assert_consume():
                 assert block_det.try_consume(channel)
@@ -329,6 +330,7 @@ class TestBlockList:
             else:
                 assert channel.msg_buffer_names() == ["SMSG1", "SMSG2"]
         assert block_det.done()
+        assert block_det.can_be_skipped()
         _assert_accepted_messages(block_det, [])
 
     @pytest.mark.parametrize("skip1", (True, False))
@@ -340,12 +342,15 @@ class TestBlockList:
         assert block_non_det.has_deterministic_end()
         accepted = all_messages[:-1]
         for i in range(len(messages) - 1):
+            assert not block_non_det.done()
+            assert not block_non_det.can_be_skipped()
             _assert_accepted_messages(block_non_det, accepted)
             accepted = all_messages[(all_messages.index(messages[i]) + 1):-1]
             assert not block_non_det.done()
             with channel.assert_consume():
                 assert block_non_det.try_consume(channel)
             assert not block_non_det.can_consume(channel_factory(messages[i:]))
+        assert block_non_det.can_be_skipped()
         assert block_non_det.done()
         _assert_accepted_messages(block_non_det, [])
 
@@ -364,14 +369,22 @@ class TestBlockList:
         for i in range(len(messages) - 1):
             _assert_accepted_messages(block_only_non_det, accepted)
             accepted = all_messages[(all_messages.index(messages[i]) + 1):-1]
-            with pytest.raises(Exception):
+            with pytest.raises(RuntimeError):
                 assert not block_only_non_det.done()
+            assert block_only_non_det.can_be_skipped()
             with channel.assert_consume():
                 assert block_only_non_det.try_consume(channel)
             assert not block_only_non_det.can_consume(channel_factory(
                 messages[i:]
             ))
+        assert block_only_non_det.can_be_skipped()
         _assert_accepted_messages(block_only_non_det, accepted)
+        if not skip3:
+            # consumed last message => block should be done
+            assert block_only_non_det.has_deterministic_end()
+            assert block_only_non_det.done()
+        else:
+            assert not block_only_non_det.has_deterministic_end()
 
     @pytest.mark.parametrize("reset_idx", range(1, 4))
     def test_reset_consecutive_deterministic(self, block_det, reset_idx):
