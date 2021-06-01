@@ -125,6 +125,7 @@ class TestProtocolVersions(TestkitTestCase):
                 ("Neo4j4.3.0", True),
                 ("FooBar/4.3.0", True),
             ):
+                # TODO: remove these blocks, once all drivers work
                 if get_driver_name() in ["dotnet"]:
                     # skip subtest: Doesn't reject server's agent sting,
                     #               compiles server agent from bolt version
