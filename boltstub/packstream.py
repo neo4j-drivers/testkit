@@ -144,92 +144,6 @@ class Structure:
         return "Structure[0x%02X](%s)" % (ord(self.tag), ", ".join(map(repr, self.fields)))
 
     def __eq__(self, other):
-        # if isinstance(other, jolt_types.JoltType):
-        #     if isinstance(other, jolt_types.JoltDate):
-        #         return self.tag == b"\x44" and self.fields == [other.days]
-        #     if isinstance(other, jolt_types.JoltTime):
-        #         return self.tag == b"\x54" and self.fields == [
-        #             other.nanoseconds, other.utc_offset
-        #         ]
-        #     if isinstance(other, jolt_types.JoltLocalTime):
-        #         return self.tag == b"\x74" and self.fields == [
-        #             other.nanoseconds
-        #         ]
-        #     if isinstance(other, jolt_types.JoltDateTime):
-        #         return self.tag == b"\x46" and self.fields == [
-        #             *other.seconds_nanoseconds, other.time.utc_offset
-        #         ]
-        #     if isinstance(other, jolt_types.JoltLocalDateTime):
-        #         if self.tag == b"\x66":
-        #             # This might or might not be the right time. However, JOLT
-        #             # does not support time zone IDs. If possible, we'd like to
-        #             # not implement them here either. Instead try to use the
-        #             # stub server in a way that avoids this structure
-        #             # completely.
-        #             warnings.warn(
-        #                 "Stub server received DateTimeZoneId structure. "
-        #                 "Comparing these against JOLT JoltLocalDateTime is "
-        #                 "currently not supported."
-        #             )
-        #         return self.tag == b"\x64" and self.fields == [
-        #             *other.seconds_nanoseconds
-        #         ]
-        #     if isinstance(other, jolt_types.JoltDuration):
-        #         return self.tag == b"\x45" and self.fields == [
-        #             other.months, other.days, other.seconds, other.nanoseconds
-        #         ]
-        #     if isinstance(other, jolt_types.JoltPoint):
-        #         if other.z is None:  # 2D
-        #             return self.tag == b"\x58" and self.fields == [
-        #                 other.srid, other.x, other.y
-        #             ]
-        #         else:
-        #             return self.tag == b"\x59" and self.fields == [
-        #                 other.srid, other.x, other.y, other.z
-        #             ]
-        #     if isinstance(other, jolt_types.JoltNode):
-        #         return self.tag == b"\x4E" and self.fields == [
-        #             other.id, other.labels, other.properties
-        #         ]
-        #     if isinstance(other, jolt_types.JoltRelationship):
-        #         return self.tag == b"\x52" and self.fields == [
-        #             other.id, other.start_node_id, other.end_node_id,
-        #             other.rel_type, other.properties
-        #         ]
-        #     if isinstance(other, jolt_types.JoltPath):
-        #         if self.tag != b"\x50":
-        #             return False
-        #         self_nodes, self_rels, self_ids = self.fields
-        #         self_node_by_id = {n.fields[0]: n for n in self_nodes}
-        #         self_rel_by_id = {rel.fields[0]: rel for rel in self_rels}
-        #         for i in range(len(other.path)):
-        #             if i % 2 == 0:  # node
-        #                 other_node = other.path[i]
-        #                 self_node = self_node_by_id[self_ids[i]]
-        #                 if self_node.fields != [
-        #                     other_node.id, other_node.labels,
-        #                     other_node.properties
-        #                 ]:
-        #                     return False
-        #                 if i != 0:
-        #                     # check relation before node goes to node
-        #                     other_rel = other.path[i - 1]
-        #                     if other_rel.end_node_id != other_node.id:
-        #                         return False
-        #                 if i < len(other.path) - 1:
-        #                     # check relation after node comes from node
-        #                     other_rel = other.path[i + 1]
-        #                     if other_rel.start_node_id != other_node.id:
-        #                         return False
-        #             else:  # relationship
-        #                 other_rel = other.path[i]
-        #                 self_rel = self_rel_by_id[self_ids[i]]
-        #                 if self_rel.fields != [
-        #                     other_rel.id, other_rel.rel_type,
-        #                     other_rel.properties
-        #                 ]:
-        #                     return False
-        #         return True
         try:
             if self.tag == b"\x50":
                 # path struct => order of nodes and rels is irrelevant
@@ -258,6 +172,39 @@ class Structure:
 
     def __setitem__(self, key, value):
         self.fields[key] = value
+
+    def match_jolt_wildcard(self, wildcard: jolt_types.JoltWildcard):
+        for t in wildcard.types:
+            if issubclass(t, jolt_types.JoltDate):
+                if self.tag == b"\x44":
+                    return True
+            if issubclass(t, jolt_types.JoltTime):
+                if self.tag == b"\x54":
+                    return True
+            if issubclass(t, jolt_types.JoltLocalTime):
+                if self.tag == b"\x74":
+                    return True
+            if issubclass(t, jolt_types.JoltDateTime):
+                if self.tag == b"\x46":
+                    return True
+            if issubclass(t, jolt_types.JoltLocalDateTime):
+                if self.tag == b"\x64":
+                    return True
+            if issubclass(t, jolt_types.JoltDuration):
+                if self.tag == b"\x45":
+                    return True
+            if issubclass(t, jolt_types.JoltPoint):
+                if self.tag in (b"\x58", b"\x59"):
+                    return True
+            if issubclass(t, jolt_types.JoltNode):
+                if self.tag == b"\x4E":
+                    return True
+            if issubclass(t, jolt_types.JoltRelationship):
+                if self.tag == b"\x52":
+                    return True
+            if issubclass(t, jolt_types.JoltPath):
+                if self.tag == b"\x50":
+                    return True
 
     @classmethod
     def from_jolt_type(cls, jolt: jolt_types.JoltType):

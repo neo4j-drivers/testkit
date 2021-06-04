@@ -71,11 +71,24 @@ class TestClientLine:
         # TODO: test wildcard + JOLT support
     ))
     def test_matches_jolt_fields(self, field_repr, fields):
-        # FIXME: broken
         content = "MSG " + field_repr
         line = ClientLine(10, "C: " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
+
+    @pytest.mark.parametrize(("field_repr", "fields"), (
+        *((r1, f2)
+          for r1, f1 in _common.JOLT_FIELD_REPR_TO_FIELDS
+          for _, f2 in _common.JOLT_FIELD_REPR_TO_FIELDS
+          if f2 != f1 or type(f2) != type(f1)),
+    ))
+    def test_does_not_match_wrong_jolt_fields(self, field_repr, fields):
+        content = "MSG " + field_repr
+        line = ClientLine(10, "C: " + content, content)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
+        assert not line.match(msg)
+
+    # TODO: test wildcard + JOLT support no-match
 
     @pytest.mark.parametrize(("expected", "received", "match"), (
         # optional

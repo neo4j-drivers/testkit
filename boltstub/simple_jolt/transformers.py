@@ -18,6 +18,7 @@ from .types import (
     JoltNode,
     JoltRelationship,
     JoltPath,
+    JoltWildcard,
 )
 
 
@@ -27,23 +28,43 @@ class JoltTypeTransformer(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         pass
+
+    @classmethod
+    def decode_simple(cls, value, decode_cb):
+        return cls._decode_simple(value, decode_cb)
 
     @staticmethod
     @abc.abstractmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         pass
+
+    @classmethod
+    def decode_full(cls, value, decode_cb):
+        if value == "*":
+            return JoltWildcard(cls._supported_types)
+        return cls._decode_full(value, decode_cb)
 
     @staticmethod
     @abc.abstractmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         pass
+
+    @classmethod
+    def encode_simple(cls, value, encode_cb, human_readable=False):
+        return cls._encode_simple(value, encode_cb,
+                                  human_readable=human_readable)
 
     @staticmethod
     @abc.abstractmethod
-    def encode_full(value, encode_cb, human_readable=False):
+    def _encode_full(value, encode_cb, human_readable):
         pass
+
+    @classmethod
+    def encode_full(cls, value, encode_cb, human_readable=False):
+        return cls._encode_full(value, encode_cb,
+                                human_readable=human_readable)
 
 
 class JoltNullTransformer(JoltTypeTransformer):
@@ -51,22 +72,22 @@ class JoltNullTransformer(JoltTypeTransformer):
 
     @staticmethod
     @abc.abstractmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         assert value is None
         return None
 
     @staticmethod
     @abc.abstractmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         raise NoFullRepresentation()
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         assert value is None
         return None
 
     @staticmethod
-    def encode_full(value, encode_cb, human_readable=False):
+    def _encode_full(value, encode_cb, human_readable):
         raise NoFullRepresentation()
 
 
@@ -75,22 +96,22 @@ class JoltBoolTransformer(JoltTypeTransformer):
     sigil = "?"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         assert isinstance(value, bool)
         return value
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, bool)
         return value
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         assert isinstance(value, bool)
         return value
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, bool)
         return {cls.sigil: value}
 
@@ -100,7 +121,7 @@ class JoltIntTransformer(JoltTypeTransformer):
     sigil = "Z"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         assert isinstance(value, int)
         if -0x80000000 <= value < 0x80000000:
             return value
@@ -108,13 +129,13 @@ class JoltIntTransformer(JoltTypeTransformer):
             return float(value)
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, str)
         value = re.sub(r"\.\d*$", "", value)
         return int(value)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         assert isinstance(value, int)
         if -0x80000000 <= value < 0x80000000:
             return value
@@ -122,7 +143,7 @@ class JoltIntTransformer(JoltTypeTransformer):
             raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, int)
         return {cls.sigil: str(value)}
 
@@ -138,20 +159,20 @@ class JoltFloatTransformer(JoltTypeTransformer):
     }
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, str)
         return float(value)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, float)
         str_repr = str(float(value))
         return {"R": cls._constant_translation.get(str_repr, str_repr)}
@@ -162,22 +183,22 @@ class JoltStrTransformer(JoltTypeTransformer):
     sigil = "U"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         assert isinstance(value, str)
         return value
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, str)
         return value
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         assert isinstance(value, str)
         return value
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, str)
         return {cls.sigil: value}
 
@@ -187,11 +208,11 @@ class JoltBytesTransformer(JoltTypeTransformer):
     sigil = "#"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, (str, list))
         if isinstance(value, str):
             assert re.match(r"^([a-fA-F0-9]{2}\s*)+$", value)
@@ -200,11 +221,11 @@ class JoltBytesTransformer(JoltTypeTransformer):
             return bytes(value)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, (bytes, bytearray))
         if not human_readable:
             return {cls.sigil: value.hex().upper()}
@@ -220,22 +241,22 @@ class JoltDictTransformer(JoltTypeTransformer):
     sigil = "{}"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, dict)
         if not all(map(lambda k: isinstance(k, str), value.keys())):
             raise ValueError("Dictionary keys must be strings")
         return {k: decode_cb(v) for k, v in value.items()}
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         if not all(map(lambda k: isinstance(k, str), value.keys())):
             raise ValueError("Dictionary keys must be strings")
         return {cls.sigil: {k: encode_cb(v) for k, v in value.items()}}
@@ -246,22 +267,22 @@ class JoltListTransformer(JoltTypeTransformer):
     sigil = "[]"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         assert isinstance(value, (list, tuple))
         return [decode_cb(v) for v in value]
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, (list, tuple))
         return [decode_cb(v) for v in value]
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         assert isinstance(value, (list, tuple))
         return [encode_cb(v) for v in value]
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, (list, tuple))
         return {cls.sigil: [encode_cb(v) for v in value]}
 
@@ -274,11 +295,11 @@ class JoltDateTimeTransformer(JoltTypeTransformer):
     sigil = "T"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         if value.startswith("P"):
             return JoltDuration(value)
         if ":" in value:
@@ -296,11 +317,11 @@ class JoltDateTimeTransformer(JoltTypeTransformer):
         raise ValueError("Couldn't parse {} as any of {}".format(value, clss))
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         return {cls.sigil: str(value)}
 
 
@@ -309,20 +330,20 @@ class JoltPointTransformer(JoltTypeTransformer):
     sigil = "@"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         assert isinstance(value, str)
         return JoltPoint(value)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         return {cls.sigil: str(value)}
 
 
@@ -331,11 +352,11 @@ class JoltNodeTransformer(JoltTypeTransformer):
     sigil = "()"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         id_, labels, properties = value
         assert isinstance(id_, int)
         assert isinstance(labels, list)
@@ -346,11 +367,11 @@ class JoltNodeTransformer(JoltTypeTransformer):
         return JoltNode(id_, labels, properties)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
         return {cls.sigil: [
             value.id, value.labels,
@@ -363,11 +384,11 @@ class JoltRelationTransformer(JoltTypeTransformer):
     sigil = "->"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         id_, start_node_id, rel_type, end_node_id, properties = value
         assert isinstance(id_, int)
         assert isinstance(start_node_id, int)
@@ -380,11 +401,11 @@ class JoltRelationTransformer(JoltTypeTransformer):
                                 properties)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
         return {cls.sigil: [
             value.id, value.start_node_id, value.rel_type, value.end_node_id,
@@ -396,21 +417,21 @@ class JoltReverseRelationTransformer(JoltTypeTransformer):
     sigil = "<-"
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         value = [value[idx] for idx in (0, 3, 2, 1, 4)]
         return JoltRelationTransformer.decode_full(value, decode_cb)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         # this class is a pure decoder. encoding always happens with "->" sigil
         raise NotImplemented
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         # this class is a pure decoder. encoding always happens with "->" sigil
         raise NotImplemented
 
@@ -420,11 +441,11 @@ class JoltPathTransformer(JoltTypeTransformer):
     sigil = ".."
 
     @staticmethod
-    def decode_simple(value, decode_cb):
+    def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
     @staticmethod
-    def decode_full(value, decode_cb):
+    def _decode_full(value, decode_cb):
         path = list(map(decode_cb, value))
         assert not path or len(path) % 2 == 1
         for i in range(0, len(path), 2):
@@ -441,11 +462,11 @@ class JoltPathTransformer(JoltTypeTransformer):
         return JoltPath(*path)
 
     @staticmethod
-    def encode_simple(value, encode_cb, human_readable=False):
+    def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
-    def encode_full(cls, value, encode_cb, human_readable=False):
+    def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
         return {cls.sigil: list(map(encode_cb, value.path))}
 

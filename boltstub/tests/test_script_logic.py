@@ -753,12 +753,7 @@ class TestServerBlock:
         msg = channel.msg_buffer[0]
         assert isinstance(msg, TranslatedStructure)
         assert msg.name == "SMSG1"
-        if (len(fields) == 1 and isinstance(fields[0], float)
-                and math.isnan(fields[0])):
-            assert (len(msg.fields) == 1 and isinstance(msg.fields[0], float)
-                    and math.isnan(msg.fields[0]))
-        else:
-            assert msg.fields == fields
+        assert _common.nan_and_type_equal(msg.fields, fields)
 
     def test_single_block(self, single_block, single_channel):
         assert not single_block.can_consume(single_channel)

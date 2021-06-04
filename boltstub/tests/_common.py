@@ -1,3 +1,5 @@
+import math
+
 from ..bolt_protocol import Structure
 
 ALL_SERVER_VERSIONS = (1,), (2,), (3,), (4, 1), (4, 2), (4, 3)
@@ -224,3 +226,32 @@ JOLT_FIELD_REPR_TO_FIELDS = (
         )]
     ),
 )
+
+
+def nan_and_type_equal(a, b):
+    if isinstance(a, list):
+        if not isinstance(b, list) or len(a) != len(b):
+            return False
+        return all(nan_and_type_equal(a_, b_) for a_, b_ in zip(a, b))
+    if isinstance(a, tuple):
+        if not isinstance(b, tuple) or len(a) != len(b):
+            return False
+        return all(nan_and_type_equal(a_, b_) for a_, b_ in zip(a, b))
+    if isinstance(a, dict):
+        if not all(isinstance(k, str) for k in a.keys()):
+            raise NotImplementedError("Only sting-only-key dicts supported")
+        if not isinstance(b, dict):
+            return False
+        if not all(isinstance(k, str) for k in b.keys()):
+            raise NotImplementedError("Only sting-only-key dicts supported")
+        return (set(a.keys()) == set(b.keys())
+                and all(nan_and_type_equal(a[k], b[k]) for k in a.keys()))
+    if isinstance(a, float):
+        if not isinstance(b, float):
+            return False
+        if math.isnan(a) and math.isnan(b):
+            return True
+        return a == b
+    if isinstance(a, int):
+        return isinstance(b, int) and a == b
+    return a == b

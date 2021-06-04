@@ -73,6 +73,8 @@ class LineError(lark.GrammarError):
 
 
 class Line(str, abc.ABC):
+    allow_jolt_wildcard = False
+
     def __new__(cls, line_number: int, raw_line, content: str):
         obj = super(Line, cls).__new__(cls, raw_line)
         obj.line_number = line_number
@@ -92,8 +94,8 @@ class Line(str, abc.ABC):
     def canonical(self):
         pass
 
-    @staticmethod
-    def parse_line(line):
+    @classmethod
+    def parse_line(cls, line):
         def splart(s):
             parts = s.split(maxsplit=1)
             while len(parts) < 2:
@@ -120,13 +122,18 @@ class Line(str, abc.ABC):
                     line,
                     "message fields failed JOLT parser"
                 ) from e
-            decoded = Line._jolt_to_struct(decoded)
+            decoded = cls._jolt_to_struct(decoded)
             fields.append(decoded)
             data = data[end:]
         return name, fields
 
-    @staticmethod
-    def _jolt_to_struct(decoded):
+    @classmethod
+    def _jolt_to_struct(cls, decoded):
+        if isinstance(decoded, jolt_types.JoltWildcard):
+            if not cls.allow_jolt_wildcard:
+                raise ValueError("{} does not allow for JOLT wildcard values")
+            else:
+                return decoded
         if isinstance(decoded, jolt_types.JoltType):
             return Structure.from_jolt_type(decoded)
         if isinstance(decoded, (list, tuple)):
@@ -218,6 +225,8 @@ class BangLine(Line):
 
 
 class ClientLine(Line):
+    allow_jolt_wildcard = True
+
     def __new__(cls, *args, **kwargs):
         obj = super(ClientLine, cls).__new__(cls, *args, **kwargs)
         obj.parsed = cls.parse_line(obj)
@@ -265,7 +274,13 @@ class ClientLine(Line):
             if should == "*":
                 return True
             should = re.sub(r"\\([\\*])", r"\1", should)
-        if type(should) != type(is_) and not isinstance(is_, Structure):
+        if isinstance(should, jolt_types.JoltWildcard):
+            if isinstance(is_, Structure):
+                return is_.match_jolt_wildcard(should)
+            return type(is_) in should.types
+        if isinstance(is_, Structure):
+            return is_ == should
+        if type(should) != type(is_):
             return False
         if isinstance(should, (list, tuple)):
             if len(should) != len(is_):

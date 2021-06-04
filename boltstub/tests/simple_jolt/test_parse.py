@@ -3,6 +3,7 @@ import math
 
 import pytest
 
+from .. import _common
 from ...simple_jolt import (
     dumps_full,
     dumps_simple,
@@ -477,19 +478,5 @@ def test_dumps_simple(in_, out_, human_readable):
     # TODO: test value errors (e.g. path with rels that don't match node ids)
 ))
 def test_loads(in_, out_):
-    def type_match(a, b):
-        # assert a == b
-        if isinstance(a, (list, tuple)):
-            return all(type_match(ea, eb) for ea, eb in zip(a, b))
-        if isinstance(a, dict):
-            return (all(type_match(ka, kb)
-                        for ka, kb in zip(sorted(a.keys()), sorted(b.keys())))
-                    and all(type_match(a[k], b[k]) for k in a))
-        return type(a) == type(b)
-
     res = loads(in_)
-    if isinstance(out_, float) and math.isnan(out_):
-        assert math.isnan(res)
-    else:
-        assert res == out_
-    assert type_match(res, out_)
+    assert _common.nan_and_type_equal(res, out_)

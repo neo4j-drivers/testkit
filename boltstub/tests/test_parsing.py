@@ -606,7 +606,3 @@ def test_comment_like_field(unverified_script):
     script = parsing.parse(script)
     assert_dialogue_blocks_block_list(script.block_list,
                                       ['C: MSG "# NOT a comment"'])
-
-
-# TODO: test JOLT (all types)
-# TODO: test JOLT with int/float confused

@@ -325,6 +325,16 @@ class JoltPath(JoltType):
         return self.path == other.path
 
 
+class JoltWildcard(JoltType):
+    """
+    This is a stub-server specific JOLT type that marks a match-all object
+
+    e.g. `{"Z": "*"}` represents any integer.
+    """
+    def __init__(self, types):
+        self.types = types
+
+
 __all__ = [
     JoltDate,
     JoltTime,
