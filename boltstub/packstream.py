@@ -22,7 +22,9 @@
 from codecs import decode
 from io import BytesIO
 from struct import pack as struct_pack, unpack as struct_unpack
+import warnings
 
+from .simple_jolt import types as jolt_types
 
 PACKED_UINT_8 = [struct_pack(">B", value) for value in range(0x100)]
 PACKED_UINT_16 = [struct_pack(">H", value) for value in range(0x10000)]
@@ -48,17 +50,205 @@ class Structure:
         self.tag = tag
         self.fields = list(fields)
 
+        self._verify_fields()
+
+    def _verify_fields(self):
+        tag, fields = self.tag, self.fields
+
+        def verify_node():
+            if (len(fields) != 3
+                    or not isinstance(fields[0], int)
+                    or not isinstance(fields[1], list)
+                    or not all(isinstance(label, str) for label in fields[1])
+                    or not isinstance(fields[2], dict)
+                    or not all(isinstance(k, str) for k in fields[2].keys())):
+                raise ValueError("Invalid Node struct received %r" % self)
+
+        def verify_relationship():
+            if (len(fields) != 5
+                    or not isinstance(fields[0], int)
+                    or not isinstance(fields[1], int)
+                    or not isinstance(fields[2], int)
+                    or not isinstance(fields[3], str)
+                    or not isinstance(fields[4], dict)
+                    or not all(isinstance(k, str) for k in fields[4].keys())):
+                raise ValueError(
+                    "Invalid Relationship struct received %r" % self
+                )
+
+        def verify_unbound_relationship():
+            if (len(fields) != 3
+                    or not isinstance(fields[0], int)
+                    or not isinstance(fields[1], str)
+                    or not isinstance(fields[2], dict)
+                    or not all(isinstance(k, str) for k in fields[2].keys())):
+                raise ValueError(
+                    "Invalid UnboundRelationship struct received %r" % self
+                )
+
+        def verify_path():
+            if (len(fields) != 3
+                    or not isinstance(fields[0], list)
+                    or not all(isinstance(n, Structure)
+                               and n.tag == b"\x4E"
+                               and n.fields[0] in fields[2]  # id is used
+                               for n in fields[0])
+                    or not isinstance(fields[1], list)
+                    or not all(isinstance(rel, Structure)
+                               and rel.tag == b"\x72"
+                               and rel.fields[0] in fields[2]  # id is used
+                               for rel in fields[1])
+                    or not isinstance(fields[2], list)
+                    or not all(isinstance(id_, int)
+                               # id exists in nodes or relationships
+                               and id_ in {
+                                   s.fields[0] for s in fields[0] + fields[1]
+                               }
+                               for id_ in fields[2])):
+                raise ValueError(
+                    "Invalid Path struct received %r" % self
+                )
+
+        def build_generic_verifier(types, name):
+            def verify():
+                if (len(fields) != len(types)
+                        or not all(isinstance(f, t)
+                                   for f, t in zip(fields, types))):
+                    raise ValueError(
+                        "Invalid %s struct received %r" % (name, self)
+                    )
+
+            return verify
+
+        field_validator = {
+            b"\x4E": verify_node,
+            b"\x52": verify_relationship,
+            b"\x72": verify_unbound_relationship,
+            b"\x50": verify_path,
+            b"\x44": build_generic_verifier((int,), "Date"),
+            b"\x54": build_generic_verifier((int, int), "Time"),
+            b"\x74": build_generic_verifier((int,), "LocalTime"),
+            b"\x46": build_generic_verifier((int, int, int,), "DateTime"),
+            b"\x66": build_generic_verifier((int, int, str), "DateTimeZoneId"),
+            b"\x64": build_generic_verifier((int, int), "LocalDateTime"),
+            b"\x45": build_generic_verifier((int, int, int, int), "Duration"),
+            b"\x58": build_generic_verifier((int, float, float), "Point2D"),
+            b"\x59": build_generic_verifier((int, float, float, float),
+                                            "Point3D"),
+        }
+
+        if tag in field_validator:
+            field_validator[tag]()
+
     def __repr__(self):
         return "Structure[0x%02X](%s)" % (ord(self.tag), ", ".join(map(repr, self.fields)))
 
     def __eq__(self, other):
+        # if isinstance(other, jolt_types.JoltType):
+        #     if isinstance(other, jolt_types.JoltDate):
+        #         return self.tag == b"\x44" and self.fields == [other.days]
+        #     if isinstance(other, jolt_types.JoltTime):
+        #         return self.tag == b"\x54" and self.fields == [
+        #             other.nanoseconds, other.utc_offset
+        #         ]
+        #     if isinstance(other, jolt_types.JoltLocalTime):
+        #         return self.tag == b"\x74" and self.fields == [
+        #             other.nanoseconds
+        #         ]
+        #     if isinstance(other, jolt_types.JoltDateTime):
+        #         return self.tag == b"\x46" and self.fields == [
+        #             *other.seconds_nanoseconds, other.time.utc_offset
+        #         ]
+        #     if isinstance(other, jolt_types.JoltLocalDateTime):
+        #         if self.tag == b"\x66":
+        #             # This might or might not be the right time. However, JOLT
+        #             # does not support time zone IDs. If possible, we'd like to
+        #             # not implement them here either. Instead try to use the
+        #             # stub server in a way that avoids this structure
+        #             # completely.
+        #             warnings.warn(
+        #                 "Stub server received DateTimeZoneId structure. "
+        #                 "Comparing these against JOLT JoltLocalDateTime is "
+        #                 "currently not supported."
+        #             )
+        #         return self.tag == b"\x64" and self.fields == [
+        #             *other.seconds_nanoseconds
+        #         ]
+        #     if isinstance(other, jolt_types.JoltDuration):
+        #         return self.tag == b"\x45" and self.fields == [
+        #             other.months, other.days, other.seconds, other.nanoseconds
+        #         ]
+        #     if isinstance(other, jolt_types.JoltPoint):
+        #         if other.z is None:  # 2D
+        #             return self.tag == b"\x58" and self.fields == [
+        #                 other.srid, other.x, other.y
+        #             ]
+        #         else:
+        #             return self.tag == b"\x59" and self.fields == [
+        #                 other.srid, other.x, other.y, other.z
+        #             ]
+        #     if isinstance(other, jolt_types.JoltNode):
+        #         return self.tag == b"\x4E" and self.fields == [
+        #             other.id, other.labels, other.properties
+        #         ]
+        #     if isinstance(other, jolt_types.JoltRelationship):
+        #         return self.tag == b"\x52" and self.fields == [
+        #             other.id, other.start_node_id, other.end_node_id,
+        #             other.rel_type, other.properties
+        #         ]
+        #     if isinstance(other, jolt_types.JoltPath):
+        #         if self.tag != b"\x50":
+        #             return False
+        #         self_nodes, self_rels, self_ids = self.fields
+        #         self_node_by_id = {n.fields[0]: n for n in self_nodes}
+        #         self_rel_by_id = {rel.fields[0]: rel for rel in self_rels}
+        #         for i in range(len(other.path)):
+        #             if i % 2 == 0:  # node
+        #                 other_node = other.path[i]
+        #                 self_node = self_node_by_id[self_ids[i]]
+        #                 if self_node.fields != [
+        #                     other_node.id, other_node.labels,
+        #                     other_node.properties
+        #                 ]:
+        #                     return False
+        #                 if i != 0:
+        #                     # check relation before node goes to node
+        #                     other_rel = other.path[i - 1]
+        #                     if other_rel.end_node_id != other_node.id:
+        #                         return False
+        #                 if i < len(other.path) - 1:
+        #                     # check relation after node comes from node
+        #                     other_rel = other.path[i + 1]
+        #                     if other_rel.start_node_id != other_node.id:
+        #                         return False
+        #             else:  # relationship
+        #                 other_rel = other.path[i]
+        #                 self_rel = self_rel_by_id[self_ids[i]]
+        #                 if self_rel.fields != [
+        #                     other_rel.id, other_rel.rel_type,
+        #                     other_rel.properties
+        #                 ]:
+        #                     return False
+        #         return True
         try:
+            if self.tag == b"\x50":
+                # path struct => order of nodes and rels is irrelevant
+                return (other.tag == b"\x50"
+                        and len(other.fields) == 3
+                        and sorted(self.fields[0]) == sorted(other.fields[0])
+                        and sorted(self.fields[1]) == sorted(other.fields[1])
+                        and self.fields[2] == other.fields[2])
             return self.tag == other.tag and self.fields == other.fields
         except AttributeError:
             return False
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __lt__(self, other):
+        if not isinstance(other, Structure):
+            return NotImplemented
+        return (self.tag, *self.fields) < (other.tag, *other.fields)
 
     def __len__(self):
         return len(self.fields)
@@ -68,6 +258,48 @@ class Structure:
 
     def __setitem__(self, key, value):
         self.fields[key] = value
+
+    @classmethod
+    def from_jolt_type(cls, jolt: jolt_types.JoltType):
+        if isinstance(jolt, jolt_types.JoltDate):
+            return cls(b"\x44", jolt.days)
+        if isinstance(jolt, jolt_types.JoltTime):
+            return cls(b"\x54", jolt.nanoseconds, jolt.utc_offset)
+        if isinstance(jolt, jolt_types.JoltLocalTime):
+            return cls(b"\x74", jolt.nanoseconds)
+        if isinstance(jolt, jolt_types.JoltDateTime):
+            return cls(b"\x46", *jolt.seconds_nanoseconds, jolt.time.utc_offset)
+        if isinstance(jolt, jolt_types.JoltLocalDateTime):
+            return cls(b"\x64", *jolt.seconds_nanoseconds)
+        if isinstance(jolt, jolt_types.JoltDuration):
+            return cls(b"\x45", jolt.months, jolt.days, jolt.seconds,
+                       jolt.nanoseconds)
+        if isinstance(jolt, jolt_types.JoltPoint):
+            if jolt.z is None:  # 2D
+                return cls(b"\x58", jolt.srid, jolt.x, jolt.y)
+            else:
+                return cls(b"\x59", jolt.srid, jolt.x, jolt.y, jolt.z)
+        if isinstance(jolt, jolt_types.JoltNode):
+            return cls(b"\x4E", jolt.id, jolt.labels, jolt.properties)
+        if isinstance(jolt, jolt_types.JoltRelationship):
+            return cls(b"\x52", jolt.id, jolt.start_node_id, jolt.end_node_id,
+                       jolt.rel_type, jolt.properties)
+        if isinstance(jolt, jolt_types.JoltPath):
+            # Node structs
+            nodes = []
+            for node in jolt.path[::2]:
+                node = cls(b"\x4E", node.id, node.labels, node.properties)
+                if node not in nodes:
+                    nodes.append(node)
+            # UnboundRelationship structs
+            rels = []
+            for rel in jolt.path[1::2]:
+                rel = cls(b"\x72", rel.id, rel.rel_type, rel.properties)
+                if rel not in rels:
+                    rels.append(rel)
+            ids = [e.id for e in jolt.path]
+            return cls(b"\x50", nodes, rels, ids)
+        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
 
 class Packer:

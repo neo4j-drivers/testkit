@@ -2,6 +2,7 @@ import abc
 from collections import OrderedDict
 from copy import deepcopy
 import json
+import math
 from os import path
 import re
 from textwrap import wrap
@@ -22,6 +23,9 @@ from .errors import (
     BoltUnknownVersion,
     ServerExit,
 )
+from .packstream import Structure
+from .simple_jolt.transformers import decode as jolt_decode
+from .simple_jolt import types as jolt_types
 
 
 def load_parser():
@@ -97,7 +101,7 @@ class Line(str, abc.ABC):
             return parts
 
         content = line.content
-        tag, data = splart(content.strip())
+        name, data = splart(content.strip())
         fields = []
         decoder = json.JSONDecoder()
         while data:
@@ -109,9 +113,27 @@ class Line(str, abc.ABC):
                     line,
                     "message fields must be white space separated json"
                 ) from e
+            try:
+                decoded = jolt_decode(decoded)
+            except (ValueError, AssertionError) as e:
+                raise LineError(
+                    line,
+                    "message fields failed JOLT parser"
+                ) from e
+            decoded = Line._jolt_to_struct(decoded)
             fields.append(decoded)
             data = data[end:]
-        return tag, fields
+        return name, fields
+
+    @staticmethod
+    def _jolt_to_struct(decoded):
+        if isinstance(decoded, jolt_types.JoltType):
+            return Structure.from_jolt_type(decoded)
+        if isinstance(decoded, (list, tuple)):
+            return type(decoded)(map(Line._jolt_to_struct, decoded))
+        if isinstance(decoded, dict):
+            return {k: Line._jolt_to_struct(v) for k, v in decoded.items()}
+        return decoded
 
 
 class BangLine(Line):
@@ -212,7 +234,7 @@ class ClientLine(Line):
         return ClientLine.field_match(fields, msg.fields)
 
     @staticmethod
-    def dict_match(should, is_):
+    def _dict_match(should, is_):
         accepted_keys = set()
         for should_key in should:
             should_key_unescaped = re.sub(r"\\([\[\]\\\{\}])", r"\1",
@@ -243,7 +265,7 @@ class ClientLine(Line):
             if should == "*":
                 return True
             should = re.sub(r"\\([\\*])", r"\1", should)
-        if type(should) != type(is_):
+        if type(should) != type(is_) and not isinstance(is_, Structure):
             return False
         if isinstance(should, (list, tuple)):
             if len(should) != len(is_):
@@ -251,8 +273,10 @@ class ClientLine(Line):
             return all(ClientLine.field_match(a, b)
                        for a, b in zip(should, is_))
         if isinstance(should, dict):
-            return ClientLine.dict_match(should, is_)
-        return should == is_
+            return ClientLine._dict_match(should, is_)
+        if isinstance(should, float) and math.isnan(should):
+            return isinstance(is_, float) and math.isnan(is_)
+        return is_ == should
 
 
 class ServerLine(Line):

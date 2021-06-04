@@ -1,8 +1,10 @@
 import contextlib
 import itertools
+import math
 import pytest
 from typing import Iterable
 
+from . import _common
 from ..bolt_protocol import TranslatedStructure
 from ..parsing import (
     ClientLine,
@@ -40,7 +42,8 @@ class MockChannel:
         self.msg_buffer.append(struct)
 
     def send_server_line(self, server_line):
-        msg = TranslatedStructure(*Line.parse_line(server_line))
+        name, fields = Line.parse_line(server_line)
+        msg = TranslatedStructure(name, b"\x00", *fields)
         self.msg_buffer.append(msg)
 
     def msg_buffer_names(self):
@@ -735,6 +738,27 @@ class TestServerBlock:
     @pytest.fixture()
     def multi_channel(self):
         return channel_factory(["NOMATCH"])
+
+    @pytest.mark.parametrize(("content", "fields"), (
+        *_common.JOLT_FIELD_REPR_TO_FIELDS,
+    ))
+    def test_send_jolt(self, content, fields):
+        channel = channel_factory(["NOMATCH"])
+        content = "SMSG1 " + content
+        block = ServerBlock([
+            ServerLine(1, "S: " + content, content)
+        ], 1)
+        block.init(channel)
+        assert len(channel.msg_buffer) == 1
+        msg = channel.msg_buffer[0]
+        assert isinstance(msg, TranslatedStructure)
+        assert msg.name == "SMSG1"
+        if (len(fields) == 1 and isinstance(fields[0], float)
+                and math.isnan(fields[0])):
+            assert (len(msg.fields) == 1 and isinstance(msg.fields[0], float)
+                    and math.isnan(msg.fields[0]))
+        else:
+            assert msg.fields == fields
 
     def test_single_block(self, single_block, single_channel):
         assert not single_block.can_consume(single_channel)

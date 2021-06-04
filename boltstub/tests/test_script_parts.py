@@ -2,7 +2,10 @@ import json
 import pytest
 from unittest.mock import patch
 
-from ..bolt_protocol import TranslatedStructure
+from . import _common
+from ..bolt_protocol import (
+    TranslatedStructure,
+)
 from ..errors import ServerExit
 from ..parsing import (
     ClientLine,
@@ -14,12 +17,12 @@ from ..parsing import (
 class TestClientLine:
     def test_matches_tag_name(self):
         line = ClientLine(10, "C: MSG", "MSG")
-        msg = TranslatedStructure("MSG", b"\00")
+        msg = TranslatedStructure("MSG", b"\x00")
         assert line.match(msg)
 
     def test_doesnt_match_wrong_tag_name(self):
         line = ClientLine(10, "C: MSG2", "MSG2")
-        msg = TranslatedStructure("MSG", b"\00")
+        msg = TranslatedStructure("MSG", b"\x00")
         assert not line.match(msg)
 
     @pytest.mark.parametrize("fields", (
@@ -38,7 +41,7 @@ class TestClientLine:
         msg_fields = ["*" if wildcard else f for f in fields]
         content = "MSG " + " ".join(map(json.dumps, msg_fields))
         line = ClientLine(10, "C: " + content, content)
-        msg = TranslatedStructure("MSG", b"\00", *fields)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
     @pytest.mark.parametrize(("expected", "received"), (
@@ -59,9 +62,20 @@ class TestClientLine:
         content = "MSG " + " ".join(map(json.dumps,
                                         received if flip else expected))
         line = ClientLine(10, "C: " + content, content)
-        msg = TranslatedStructure("MSG", b"\00",
+        msg = TranslatedStructure("MSG", b"\x00",
                                   *(expected if flip else received))
         assert not line.match(msg)
+
+    @pytest.mark.parametrize(("field_repr", "fields"), (
+        *_common.JOLT_FIELD_REPR_TO_FIELDS,
+        # TODO: test wildcard + JOLT support
+    ))
+    def test_matches_jolt_fields(self, field_repr, fields):
+        # FIXME: broken
+        content = "MSG " + field_repr
+        line = ClientLine(10, "C: " + content, content)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
+        assert line.match(msg)
 
     @pytest.mark.parametrize(("expected", "received", "match"), (
         # optional
@@ -199,7 +213,7 @@ class TestClientLine:
                 received[0] = {"key": received[0]}
         content = "MSG " + " ".join(map(json.dumps, expected))
         line = ClientLine(10, "C: " + content, content)
-        msg = TranslatedStructure("MSG", b"\00", *received)
+        msg = TranslatedStructure("MSG", b"\x00", *received)
         assert match == line.match(msg)
 
 
