@@ -4,3 +4,7 @@ class NoSimpleRepresentation(ValueError):
 
 class NoFullRepresentation(ValueError):
     pass
+
+
+class JOLTValueError(ValueError):
+    pass

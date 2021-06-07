@@ -9,6 +9,7 @@ from ...simple_jolt import (
     dumps_simple,
     loads,
 )
+from ...simple_jolt.errors import JOLTValueError
 from ...simple_jolt.types import (
     JoltDate,
     JoltTime,
@@ -218,7 +219,7 @@ def test_dumps_full(in_, out_, human_readable):
     ({}, '{"{}": {}}'),
     ({"a": 1}, '{"{}": {"a": 1}}'),
     ({"#": "no bytes"}, '{"{}": {"#": "no bytes"}}'),
-    ({1: 1}, ValueError),
+    ({1: 1}, JOLTValueError),
 
     # date
     (JoltDate("2020-01-01"), '{"T": "2020-01-01"}'),
@@ -337,9 +338,11 @@ def test_dumps_simple(in_, out_, human_readable):
     ('{"Z": "-2147483649"}', -2147483649),
     ('{"Z": "2147483647"}', 2147483647),
     ('{"Z": "2147483648"}', 2147483648),
+    ('{"Z": "1.23"}', 1),
     ('{"Z": "999999999999999999999999999999"}', 999999999999999999999999999999),
 
     # float - full
+    ('{"R": "1"}', 1.0),
     ('{"R": "1.0"}', 1.0),
     ('{"R": "1.23456789"}', 1.23456789),
     ('{"R": "-1.23456789"}', -1.23456789),
@@ -350,18 +353,22 @@ def test_dumps_simple(in_, out_, human_readable):
     ('{"R": "-Infinity"}', float("-inf")),
 
     # str - simple
+    ('""', ""),
     ('"abc"', "abc"),
     ('"ab\\u1234"', "ab\u1234"),
 
     # str - full
+    ('{"U": ""}', ""),
     ('{"U": "abc"}', "abc"),
     ('{"U": "ab\\u1234"}', "ab\u1234"),
 
     # bytes
+    ('{"#": ""}', b""),
     ('{"#": "1234"}', b"\x12\x34"),
     ('{"#": "12FF"}', b"\x12\xff"),
     ('{"#": "12 34"}', b"\x12\x34"),
     ('{"#": "12 FF"}', b"\x12\xff"),
+    ('{"#": [3, 4, 255]}', bytes([3, 4, 255])),
 
     # list - simple
     ("[]", []),
@@ -427,7 +434,7 @@ def test_dumps_simple(in_, out_, human_readable):
     ('{"@": "POINT (1 2)"}', JoltPoint("POINT (1 2)")),
     ('{"@": "POINT(1 2.3)"}', JoltPoint("POINT(1 2.3)")),
     ('{"@": "POINT(56.21 13.43)"}', JoltPoint("POINT(56.21 13.43)")),
-    ('{"@": "POINT(56.21 13.43 12)"}', JoltPoint("POINT(56.21 13.43 12)")),
+    ('{"@": "POINT(56.21 -13.43 12)"}', JoltPoint("POINT(56.21 -13.43 12)")),
     ('{"@": "SRID=4326;POINT(1 2.3)"}', JoltPoint("SRID=4326;POINT(1 2.3)")),
 
     # node
@@ -475,8 +482,299 @@ def test_dumps_simple(in_, out_, human_readable):
             JoltNode(1, ["l"], {}),
         )
     ),
-    # TODO: test value errors (e.g. path with rels that don't match node ids)
 ))
 def test_loads(in_, out_):
     res = loads(in_)
     assert _common.nan_and_type_equal(res, out_)
+
+
+@pytest.mark.parametrize("in_", (
+    # wrong value type
+    '{"?": 123}',
+    '{"?": 123.4}',
+    '{"?": [123]}',
+    '{"?": [123.4]}',
+    '{"?": {"?": true}}',
+    '{"?": "true"}',
+    '{"?": {"a": "b"}}',
+))
+def test_verifies_bool(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # wrong value type
+    '{"Z": 123}',
+    '{"Z": 123.4}',
+    '{"Z": [123]}',
+    '{"Z": [123.4]}',
+    '{"Z": {"Z": "123"}}',
+    '{"Z": true}',
+    # garbage str repr
+    '{"Z": "abd"}',
+    '{"Z": "123a"}',
+    '{"Z": "123,5"}',
+    '{"Z": "123.a"}',
+))
+def test_verifies_int(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # wrong value type
+    '{"R": 123}',
+    '{"R": 123.4}',
+    '{"R": [123]}',
+    '{"R": [123.4]}',
+    '{"R": {"R": "123.4"}}',
+    '{"R": true}',
+    # garbage str repr
+    '{"R": "abd"}',
+    '{"R": "123a"}',
+    '{"R": "123,5"}',
+))
+def test_verifies_float(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # wrong value type
+    '{"U": 123}',
+    '{"U": 123.4}',
+    '{"U": [123]}',
+    '{"U": true}',
+    '{"U": {"a": "b"}}',
+    '{"U": {"U": "b"}}',
+))
+def test_verifies_str(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # wrong value type
+    '{"#": 123.4}',
+    '{"#": 123}',
+    '{"#": {"a": 123}}',
+    '{"#": true}',
+    # invalid string repr
+    '{"#": "123"}',
+    '{"#": "FG"}',
+    '{"#": "F F FF"}',
+    '{"#": "[1, 2]"}',
+    # invalid list repr
+    '{"#": [-1, 128]}',
+    '{"#": [128.0, 128]}',
+    '{"#": [128, 256]}',
+    '{"#": ["128", 255]}',
+))
+def test_verifies_bytes(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # not a list value
+    '{"[]": 123.4}',
+    '{"[]": 123}',
+    '{"[]": "a"}',
+    '{"[]": true}',
+    '{"[]": {"a": 1}}',
+    '{"[]": "[1, 2]"}',
+))
+def test_verifies_list(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # not a dict value
+    '{"{}": 123.4}',
+    '{"{}": 123}',
+    '{"{}": "a"}',
+    '{"{}": true}',
+    r'{"{}": "{\"a\": \"b\"}"}',
+))
+def test_verifies_dict(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # lower case time separator(
+    '{"T": "2020-01-02t12:13:01.1234+01"}',
+    # too high precision
+    '{"T": "2020-01-02T12:13:01.1234567890+01"}',
+    # garbage
+    '{"T": "123456"}',
+    # int value
+    '{"T": 12345}',
+    # bool value
+    '{"T": true}',
+    # lower case duration marker
+    '{"T": "p1Y13M2DT18M"}',
+    '{"T": "P1Y13m2DT18M"}',
+))
+def test_verifies_duration(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # str srid
+    r'{"@": "SRID=\"4326\";POINT(1 2.3)"}',
+    # comma srid separator
+    '{"@": "SRID=4326,POINT(1 2.3)"}',
+    # negative srid
+    '{"@": "SRID=-4326;POINT(1 2.3)"}',
+    # 4D point
+    '{"@": "SRID=4326;POINT(1 2.3 3 4.1234)"}',
+    # Wrong keyword
+    '{"@": "SRID=4326;POiNT(1 2.3)"}',
+    # missing parentheses
+    '{"@": "SRID=4326;POINT(1 2.3"}',
+    # extra parentheses
+    '{"@": "SRID=4326;POINT(1 2.3))"}',
+    # comma separated arguments
+    '{"@": "SRID=4326;POINT(1, 2.3)"}',
+    # bool value
+    '{"@": true}',
+    # list value
+    '{"@": [1, 2]}',
+))
+def test_verifies_point(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # str id
+    '{"()": ["1", ["l"], {}]}',
+    # int label
+    '{"()": [1, [1], {}]}',
+    # str label
+    '{"()": [1, "[]", {}]}',
+    # list property
+    '{"()": [1, ["l"], ["a", "b"]]}',
+))
+def test_verifies_node(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # dict id
+    '{"->": [{"U": "2"}, 1, "RELATES_TO", 3, {}]}',
+    # str dict
+    '{"->": ["2", 1, "RELATES_TO", 3, {}]}',
+    # str start id
+    '{"->": [2, "1", "RELATES_TO", 3, {}]}',
+    # int label
+    '{"->": [2, 1, 1337, 3, {}]}',
+    # str end id
+    '{"->": [2, 1, "RELATES_TO", "3", {}]}',
+    # list properties
+    '{"->": [2, 1, "RELATES_TO", "3", ["a", "b"]]}',
+))
+@pytest.mark.parametrize("flip", [True, False])
+def test_verifies_relationship(in_, flip):
+    if flip:
+        assert in_[:6] == '{"->":'
+        in_ = '{"<-":' + in_[6:]
+    with pytest.raises(JOLTValueError):
+        loads(in_)
+
+
+@pytest.mark.parametrize("in_", (
+    # Link to non-existent node
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 4, {}]}, '
+    '{"()": [3, ["l"], {}]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+    '{"()": [1, ["l"], {}]}'
+    ']}',
+    # Link from non-existent node
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 4, "RELATES_TO", 3, {}]}, '
+    '{"()": [3, ["l"], {}]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+    '{"()": [1, ["l"], {}]}'
+    ']}',
+    # double link
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"->": [4, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [3, ["l"], {}]}'
+    ']}',
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"->": [4, 1, "RELATES_TO", 3, {}]}, '
+    '{"->": [5, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [3, ["l"], {}]}'
+    ']}',
+    # double node
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"()": [4, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [4, ["l"], {}]} '
+    ']}',
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"()": [4, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [5, ["l"], {}]}, '
+    '{"()": [4, ["l"], {}]} '
+    ']}',
+    # only nodes
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"()": [4, ["l"], {}]}, '
+    '{"()": [2, ["l"], {}]}'
+    ']}',
+    # only relationships
+    '{"..": ['
+    '{"->": [1, 1, "RELATES_TO", 3, {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"->": [3, 1, "RELATES_TO", 3, {}]}'
+    ']}',
+    # start with relationship
+    '{"..": ['
+    '{"->": [5, 1, "RELATES_TO", 1, {}]}, '
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [3, ["l"], {}]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+    '{"()": [1, ["l"], {}]}'
+    ']}',
+    # ending with relationship
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [3, ["l"], {}]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [5, 1, "RELATES_TO", 1, {}]}'
+    ']}',
+    '{"..": ['
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+    '{"()": [3, ["l"], {}]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+    '{"()": [1, ["l"], {}]}, '
+    '{"->": [6, 1, "RELATES_TO", 1, {}]}, '
+    '{"->": [6, 1, "RELATES_TO", 1, {}]}'
+    ']}',
+    # total bogus
+    '{"..": {"Z": "1234"}}'
+))
+def test_verifies_path(in_):
+    with pytest.raises(JOLTValueError):
+        loads(in_)

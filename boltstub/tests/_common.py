@@ -228,6 +228,116 @@ JOLT_FIELD_REPR_TO_FIELDS = (
 )
 
 
+JOLT_WILDCARD_TO_FIELDS = (
+    # bool
+    ('{"?": "*"}', (
+        [True],
+        [False]
+    )),
+
+    # int
+    ('{"Z": "*"}', (
+        [1],
+        [0],
+        [-1],
+        [-2147483648],
+        [-2147483649],
+        [2147483647],
+        [2147483648],
+    )),
+
+    # float
+    ('{"R": "*"}', (
+        [1.0],
+        [1.23456789],
+        [-1.23456789],
+        [0.0],
+        [-0.0],
+        [float("nan")],
+        [float("inf")],
+        [float("-inf")],
+    )),
+
+    # str
+    ('{"U": "*"}', (
+        [""],
+        ["abc"],
+        ["*"],
+        ["\u1234foobar"],
+    )),
+
+    # bytes
+    ('{"#": "*"}', (
+        [b"\x12\x34"],
+        [b""],
+        [b"\x00"],
+    )),
+
+    # list
+    ('{"[]": "*"}', (
+        [[]],
+        [[1]],
+        [["a"]],
+        [[1, "a"]],
+        [[1, ["a"]]],
+    )),
+
+    # dict
+    ('{"{}": "*"}', (
+        [{}],
+        [{"a": 1}],
+        [{"#": "no bytes"}],
+    )),
+
+    # date / time / local time / date time / local date time / duration
+    ('{"T": "*"}', (
+        [Structure(b"\x44", 1)],
+        [Structure(b"\x54", 2000000000, 0)],
+        [Structure(b"\x54", 2001000000, 5400)],
+        [Structure(b"\x74", 60000000001)],
+        [Structure(b"\x74", 3601000000000)],
+        [Structure(b"\x46", 90061, 123400000, 3600)],
+        [Structure(b"\x64", 90061, 1234)],
+        [Structure(b"\x45", 25, 2, 1080, 100000000)],
+    )),
+
+    # point 2D / point 3D
+    ('{"@": "*"}', (
+        [Structure(b"\x58", 123, 1.0, 2.3)],
+        [Structure(b"\x59", 42, 56.21, 13.43, 12.)],
+    )),
+
+    # node
+    ('{"()": "*"}', (
+        [Structure(b"\x4E", 123, ["l1", "l2"], {"a": 42})],
+        [Structure(b"\x4E", 0, [], {})],
+    )),
+
+    # relationship
+    ('{"->": "*"}', (
+        [Structure(b"\x52", 0, 0, 0, "", {})],
+        [Structure(b"\x52", 42, 123, 321, "REVERTS_TO", {"prop": "value"})],
+    )),
+
+    # path
+    ('{"..": "*"}', (
+        [Structure(b"\x50", [], [], [])],
+        [Structure(
+            b"\x50",
+            [  # Nodes
+                Structure(b"\x4E", 1, ["l"], {}),
+                Structure(b"\x4E", 3, ["l"], {}),
+            ],
+            [  # Relationships
+                Structure(b"\x72", 2, "RELATES_TO", {}),
+                Structure(b"\x72", 4, "RELATES_TO", {}),
+            ],
+            [1, 2, 3, 4, 1]  # ids
+        )],
+    )),
+)
+
+
 def nan_and_type_equal(a, b):
     if isinstance(a, list):
         if not isinstance(b, list) or len(a) != len(b):

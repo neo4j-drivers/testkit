@@ -2,6 +2,8 @@ import abc
 import datetime
 import re
 
+from .errors import JOLTValueError
+
 
 class JoltType:
     pass
@@ -14,7 +16,7 @@ class _JoltParsedType(JoltType, abc.ABC):
     def __init__(self, value: str):
         match = self._parse_re.match(value)
         if not match:
-            raise ValueError(
+            raise JOLTValueError(
                 "{} didn't match the types format: {}".format(
                     value, self._parse_re
                 )
@@ -267,8 +269,22 @@ class JoltDuration(_JoltParsedType):
 class JoltPoint(_JoltParsedType):
     _parse_re = re.compile(
         r"^(?:SRID=(\d+);)?\s*"
-        r"POINT\s*\(((?:\d+(?:\.\d+)? ){1,2}\d+(?:\.\d+)?)\)$"
+        r"POINT\s*\(((?:[+-]?\d+(?:\.\d+)? ){1,2}[+-]?\d+(?:\.\d+)?)\)$"
     )
+    # yes:
+    # SRID=1234;POINT(1 2 3)
+    # SRID=1234; POINT(1 2 3)
+    # POINT(1 2 3)
+    # POINT(1 2)
+    # POINT(1 2.3)
+    # POINT(1 -2.3)
+    # POINT(+1 -2.3)
+
+    # no:
+    # POINT(1 2 3 4)
+    # POINT(1)
+    # POINT(1, 2)
+    # POiNT(1 2)
 
     def __init__(self, value: str):
         super().__init__(value)

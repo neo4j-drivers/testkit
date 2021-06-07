@@ -4,8 +4,9 @@ import re
 import sys
 
 from .errors import (
+    JOLTValueError,
     NoSimpleRepresentation,
-    NoFullRepresentation
+    NoFullRepresentation,
 )
 from .types import (
     JoltDate,
@@ -102,7 +103,8 @@ class JoltBoolTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, bool)
+        if not isinstance(value, bool):
+            raise JOLTValueError('Expected bool type after sigil "?"')
         return value
 
     @staticmethod
@@ -130,9 +132,13 @@ class JoltIntTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise JOLTValueError('Expected str type after sigil "Z"')
         value = re.sub(r"\.\d*$", "", value)
-        return int(value)
+        try:
+            return int(value)
+        except ValueError as e:
+            raise JOLTValueError("Invalid int representation") from e
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
@@ -164,8 +170,12 @@ class JoltFloatTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, str)
-        return float(value)
+        if not isinstance(value, str):
+            raise JOLTValueError('Expected str type after sigil "R"')
+        try:
+            return float(value)
+        except ValueError as e:
+            raise JOLTValueError("Invalid float representation") from e
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
@@ -189,7 +199,8 @@ class JoltStrTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise JOLTValueError('Expected str after sigil "U"')
         return value
 
     @staticmethod
@@ -213,9 +224,16 @@ class JoltBytesTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, (str, list))
+        if not (isinstance(value, str)
+                or (isinstance(value, list)
+                    and all(isinstance(b, int) and 0 <= b <= 255
+                            for b in value))):
+            raise JOLTValueError('Expected str or list of integers (0-255) '
+                                 'after sigil "#"')
         if isinstance(value, str):
-            assert re.match(r"^([a-fA-F0-9]{2}\s*)+$", value)
+            if not re.match(r"^([a-fA-F0-9]{2}\s*)*$", value):
+                raise JOLTValueError("Invalid hex encoded string for bytes %s"
+                                     % value)
             return bytes.fromhex(value)
         else:
             return bytes(value)
@@ -246,9 +264,9 @@ class JoltDictTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, dict)
-        if not all(map(lambda k: isinstance(k, str), value.keys())):
-            raise ValueError("Dictionary keys must be strings")
+        if not isinstance(value, dict):
+            raise JOLTValueError('Expecting dict after sigil "{}"')
+        assert all(map(lambda k: isinstance(k, str), value.keys()))
         return {k: decode_cb(v) for k, v in value.items()}
 
     @staticmethod
@@ -258,7 +276,7 @@ class JoltDictTransformer(JoltTypeTransformer):
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
         if not all(map(lambda k: isinstance(k, str), value.keys())):
-            raise ValueError("Dictionary keys must be strings")
+            raise JOLTValueError("Dictionary keys must be strings")
         return {cls.sigil: {k: encode_cb(v) for k, v in value.items()}}
 
 
@@ -273,7 +291,8 @@ class JoltListTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, (list, tuple))
+        if not isinstance(value, list):
+            raise JOLTValueError('Expecting list after sigil "[]"')
         return [decode_cb(v) for v in value]
 
     @staticmethod
@@ -300,6 +319,8 @@ class JoltDateTimeTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
+        if not isinstance(value, str):
+            raise JOLTValueError('Expecting str after sigil "T"')
         if value.startswith("P"):
             return JoltDuration(value)
         if ":" in value:
@@ -314,7 +335,8 @@ class JoltDateTimeTransformer(JoltTypeTransformer):
                 return cls(value)
             except ValueError:
                 pass
-        raise ValueError("Couldn't parse {} as any of {}".format(value, clss))
+        raise JOLTValueError("Couldn't parse {} as any of {}"
+                             .format(value, clss))
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
@@ -335,7 +357,8 @@ class JoltPointTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        assert isinstance(value, str)
+        if not isinstance(value, str):
+            raise JOLTValueError('Expecting str sigil "@"')
         return JoltPoint(value)
 
     @staticmethod
@@ -357,11 +380,17 @@ class JoltNodeTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
+        if not isinstance(value, list) or len(value) != 3:
+            raise JOLTValueError('Expecting list of length 3 after sigil "()"')
         id_, labels, properties = value
-        assert isinstance(id_, int)
-        assert isinstance(labels, list)
-        assert all(map(lambda l: isinstance(l, str), labels))
-        assert isinstance(properties, dict)
+        if not isinstance(id_, int):
+            raise JOLTValueError("Node id must be int")
+        if not isinstance(labels, list):
+            raise JOLTValueError("Node labels must be list")
+        if not all(map(lambda l: isinstance(l, str), labels)):
+            raise JOLTValueError("Node labels must be list of str")
+        if not isinstance(properties, dict):
+            raise JOLTValueError("Node properties must be dict")
         properties = {k: decode_cb(v) for k, v in properties.items()}
         assert all(map(lambda e: isinstance(e, str), properties.keys()))
         return JoltNode(id_, labels, properties)
@@ -387,16 +416,25 @@ class JoltRelationTransformer(JoltTypeTransformer):
     def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
-    @staticmethod
-    def _decode_full(value, decode_cb):
+    @classmethod
+    def _decode_full(cls, value, decode_cb):
+        if not isinstance(value, list) or len(value) != 5:
+            raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
+                                 % cls.sigil)
         id_, start_node_id, rel_type, end_node_id, properties = value
-        assert isinstance(id_, int)
-        assert isinstance(start_node_id, int)
-        assert isinstance(rel_type, str)
-        assert isinstance(end_node_id, int)
-        assert isinstance(properties, dict)
+        if not isinstance(id_, int):
+            raise JOLTValueError("Relationship id must be int")
+        if not isinstance(start_node_id, int):
+            raise JOLTValueError("Relationship's start id must be int")
+        if not isinstance(rel_type, str):
+            raise JOLTValueError("Relationship's type id must be str")
+        if not isinstance(end_node_id, int):
+            raise JOLTValueError("Relationship's end id must be int")
+        if not isinstance(properties, dict):
+            raise JOLTValueError("Relationship's properties  must be dict")
         properties = {k: decode_cb(v) for k, v in properties.items()}
-        assert all(map(lambda e: isinstance(e, str), properties.keys()))
+        if not all(map(lambda e: isinstance(e, str), properties.keys())):
+            raise JOLTValueError("Relationship's properties keys must be str")
         return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
                                 properties)
 
@@ -446,19 +484,33 @@ class JoltPathTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
+        if not isinstance(value, list):
+            raise JOLTValueError('Expecting list after sigil ".."')
         path = list(map(decode_cb, value))
-        assert not path or len(path) % 2 == 1
+        if path and len(path) % 2 != 1:
+            raise JOLTValueError("Path doesn't have odd number of elements")
         for i in range(0, len(path), 2):
             node = path[i]
-            assert isinstance(node, JoltNode)
+            if not isinstance(node, JoltNode):
+                raise JOLTValueError("Element %i in path was expected to be "
+                                     "a Node" % i)
             if i != 0:
                 prev_rel = path[i - 1]
-                assert isinstance(prev_rel, JoltRelationship)
-                assert prev_rel.end_node_id == node.id
+                if not isinstance(prev_rel, JoltRelationship):
+                    raise JOLTValueError("Element %i in path was expected to "
+                                         "be a Relationship" % (i - 1))
+                if prev_rel.end_node_id != node.id:
+                    raise JOLTValueError("Relationship %i did not point to the "
+                                         "following Node in the path" % (i - 1))
+
             if i < len(path) - 1:
                 next_rel = path[i + 1]
-                assert isinstance(next_rel, JoltRelationship)
-                assert next_rel.start_node_id == node.id
+                if not isinstance(next_rel, JoltRelationship):
+                    raise JOLTValueError("Element %i in path was expected to "
+                                         "be a Relationship" % (i + 1))
+                if next_rel.start_node_id != node.id:
+                    raise JOLTValueError("Relationship %i did not point to the "
+                                         "previous Node in the path" % (i + 1))
         return JoltPath(*path)
 
     @staticmethod
