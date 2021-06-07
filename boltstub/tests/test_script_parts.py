@@ -325,3 +325,8 @@ class TestServerLine:
         content = "<SLEEP> " + string
         with pytest.raises(LineError):
             ServerLine(10, "S: " + content, content)
+
+    def test_does_not_accept_jolt_wildcard(self):
+        content = 'MSG {"Z": "*"}'
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)

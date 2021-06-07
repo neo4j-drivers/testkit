@@ -122,16 +122,19 @@ class Line(str, abc.ABC):
                     line,
                     "message fields failed JOLT parser"
                 ) from e
-            decoded = cls._jolt_to_struct(decoded)
+            decoded = cls._jolt_to_struct(line, decoded)
             fields.append(decoded)
             data = data[end:]
         return name, fields
 
     @classmethod
-    def _jolt_to_struct(cls, decoded):
+    def _jolt_to_struct(cls, line, decoded):
         if isinstance(decoded, jolt_types.JoltWildcard):
             if not cls.allow_jolt_wildcard:
-                raise ValueError("{} does not allow for JOLT wildcard values")
+                raise LineError(
+                    line, "{} does not allow for JOLT wildcard values"
+                          .format(cls.__name__)
+                )
             else:
                 return decoded
         if isinstance(decoded, jolt_types.JoltType):
