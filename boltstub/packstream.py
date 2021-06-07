@@ -172,6 +172,7 @@ class Structure:
 
     def __setitem__(self, key, value):
         self.fields[key] = value
+        self._verify_fields()
 
     def match_jolt_wildcard(self, wildcard: jolt_types.JoltWildcard):
         for t in wildcard.types:
@@ -629,10 +630,10 @@ class Unpacker:
             # Structure
             elif 0xB0 <= marker <= 0xBF:
                 size, tag = self._unpack_structure_header(marker)
-                value = Structure(tag, *([None] * size))
-                for i in range(len(value)):
-                    value[i] = self._unpack()
-                return value
+                fields = [None] * size
+                for i in range(len(fields)):
+                    fields[i] = self._unpack()
+                return Structure(tag, *fields)
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream

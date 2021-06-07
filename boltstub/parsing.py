@@ -140,9 +140,11 @@ class Line(str, abc.ABC):
         if isinstance(decoded, jolt_types.JoltType):
             return Structure.from_jolt_type(decoded)
         if isinstance(decoded, (list, tuple)):
-            return type(decoded)(map(Line._jolt_to_struct, decoded))
+            return type(decoded)(Line._jolt_to_struct(line, d)
+                                 for d in decoded)
         if isinstance(decoded, dict):
-            return {k: Line._jolt_to_struct(v) for k, v in decoded.items()}
+            return {k: Line._jolt_to_struct(line, v)
+                    for k, v in decoded.items()}
         return decoded
 
 

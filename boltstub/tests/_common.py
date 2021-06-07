@@ -1,6 +1,14 @@
+from itertools import cycle
 import math
 
 from ..bolt_protocol import Structure
+
+
+def cycle_zip(*args):
+    max_len_idx = max(range(len(args)), key=lambda i: len(args[i]))
+    return zip(*(arg if i == max_len_idx else cycle(arg)
+               for i, arg in enumerate(args)))
+
 
 ALL_SERVER_VERSIONS = (1,), (2,), (3,), (4, 1), (4, 2), (4, 3)
 

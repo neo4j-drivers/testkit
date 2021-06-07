@@ -1,8 +1,10 @@
-import pytest
-import threading
+from itertools import cycle
 import socket
 from struct import unpack as struct_unpack
+import threading
 import traceback
+
+import pytest
 
 from .. import BoltStubService
 from ..parsing import parse
@@ -10,7 +12,8 @@ from ..util import hex_repr
 from ._common import (
     ALL_REQUESTS_PER_VERSION,
     ALL_RESPONSES_PER_VERSION,
-    ALL_SERVER_VERSIONS
+    ALL_SERVER_VERSIONS,
+    cycle_zip,
 )
 
 
@@ -101,6 +104,8 @@ def server_factory():
     if server is not None:
         server.stop()
         server.join()
+        for exc in server.service.exceptions:
+            traceback.format_exception(type(exc), exc, None)
 
 
 @pytest.fixture()
@@ -256,6 +261,66 @@ def test_auto_replies(server_version, request_tag, request_name,
     res = con.read_message()
     assert res[:2] == b"\xb1\x70"  # SUCCESS
     with pytest.raises(socket.timeout):
+        con.read(1)
+    assert not server.service.exceptions
+
+I = 5  # [I:(I + 1)]
+@pytest.mark.parametrize(("server_version", "request_tag", "request_name",
+                          "field_rep", "field_bin"), (
+    *((version, tag, name, rep, fields)
+      for (version, tag, name), (rep, fields) in
+      cycle_zip(ALL_REQUESTS_PER_VERSION, (
+          ("null", b"\xC0"),
+          ("false", b"\xC2"),
+          ('{"?": true}', b"\xC3"),
+          ('{"Z": "42"}', b"\x2A"),
+          ('{"Z": "42"}', b"\xC8\x2A"),
+          ("42", b"\xC9\x00\x2A"),
+          ('{"Z": "42"}', b"\xCA\x00\x00\x00\x2A"),
+          ('{"Z": "42"}', b"\xCB\x00\x00\x00\x00\x00\x00\x00\x2A"),
+          ('{"R": "1.23"}', b"\xC1\x3F\xF3\xAE\x14\x7A\xE1\x47\xAE"),
+          ('{"#": "2A"}', b"\xCC\x01\x2A"),
+          ('{"#": "2A"}', b"\xCD\x00\x01\x2A"),
+          ('{"#": "2A"}', b"\xCE\x00\x00\x00\x01\x2A"),
+          ('{"U": "abc"}', b"\x83abc"),
+          ('"foobar"', b"\x86foobar"),
+          ('{"U": "abc"}', b"\xD0\03abc"),
+          ('{"U": "abc"}', b"\xD1\x00\03abc"),
+          ('{"U": "abc"}', b"\xD2\x00\x00\x00\03abc"),
+          ('{"[]": [1, 2]}', b"\x92\x01\x02"),
+          ("[1, 2]", b"\xD4\x02\x01\x02"),
+          ('{"[]": [1, 2]}', b"\xD5\x00\x02\x01\x02"),
+          ('{"[]": [1, 2]}', b"\xD6\x00\x00\x00\x02\x01\x02"),
+          ('{"a": "b"}', b"\xA1\x81a\x81b"),
+          ('{"a": "b"}', b"\xD8\x01\x81a\x81b"),
+          ('{"a": "b"}', b"\xD9\x00\x01\x81a\x81b"),
+          ('{"a": "b"}', b"\xDA\x00\x00\x00\x01\x81a\x81b"),
+          ('{"()": [1, [], {}]}', b"\xB3\x4E\x01\x90\xA0"),
+          ('{"->": [1, 2, "a", 3, {}]}', b"\xB5\x52\x01\x02\x03\x81a\xA0"),
+          # enough structures tested. translation to Structs and checking
+          # equality is covered by unit tests
+      ))),
+))
+def test_plays_through(server_version, request_tag, request_name, field_rep,
+                       field_bin, server_factory, connection_factory):
+    script = parse("""
+    !: BOLT {}
+
+    C: {} {}
+    S: SUCCESS {{}}
+    """.format(".".join(map(str, server_version)), request_name,
+               field_rep))
+
+    server = server_factory(script)
+    con = connection_factory("localhost", 7687)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(server_version_to_version_request(server_version))
+    con.read(4)
+    msg = b"\xB1" + request_tag + field_bin
+    con.write(len(msg).to_bytes(2, "big") + msg + b"\x00\x00")
+    res = con.read_message()
+    assert res[:2] == b"\xb1\x70"  # SUCCESS
+    with pytest.raises(BrokenSocket):
         con.read(1)
     assert not server.service.exceptions
 
