@@ -51,10 +51,19 @@ class JoltDate(_JoltParsedType):
         epoch = datetime.date(1970, 1, 1)
         self.days = (dt - epoch).days
 
+    @classmethod
+    def new(cls, days: int):
+        epoch = datetime.date(1970, 1, 1)
+        delta = datetime.timedelta(days=days)
+        return cls(str(epoch + delta))
+
     def __eq__(self, other):
         if not isinstance(other, JoltDate):
             return NotImplemented
         return self.days == other.days
+
+    def __repr__(self):
+        return "%s<%r>" % (self.__class__.__name__, self.days)
 
 
 class JoltTime(_JoltParsedType):
@@ -107,11 +116,39 @@ class JoltTime(_JoltParsedType):
                             + hours * 3600000000000)
         self.utc_offset = utc_offset  # in seconds
 
+    @classmethod
+    def new(cls, nanoseconds: int, utc_offset_seconds: int):
+        if nanoseconds < 0:
+            raise ValueError("nanoseconds must be >= 0")
+        hours, nanoseconds = divmod(nanoseconds, 3600000000000)
+        minutes, nanoseconds = divmod(nanoseconds, 60000000000)
+        seconds, nanoseconds = divmod(nanoseconds, 1000000000)
+        offset_hours, offset_seconds = divmod(utc_offset_seconds, 3600)
+        offset_minutes, offset_seconds = divmod(offset_seconds, 60)
+        if offset_seconds:
+            raise ValueError("UTC offset is expected in multiple of minutes")
+        seconds_str = "%02i" % seconds
+        if nanoseconds:
+            seconds_str += "." + re.sub(r"0+$", "", "%09i" % nanoseconds)
+        if utc_offset_seconds >= 0:
+            s = "%02i:%02i:%s+%02i%02i" % (hours, minutes, seconds_str,
+                                           offset_hours, offset_minutes)
+        else:
+            s = "%02i:%02i:%s-%02i%02i" % (
+                hours, minutes, seconds_str,
+                -offset_hours - 1, 60 - offset_minutes
+            )
+        return cls(s)
+
     def __eq__(self, other):
         if not isinstance(other, JoltTime):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("nanoseconds", "utc_offset"))
+
+    def __repr__(self):
+        return "%s<%r, %r>" % (self.__class__.__name__,
+                               self.nanoseconds, self.utc_offset)
 
 
 class JoltLocalTime(_JoltParsedType):
@@ -147,10 +184,26 @@ class JoltLocalTime(_JoltParsedType):
                             + minutes * 60000000000
                             + hours * 3600000000000)
 
+    @classmethod
+    def new(cls, nanoseconds: int):
+        if nanoseconds < 0:
+            raise ValueError("nanoseconds must be >= 0")
+        hours, nanoseconds = divmod(nanoseconds, 3600000000000)
+        minutes, nanoseconds = divmod(nanoseconds, 60000000000)
+        seconds, nanoseconds = divmod(nanoseconds, 1000000000)
+        seconds_str = "%02i" % seconds
+        if nanoseconds:
+            seconds_str += "." + re.sub(r"0+$", "", "%09i" % nanoseconds)
+        s = "%02i:%02i:%s" % (hours, minutes, seconds_str)
+        return cls(s)
+
     def __eq__(self, other):
         if not isinstance(other, JoltLocalTime):
             return NotImplemented
         return self.nanoseconds == other.nanoseconds
+
+    def __repr__(self):
+        return "%s<%r>" % (self.__class__.__name__, self.nanoseconds)
 
 
 class JoltDateTime(_JoltParsedType):
@@ -177,6 +230,9 @@ class JoltDateTime(_JoltParsedType):
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("date", "time"))
 
+    def __repr__(self):
+        return "%s<%r, %r>" % (self.__class__.__name__, self.date, self.time)
+
     @property
     def seconds_nanoseconds(self):
         s, ns = divmod(self.time.nanoseconds, 1000000000)
@@ -184,6 +240,16 @@ class JoltDateTime(_JoltParsedType):
         #       saving time
         s += self.date.days * 86400
         return s, ns
+
+    @classmethod
+    def new(cls, seconds: int, nanoseconds: int, utc_offset_seconds: int):
+        seconds += nanoseconds // 1000000000
+        nanoseconds = nanoseconds % 1000000000
+        days, seconds = divmod(seconds, 86400)
+        date = JoltDate.new(days=days)
+        time = JoltTime.new(nanoseconds=seconds * 1000000000 + nanoseconds,
+                            utc_offset_seconds=utc_offset_seconds)
+        return cls("%sT%s" % (date, time))
 
 
 class JoltLocalDateTime(_JoltParsedType):
@@ -212,6 +278,9 @@ class JoltLocalDateTime(_JoltParsedType):
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("date", "time"))
 
+    def __repr__(self):
+        return "%s<%r, %r>" % (self.__class__.__name__, self.date, self.time)
+
     @property
     def seconds_nanoseconds(self):
         s, ns = divmod(self.time.nanoseconds, 1000000000)
@@ -219,6 +288,15 @@ class JoltLocalDateTime(_JoltParsedType):
         #       saving time
         s += self.date.days * 86400
         return s, ns
+
+    @classmethod
+    def new(cls, seconds: int, nanoseconds: int):
+        seconds += nanoseconds // 1000000000
+        nanoseconds = nanoseconds % 1000000000
+        days, seconds = divmod(seconds, 86400)
+        date = JoltDate.new(days=days)
+        time = JoltLocalTime.new(nanoseconds=seconds * 1000000000 + nanoseconds)
+        return cls("%sT%s" % (date, time))
 
 
 class JoltDuration(_JoltParsedType):
@@ -265,6 +343,29 @@ class JoltDuration(_JoltParsedType):
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("months", "days", "seconds"))
 
+    def __repr__(self):
+        return "%s<%r, %r, %r>" % (self.__class__.__name__, self.months,
+                                   self.days, self.seconds)
+
+    @classmethod
+    def new(cls, months: int, days: int, seconds: int, nanoseconds: int):
+        years, months = divmod(months, 12)
+        seconds += nanoseconds // 1000000000
+        nanoseconds = nanoseconds % 1000000000
+        hours, seconds = divmod(seconds, 3600)
+        minutes, seconds = divmod(seconds, 60)
+        years_str = "%02iY" % years if years else ""
+        months_str = "%02iM" % months if months else ""
+        days_str = "%02iD" % days if days else ""
+        hours_str = "%02iH" % hours if hours else ""
+        minutes_str = "%02iM" % minutes if minutes else ""
+        seconds_str = "%02i" % seconds
+        if nanoseconds:
+            seconds_str += "." + re.sub(r"0+$", "", "%09i" % nanoseconds)
+        seconds_str += "S"
+        return cls("P%s%s%sT%s%s%s" % (years_str, months_str, days_str,
+                                       hours_str, minutes_str, seconds_str))
+
 
 class JoltPoint(_JoltParsedType):
     _parse_re = re.compile(
@@ -301,6 +402,23 @@ class JoltPoint(_JoltParsedType):
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("srid", "x", "y", "z"))
 
+    def __repr__(self):
+        return "%s<%r, %r, %r, %r>" % (self.__class__.__name__, self.srid,
+                                       self.x, self.y, self.z)
+
+    @classmethod
+    def new(cls, x: float, y: float, z: float = None, srid: int = None):
+        str_ = ""
+        if srid is not None:
+            str_ += "SRID=%i;" % srid
+        str_ += "POINT("
+        if z is not None:
+            str_ += " ".join(map(str, (x, y, z)))
+        else:
+            str_ += " ".join(map(str, (x, y)))
+        str_ += ")"
+        return cls(str_)
+
 
 class JoltNode(JoltType):
     def __init__(self, id_, labels, properties):
@@ -313,6 +431,10 @@ class JoltNode(JoltType):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("id", "labels", "properties"))
+
+    def __repr__(self):
+        return "%s<%r, %r, %r>" % (self.__class__.__name__, self.id,
+                                   self.labels, self.properties)
 
 
 class JoltRelationship(JoltType):
@@ -330,6 +452,12 @@ class JoltRelationship(JoltType):
                    for attr in ("id", "start_node_id", "rel_type",
                                 "end_node_id", "properties"))
 
+    def __repr__(self):
+        return "%s<%r, %r, %r, %r, %r>" % (
+            self.__class__.__name__, self.id, self.start_node_id, self.rel_type,
+            self.end_node_id, self.properties
+        )
+
 
 class JoltPath(JoltType):
     def __init__(self, *path):
@@ -339,6 +467,9 @@ class JoltPath(JoltType):
         if not isinstance(other, JoltPath):
             return NotImplemented
         return self.path == other.path
+
+    def __repr__(self):
+        return "%s<%r>" % (self.__class__.__name__, self.path)
 
 
 class JoltWildcard(JoltType):

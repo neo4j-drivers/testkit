@@ -46,11 +46,16 @@ EndOfStream = object()
 
 class Structure:
 
-    def __init__(self, tag, *fields):
+    def __init__(self, tag, *fields, verified=True):
         self.tag = tag
         self.fields = list(fields)
+        self._verified = verified
+        if verified:
+            self._verify_fields()
 
-        self._verify_fields()
+    @property
+    def verified(self):
+        return self._verified
 
     def _verify_fields(self):
         tag, fields = self.tag, self.fields
@@ -172,7 +177,8 @@ class Structure:
 
     def __setitem__(self, key, value):
         self.fields[key] = value
-        self._verify_fields()
+        if self._verified:
+            self._verify_fields()
 
     def match_jolt_wildcard(self, wildcard: jolt_types.JoltWildcard):
         for t in wildcard.types:
@@ -248,6 +254,59 @@ class Structure:
             ids = [e.id for e in jolt.path]
             return cls(b"\x50", nodes, rels, ids)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+
+    def to_jolt_type(self):
+        if not self._verified:
+            raise ValueError("Can only convert verified struct to jolt type")
+        if self.tag == b"\x44":
+            return jolt_types.JoltDate.new(*self.fields)
+        if self.tag == b"\x54":
+            return jolt_types.JoltTime.new(*self.fields)
+        if self.tag == b"\x74":
+            return jolt_types.JoltLocalTime.new(*self.fields)
+        if self.tag == b"\x46":
+            return jolt_types.JoltDateTime.new(*self.fields)
+        if self.tag == b"\x64":
+            return jolt_types.JoltLocalDateTime.new(*self.fields)
+        if self.tag == b"\x45":
+            return jolt_types.JoltDuration.new(*self.fields)
+        if self.tag == b"\x58" or self.tag == b"\x59":
+            return jolt_types.JoltPoint.new(*self.fields[1:],
+                                            srid=self.fields[0])
+        if self.tag == b"\x4E":
+            return jolt_types.JoltNode(*self.fields)
+        if self.tag == b"\x52":
+            return jolt_types.JoltRelationship(*(self.fields[i]
+                                                 for i in (0, 1, 3, 2, 4)))
+        if self.tag == b"\x50":
+            nodes = {node.fields[0]: node
+                     for node in self.fields[0]}
+            rels = {rel.fields[0]: rel
+                    for rel in self.fields[1]}
+            ids = self.fields[2]
+            path = []
+            for idx, id_ in enumerate(ids):
+                if idx % 2 == 0:
+                    path.append(nodes[id_].to_jolt_type())
+                else:
+                    path.append(jolt_types.JoltRelationship(
+                        id_, ids[idx - 1], rels[id_].fields[1],
+                        ids[idx + 1], rels[id_].fields[2])
+                    )
+            return jolt_types.JoltPath(*path)
+        raise TypeError("Unsupported struct type: {}".format(self.tag))
+
+    def fields_to_jolt_types(self):
+        def transform_field(field):
+            if isinstance(field, dict):
+                return {k: transform_field(v) for k, v in field.items()}
+            if isinstance(field, list):
+                return list(map(transform_field, field))
+            if isinstance(field, Structure):
+                return field.to_jolt_type()
+            return field
+
+        return transform_field(self.fields)
 
 
 class Packer:
@@ -553,10 +612,16 @@ class Unpacker:
     def read_u8(self):
         return self.unpackable.read_u8()
 
+    def unpack_message(self):
+        res = self._unpack(verify_struct=False)
+        if not isinstance(res, Structure):
+            raise ValueError("Expected a message struct")
+        return res
+
     def unpack(self):
         return self._unpack()
 
-    def _unpack(self):
+    def _unpack(self, verify_struct=True):
         marker = self.read_u8()
 
         if marker == -1:
@@ -632,8 +697,8 @@ class Unpacker:
                 size, tag = self._unpack_structure_header(marker)
                 fields = [None] * size
                 for i in range(len(fields)):
-                    fields[i] = self._unpack()
-                return Structure(tag, *fields)
+                    fields[i] = self._unpack(verify_struct=True)
+                return Structure(tag, *fields, verified=verify_struct)
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
@@ -818,7 +883,7 @@ class PackStream:
         buffer = UnpackableBuffer(b"".join(self.data_buffer))
         self.data_buffer = []
         unpacker = Unpacker(buffer)
-        return unpacker.unpack()
+        return unpacker.unpack_message()
 
     def write_message(self, message):
         """ Write a chunked message.
