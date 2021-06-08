@@ -98,6 +98,11 @@ class TestIterationSessionRun(TestkitTestCase):
                           'commit transactions)')
         for version, script in (("v3", "pull_all_any_mode.script"),
                                 ("v4x0", "pull_2_then_discard.script")):
+            # TODO: remove this block once all drivers work
+            if version == "v4x0" and get_driver_name() in ["javascript"]:
+                # driver would eagerly pull all available results in the
+                # background
+                continue
             for mode in ("write", "read"):
                 with self.subTest(version + "-" + mode):
                     test()
