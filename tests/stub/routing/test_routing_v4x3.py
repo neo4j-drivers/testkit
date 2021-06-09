@@ -251,8 +251,6 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, None)
         self.start_server(self._routingServer1,
@@ -282,7 +280,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -318,7 +316,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_retry_write_until_success_with_leader_shutdown_during_tx_using_tx_function(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -685,9 +683,6 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(["BookmarkC"], second_bookmark)
 
     def test_should_retry_read_tx_until_success_on_error(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -787,9 +782,6 @@ class RoutingV4x3(RoutingBase):
         #       do round robin, e.g. Java.
 
     def test_should_retry_write_tx_until_success_on_error(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -890,7 +882,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_retry_read_tx_and_rediscovery_until_success(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -933,9 +925,6 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(3, try_count)
 
     def test_should_retry_write_tx_and_rediscovery_until_success(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet', 'go']:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1047,9 +1036,6 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[1]], sequences)
 
     def test_should_send_empty_hello(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
         # Some drivers (for instance, java) may use separate connections for
         # readers and writers when they are addressed by domain names in routing
         # table. Since this test is not for testing DNS resolution, it has been
@@ -1084,9 +1070,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_serve_reads_and_fail_writes_when_no_writers_available(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['dotnet', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("consume not implemented in backend "
                           "or requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1131,9 +1115,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_accept_routing_table_without_writers_and_then_rediscover(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['go']:
             self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -1173,8 +1155,6 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_accept_routing_table_with_single_router(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1203,9 +1183,6 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([1], sequence)
 
     def test_should_successfully_send_multiple_bookmarks(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -1234,9 +1211,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_forget_address_on_database_unavailable_error(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['dotnet', 'go']:
+        if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -1275,9 +1250,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_use_resolver_during_rediscovery_when_existing_routers_fail(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['go']:
             self.skipTest("resolver not implemented in backend")
         resolver_invoked = 0
 
@@ -1323,9 +1296,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_revert_to_initial_router_if_known_router_throws_protocol_errors(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['go']:
             self.skipTest("resolver not implemented in backend")
 
         resolver_calls = defaultdict(lambda: 0)
@@ -1396,9 +1367,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_successfully_check_if_support_for_multi_db_is_available(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['go']:
             self.skipTest("supportsMultiDb not implemented in backend")
 
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1416,9 +1385,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_read_successfully_on_empty_discovery_result_using_session_run(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['go']:
             self.skipTest("resolver not implemented in backend")
 
         def resolver(address):
@@ -1449,9 +1416,7 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['go']:
             self.skipTest("add code support")
         if not self.should_support_multi_db():
             return
@@ -1484,9 +1449,6 @@ class RoutingV4x3(RoutingBase):
         self.assertTrue(failed)
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
 
@@ -1548,8 +1510,6 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_request_rt_from_all_initial_routers_until_successful(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("needs ROUTE bookmark list support")
         if get_driver_name() in ['go', 'dotnet']:
             self.skipTest("add resolvers and connection timeout support")
 
@@ -1624,7 +1584,6 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
-
         if get_driver_name() in ['go']:
             self.skipTest("needs verifyConnectivity support")
         ip_addresses = get_ip_addresses()
