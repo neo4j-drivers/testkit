@@ -1,3 +1,15 @@
+from itertools import cycle
+import math
+
+from ..bolt_protocol import Structure
+
+
+def cycle_zip(*args):
+    max_len_idx = max(range(len(args)), key=lambda i: len(args[i]))
+    return zip(*(arg if i == max_len_idx else cycle(arg)
+               for i, arg in enumerate(args)))
+
+
 ALL_SERVER_VERSIONS = (1,), (2,), (3,), (4, 1), (4, 2), (4, 3)
 
 
@@ -49,3 +61,315 @@ ALL_RESPONSES_PER_VERSION = tuple((
           (b"\x71", "RECORD"),
       )),
 ))
+
+
+JOLT_FIELD_REPR_TO_FIELDS = (
+    # none
+    ("null", [None]),
+
+    # bool - simple
+    ("true", [True]),
+    ("false", [False]),
+
+    # bool - full
+    ('{"?": true}', [True]),
+    ('{"?": false}', [False]),
+
+    # int/float - simple
+    ("1", [1]),
+    ("0", [0]),
+    ("-1", [-1]),
+    ("-2147483648", [-2147483648]),
+    ("-2147483649", [-2147483649.]),
+    ("2147483647", [2147483647]),
+    ("2147483648", [2147483648.]),
+
+    # int - full
+    ('{"Z": "1"}', [1]),
+    ('{"Z": "0"}', [0]),
+    ('{"Z": "-1"}', [-1]),
+    ('{"Z": "-2147483648"}', [-2147483648]),
+    ('{"Z": "-2147483649"}', [-2147483649]),
+    ('{"Z": "2147483647"}', [2147483647]),
+    ('{"Z": "2147483648"}', [2147483648]),
+
+    # float - full
+    ('{"R": "1.0"}', [1.0]),
+    ('{"R": "1.23456789"}', [1.23456789]),
+    ('{"R": "-1.23456789"}', [-1.23456789]),
+    ('{"R": "0.0"}', [0.0]),
+    ('{"R": "-0.0"}', [-0.0]),
+    ('{"R": "NaN"}', [float("nan")]),
+    ('{"R": "+Infinity"}', [float("inf")]),
+    ('{"R": "-Infinity"}', [float("-inf")]),
+
+    # str - simple
+    ('"abc"', ["abc"]),
+
+    # str - full
+    ('{"U": "abc"}', ["abc"]),
+
+    # bytes
+    ('{"#": "1234"}', [b"\x12\x34"]),
+    ('{"#": "12FF"}', [b"\x12\xff"]),
+    ('{"#": "12 34"}', [b"\x12\x34"]),
+    ('{"#": "12 FF"}', [b"\x12\xff"]),
+
+    # list - simple
+    ("[]", [[]]),
+    ("[1]", [[1]]),
+    ('["a"]', [["a"]]),
+    ('[1, "a"]', [[1, "a"]]),
+    ('[1, ["a"]]', [[1, ["a"]]]),
+
+    # list - full
+    ('{"[]": []}', [[]]),
+    ('{"[]": [{"Z": "1"}]}', [[1]]),
+    ('{"[]": [{"U": "a"}]}', [["a"]]),
+    ('{"[]": [{"Z": "1"}, {"U": "a"}]}', [[1, "a"]]),
+    ('{"[]": [{"Z": "1"}, {"[]": [{"U": "a"}]}]}', [[1, ["a"]]]),
+
+    # dict - full
+    ('{"{}": {}}', [{}]),
+    ('{"{}": {"a": 1}}', [{"a": 1}]),
+    ('{"{}": {"#": "no bytes"}}', [{"#": "no bytes"}]),
+
+    # date - full
+    ('{"T": "1970-01-02"}', [Structure(b"\x44", 1)]),
+
+    # time - full
+    ('{"T": "00:00:02Z"}', [Structure(b"\x54", 2000000000, 0)]),
+    ('{"T": "00:00:02.001+0130"}', [Structure(b"\x54", 2001000000, 5400)]),
+
+    # local time - full
+    ('{"T": "00:01:00.000000001"}', [Structure(b"\x74", 60000000001)]),
+    ('{"T": "01:00:01"}', [Structure(b"\x74", 3601000000000)]),
+
+    # date time - full
+    (
+        '{"T": "1970-01-02T01:01:01.1234+01"}',
+        [Structure(b"\x46", 90061, 123400000, 3600)]
+    ),
+
+    # local date time - full
+    (
+        '{"T": "1970-01-02T01:01:01.000001234"}',
+        [Structure(b"\x64", 90061, 1234)]
+    ),
+
+    # duration - full
+    (
+        '{"T": "P1Y13M2DT18M0.1S"}',
+        [Structure(b"\x45", 25, 2, 1080, 100000000)]
+    ),
+
+    # point - full
+    ('{"@": "SRID=123;POINT(1 2.3)"}', [Structure(b"\x58", 123, 1.0, 2.3)]),
+    (
+        '{"@": "SRID=42;POINT(56.21 13.43 12)"}',
+        [Structure(b"\x59", 42, 56.21, 13.43, 12.)]
+    ),
+
+    # node
+    (
+        '{"()": [123, ["l1", "l2"], {"a": 42}]}',
+        [Structure(b"\x4E", 123, ["l1", "l2"], {"a": 42})]
+    ),
+    (
+        '{"()": [123, ["l1", "l2"], {"U": {"Z": "2147483648"}}]}',
+        [Structure(b"\x4E", 123, ["l1", "l2"], {"U": 2147483648})]
+    ),
+
+    # relationship
+    (
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": "value"}]}',
+        [Structure(b"\x52", 42, 123, 321, "REVERTS_TO", {"prop": "value"})]
+    ),
+    (
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}',
+        [Structure(b"\x52", 42, 123, 321, "REVERTS_TO", {"prop": "value"})]
+    ),
+
+    # path
+    (
+        '{"..": ['
+        '{"()": [1, ["l"], {}]}, '
+        '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+        '{"()": [3, ["l"], {}]}, '
+        '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+        '{"()": [1, ["l"], {}]}'
+        ']}',
+        [Structure(
+            b"\x50",
+            [  # Nodes
+                Structure(b"\x4E", 1, ["l"], {}),
+                Structure(b"\x4E", 3, ["l"], {}),
+            ],
+            [  # Relationships
+                Structure(b"\x72", 2, "RELATES_TO", {}),
+                Structure(b"\x72", 4, "RELATES_TO", {}),
+            ],
+            [1, 2, 3, 4, 1]  # ids
+        )]
+    ),
+    (
+        '{"..": ['
+        '{"()": [1, ["l"], {}]}, '
+        '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+        '{"()": [3, ["l"], {}]}, '
+        '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+        '{"()": [1, ["l"], {}]}'
+        ']}',
+        [Structure(
+            b"\x50",
+            [  # Nodes
+                Structure(b"\x4E", 3, ["l"], {}),
+                Structure(b"\x4E", 1, ["l"], {}),
+            ],
+            [  # Relationships
+                Structure(b"\x72", 4, "RELATES_TO", {}),
+                Structure(b"\x72", 2, "RELATES_TO", {}),
+            ],
+            [1, 2, 3, 4, 1]  # ids
+        )]
+    ),
+)
+
+
+JOLT_WILDCARD_TO_FIELDS = (
+    # bool
+    ('{"?": "*"}', (
+        [True],
+        [False]
+    )),
+
+    # int
+    ('{"Z": "*"}', (
+        [1],
+        [0],
+        [-1],
+        [-2147483648],
+        [-2147483649],
+        [2147483647],
+        [2147483648],
+    )),
+
+    # float
+    ('{"R": "*"}', (
+        [1.0],
+        [1.23456789],
+        [-1.23456789],
+        [0.0],
+        [-0.0],
+        [float("nan")],
+        [float("inf")],
+        [float("-inf")],
+    )),
+
+    # str
+    ('{"U": "*"}', (
+        [""],
+        ["abc"],
+        ["*"],
+        ["\u1234foobar"],
+    )),
+
+    # bytes
+    ('{"#": "*"}', (
+        [b"\x12\x34"],
+        [b""],
+        [b"\x00"],
+    )),
+
+    # list
+    ('{"[]": "*"}', (
+        [[]],
+        [[1]],
+        [["a"]],
+        [[1, "a"]],
+        [[1, ["a"]]],
+    )),
+
+    # dict
+    ('{"{}": "*"}', (
+        [{}],
+        [{"a": 1}],
+        [{"#": "no bytes"}],
+    )),
+
+    # date / time / local time / date time / local date time / duration
+    ('{"T": "*"}', (
+        [Structure(b"\x44", 1)],
+        [Structure(b"\x54", 2000000000, 0)],
+        [Structure(b"\x54", 2001000000, 5400)],
+        [Structure(b"\x74", 60000000001)],
+        [Structure(b"\x74", 3601000000000)],
+        [Structure(b"\x46", 90061, 123400000, 3600)],
+        [Structure(b"\x64", 90061, 1234)],
+        [Structure(b"\x45", 25, 2, 1080, 100000000)],
+    )),
+
+    # point 2D / point 3D
+    ('{"@": "*"}', (
+        [Structure(b"\x58", 123, 1.0, 2.3)],
+        [Structure(b"\x59", 42, 56.21, 13.43, 12.)],
+    )),
+
+    # node
+    ('{"()": "*"}', (
+        [Structure(b"\x4E", 123, ["l1", "l2"], {"a": 42})],
+        [Structure(b"\x4E", 0, [], {})],
+    )),
+
+    # relationship
+    ('{"->": "*"}', (
+        [Structure(b"\x52", 0, 0, 0, "", {})],
+        [Structure(b"\x52", 42, 123, 321, "REVERTS_TO", {"prop": "value"})],
+    )),
+
+    # path
+    ('{"..": "*"}', (
+        [Structure(b"\x50", [], [], [])],
+        [Structure(
+            b"\x50",
+            [  # Nodes
+                Structure(b"\x4E", 1, ["l"], {}),
+                Structure(b"\x4E", 3, ["l"], {}),
+            ],
+            [  # Relationships
+                Structure(b"\x72", 2, "RELATES_TO", {}),
+                Structure(b"\x72", 4, "RELATES_TO", {}),
+            ],
+            [1, 2, 3, 4, 1]  # ids
+        )],
+    )),
+)
+
+
+def nan_and_type_equal(a, b):
+    if isinstance(a, list):
+        if not isinstance(b, list) or len(a) != len(b):
+            return False
+        return all(nan_and_type_equal(a_, b_) for a_, b_ in zip(a, b))
+    if isinstance(a, tuple):
+        if not isinstance(b, tuple) or len(a) != len(b):
+            return False
+        return all(nan_and_type_equal(a_, b_) for a_, b_ in zip(a, b))
+    if isinstance(a, dict):
+        if not all(isinstance(k, str) for k in a.keys()):
+            raise NotImplementedError("Only sting-only-key dicts supported")
+        if not isinstance(b, dict):
+            return False
+        if not all(isinstance(k, str) for k in b.keys()):
+            raise NotImplementedError("Only sting-only-key dicts supported")
+        return (set(a.keys()) == set(b.keys())
+                and all(nan_and_type_equal(a[k], b[k]) for k in a.keys()))
+    if isinstance(a, float):
+        if not isinstance(b, float):
+            return False
+        if math.isnan(a) and math.isnan(b):
+            return True
+        return a == b
+    if isinstance(a, int):
+        return isinstance(b, int) and a == b
+    return a == b
