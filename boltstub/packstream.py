@@ -22,7 +22,6 @@
 from codecs import decode
 from io import BytesIO
 from struct import pack as struct_pack, unpack as struct_unpack
-import warnings
 
 from .simple_jolt import types as jolt_types
 
@@ -42,6 +41,22 @@ INT64_MAX = 2 ** 63
 
 
 EndOfStream = object()
+
+
+class StructTag:
+    node = b"\x4E"
+    relationship = b"\x52"
+    unbound_relationship = b"\x72"
+    path = b"\x50"
+    date = b"\x44"
+    time = b"\x54"
+    local_time = b"\x74"
+    date_time = b"\x46"
+    date_time_zone_id = b"\x66"
+    local_date_time = b"\x64"
+    duration = b"\x45"
+    point_2d = b"\x58"
+    point_3d = b"\x59"
 
 
 class Structure:
@@ -95,12 +110,12 @@ class Structure:
             if (len(fields) != 3
                     or not isinstance(fields[0], list)
                     or not all(isinstance(n, Structure)
-                               and n.tag == b"\x4E"
+                               and n.tag == StructTag.node
                                and n.fields[0] in fields[2]  # id is used
                                for n in fields[0])
                     or not isinstance(fields[1], list)
                     or not all(isinstance(rel, Structure)
-                               and rel.tag == b"\x72"
+                               and rel.tag == StructTag.unbound_relationship
                                and rel.fields[0] in fields[2]  # id is used
                                for rel in fields[1])
                     or not isinstance(fields[2], list)
@@ -126,33 +141,46 @@ class Structure:
             return verify
 
         field_validator = {
-            b"\x4E": verify_node,
-            b"\x52": verify_relationship,
-            b"\x72": verify_unbound_relationship,
-            b"\x50": verify_path,
-            b"\x44": build_generic_verifier((int,), "Date"),
-            b"\x54": build_generic_verifier((int, int), "Time"),
-            b"\x74": build_generic_verifier((int,), "LocalTime"),
-            b"\x46": build_generic_verifier((int, int, int,), "DateTime"),
-            b"\x66": build_generic_verifier((int, int, str), "DateTimeZoneId"),
-            b"\x64": build_generic_verifier((int, int), "LocalDateTime"),
-            b"\x45": build_generic_verifier((int, int, int, int), "Duration"),
-            b"\x58": build_generic_verifier((int, float, float), "Point2D"),
-            b"\x59": build_generic_verifier((int, float, float, float),
-                                            "Point3D"),
+            StructTag.node:
+                verify_node,
+            StructTag.relationship:
+                verify_relationship,
+            StructTag.unbound_relationship:
+                verify_unbound_relationship,
+            StructTag.path:
+                verify_path,
+            StructTag.date:
+                build_generic_verifier((int,), "Date"),
+            StructTag.time:
+                build_generic_verifier((int, int), "Time"),
+            StructTag.local_time:
+                build_generic_verifier((int,), "LocalTime"),
+            StructTag.date_time:
+                build_generic_verifier((int, int, int,), "DateTime"),
+            StructTag.date_time_zone_id:
+                build_generic_verifier((int, int, str), "DateTimeZoneId"),
+            StructTag.local_date_time:
+                build_generic_verifier((int, int), "LocalDateTime"),
+            StructTag.duration:
+                build_generic_verifier((int, int, int, int), "Duration"),
+            StructTag.point_2d:
+                build_generic_verifier((int, float, float), "Point2D"),
+            StructTag.point_3d:
+                build_generic_verifier((int, float, float, float), "Point3D"),
         }
 
         if tag in field_validator:
             field_validator[tag]()
 
     def __repr__(self):
-        return "Structure[0x%02X](%s)" % (ord(self.tag), ", ".join(map(repr, self.fields)))
+        return "Structure[0x%02X](%s)" % (ord(self.tag),
+                                          ", ".join(map(repr, self.fields)))
 
     def __eq__(self, other):
         try:
-            if self.tag == b"\x50":
+            if self.tag == StructTag.path:
                 # path struct => order of nodes and rels is irrelevant
-                return (other.tag == b"\x50"
+                return (other.tag == StructTag.path
                         and len(other.fields) == 3
                         and sorted(self.fields[0]) == sorted(other.fields[0])
                         and sorted(self.fields[1]) == sorted(other.fields[1])
@@ -183,102 +211,105 @@ class Structure:
     def match_jolt_wildcard(self, wildcard: jolt_types.JoltWildcard):
         for t in wildcard.types:
             if issubclass(t, jolt_types.JoltDate):
-                if self.tag == b"\x44":
+                if self.tag == StructTag.date:
                     return True
-            if issubclass(t, jolt_types.JoltTime):
-                if self.tag == b"\x54":
+            elif issubclass(t, jolt_types.JoltTime):
+                if self.tag == StructTag.time:
                     return True
-            if issubclass(t, jolt_types.JoltLocalTime):
-                if self.tag == b"\x74":
+            elif issubclass(t, jolt_types.JoltLocalTime):
+                if self.tag == StructTag.local_time:
                     return True
-            if issubclass(t, jolt_types.JoltDateTime):
-                if self.tag == b"\x46":
+            elif issubclass(t, jolt_types.JoltDateTime):
+                if self.tag == StructTag.date_time:
                     return True
-            if issubclass(t, jolt_types.JoltLocalDateTime):
-                if self.tag == b"\x64":
+            elif issubclass(t, jolt_types.JoltLocalDateTime):
+                if self.tag == StructTag.local_date_time:
                     return True
-            if issubclass(t, jolt_types.JoltDuration):
-                if self.tag == b"\x45":
+            elif issubclass(t, jolt_types.JoltDuration):
+                if self.tag == StructTag.duration:
                     return True
-            if issubclass(t, jolt_types.JoltPoint):
-                if self.tag in (b"\x58", b"\x59"):
+            elif issubclass(t, jolt_types.JoltPoint):
+                if self.tag in (StructTag.point_2d, StructTag.point_3d):
                     return True
-            if issubclass(t, jolt_types.JoltNode):
-                if self.tag == b"\x4E":
+            elif issubclass(t, jolt_types.JoltNode):
+                if self.tag == StructTag.node:
                     return True
-            if issubclass(t, jolt_types.JoltRelationship):
-                if self.tag == b"\x52":
+            elif issubclass(t, jolt_types.JoltRelationship):
+                if self.tag == StructTag.relationship:
                     return True
-            if issubclass(t, jolt_types.JoltPath):
-                if self.tag == b"\x50":
+            elif issubclass(t, jolt_types.JoltPath):
+                if self.tag == StructTag.path:
                     return True
 
     @classmethod
     def from_jolt_type(cls, jolt: jolt_types.JoltType):
         if isinstance(jolt, jolt_types.JoltDate):
-            return cls(b"\x44", jolt.days)
+            return cls(StructTag.date, jolt.days)
         if isinstance(jolt, jolt_types.JoltTime):
-            return cls(b"\x54", jolt.nanoseconds, jolt.utc_offset)
+            return cls(StructTag.time, jolt.nanoseconds, jolt.utc_offset)
         if isinstance(jolt, jolt_types.JoltLocalTime):
-            return cls(b"\x74", jolt.nanoseconds)
+            return cls(StructTag.local_time, jolt.nanoseconds)
         if isinstance(jolt, jolt_types.JoltDateTime):
-            return cls(b"\x46", *jolt.seconds_nanoseconds, jolt.time.utc_offset)
+            return cls(StructTag.date_time, *jolt.seconds_nanoseconds,
+                       jolt.time.utc_offset)
         if isinstance(jolt, jolt_types.JoltLocalDateTime):
-            return cls(b"\x64", *jolt.seconds_nanoseconds)
+            return cls(StructTag.local_date_time, *jolt.seconds_nanoseconds)
         if isinstance(jolt, jolt_types.JoltDuration):
-            return cls(b"\x45", jolt.months, jolt.days, jolt.seconds,
+            return cls(StructTag.duration, jolt.months, jolt.days, jolt.seconds,
                        jolt.nanoseconds)
         if isinstance(jolt, jolt_types.JoltPoint):
             if jolt.z is None:  # 2D
-                return cls(b"\x58", jolt.srid, jolt.x, jolt.y)
+                return cls(StructTag.point_2d, jolt.srid, jolt.x, jolt.y)
             else:
-                return cls(b"\x59", jolt.srid, jolt.x, jolt.y, jolt.z)
+                return cls(StructTag.point_3d, jolt.srid, jolt.x, jolt.y,
+                           jolt.z)
         if isinstance(jolt, jolt_types.JoltNode):
-            return cls(b"\x4E", jolt.id, jolt.labels, jolt.properties)
+            return cls(StructTag.node, jolt.id, jolt.labels, jolt.properties)
         if isinstance(jolt, jolt_types.JoltRelationship):
-            return cls(b"\x52", jolt.id, jolt.start_node_id, jolt.end_node_id,
-                       jolt.rel_type, jolt.properties)
+            return cls(StructTag.relationship, jolt.id, jolt.start_node_id,
+                       jolt.end_node_id, jolt.rel_type, jolt.properties)
         if isinstance(jolt, jolt_types.JoltPath):
             # Node structs
             nodes = []
             for node in jolt.path[::2]:
-                node = cls(b"\x4E", node.id, node.labels, node.properties)
+                node = cls(StructTag.node, node.id, node.labels, node.properties)
                 if node not in nodes:
                     nodes.append(node)
             # UnboundRelationship structs
             rels = []
             for rel in jolt.path[1::2]:
-                rel = cls(b"\x72", rel.id, rel.rel_type, rel.properties)
+                rel = cls(StructTag.unbound_relationship, rel.id, rel.rel_type,
+                          rel.properties)
                 if rel not in rels:
                     rels.append(rel)
             ids = [e.id for e in jolt.path]
-            return cls(b"\x50", nodes, rels, ids)
+            return cls(StructTag.path, nodes, rels, ids)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     def to_jolt_type(self):
         if not self._verified:
             raise ValueError("Can only convert verified struct to jolt type")
-        if self.tag == b"\x44":
+        if self.tag == StructTag.date:
             return jolt_types.JoltDate.new(*self.fields)
-        if self.tag == b"\x54":
+        if self.tag == StructTag.time:
             return jolt_types.JoltTime.new(*self.fields)
-        if self.tag == b"\x74":
+        if self.tag == StructTag.local_time:
             return jolt_types.JoltLocalTime.new(*self.fields)
-        if self.tag == b"\x46":
+        if self.tag == StructTag.date_time:
             return jolt_types.JoltDateTime.new(*self.fields)
-        if self.tag == b"\x64":
+        if self.tag == StructTag.local_date_time:
             return jolt_types.JoltLocalDateTime.new(*self.fields)
-        if self.tag == b"\x45":
+        if self.tag == StructTag.duration:
             return jolt_types.JoltDuration.new(*self.fields)
-        if self.tag == b"\x58" or self.tag == b"\x59":
+        if self.tag == StructTag.point_2d or self.tag == StructTag.point_3d:
             return jolt_types.JoltPoint.new(*self.fields[1:],
                                             srid=self.fields[0])
-        if self.tag == b"\x4E":
+        if self.tag == StructTag.node:
             return jolt_types.JoltNode(*self.fields)
-        if self.tag == b"\x52":
+        if self.tag == StructTag.relationship:
             return jolt_types.JoltRelationship(*(self.fields[i]
                                                  for i in (0, 1, 3, 2, 4)))
-        if self.tag == b"\x50":
+        if self.tag == StructTag.path:
             nodes = {node.fields[0]: node
                      for node in self.fields[0]}
             rels = {rel.fields[0]: rel
