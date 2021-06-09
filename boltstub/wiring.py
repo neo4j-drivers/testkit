@@ -24,6 +24,7 @@ as well as classes for modelling IP addresses, based on tuples.
 """
 
 
+from functools import cached_property
 from socket import (
     getservbyname,
     socket,
@@ -243,13 +244,13 @@ class Wire(object):
         """
         return self.__broken
 
-    @property
+    @cached_property
     def local_address(self):
         """ The local :class:`.Address` to which this connection is bound.
         """
         return Address(self.__socket.getsockname())
 
-    @property
+    @cached_property
     def remote_address(self):
         """ The remote :class:`.Address` to which this connection is bound.
         """
