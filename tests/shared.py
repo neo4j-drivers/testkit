@@ -129,6 +129,9 @@ class TestkitTestCase(unittest.TestCase):
                  "stub.authorization.AuthorizationTestsV3."),
                 (r"^stub\.authorization\.[^.]+\.TestNoRoutingAuthorization\.",
                  "stub.authorization.NoRoutingAuthorizationTests."),
+                (r"^stub\.server_side_routing\.test_server_side_routing\."
+                 r"TestServerSideRouting\.",
+                 "stub.serversiderouting.ServerSideRouting."),
             ):
                 id_ = re.sub(exp, sub, id_)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
