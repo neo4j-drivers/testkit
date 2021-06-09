@@ -262,13 +262,32 @@ class StubServer:
             self._interrupt(0)
             self._kill()
 
-    def count_requests_re(self, pattern):
+    def _wait_for_silence(self, seconds, max_wait_seconds=5):
+        max_wait = int(max_wait_seconds / (seconds / 2) + .5)
+        self._read_pipes()
+        buf_lens = len(self._stdout_lines), len(self._stderr_lines)
+        last_change_before = 0
+        while self._process and max_wait:
+            max_wait -= 1
+            time.sleep(seconds / 2)
+            self._read_pipes()
+            new_buf_lens = len(self._stdout_lines), len(self._stderr_lines)
+            if buf_lens != new_buf_lens:
+                last_change_before = 0
+            else:
+                last_change_before += 1
+            if last_change_before >= 2:
+                break
+            buf_lens = new_buf_lens
+
+    def count_requests_re(self, pattern, silence_period=0.1):
         if isinstance(pattern, re.Pattern):
             return self.count_requests(pattern)
-        return self.count_requests(re.compile(pattern))
+        return self.count_requests(re.compile(pattern),
+                                   silence_period=silence_period)
 
-    def count_requests(self, pattern):
-        self._read_pipes()
+    def count_requests(self, pattern, silence_period=0.1):
+        self._wait_for_silence(silence_period)
         count = 0
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
@@ -286,13 +305,14 @@ class StubServer:
                 count += line.startswith(pattern)
         return count
 
-    def count_responses_re(self, pattern):
+    def count_responses_re(self, pattern, silence_period=0.1):
         if isinstance(pattern, re.Pattern):
             return self.count_responses(pattern)
-        return self.count_responses(re.compile(pattern))
+        return self.count_responses(re.compile(pattern),
+                                    silence_period=silence_period)
 
-    def count_responses(self, pattern):
-        self._read_pipes()
+    def count_responses(self, pattern, silence_period=0.1):
+        self._wait_for_silence(silence_period)
         count = 0
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "

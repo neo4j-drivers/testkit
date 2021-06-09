@@ -1,4 +1,6 @@
-from tests.shared import get_driver_name
+from nutkit.frontend import Driver
+import nutkit.protocol as types
+from ...shared import get_driver_name
 from ._routing import get_extra_hello_props
 from .test_routing_v4x3 import RoutingV4x3
 
@@ -49,3 +51,27 @@ class RoutingV3(RoutingV4x3):
 
     def test_should_send_system_bookmark_with_route(self):
         pass
+
+    def test_should_fail_on_empty_routing_response(self):
+        # This test is BOLT v3 only because the server will return an Exception
+        # instead of an empty routing table starting from version 4
+        self.start_server(
+            self._routingServer1,
+            "router_yielding_empty_response.script"
+        )
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        session = driver.session("w")
+        failed = False
+        try:
+            session.run("RETURN 1 AS x").consume()
+        except types.DriverError as e:
+            failed = True
+            if get_driver_name() in ['python']:
+                self.assertEqual(
+                    e.errorType,
+                    "<class 'neo4j.exceptions.ServiceUnavailable'>"
+                )
+                self.assertIn("routing", e.msg)
+
+        self.assertTrue(failed)

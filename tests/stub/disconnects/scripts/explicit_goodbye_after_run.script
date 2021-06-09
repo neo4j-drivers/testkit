@@ -1,0 +1,17 @@
+!: BOLT 4.3
+!: AUTO HELLO
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n.name"]}
+C: PULL {"n": "*"}
+S: SUCCESS {"type": "w"}
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+C: GOODBYE
+S: <EXIT>

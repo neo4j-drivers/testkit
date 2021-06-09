@@ -177,6 +177,11 @@ class Summary:
     """
 
     def __init__(self, **data):
+        # TODO: remove block when all drivers support the address field
+        from tests.shared import get_driver_name
+        if get_driver_name() in ["python", "java", "javascript", "go",
+                                 "dotnet"]:
+            data["serverInfo"]["address"] = data["serverInfo"].get("address")
         self.server_info = ServerInfo(**data["serverInfo"])
 
 
@@ -184,9 +189,10 @@ class ServerInfo:
     """ Represents server info that is included within Summary response.
     """
 
-    def __init__(self, protocolVersion, agent):
+    def __init__(self, protocolVersion, agent, address):
         self.protocol_version = protocolVersion
         self.agent = agent
+        self.address = address
 
 
 class Bookmarks:

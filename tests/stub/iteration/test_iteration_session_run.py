@@ -61,7 +61,48 @@ class TestIterationSessionRun(TestkitTestCase):
     def test_all(self):
         self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"])
 
+    def test_all_slow_connection(self):
+        self._run(-1, "pull_all_slow_connection.script",
+                  ["1", "2", "3", "4", "5", "6"])
+
     # Support -1, not batched at all for BOLTv3
     def test_all_v3(self):
         self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"],
                   protocol_version="v3")
+
+    def test_discards_on_session_close(self):
+        def test():
+            uri = "bolt://%s" % self._server.address
+            driver = Driver(self._backend, uri,
+                            types.AuthorizationToken(scheme="basic"))
+            self._server.start(
+                path=self.script_path(version, script),
+                vars={"#MODE#": mode[0]}
+            )
+            try:
+                session = driver.session(mode[0], fetchSize=2)
+                session.run("RETURN 1 AS n").next()
+                self.assertEqual(self._server.count_requests("DISCARD"), 0)
+                session.close()
+                self._server.done()
+                if (version == "v4x0"
+                        and get_driver_name() not in ["java", "javascript"]):
+                    # assert only JAVA and JS pulls results eagerly.
+                    self.assertEqual(self._server.count_requests("PULL"), 1)
+                driver.close()
+            finally:
+                self._server.reset()
+
+        if get_driver_name() in ["go"]:
+            self.skipTest('sends `"qid": -1` in DISCARD (invalid BOLT for auto-'
+                          'commit transactions)')
+        for version, script in (("v3", "pull_all_any_mode.script"),
+                                ("v4x0", "pull_2_then_discard.script")):
+            # TODO: remove this block once all drivers work
+            if version == "v4x0" and get_driver_name() in ["javascript"]:
+                # driver would eagerly pull all available results in the
+                # background
+                continue
+            for mode in ("write", "read"):
+                with self.subTest(version + "-" + mode):
+                    test()

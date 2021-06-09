@@ -5,7 +5,7 @@ import socket
 
 import nutkit.protocol as protocol
 
-protocolClasses = dict([
+protocol_classes = dict([
     m for m in inspect.getmembers(protocol, inspect.isclass)])
 debug = os.environ.get('TEST_DEBUG_REQRES', 0)
 
@@ -13,7 +13,7 @@ debug = os.environ.get('TEST_DEBUG_REQRES', 0)
 class Encoder(json.JSONEncoder):
     def default(self, o):
         name = type(o).__name__
-        if name in protocolClasses:
+        if name in protocol_classes:
             return {"name": name, "data": o.__dict__}
         return json.JSONEncoder.default(self, o)
 
@@ -23,14 +23,14 @@ def decode_hook(x):
         return x
 
     name = x['name']
-    if name not in protocolClasses:
+    if name not in protocol_classes:
         return x
 
     data = x.get('data', {})
     if not data:
         data = {}
 
-    return protocolClasses[name](**data)
+    return protocol_classes[name](**data)
 
 
 # How long to wait before backend responds
