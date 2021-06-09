@@ -2,7 +2,10 @@ import json
 import pytest
 from unittest.mock import patch
 
-from ..bolt_protocol import TranslatedStructure
+from . import _common
+from ..bolt_protocol import (
+    TranslatedStructure,
+)
 from ..errors import ServerExit
 from ..parsing import (
     ClientLine,
@@ -14,12 +17,12 @@ from ..parsing import (
 class TestClientLine:
     def test_matches_tag_name(self):
         line = ClientLine(10, "C: MSG", "MSG")
-        msg = TranslatedStructure("MSG", b"\00")
+        msg = TranslatedStructure("MSG", b"\x00")
         assert line.match(msg)
 
     def test_doesnt_match_wrong_tag_name(self):
         line = ClientLine(10, "C: MSG2", "MSG2")
-        msg = TranslatedStructure("MSG", b"\00")
+        msg = TranslatedStructure("MSG", b"\x00")
         assert not line.match(msg)
 
     @pytest.mark.parametrize("fields", (
@@ -38,7 +41,7 @@ class TestClientLine:
         msg_fields = ["*" if wildcard else f for f in fields]
         content = "MSG " + " ".join(map(json.dumps, msg_fields))
         line = ClientLine(10, "C: " + content, content)
-        msg = TranslatedStructure("MSG", b"\00", *fields)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
     @pytest.mark.parametrize(("expected", "received"), (
@@ -59,8 +62,54 @@ class TestClientLine:
         content = "MSG " + " ".join(map(json.dumps,
                                         received if flip else expected))
         line = ClientLine(10, "C: " + content, content)
-        msg = TranslatedStructure("MSG", b"\00",
+        msg = TranslatedStructure("MSG", b"\x00",
                                   *(expected if flip else received))
+        assert not line.match(msg)
+
+    @pytest.mark.parametrize(("field_repr", "fields"), (
+        *_common.JOLT_FIELD_REPR_TO_FIELDS,
+    ))
+    def test_matches_jolt_fields(self, field_repr, fields):
+        content = "MSG " + field_repr
+        line = ClientLine(10, "C: " + content, content)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
+        assert line.match(msg)
+
+    @pytest.mark.parametrize(("field_repr", "fields"), (
+        *((rep, fields)
+          for rep, field_matches in _common.JOLT_WILDCARD_TO_FIELDS
+          for fields in field_matches),
+    ))
+    def test_matches_jolt_wildcard(self, field_repr, fields):
+        content = "MSG " + field_repr
+        line = ClientLine(10, "C: " + content, content)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
+        assert line.match(msg)
+
+    @pytest.mark.parametrize(("field_repr", "fields"), (
+        *((r1, f2)
+          for r1, f1 in _common.JOLT_FIELD_REPR_TO_FIELDS
+          for _, f2 in _common.JOLT_FIELD_REPR_TO_FIELDS
+          if not _common.nan_and_type_equal(f1, f2)),
+    ))
+    def test_does_not_match_wrong_jolt_fields(self, field_repr, fields):
+        content = "MSG " + field_repr
+        line = ClientLine(10, "C: " + content, content)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
+        assert not line.match(msg)
+
+    @pytest.mark.parametrize(("field_repr", "fields"), (
+        *((rep1, wrong_fields)
+          for rep1, _ in _common.JOLT_WILDCARD_TO_FIELDS
+          for rep2, wrong_field_matches in _common.JOLT_WILDCARD_TO_FIELDS
+          if rep1 != rep2
+          for wrong_fields in wrong_field_matches),
+    ))
+    def test_does_not_matches_jolt_wildcard_wrong_fields(self, field_repr,
+                                                         fields):
+        content = "MSG " + field_repr
+        line = ClientLine(10, "C: " + content, content)
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert not line.match(msg)
 
     @pytest.mark.parametrize(("expected", "received", "match"), (
@@ -199,7 +248,7 @@ class TestClientLine:
                 received[0] = {"key": received[0]}
         content = "MSG " + " ".join(map(json.dumps, expected))
         line = ClientLine(10, "C: " + content, content)
-        msg = TranslatedStructure("MSG", b"\00", *received)
+        msg = TranslatedStructure("MSG", b"\x00", *received)
         assert match == line.match(msg)
 
 
@@ -274,5 +323,10 @@ class TestServerLine:
     @pytest.mark.parametrize("string", ("", "-1", "a", "None"))
     def test_sleep_server_line_with_invalid_arg(self, string):
         content = "<SLEEP> " + string
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)
+
+    def test_does_not_accept_jolt_wildcard(self):
+        content = 'MSG {"Z": "*"}'
         with pytest.raises(LineError):
             ServerLine(10, "S: " + content, content)

@@ -1,5 +1,3 @@
-import json
-
 from .errors import (
     BoltMissingVersion,
     BoltUnknownMessage,
@@ -7,6 +5,7 @@ from .errors import (
     ServerExit
 )
 from .packstream import Structure
+from .simple_jolt import dumps_simple as jolt_dumps
 from .util import recursive_subclasses, hex_repr
 
 
@@ -48,7 +47,8 @@ def verify_script_messages(script):
 
 class TranslatedStructure(Structure):
     def __init__(self, name, tag, *fields):
-        super().__init__(tag, *fields)
+        # Verified is false as this class in only used for message structs
+        super().__init__(tag, *fields, verified=False)
         self.name = name
 
     def __repr__(self):
@@ -56,7 +56,9 @@ class TranslatedStructure(Structure):
                                              ", ".join(map(repr, self.fields)))
 
     def __str__(self):
-        return self.name + " {}".format(" ".join(map(json.dumps, self.fields)))
+        return self.name + " {}".format(" ".join(
+            map(jolt_dumps, self.fields_to_jolt_types())
+        ))
 
     def __eq__(self, other):
         try:
