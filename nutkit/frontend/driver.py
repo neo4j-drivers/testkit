@@ -13,7 +13,7 @@ class Driver:
                                  connectionTimeoutMs=connectionTimeoutMs)
         res = backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+            raise Exception("Should be Driver but was %s" % res)
         self._driver = res
 
     def verifyConnectivity(self):

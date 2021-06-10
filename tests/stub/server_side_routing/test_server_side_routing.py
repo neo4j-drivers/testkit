@@ -1,5 +1,4 @@
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken
 import nutkit.protocol as types
 from tests.shared import (
     get_driver_name,
@@ -8,29 +7,8 @@ from tests.shared import (
 from tests.stub.shared import StubServer
 
 
-direct_connection_without_routing_ssr_script = """
-!: BOLT #VERSION#
-!: AUTO RESET
-!: AUTO GOODBYE
-{{
-    C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "realm": "", "ticket": "" }
-----
-    C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "realm": "", "routing": null }
-----
-    C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": null}
-----
-    C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007"}
-}}
-S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
-C: RUN "RETURN 1 AS n" {} {}
-   PULL {"n": 1000}
-S: SUCCESS {"fields": ["n"]}
-   SUCCESS {"type": "w"}
-"""
-
-
-class ServerSideRouting(TestkitTestCase):
-    """ Verifies that the driver behaves as expected  when
+class TestServerSideRouting(TestkitTestCase):
+    """ Verifies that the driver behaves as expected when
     in Server Side Routing scenarios
     """
 
@@ -45,14 +23,16 @@ class ServerSideRouting(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
+    def _start_server(self):
+        path = self.script_path("direct_connection_without_routing_ssr.script")
+        self._server.start(path=path, vars={"#VERSION#": "4.1"})
+
     # When a direct driver is created without params, it should not send
     # any information about the routing context in the HELLO message
     # to not enable Server Side Routing
     def test_direct_connection_without_url_params(self):
         uri = "bolt://%s" % self._server.address
-        self._server.start(script=direct_connection_without_routing_ssr_script,
-                           vars={"#VERSION#": "4.1"})
-
+        self._start_server()
 
         driver = Driver(self._backend, uri, self._auth, self._userAgent)
         session = driver.session("w", fetchSize=1000)
@@ -70,14 +50,22 @@ class ServerSideRouting(TestkitTestCase):
     def test_direct_connection_with_url_params(self):
         params = "region=china&policy=my_policy"
         uri = "bolt://%s?%s" % (self._server.address, params)
-        self._server.start(script=direct_connection_without_routing_ssr_script,
-                           vars={
-                               "#VERSION#": "4.1"
-                           })
+        self._start_server()
         try:
             driver = Driver(self._backend, uri, self._auth, self._userAgent)
-        except Exception:
+        except types.DriverError:
             pass
+        except types.BackendError:
+            if get_driver_name() in ["javascript"]:
+                # TODO: this shouldn't be communicated as backend error
+                return
+        except Exception as e:
+            if get_driver_name() in ["java"]:
+                if "TestkitErrorResponse" in str(e):
+                    # TODO: sends unknown protocol message on failure
+                    return
+            raise
+
         else:
             # Python driver
             session = driver.session("w", fetchSize=1000)
