@@ -277,3 +277,29 @@ class RetryableNegative:
     def __init__(self, sessionId, errorId=""):
         self.sessionId = sessionId
         self.errorId = errorId
+
+
+class ForcedRoutingTableUpdate:
+    """ Request to update the routing table for the given database.
+    This API shouldn't be part of the driver's public API, but is used for
+    testing purposes only.
+    The Backend should respond with a Driver response if the update was
+    successful or an Error if not."""
+
+    def __init__(self, driverId, database=None, bookmarks=None):
+        self.driverId = driverId
+        self.database = database
+        # Array of boookmarks in form of a list of strings or None
+        self.bookmarks = bookmarks
+
+
+class GetRoutingTable:
+    """ Request the backend to extract the routing table for the given database
+    (default database if None is specified).
+    This API shouldn't be part of the drivers's public API, but is used for
+    testing purposes only.
+    The Backend should respond with a RoutingTable response."""
+
+    def __init__(self, driverId, database=None):
+        self.driverId = driverId
+        self.database = database

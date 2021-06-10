@@ -31,7 +31,15 @@ else:
     POPEN_EXTRA_KWARGS = {}
 
 
-class StubServerUncleanExit(Exception):
+class StubServerError(Exception):
+    pass
+
+
+class StubServerUncleanExit(StubServerError):
+    pass
+
+
+class StubServerScriptNotFinished(StubServerError):
     pass
 
 
@@ -211,7 +219,7 @@ class StubServer:
 
         If the server exited with anything but 0, or a connection is open that
         cannot reach the end of the script, this functions terminates the
-        process, dumps the output of the server and raises StubServerUncleanExit
+        process, dumps the output of the server and raises StubServerError
 
 
         Note about fully played scripts:
@@ -228,7 +236,7 @@ class StubServer:
             if self._interrupt():
                 pass
             elif self._interrupt():
-                raise StubServerUncleanExit(
+                raise StubServerScriptNotFinished(
                     "Stub server didn't finish the script."
                 )
             elif not self._interrupt():
@@ -236,6 +244,8 @@ class StubServer:
                 self._process.wait()
                 raise StubServerUncleanExit("Stub server hanged.")
             if self._process.returncode not in (0, INTERRUPT_EXIT_CODE):
+                if self._process.returncode == 3:
+                    raise StubServerScriptNotFinished("Script never started.")
                 raise StubServerUncleanExit(
                     "Stub server exited unclean ({})".format(
                         self._process.returncode

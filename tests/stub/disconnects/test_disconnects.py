@@ -22,6 +22,7 @@ class TestDisconnects(TestkitTestCase):
         self._driver = Driver(self._backend, uri, auth,
                               userAgent=customUserAgent)
         self._session = self._driver.session("w")
+        self._last_exc = None
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
@@ -34,18 +35,54 @@ class TestDisconnects(TestkitTestCase):
     def _run(self):
         try:
             result = self._session.run("RETURN 1 as n")
-        except types.DriverError:
+        except types.DriverError as exc:
+            self._last_exc = exc
             return "after run"
 
         try:
             result.next()
-        except types.DriverError:
+        except types.DriverError as exc:
+            self._last_exc = exc
             return "after first next"
 
         try:
             result.next()
-        except types.DriverError:
+        except types.DriverError as exc:
+            self._last_exc = exc
             return "after last next"
+
+        return "success"
+
+    # Helper function that runs the sequence and returns the name of the step
+    # at which the error happened.
+    def _run_tx(self):
+        try:
+            tx = self._session.beginTransaction()
+        except types.DriverError as exc:
+            self._last_exc = exc
+            return "after begin"
+        try:
+            result = tx.run("RETURN 1 as n")
+        except types.DriverError as exc:
+            self._last_exc = exc
+            return "after run"
+
+        try:
+            result.next()
+        except types.DriverError as exc:
+            self._last_exc = exc
+            return "after first next"
+
+        try:
+            result.next()
+        except types.DriverError as exc:
+            self._last_exc = exc
+            return "after last next"
+        try:
+            tx.commit()
+        except types.DriverError as exc:
+            self._last_exc = exc
+            return "after commit"
 
         return "success"
 
@@ -81,7 +118,7 @@ class TestDisconnects(TestkitTestCase):
             expected_step = "after run"
         self.assertEqual(step, expected_step)
 
-    def test_disconnect_on_run(self):
+    def test_disconnect_session_on_run(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt run message.
         self._server.start(path=self.script_path("exit_after_run.script"))
@@ -107,6 +144,98 @@ class TestDisconnects(TestkitTestCase):
 
         expected_step = "after first next"
         self.assertEqual(step, expected_step)
+
+    def test_disconnect_session_on_pull_after_record(self):
+        # Verifies how the driver handles when server disconnects after driver
+        # sent bolt RUN message and received a RECORD but no summary.
+        self._server.start(path=self.script_path("exit_after_record.script"))
+        step = self._run()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after last next"
+        self.assertEqual(step, expected_step)
+
+    def test_disconnect_on_tx_begin(self):
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt BEGIN message.
+        if self._driverName in ["go"]:
+            self.skipTest("Driver fails on session.close")
+        self._server.start(path=self.script_path("exit_after_tx_begin.script"))
+        step = self._run_tx()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after begin"
+        if self._driverName in ["python", "go"]:
+            expected_step = "after run"
+        elif self._driverName in ["javascript", "dotnet"]:
+            expected_step = "after first next"
+        self.assertEqual(step, expected_step)
+
+    def test_disconnect_on_tx_run(self):
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt RUN message within a transaction.
+        if self._driverName in ["go"]:
+            self.skipTest("Driver fails on session.close")
+        self._server.start(path=self.script_path("exit_after_tx_run.script"))
+        step = self._run_tx()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after run"
+        if self._driverName in ["javascript", "java", "dotnet"]:
+            expected_step = "after first next"
+        self.assertEqual(step, expected_step)
+
+    def test_disconnect_on_tx_pull(self):
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt PULL message within a transaction.
+        if self._driverName in ["go"]:
+            self.skipTest("Driver fails on session.close")
+        self._server.start(path=self.script_path("exit_after_tx_pull.script"))
+        step = self._run_tx()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after first next"
+        self.assertEqual(step, expected_step)
+
+    def test_disconnect_session_on_tx_pull_after_record(self):
+        # Verifies how the driver handles when server disconnects after driver
+        # sent bolt RUN message and received a RECORD but no summary within a
+        # transaction.
+        if self._driverName in ["go"]:
+            self.skipTest("Driver fails on session.close")
+        self._server.start(path=self.script_path("exit_after_tx_record.script"))
+        step = self._run_tx()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after last next"
+        self.assertEqual(step, expected_step)
+
+    def test_disconnect_session_on_tx_commit(self):
+        # Verifies how the driver handles when server disconnects right after
+        # driver sent bolt run message.
+        self._server.start(path=self.script_path("exit_after_tx_commit.script"))
+        step = self._run_tx()
+        self._session.close()
+        self._driver.close()
+        self._server.done()
+
+        expected_step = "after commit"
+        self.assertEqual(step, expected_step)
+        if get_driver_name() in ['python']:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.IncompleteCommit'>",
+                self._last_exc.errorType
+            )
 
     # FIXME: This test doesn't really fit here. It tests FAILURE handling, not
     #        handling sudden loss of connectivity.

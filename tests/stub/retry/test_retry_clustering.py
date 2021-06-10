@@ -70,6 +70,47 @@ class TestRetryClustering(TestkitTestCase):
             "Neo.TransientError.Completely.MadeUp"
         )
 
+    def test_disconnect_on_commit(self):
+        # Should NOT retry when connection is lost on unconfirmed commit.
+        # The rule could be relaxed on read transactions therefore we test on
+        # writeTransaction.  An error should be raised to indicate the failure
+        if get_driver_name() in ["java", "dotnet", "javascript"]:
+            self.skipTest("Keeps retrying on commit despite connection "
+                          "being dropped")
+        self._routingServer.start(
+            path=self.script_path("clustering", "router.script"),
+            vars=self.get_vars()
+        )
+        self._writeServer.start(
+            path=self.script_path("commit_disconnect.script")
+        )
+        num_retries = 0
+
+        def once(tx):
+            nonlocal num_retries
+            num_retries = num_retries + 1
+            result = tx.run("RETURN 1")
+            result.next()
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        session = driver.session("w")
+
+        with self.assertRaises(types.DriverError) as e:  # Check further...
+            session.writeTransaction(once)
+        if get_driver_name() in ['python']:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.IncompleteCommit'>",
+                e.exception.errorType
+            )
+
+        self.assertEqual(num_retries, 1)
+        session.close()
+        driver.close()
+        self.assertEqual(self._routingServer.count_responses("<ACCEPT>"), 1)
+        self.assertEqual(self._writeServer.count_responses("<ACCEPT>"), 1)
+        self._routingServer.done()
+        self._readServer.done()
+
     def test_retry_ForbiddenOnReadOnlyDatabase(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
