@@ -121,6 +121,14 @@ class TestkitTestCase(unittest.TestCase):
                  "stub.versions.ProtocolVersions"),
                 (r"^stub\.transport\.[^.]+\.TestTransport\.",
                  "stub.transport.Transport."),
+                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV4x3\.",
+                 "stub.authorization.AuthorizationTests."),
+                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV4x1\.",
+                 "stub.authorization.AuthorizationTestsV4."),
+                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV3\.",
+                 "stub.authorization.AuthorizationTestsV3."),
+                (r"^stub\.authorization\.[^.]+\.TestNoRoutingAuthorization\.",
+                 "stub.authorization.NoRoutingAuthorizationTests."),
             ):
                 id_ = re.sub(exp, sub, id_)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))

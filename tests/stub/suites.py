@@ -9,7 +9,6 @@ import unittest
 import tests.stub.retry as retry
 import tests.stub.transport.test_transport as transport
 import tests.stub.tx_begin_parameters.test_tx_begin_parameters as txparameters
-from tests.stub import authorization
 import tests.stub.serversiderouting as serversiderouting
 from tests.testenv import (
     begin_test_suite,
@@ -21,7 +20,6 @@ from tests.testenv import (
 loader = unittest.TestLoader()
 
 stub_suite = unittest.TestSuite()
-stub_suite.addTests(loader.loadTestsFromModule(authorization))
 stub_suite.addTests(loader.loadTestsFromModule(retry))
 stub_suite.addTests(loader.loadTestsFromModule(transport))
 stub_suite.addTests(loader.loadTestsFromModule(txparameters))
