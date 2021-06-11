@@ -57,7 +57,6 @@ class TestServerSideRouting(TestkitTestCase):
             if get_driver_name() in ["java"]:
                 self.assertEqual('java.lang.IllegalArgumentException',
                                  e.errorType)
-            pass
         except types.BackendError:
             if get_driver_name() in ["javascript"]:
                 # TODO: this shouldn't be communicated as backend error
