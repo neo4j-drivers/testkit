@@ -53,18 +53,15 @@ class TestServerSideRouting(TestkitTestCase):
         self._start_server()
         try:
             driver = Driver(self._backend, uri, self._auth, self._userAgent)
-        except types.DriverError:
+        except types.DriverError as e:
+            if get_driver_name() in ["java"]:
+                self.assertEqual('java.lang.IllegalArgumentException',
+                                 e.errorType)
             pass
         except types.BackendError:
             if get_driver_name() in ["javascript"]:
                 # TODO: this shouldn't be communicated as backend error
                 return
-        except Exception as e:
-            if get_driver_name() in ["java"]:
-                if "TestkitErrorResponse" in str(e):
-                    # TODO: sends unknown protocol message on failure
-                    return
-            raise
 
         else:
             # Python driver
