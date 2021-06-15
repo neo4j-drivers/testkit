@@ -385,15 +385,16 @@ def get_ip_addresses(exclude_loopback=True):
     return ips
 
 
-def dns_resolve(addr):
-    return socket.gethostbyname_ex(addr)[2]
+def dns_resolve(host_name):
+    _, _, ip_addresses = socket.gethostbyname_ex(host_name)
+    return ip_addresses
 
 
-def dns_resolve_single(addr):
-    ips = dns_resolve(addr)
+def dns_resolve_single(host_name):
+    ips = dns_resolve(host_name)
     if len(ips) != 1:
-        raise ValueError("%s resolved to %i instead of 1 IP addresses"
-                         % (addr, len(ips)))
+        raise ValueError("%s resolved to %i instead of 1 IP address"
+                         % (host_name, len(ips)))
     return ips[0]
 
 
