@@ -63,7 +63,8 @@ def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
     cmd = ["docker", "create", "--name", name]
     if mount_map is not None:
         for k in mount_map:
-            cmd.extend(["-v", "%s:%s" % (k, mount_map[k])])
+            src, dst = os.path.abspath(k), os.path.abspath(mount_map[k])
+            cmd.extend(["-v", "%s:%s" % (src, dst)])
     if host_map is not None:
         for k in host_map:
             cmd.extend(["--add-host", "%s:%s" % (k, host_map[k])])
