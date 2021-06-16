@@ -3,7 +3,10 @@ from collections import defaultdict
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import get_driver_name
-from tests.stub.shared import get_ip_addresses, StubServerScriptNotFinished
+from tests.stub.shared import (
+    get_dns_resolved_server_address,
+    get_ip_addresses,
+)
 from ._routing import RoutingBase
 
 
@@ -71,7 +74,8 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._readServer1.done()
-        self.assertEqual(summary.server_info.address, self._readServer1.address)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
         self.assertEqual([1], sequence)
 
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
@@ -89,7 +93,8 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._readServer1.done()
-        self.assertEqual(summary.server_info.address, self._readServer1.address)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
         self.assertEqual([1], sequence)
 
     # Same test as for session.run but for transaction run.
@@ -110,7 +115,8 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._readServer1.done()
-        self.assertEqual(summary.server_info.address, self._readServer1.address)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
         self.assertEqual([1], sequence)
 
     def test_should_send_system_bookmark_with_route(self):
@@ -169,7 +175,7 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[1]], sequences)
         self.assertEqual(len(summaries), 1)
         self.assertEqual(summaries[0].server_info.address,
-                         self._readServer1.address)
+                         get_dns_resolved_server_address(self._readServer1))
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
         # TODO remove this block once all languages wor
@@ -255,7 +261,8 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer1.done()
-        assert summary.server_info.address == self._writeServer1.address
+        assert (summary.server_info.address
+                == get_dns_resolved_server_address(self._writeServer1))
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_tx_run(self):
@@ -275,7 +282,8 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer1.done()
-        assert summary.server_info.address == self._writeServer1.address
+        assert (summary.server_info.address
+                == get_dns_resolved_server_address(self._writeServer1))
 
     def test_should_write_successfully_on_writer_using_tx_function(self):
         # TODO remove this block once all languages work
@@ -302,7 +310,8 @@ class RoutingV4x3(RoutingBase):
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertIsNotNone(res)
-        assert summary.server_info.address == self._writeServer1.address
+        assert (summary.server_info.address
+                == get_dns_resolved_server_address(self._writeServer1))
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
         # TODO remove this block once all languages work
