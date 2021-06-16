@@ -12,6 +12,7 @@ from queue import (
 )
 import re
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -382,3 +383,44 @@ class StubServer:
 scripts_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "scripts"
 )
+
+
+def get_ip_addresses(exclude_loopback=True):
+    def pick_address(adapter_):
+        ip6 = None
+        for address_ in adapter_.ips:
+            if address_.is_IPv4:
+                return address_.ip
+            elif ip6 is None:
+                ip6 = address_.ip
+        return ip6
+
+    ips = []
+    for adapter in ifaddr.get_adapters():
+        if exclude_loopback:
+            name = adapter.nice_name.lower()
+            if name == "lo" or "loopback" in name:
+                continue
+        address = pick_address(adapter)
+        if address:
+            ips.append(address)
+
+    return ips
+
+
+def dns_resolve(host_name):
+    _, _, ip_addresses = socket.gethostbyname_ex(host_name)
+    return ip_addresses
+
+
+def dns_resolve_single(host_name):
+    ips = dns_resolve(host_name)
+    if len(ips) != 1:
+        raise ValueError("%s resolved to %i instead of 1 IP address"
+                         % (host_name, len(ips)))
+    return ips[0]
+
+
+def get_dns_resolved_server_address(server):
+    print(server.host, server.port)
+    return "%s:%i" % (dns_resolve_single(server.host), server.port)

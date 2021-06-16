@@ -2,9 +2,9 @@ from collections import defaultdict
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.shared import (
+from tests.shared import get_driver_name
+from tests.stub.shared import (
     get_dns_resolved_server_address,
-    get_driver_name,
     get_ip_addresses,
 )
 from ._routing import RoutingBase
