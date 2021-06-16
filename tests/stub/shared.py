@@ -12,6 +12,7 @@ from queue import (
 )
 import re
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
