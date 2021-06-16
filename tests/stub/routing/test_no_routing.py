@@ -4,7 +4,10 @@ from tests.shared import (
     get_driver_name,
     TestkitTestCase,
 )
-from tests.stub.shared import StubServer
+from tests.stub.shared import (
+    get_dns_resolved_server_address,
+    StubServer,
+)
 from ._routing import get_extra_hello_props
 
 
@@ -51,5 +54,6 @@ class NoRouting(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertEqual(summary.server_info.address, self._server.address)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
         self._server.done()

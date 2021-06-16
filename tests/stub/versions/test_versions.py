@@ -9,7 +9,10 @@ from tests.shared import (
     get_driver_name,
     TestkitTestCase,
 )
-from tests.stub.shared import StubServer
+from tests.stub.shared import (
+    get_dns_resolved_server_address,
+    StubServer,
+)
 
 
 class TestProtocolVersions(TestkitTestCase):
@@ -78,8 +81,10 @@ class TestProtocolVersions(TestkitTestCase):
                         self.assertEqual(summary.server_info.agent,
                                          vars_["#SERVER_AGENT#"])
                     if check_server_address:
-                        self.assertEqual(summary.server_info.address,
-                                         self._server.address)
+                        self.assertEqual(
+                            summary.server_info.address,
+                            get_dns_resolved_server_address(self._server)
+                        )
                 else:
                     # Otherwise the script will not fail when the protocol is
                     # not present (on backends where run is lazily evaluated)
@@ -161,8 +166,10 @@ class TestProtocolVersions(TestkitTestCase):
         ) as session:
             result = session.run("RETURN 1 AS n")
             summary = result.consume()
-            self.assertEqual(summary.server_info.address, self._server.address)
+            self.assertEqual(summary.server_info.address,
+                             get_dns_resolved_server_address(self._server))
         # result should cache summary and still be valid after the session's and
         # the driver's life-time
         summary = result.consume()
-        self.assertEqual(summary.server_info.address, self._server.address)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))

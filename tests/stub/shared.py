@@ -12,6 +12,7 @@ from queue import (
 )
 import re
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -382,3 +383,21 @@ def get_ip_addresses(exclude_loopback=True):
             ips.append(address)
 
     return ips
+
+
+def dns_resolve(host_name):
+    _, _, ip_addresses = socket.gethostbyname_ex(host_name)
+    return ip_addresses
+
+
+def dns_resolve_single(host_name):
+    ips = dns_resolve(host_name)
+    if len(ips) != 1:
+        raise ValueError("%s resolved to %i instead of 1 IP address"
+                         % (host_name, len(ips)))
+    return ips[0]
+
+
+def get_dns_resolved_server_address(server):
+    print(server.host, server.port)
+    return "%s:%i" % (dns_resolve_single(server.host), server.port)
