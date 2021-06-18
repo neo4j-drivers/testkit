@@ -187,7 +187,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driverName in ["javascript", "java", "dotnet"]:
+        if self._driverName in ["javascript", "dotnet"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
