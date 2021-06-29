@@ -66,13 +66,17 @@ class Container:
         self._container.exec(
                 ["python3", "-m", "tests.tls.suites"])
 
-    def run_neo4j_tests(self, suite, hostname, username, password, scheme):
+    def run_neo4j_tests(self, suite, hostname, username, password,
+                        neo4j_config):
         self._env.update({
             # Hostname of Docker container running db
             "TEST_NEO4J_HOST": hostname,
             "TEST_NEO4J_USER": username,
             "TEST_NEO4J_PASS": password,
-            "TEST_NEO4J_SCHEME": scheme
+            "TEST_NEO4J_SCHEME": neo4j_config.scheme,
+            "TEST_NEO4J_VERSION": neo4j_config.version,
+            "TEST_NEO4J_EDITION": neo4j_config.edition,
+            "TEST_NEO4J_CLUSTER": neo4j_config.cluster
         })
         self._container.exec([
             "python3", "-m", "tests.neo4j.suites", suite],
@@ -87,14 +91,17 @@ class Container:
                 ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
         self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
 
-    def run_selected_neo4j_tests(
-            self, testpattern, hostname, username, password, scheme):
+    def run_selected_neo4j_tests(self, testpattern, hostname, username,
+                                 password, neo4j_config):
         self._env.update({
             # Hostname of Docker container running db
             "TEST_NEO4J_HOST": hostname,
             "TEST_NEO4J_USER": username,
             "TEST_NEO4J_PASS": password,
-            "TEST_NEO4J_SCHEME": scheme
+            "TEST_NEO4J_SCHEME": neo4j_config.scheme,
+            "TEST_NEO4J_VERSION": neo4j_config.version,
+            "TEST_NEO4J_EDITION": neo4j_config.edition,
+            "TEST_NEO4J_CLUSTER": neo4j_config.cluster
         })
         self._container.exec([
             "python3", "-m", "unittest", "-v", testpattern],

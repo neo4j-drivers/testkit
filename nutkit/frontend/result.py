@@ -17,3 +17,13 @@ class Result:
         """
         req = protocol.ResultConsume(self._result.id)
         return self._backend.sendAndReceive(req)
+
+    def keys(self):
+        return self._result.keys
+
+    def __iter__(self):
+        while True:
+            record = self.next()
+            if isinstance(record, protocol.NullRecord):
+                break
+            yield record

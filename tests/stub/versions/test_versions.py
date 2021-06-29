@@ -6,13 +6,11 @@ from nutkit.protocol import (
     DriverError,
 )
 from tests.shared import (
+    get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
 )
-from tests.stub.shared import (
-    get_dns_resolved_server_address,
-    StubServer,
-)
+from tests.stub.shared import StubServer
 
 
 class TestProtocolVersions(TestkitTestCase):
