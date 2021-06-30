@@ -90,31 +90,20 @@ class TestDirectDriver(TestkitTestCase):
     def test_supports_multi_db(self):
         self._driver = get_driver(self._backend)
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN 1")
-        summary = result.consume()
-        server_info = summary.server_info
-        result = get_server_info().supports_multi_db
-        protocol_version = tuple(map(int,
-                                     server_info.protocol_version.split(".")))
-        server_agent = server_info.agent
-        self.assertTrue(server_agent.startswith("Neo4j/"))
-        server_version = tuple(map(int, server_agent[6:].split(".")))
-        self.assertEqual(len(server_version), 3)
+        summary = self._session.run("RETURN 1 as n").consume()
+        result = self._driver.supportsMultiDB()
+        server_version = tuple(map(int, get_server_info().version.split(".")))
 
-        if server_version[:2] in ((4, 0), (4, 1), (4, 2), (4, 3)):
+        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3)):
             self.assertTrue(result)
             # This is the default database name if not set explicitly on the
             # Neo4j Server
             self.assertEqual(summary.database, "neo4j")
-            self.assertEqual(protocol_version, protocol_version[:2])
         elif server_version == (3, 5):
             self.assertFalse(result)
             self.assertIsNone(summary.database)
-            self.assertEqual(protocol_version, (3, 0))
         else:
-            self.fail("Unexpected server version %s -> %s" % (
-                server_agent, server_version
-            ))
+            self.fail("Unexpected server version %s" % get_server_info())
 
         self.assertEqual(summary.query_type, "r")
 

@@ -1,6 +1,7 @@
 from nutkit import protocol as types
 from ..shared import (
     driver_feature,
+    get_driver_name,
     TestkitTestCase,
 )
 from .shared import (
@@ -79,9 +80,17 @@ class TestDirectDriver(TestkitTestCase):
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        self.assertIn(summary.server_info.protocol_version, (
-            "1.0", "2.0", "3.0", "4.0", "4.1", "4.2", "4.3"
-        ))
+        self.assertEqual(summary.server_info.protocol_version,
+                         get_server_info().max_protocol_version)
+
+    def test_agent_string(self):
+        summary = self.get_summary("RETURN 1 AS number")
+        if isinstance(summary, dict) and get_driver_name() in ["java"]:
+            self.skipTest("Java 4.2 backend does not support summary")
+
+        self.assertTrue(summary.server_info.agent.startswith("Neo4j/"))
+        version = summary.server_info.agent[6:].split(".")
+        self.assertEqual(version[:2], get_server_info().version.split("."))
 
     def _assert_counters(self, summary, nodes_created=0, nodes_deleted=0,
                          relationships_created=0, relationships_deleted=0,

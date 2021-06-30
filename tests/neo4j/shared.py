@@ -72,6 +72,16 @@ class ServerInfo:
     def supports_multi_db(self):
         return self.version >= "4" and self.edition == "enterprise"
 
+    @property
+    def max_protocol_version(self):
+        return {
+            "3.5": "3.0",
+            "4.0": "4.0",
+            "4.1": "4.1",
+            "4.2": "4.2",
+            "4.3": "4.3",
+        }[".".join(self.version.split(".")[:2])]
+
 
 def get_server_info():
     return ServerInfo(

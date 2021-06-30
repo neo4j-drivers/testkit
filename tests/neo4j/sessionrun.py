@@ -1,5 +1,8 @@
 import nutkit.protocol as types
-from tests.neo4j.shared import get_driver
+from tests.neo4j.shared import (
+    get_driver,
+    get_server_info,
+)
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -119,16 +122,10 @@ class TestSessionRun(TestkitTestCase):
 
     def test_autocommit_transactions_should_support_metadata(self):
         self._session1 = self._driver.session("r")
-        result = self._session1.run("RETURN 1")
-        summary = result.consume()
-        if isinstance(summary, dict) and get_driver_name() in ["java"]:
-            self.skipTest("Java driver 4.2 does not support server_info agent")
-        server_version = summary.server_info.agent.split("/")[-1].split(".")
-        if not server_version:
-            self.fail("Driver couldn't return server version.")
-        if server_version[0] == "3":
+        server_version = get_server_info().version
+        if server_version.startswith("3."):
             query = "CALL dbms.getTXMetaData"
-        elif server_version[0] == "4":
+        elif server_version.startswith("4."):
             query = "CALL tx.getMetaData"
         else:
             self.fail("Unknown server version %s should be 3.x or 4.x." %
