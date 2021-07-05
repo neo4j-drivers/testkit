@@ -157,28 +157,33 @@ class BoltStubService:
             self.server.handle_request()
             self.server.server_close()
 
-    def stop(self):
-        if self.script.context.restarting or self.script.context.concurrent:
-            self.server.shutdown()
+    def _close_socket(self):
         self.server.socket.close()
 
-    def stop_async(self):
-        Thread(target=self.stop, daemon=True).start()
+    def _stop_server(self):
+        if self.script.context.restarting or self.script.context.concurrent:
+            self.server.shutdown()
+
+    def stop(self):
+        self._close_socket()
+        self._stop_server()
 
     def try_skip_to_end(self):
-        self.stop()
+        self._close_socket()
         with self.actors_lock:
             for actor in self.actors:
                 actor.try_skip_to_end()
+        self._stop_server()
 
     def try_skip_to_end_async(self):
         Thread(target=self.try_skip_to_end, daemon=True).start()
 
     def close_all_connections(self):
-        self.stop()
+        self._close_socket()
         with self.actors_lock:
             for actor in self.actors:
                 actor.exit()
+        self._stop_server()
 
     def close_all_connections_async(self):
         Thread(target=self.close_all_connections, daemon=True).start()
