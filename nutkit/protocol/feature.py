@@ -23,3 +23,12 @@ class Feature(Enum):
     # PULL right afterwards and consumes two message after that. This saves a
     # full round-trip.
     OPT_PULL_PIPELINING = "Optimization:PullPipelining"
+
+    # === CONFIGURATION HINTS (BOLT 4.3+) ===
+    # The driver understands and follow the connection hint
+    # connection.recv_timeout_seconds which tells it to close the connection
+    # after not receiving an answer on any request for longer than the given
+    # time period. On timout, the driver should remove the server from its
+    # routing table and assume all other connections to the server are dead
+    # as well.
+    CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"

@@ -1,0 +1,26 @@
+!: BOLT 4.3
+!: ALLOW RESTART
+!: AUTO RESET
+!: AUTO GOODBYE
+
+C: HELLO "*"
+S: SUCCESS {"server": "Neo4j/4.3.1", "hints": {"connection.recv_timeout_seconds": 1}, "connection_id": "bolt-0"}
+C: BEGIN {}
+S: SUCCESS {}
+{{
+    C: RUN "RETURN 1 AS n" "*" "*"
+    S: <SLEEP> 3
+    S: SUCCESS {"fields": ["n"]}
+----
+    C: RUN "RETURN 2 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+}}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
