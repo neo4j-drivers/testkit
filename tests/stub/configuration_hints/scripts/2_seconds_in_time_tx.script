@@ -1,4 +1,5 @@
 !: BOLT 4.3
+!: AUTO RESET
 !: AUTO GOODBYE
 
 C: HELLO "*"
@@ -11,8 +12,6 @@ S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": "*"}
 S: RECORD [1]
    SUCCESS {"type": "r"}
-C: COMMIT
-S: SUCCESS {}
 {*
     C: RESET
     S: SUCCESS {}

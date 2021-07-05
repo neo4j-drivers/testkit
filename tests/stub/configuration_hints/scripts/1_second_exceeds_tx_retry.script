@@ -1,5 +1,6 @@
 !: BOLT 4.3
 !: ALLOW RESTART
+!: AUTO RESET
 !: AUTO GOODBYE
 
 C: HELLO "*"
@@ -8,23 +9,18 @@ C: BEGIN {}
 S: SUCCESS {}
 {{
     C: RUN "RETURN 1 AS n" "*" "*"
-    S: <SLEEP> 2
-       SUCCESS {"fields": ["n"]}
-    {?
-        C: PULL {"n": "*"}
-        S: RECORD [1]
-           SUCCESS {"type": "r"}
-    ?}
+    S: <SLEEP> 3
+    S: SUCCESS {"fields": ["n"]}
 ----
     C: RUN "RETURN 2 AS n" "*" "*"
     S: SUCCESS {"fields": ["n"]}
-    C: PULL {"n": "*"}
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
-    C: COMMIT
-    S: SUCCESS {}
-    {*
-        C: RESET
-        S: SUCCESS {}
-    *}
 }}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
