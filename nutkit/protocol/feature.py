@@ -36,7 +36,7 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official drivers
     # have been unified in their behaviour of when they return a Result object.
     # We aim for drivers to not providing a Result until the server replied with
-    # SUCCESS so that the result keys are already know when and attached to the
+    # SUCCESS so that the result keys are already known and attached to the
     # Result object without further waiting or communication with the server.
     TMP_RESULT_KEYS = "Temporary:ResultKeys"
     # Temporary driver feature that will be removed when all official driver

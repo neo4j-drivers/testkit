@@ -44,7 +44,7 @@ class TestDirectDriver(TestkitTestCase):
             resolved_addresses.append(socket_address)
             return (
                 # should be rejected as unable to connect
-                "99.99.99.99:%d" % port,
+                "127.100.200.42:%d" % port,
                 "%s:%d" % (host, port),  # should succeed
             )
 
