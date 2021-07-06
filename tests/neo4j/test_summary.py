@@ -36,8 +36,8 @@ class TestDirectDriver(TestkitTestCase):
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_summary_after_consuming_result(self):
         summary = self.get_summary("CREATE (n) RETURN n")
-        self.assertEqual(summary.query, "CREATE (n) RETURN n")
-        self.assertEqual(summary.parameters, {})
+        self.assertEqual(summary.query.text, "CREATE (n) RETURN n")
+        self.assertEqual(summary.query.parameters, {})
         self.assertEqual(summary.query_type, "rw")
         self.assertEqual(summary.counters.nodes_created, 1)
 
@@ -112,8 +112,8 @@ class TestDirectDriver(TestkitTestCase):
 
         summary = self.get_summary("RETURN $number AS x", params=params)
 
-        self.assertEqual(summary.query, "RETURN $number AS x")
-        self.assertEqual(summary.parameters, params)
+        self.assertEqual(summary.query.text, "RETURN $number AS x")
+        self.assertEqual(summary.query.parameters, params)
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
 
@@ -145,8 +145,8 @@ class TestDirectDriver(TestkitTestCase):
 
         summary = result.consume()
 
-        self.assertEqual(summary.query, "SHOW DATABASES")
-        self.assertEqual(summary.parameters, {})
+        self.assertEqual(summary.query.text, "SHOW DATABASES")
+        self.assertEqual(summary.query.parameters, {})
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
 
@@ -156,8 +156,8 @@ class TestDirectDriver(TestkitTestCase):
         self._session.run("DROP DATABASE test IF EXISTS").consume()
         summary = self._session.run("CREATE DATABASE test").consume()
 
-        self.assertEqual(summary.query, "CREATE DATABASE test")
-        self.assertEqual(summary.parameters, {})
+        self.assertEqual(summary.query.text, "CREATE DATABASE test")
+        self.assertEqual(summary.query.parameters, {})
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
 

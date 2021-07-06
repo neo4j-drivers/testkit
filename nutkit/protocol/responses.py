@@ -234,10 +234,20 @@ class Summary:
                     "relationshipsDeleted": None,
                     "systemUpdates": None
                 }
+            if "query" in data:
+                import warnings
+                warnings.warn(
+                    "Backend supports query field in Summary. "
+                    "Remove the backwards compatibility check!"
+                )
+            else:
+                data["query"] = {
+                    "text": None,
+                    "parameters": None
+                }
             for field in (
                 "database", "notifications", "plan", "profile",
-                "parameters", "query", "queryType", "resultAvailableAfter",
-                "resultConsumedAfter"
+                "queryType", "resultAvailableAfter", "resultConsumedAfter"
             ):
                 if field in data:
                     import warnings
@@ -248,29 +258,28 @@ class Summary:
                 else:
                     data[field] = None
         # ----------------------------------------------------------------------
-        self.server_info = ServerInfo(**data["serverInfo"])
-        self.counters = Counters(**data["counters"])
+        self.counters = SummaryCounters(**data["counters"])
         self.database = data["database"]
         self.notifications = data["notifications"]
         self.plan = data["plan"]
         self.profile = data["profile"]
-        self.parameters = data["parameters"]
-        self.query = data["query"]
+        self.query = SummaryQuery(**data["query"])
         self.query_type = data["queryType"]
         self.result_available_after = data["resultAvailableAfter"]
         self.result_consumed_after = data["resultConsumedAfter"]
+        self.server_info = ServerInfo(**data["serverInfo"])
 
 
 class ServerInfo:
     """ Represents server info that is included in the Summary response. """
 
-    def __init__(self, protocolVersion, agent, address):
-        self.protocol_version = protocolVersion
-        self.agent = agent
+    def __init__(self, address, agent, protocolVersion):
         self.address = address
+        self.agent = agent
+        self.protocol_version = protocolVersion
 
 
-class Counters:
+class SummaryCounters:
     """ Represents the counters info that is included in the Summary response.
     """
 
@@ -293,6 +302,15 @@ class Counters:
         self.relationships_created = relationshipsCreated
         self.relationships_deleted = relationshipsDeleted
         self.system_updates = systemUpdates
+
+
+class SummaryQuery:
+    """ Represents the query info that is included in the Summary response.
+    """
+
+    def __init__(self, text, parameters):
+        self.text = text
+        self.parameters = parameters
 
 
 class Bookmarks:
