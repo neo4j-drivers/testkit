@@ -12,13 +12,6 @@ from tests.stub.shared import (
 )
 
 
-import tracemalloc
-
-tracemalloc.start(5)
-# TODO: ResourceWarning: unclosed <socket.socket [closed] fd=4, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=0>
-# ResourceWarning: Enable tracemalloc to get the object allocation traceback
-
-
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def setUp(self):
         super().setUp()
