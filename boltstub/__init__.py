@@ -228,14 +228,15 @@ class BoltActor:
                     # `try_skip_to_end` being called from the interrupt handler
                     # in `__main__.py` which spawns a new thread. Without this
                     # `sleep`, the main thread that keeps calling
-                    # `script.consume` only releases Script's internal lock only
-                    # so briefly that `try_skip_to_end` hangs unnecessarily long
+                    # `script.consume` only releases Script's internal lock  so
+                    # briefly that `try_skip_to_end` hangs unnecessarily long
                     time.sleep(0.000001)
                     continue
-        except (ConnectionError, OSError):
+        except (ConnectionError, OSError) as e:
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.
+            self.log("S: <BROKEN> %r", e)
             return
         self.log("Script finished")
 

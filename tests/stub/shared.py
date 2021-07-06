@@ -399,5 +399,4 @@ def dns_resolve_single(host_name):
 
 
 def get_dns_resolved_server_address(server):
-    print(server.host, server.port)
     return "%s:%i" % (dns_resolve_single(server.host), server.port)
