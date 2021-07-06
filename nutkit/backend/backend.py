@@ -53,6 +53,8 @@ class Backend:
         self._writer = self._socket.makefile(mode='w', encoding='utf-8')
 
     def close(self):
+        self._reader.close()
+        self._writer.close()
         self._socket.shutdown(socket.SHUT_RDWR)
         self._socket.close()
 
