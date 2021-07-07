@@ -23,7 +23,7 @@ def decode_hook(x):
         return x
 
     name = x['name']
-    if name not in protocol_classes:
+    if not isinstance(name, str) or name not in protocol_classes:
         return x
 
     data = x.get('data', {})

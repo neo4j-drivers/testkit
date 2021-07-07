@@ -8,6 +8,8 @@ import unittest
 import tests.neo4j.authentication as authentication
 import tests.neo4j.datatypes as datatypes
 import tests.neo4j.sessionrun as sessionrun
+import tests.neo4j.test_direct_driver as test_direct_driver
+import tests.neo4j.test_summary as test_summary
 import tests.neo4j.txfuncrun as txfuncrun
 import tests.neo4j.txrun as txrun
 from tests.testenv import (
@@ -25,6 +27,8 @@ suite_3x5 = unittest.TestSuite()
 suite_3x5.addTests(loader.loadTestsFromModule(datatypes))
 suite_3x5.addTests(loader.loadTestsFromModule(sessionrun))
 suite_3x5.addTests(loader.loadTestsFromModule(authentication))
+suite_3x5.addTests(loader.loadTestsFromModule(test_direct_driver))
+suite_3x5.addTests(loader.loadTestsFromModule(test_summary))
 suite_3x5.addTests(loader.loadTestsFromModule(txfuncrun))
 suite_3x5.addTests(loader.loadTestsFromModule(txrun))
 
@@ -35,6 +39,8 @@ suite_4x0 = unittest.TestSuite()
 suite_4x0.addTests(loader.loadTestsFromModule(datatypes))
 suite_4x0.addTests(loader.loadTestsFromModule(sessionrun))
 suite_4x0.addTests(loader.loadTestsFromModule(authentication))
+suite_4x0.addTests(loader.loadTestsFromModule(test_direct_driver))
+suite_4x0.addTests(loader.loadTestsFromModule(test_summary))
 suite_4x0.addTests(loader.loadTestsFromModule(txfuncrun))
 suite_4x0.addTests(loader.loadTestsFromModule(txrun))
 
@@ -46,6 +52,8 @@ suite_4x1 = unittest.TestSuite()
 suite_4x1.addTests(loader.loadTestsFromModule(datatypes))
 suite_4x1.addTests(loader.loadTestsFromModule(sessionrun))
 suite_4x1.addTests(loader.loadTestsFromModule(authentication))
+suite_4x1.addTests(loader.loadTestsFromModule(test_direct_driver))
+suite_4x1.addTests(loader.loadTestsFromModule(test_summary))
 suite_4x1.addTests(loader.loadTestsFromModule(txfuncrun))
 suite_4x1.addTests(loader.loadTestsFromModule(txrun))
 
@@ -56,6 +64,8 @@ suite_4x2 = unittest.TestSuite()
 suite_4x2.addTests(loader.loadTestsFromModule(datatypes))
 suite_4x2.addTests(loader.loadTestsFromModule(sessionrun))
 suite_4x2.addTests(loader.loadTestsFromModule(authentication))
+suite_4x2.addTests(loader.loadTestsFromModule(test_direct_driver))
+suite_4x2.addTests(loader.loadTestsFromModule(test_summary))
 suite_4x2.addTests(loader.loadTestsFromModule(txfuncrun))
 suite_4x2.addTests(loader.loadTestsFromModule(txrun))
 
@@ -66,6 +76,8 @@ suite_4x3 = unittest.TestSuite()
 suite_4x3.addTests(loader.loadTestsFromModule(datatypes))
 suite_4x3.addTests(loader.loadTestsFromModule(sessionrun))
 suite_4x3.addTests(loader.loadTestsFromModule(authentication))
+suite_4x3.addTests(loader.loadTestsFromModule(test_direct_driver))
+suite_4x3.addTests(loader.loadTestsFromModule(test_summary))
 suite_4x3.addTests(loader.loadTestsFromModule(txfuncrun))
 suite_4x3.addTests(loader.loadTestsFromModule(txrun))
 
@@ -89,6 +101,9 @@ if __name__ == "__main__":
     if not suite:
         print("Unknown suite name: " + name)
         sys.exit(-1)
+
+    import os
+    os.environ["env_neo4j_version"] = os.environ.get("env_neo4j_version", name)
 
     suite_name = "Integration tests " + name
     begin_test_suite(suite_name)
