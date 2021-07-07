@@ -38,6 +38,7 @@ class TestDataTypes(TestkitTestCase):
         result = self._session.run("RETURN $x as y", params={"x": val})
         record = result.next()
         self.assertEqual(record, types.Record(values=[val]))
+        assert isinstance(result.next(), types.NullRecord)
 
     def test_should_echo_back(self):
         vals = [

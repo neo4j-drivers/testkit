@@ -107,15 +107,64 @@ class Node:
         self.props = props
 
     def __str__(self):
-        return "Node (id={}, labels={}), props={}".format(
+        return "Node (id={}, labels={}, props={})".format(
             self.id, self.labels, self.props)
 
     def __eq__(self, other):
         if not isinstance(other, Node):
             return False
-
-        return self.id == other.id and self.labels == other.labels and self.props == other.props
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("id", "labels", "props"))
 
 
 # More in line with other naming
 CypherNode = Node
+
+
+class Relationship:
+    def __init__(self, id, startNodeId, endNodeId, type, props):
+        self.id = id
+        self.startNodeId = startNodeId
+        self.endNodeId = endNodeId
+        self.type = type
+        self.props = props
+
+    def __str__(self):
+        return (
+            "Relationship (id={}, startNodeId={}, endNodeId={}, type={}, "
+            "props={})".format(self.id, self.startNodeId, self.endNodeId,
+                               self.type, self.props)
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, Relationship):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("id", "startNodeId", "endNodeId", "type",
+                                "props"))
+
+
+# More in line with other naming
+CypherRelationship = Relationship
+
+
+class Path:
+    def __init__(self, nodes, relationships):
+        self.nodes = nodes
+        self.relationships = relationships
+
+    def __str__(self):
+        return ("Path (nodes={}, relationships={})".format(self.nodes,
+                                                           self.relationships))
+
+    def __eq__(self, other):
+        if not isinstance(other, Path):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("nodes", "relationships"))
+
+
+# More in line with other naming
+CypherPath = Path

@@ -4,10 +4,10 @@ from tests.shared import (
     driver_feature,
     get_driver_name,
     TestkitTestCase,
+    dns_resolve_single,
+    get_dns_resolved_server_address
 )
 from tests.stub.shared import (
-    dns_resolve_single,
-    get_dns_resolved_server_address,
     StubServer,
 )
 
