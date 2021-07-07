@@ -32,3 +32,16 @@ class Feature(Enum):
     # routing table and assume all other connections to the server are dead
     # as well.
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
+
+    # Temporary driver feature that will be removed when all official drivers
+    # have been unified in their behaviour of when they return a Result object.
+    # We aim for drivers to not providing a Result until the server replied with
+    # SUCCESS so that the result keys are already known and attached to the
+    # Result object without further waiting or communication with the server.
+    TMP_RESULT_KEYS = "Temporary:ResultKeys"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented all summary response fields.
+    TMP_FULL_SUMMARY = "Temporary:FullSummary"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented path and relationship types
+    TMP_CYPHER_PATH_AND_RELATIONSHIP = "Temporary:CypherPathAndRelationship"

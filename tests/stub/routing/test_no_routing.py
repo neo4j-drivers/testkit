@@ -5,10 +5,7 @@ from tests.shared import (
     get_driver_name,
     TestkitTestCase,
 )
-from tests.stub.shared import (
-    get_dns_resolved_server_address,
-    StubServer,
-)
+from tests.stub.shared import StubServer
 from ._routing import get_extra_hello_props
 
 

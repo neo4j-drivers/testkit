@@ -80,17 +80,8 @@ class TestDirectDriver(TestkitTestCase):
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        max_protocol_version = get_server_info().max_protocol_version
-        if max_protocol_version == "4.2":
-            # Both versions are equivalent. Since 4.2 was introduced before
-            # having version ranges in the handshake, we allow drivers to
-            # negotiate bolt 4.1 with 4.2 to be able to fit support for more
-            # server versions into the handshake
-            self.assertIn(summary.server_info.protocol_version,
-                          ("4.2", "4.1"))
-        else:
-            self.assertEqual(summary.server_info.protocol_version,
-                             get_server_info().max_protocol_version)
+        self.assertEqual(summary.server_info.protocol_version,
+                         get_server_info().max_protocol_version)
 
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
