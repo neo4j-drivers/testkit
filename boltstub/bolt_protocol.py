@@ -72,6 +72,8 @@ class TranslatedStructure(Structure):
 class BoltProtocol:
     protocol_version = None
     version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     messages = {
         "C": {},
@@ -119,6 +121,8 @@ class Bolt1Protocol(BoltProtocol):
 
     protocol_version = (1, 0)
     version_aliases = {(1,), (3, 0), (3, 1), (3, 2), (3, 3)}
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     messages = {
         "C": {
@@ -141,7 +145,8 @@ class Bolt1Protocol(BoltProtocol):
 
     @classmethod
     def decode_versions(cls, b):
-        # ignore minor versions and ranges
+        # only major version is supported
+        # ignore all but last byte
         masked = bytes(0 if i % 4 != 3 else b[i]
                        for i in range(len(b)))
         return BoltProtocol.decode_versions(masked)
@@ -160,6 +165,8 @@ class Bolt2Protocol(Bolt1Protocol):
 
     protocol_version = (2, 0)
     version_aliases = {(2,), (3, 4)}
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     server_agent = "Neo4j/3.4.0"
 
@@ -177,6 +184,8 @@ class Bolt3Protocol(Bolt2Protocol):
 
     protocol_version = (3, 0)
     version_aliases = {(3,), (3, 5), (3, 6)}
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     messages = {
         "C": {
@@ -215,6 +224,8 @@ class Bolt4x0Protocol(Bolt3Protocol):
 
     protocol_version = (4, 0)
     version_aliases = {(4,)}
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     messages = {
         "C": {
@@ -240,10 +251,9 @@ class Bolt4x0Protocol(Bolt3Protocol):
 
     @classmethod
     def decode_versions(cls, b):
-        # minor version were introduced
-        # range support was backported from 4.3
-        # ignore reserved byte
-        masked = bytes(0 if i % 4 == 0 else b[i]
+        # minor version was introduced
+        # ignore first two bytes
+        masked = bytes(0 if i % 4 <= 1 else b[i]
                        for i in range(len(b)))
         return BoltProtocol.decode_versions(masked)
 
@@ -261,6 +271,9 @@ class Bolt4x0Protocol(Bolt3Protocol):
 class Bolt4x1Protocol(Bolt4x0Protocol):
 
     protocol_version = (4, 1)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     messages = {
         "C": {
@@ -299,44 +312,19 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
 class Bolt4x2Protocol(Bolt4x1Protocol):
 
     protocol_version = (4, 2)
-
-    messages = {
-        "C": {
-            b"\x01": "HELLO",
-            b"\x02": "GOODBYE",
-            b"\x0F": "RESET",
-            b"\x10": "RUN",
-            b"\x11": "BEGIN",
-            b"\x12": "COMMIT",
-            b"\x13": "ROLLBACK",
-            b"\x2F": "DISCARD",
-            b"\x3F": "PULL",
-        },
-        "S": {
-            b"\x70": "SUCCESS",
-            b"\x71": "RECORD",
-            b"\x7E": "IGNORED",
-            b"\x7F": "FAILURE",
-        },
-    }
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = {(4, 1)}
 
     server_agent = "Neo4j/4.2.0"
-
-    @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
-        if request.tag == b"\x01":
-            return TranslatedStructure("SUCCESS", b"\x70", {
-                "connection_id": "bolt-0",
-                "server": cls.server_agent,
-                "routing": None,
-            })
-        else:
-            return TranslatedStructure("SUCCESS", b"\x70", {})
 
 
 class Bolt4x3Protocol(Bolt4x2Protocol):
 
     protocol_version = (4, 3)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
 
     messages = {
         "C": {
@@ -362,12 +350,9 @@ class Bolt4x3Protocol(Bolt4x2Protocol):
     server_agent = "Neo4j/4.3.0"
 
     @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
-        if request.tag == b"\x01":
-            return TranslatedStructure("SUCCESS", b"\x70", {
-                "connection_id": "bolt-0",
-                "server": cls.server_agent,
-                "routing": None,
-            })
-        else:
-            return TranslatedStructure("SUCCESS", b"\x70", {})
+    def decode_versions(cls, b):
+        # minor version ranges were introduced
+        # ignore first byte
+        masked = bytes(0 if i % 4 == 0 else b[i]
+                       for i in range(len(b)))
+        return BoltProtocol.decode_versions(masked)

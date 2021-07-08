@@ -108,39 +108,29 @@ class TestDirectDriver(TestkitTestCase):
         self.assertEqual(summary.query_type, "r")
 
     def test_multi_db_non_existing(self):
+        if not get_server_info().supports_multi_db:
+            self.skipTest("Needs multi DB support")
         self._driver = get_driver(self._backend)
         self._session = self._driver.session("r", database="test-database")
         with self.assertRaises(types.DriverError) as e:
             result = self._session.run("RETURN 1")
             result.next()
         exc = e.exception
-        if get_server_info().supports_multi_db:
-            # TODO remove this block once all languages work
-            if get_driver_name() in ["go"]:
-                # does not set exception code or message
-                return
-            self.assertEqual(exc.code,
-                             "Neo.ClientError.Database.DatabaseNotFound")
-            # TODO remove this block once all languages work
-            if get_driver_name() in ["java"]:
-                # does not set exception message
-                return
-            self.assertIn("test-database", exc.msg)
-            self.assertIn("exist", exc.msg)
+        # TODO remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            # does not set exception code or message
+            return
+        self.assertEqual(exc.code,
+                         "Neo.ClientError.Database.DatabaseNotFound")
+        # TODO remove this block once all languages work
+        if get_driver_name() in ["java"]:
+            # does not set exception message
+            return
+        self.assertIn("test-database", exc.msg)
+        self.assertIn("exist", exc.msg)
         if get_driver_name() in ["python"]:
-            if get_server_info().supports_multi_db:
-                self.assertEqual(exc.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
-            else:
-                self.assertEqual(
-                    exc.errorType,
-                    "<class 'neo4j.exceptions.ConfigurationError'>"
-                )
-                self.assertIn(
-                    "Database name parameter for selecting database is not "
-                    "supported in Bolt Protocol Version(3, 0)",
-                    exc.msg
-                )
+            self.assertEqual(exc.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_multi_db(self):
