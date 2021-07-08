@@ -1,10 +1,7 @@
 from contextlib import contextmanager
 
 from nutkit.frontend import Driver
-from nutkit.protocol import (
-    AuthorizationToken,
-    DriverError,
-)
+from nutkit import protocol as types
 from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
@@ -29,7 +26,8 @@ class TestProtocolVersions(TestkitTestCase):
     @contextmanager
     def _get_session(self, script_path, vars_=None):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri, AuthorizationToken(scheme="basic"))
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
         self._server.start(path=script_path, vars=vars_)
         session = driver.session("w", fetchSize=1000)
         try:
@@ -58,12 +56,13 @@ class TestProtocolVersions(TestkitTestCase):
                                          server-address
             :type check_server_address: bool
         """
-        expected_version = version.replace("x", ".")
-        if "." not in expected_version:
-            expected_version += ".0"
+        expected_server_version = version.replace("x", ".")
+        if "." not in expected_server_version:
+            expected_server_version += ".0"
+        expected_server_version += ".0"
         vars_ = {}
         if server_agent is None:
-            vars_["#SERVER_AGENT#"] = "Neo4j/" + expected_version + ".0"
+            vars_["#SERVER_AGENT#"] = "Neo4j/" + expected_server_version
         else:
             vars_["#SERVER_AGENT#"] = server_agent
         script_path = self.script_path("v{}_return_1.script".format(version))
@@ -73,8 +72,15 @@ class TestProtocolVersions(TestkitTestCase):
                 if server_agent or check_version or check_server_address:
                     summary = result.consume()
                     if check_version:
+                        expected_protocol_version = \
+                            self._server.get_negotiated_bolt_version()
+                        expected_protocol_version = ".".join(
+                            map(str, expected_protocol_version)
+                        )
+                        if "." not in expected_protocol_version:
+                            expected_protocol_version += ".0"
                         self.assertEqual(summary.server_info.protocol_version,
-                                         expected_version)
+                                         expected_protocol_version)
                     if server_agent is not None:
                         self.assertEqual(summary.server_info.agent,
                                          vars_["#SERVER_AGENT#"])
@@ -87,14 +93,14 @@ class TestProtocolVersions(TestkitTestCase):
                     # Otherwise the script will not fail when the protocol is
                     # not present (on backends where run is lazily evaluated)
                     result.next()
-            except DriverError:
+            except types.DriverError:
                 if not rejected_agent:
                     raise
                 # TODO: check exception further
             else:
                 if rejected_agent:
                     self.fail("Driver should have rejected the server agent")
-        self._server.done()
+            self._server.done()
 
     def test_supports_bolt_4x0(self):
         self._run("4x0")

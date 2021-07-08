@@ -15,6 +15,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+from textwrap import wrap
 from threading import Thread
 import time
 
@@ -231,7 +232,7 @@ class StubServer:
             # be started.
             return
         try:
-            if self._interrupt():
+            if self._poll(.1) or self._interrupt():
                 pass
             elif self._interrupt():
                 raise StubServerScriptNotFinished(
@@ -288,6 +289,20 @@ class StubServer:
                 break
             buf_lens = new_buf_lens
 
+    def get_negotiated_bolt_version(self):
+        handshake_prefix = "<HANDSHAKE>"
+        handshakes = self.get_responses("<HANDSHAKE>")
+        if not handshakes:
+            return 0,
+        assert len(handshakes) == 1
+        handshake = handshakes[0][len(handshake_prefix):]
+        handshake = re.sub(r"\s", "", handshake)
+        version = list(int(b, 16) for b in wrap(handshake, 2))
+        while len(version) > 1 and not version[0]:
+            version.pop(0)
+        version.reverse()
+        return tuple(version)
+
     def count_requests_re(self, pattern, silence_period=0.1):
         if isinstance(pattern, re.Pattern):
             return self.count_requests(pattern)
@@ -295,8 +310,11 @@ class StubServer:
                                    silence_period=silence_period)
 
     def count_requests(self, pattern, silence_period=0.1):
+        return len(self.get_requests(pattern, silence_period))
+
+    def get_requests(self, pattern, silence_period=0.1):
         self._wait_for_silence(silence_period)
-        count = 0
+        res = []
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
@@ -308,10 +326,12 @@ class StubServer:
                 continue
             line = line[match.end():]
             if isinstance(pattern, re.Pattern):
-                count += bool(pattern.match(line))
+                if pattern.match(line):
+                    res.append(line)
             else:
-                count += line.startswith(pattern)
-        return count
+                if line.startswith(pattern):
+                    res.append(line)
+        return res
 
     def count_responses_re(self, pattern, silence_period=0.1):
         if isinstance(pattern, re.Pattern):
@@ -319,9 +339,9 @@ class StubServer:
         return self.count_responses(re.compile(pattern),
                                     silence_period=silence_period)
 
-    def count_responses(self, pattern, silence_period=0.1):
+    def get_responses(self, pattern, silence_period=0.1):
         self._wait_for_silence(silence_period)
-        count = 0
+        res = []
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
@@ -333,10 +353,15 @@ class StubServer:
                 continue
             line = line[match.end():]
             if isinstance(pattern, re.Pattern):
-                count += bool(pattern.match(line))
+                if pattern.match(line):
+                    res.append(line)
             else:
-                count += line.startswith(pattern)
-        return count
+                if line.startswith(pattern):
+                    res.append(line)
+        return res
+
+    def count_responses(self, pattern, silence_period=0.1):
+        return len(self.get_responses(pattern, silence_period))
 
     @property
     def stdout(self):

@@ -7,7 +7,10 @@ import traceback
 import pytest
 
 from .. import BoltStubService
-from ..parsing import parse
+from ..parsing import (
+    parse,
+    ScriptFailure,
+)
 from ..util import hex_repr
 from ._common import (
     ALL_REQUESTS_PER_VERSION,
@@ -149,49 +152,57 @@ def test_magic_bytes(server_version, magic_bytes, server_factory, fail,
     assert not server.service.exceptions
 
 
-@pytest.mark.parametrize(("client_version", "server_version", "matches"), [
-    [b"\x00\x00\x00\x01", (1,), True],
-    [b"\x00\x00\x00\x01", (1, 0), True],
-    [b"\x00\x00\x00\x01\x00\x00\x00\x02", (1, 0), True],
-    [b"\x00\x00\x00\x01\x00\x00\x00\x02", (2, 0), True],
-    [b"\x00\x00\x00\x01\x00\x00\x00\x03", (2,), False],
-    [b"\x00\x00\x00\x03", (3,), True],
-    [b"\x00\x00\x00\x04", (4,), True],
-    [b"\x00\x00\x01\x04", (4, 1), True],
-    [b"\x00\x00\x02\x04", (4, 2), True],
-    [b"\x00\x00\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04", (4, 2), True],
-    [b"\x00\x00\x03\x04", (4, 3), True],
-    [b"\x00\x02\x03\x04", (4, 3), True],
+@pytest.mark.parametrize(("client_version", "server_version",
+                          "negotiated_version"), [
+    [b"\x00\x00\x00\x01", (1,), (1,)],
+    [b"\x00\x00\x00\x01", (1, 0), (1, 0)],
+    [b"\x00\x00\x00\x01\x00\x00\x00\x02", (1, 0), (1, 0)],
+    [b"\x00\x00\x00\x01\x00\x00\x00\x02", (2, 0), (2, 0)],
+    [b"\x00\x00\x00\x01\x00\x00\x00\x03", (2,), None],
+    [b"\x00\x00\x00\x03", (3,), (3,)],
+    [b"\x00\x00\x00\x04", (4,), (4,)],
+    [b"\x00\x00\x01\x04", (4, 1), (4, 1)],
+    [b"\x00\x00\x02\x04", (4, 2), (4, 2)],
+    [b"\x00\x00\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04", (4, 2), (4, 2)],
+    [b"\x00\x00\x03\x04", (4, 3), (4, 3)],
+    [b"\x00\x02\x03\x04", (4, 3), (4, 3)],
     [b"\x00\x03\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04\x00\x00\x00\x03",
-     (4, 0), True],
+     (4, 0), None],
+    [b"\x00\x01\x03\x04\x00\x00\x01\x04\x00\x00\x00\x04\x00\x00\x00\x03",
+     (4, 0), (4, 0)],
     # ignore minor versions until 4.0
-    [b"\x00\x00\x10\x01", (1,), True],
-    [b"\x00\x00\x10\x02", (2,), True],
-    [b"\x00\x00\x10\x03", (3,), True],
-    [b"\x00\x00\x10\x04", (4, 0), False],
-    [b"\x00\x00\x10\x04", (4, 1), False],
-    [b"\x00\x00\x10\x04", (4, 2), False],
-    [b"\x00\x00\x10\x04", (4, 3), False],
-    # ignore version ranges until 4.0
-    [b"\x00\x09\x0A\x01", (1,), True],
-    [b"\x00\x0A\x0A\x01", (1,), True],
-    [b"\x00\x09\x0A\x02", (2,), True],
-    [b"\x00\x0A\x0A\x02", (2,), True],
-    [b"\x00\x09\x0A\x03", (3,), True],
-    [b"\x00\x0A\x0A\x03", (3,), True],
-    [b"\x00\x0A\x0A\x04", (4, 0), True],
-    [b"\x00\x09\x0A\x04", (4, 0), False],
-    [b"\x00\x0A\x0A\x04", (4, 1), True],
-    [b"\x00\x09\x0A\x04", (4, 1), True],
-    [b"\x00\x08\x0A\x04", (4, 1), False],
-    [b"\x00\x09\x0A\x04", (4, 2), True],
-    [b"\x00\x08\x0A\x04", (4, 2), True],
-    [b"\x00\x07\x0A\x04", (4, 2), False],
-    [b"\x00\x08\x0A\x04", (4, 3), True],
-    [b"\x00\x07\x0A\x04", (4, 3), True],
-    [b"\x00\x06\x0A\x04", (4, 3), False],
+    [b"\x00\x00\x10\x01", (1,), (1,)],
+    [b"\x00\x00\x10\x02", (2,), (2,)],
+    [b"\x00\x00\x10\x03", (3,), (3,)],
+    [b"\x00\x00\x10\x04", (4, 0), None],
+    [b"\x00\x00\x10\x04", (4, 1), None],
+    [b"\x00\x00\x10\x04", (4, 2), None],
+    [b"\x00\x00\x10\x04", (4, 3), None],
+    # ignore version ranges until 4.3
+    [b"\x00\x09\x0A\x01", (1,), (1,)],
+    [b"\x00\x0A\x0A\x01", (1,), (1,)],
+    [b"\x00\x09\x0A\x02", (2,), (2,)],
+    [b"\x00\x0A\x0A\x02", (2,), (2,)],
+    [b"\x00\x09\x0A\x03", (3,), (3,)],
+    [b"\x00\x0A\x0A\x03", (3,), (3,)],
+    [b"\x00\x0A\x0A\x04", (4, 0), None],
+    [b"\x00\x09\x0A\x04", (4, 0), None],
+    [b"\x00\x0A\x0A\x04", (4, 1), None],
+    [b"\x00\x09\x0A\x04", (4, 1), None],
+    [b"\x00\x08\x0A\x04", (4, 1), None],
+    [b"\x00\x09\x0A\x04", (4, 2), None],
+    [b"\x00\x08\x0A\x04", (4, 2), None],
+    [b"\x00\x07\x0A\x04", (4, 2), None],
+    [b"\x00\x08\x0A\x04", (4, 3), (4, 3)],
+    [b"\x00\x07\x0A\x04", (4, 3), (4, 3)],
+    [b"\x00\x06\x0A\x04", (4, 3), None],
+    # special backwards compatibility
+    # (4.2 server allows to fall back to equivalent 4.1 protocol)
+    [b"\x00\x00\x01\x04", (4, 2), (4, 1)],
+    [b"\x00\x00\x02\x04", (4, 1), None],
+    [b"\x00\x00\x02\x04", (4, 3), None],
 ])
-def test_handshake_auto(client_version, server_version, matches,
+def test_handshake_auto(client_version, server_version, negotiated_version,
                         server_factory, connection_factory):
     client_version = client_version + b"\x00" * (16 - len(client_version))
 
@@ -205,13 +216,18 @@ def test_handshake_auto(client_version, server_version, matches,
     con = connection_factory("localhost", 7687)
     con.write(b"\x60\x60\xb0\x17")
     con.write(client_version)
-    if matches:
-        assert con.read(4) == server_version_to_version_response(server_version)
+    if negotiated_version is not None:
+        assert (con.read(4)
+                == server_version_to_version_response(negotiated_version))
     else:
         assert con.read(4) == b"\x00" * 4
         with pytest.raises(BrokenSocket):
             print(con.read(1))
-    assert not server.service.exceptions
+    if negotiated_version is None:
+        assert len(server.service.exceptions) == 1
+        assert isinstance(server.service.exceptions[0], ScriptFailure)
+    else:
+        assert not server.service.exceptions
 
 
 @pytest.mark.parametrize("custom_handshake", [b"\x00\x00\xFF\x00", b"foobar"])
@@ -264,7 +280,7 @@ def test_auto_replies(server_version, request_tag, request_name,
         con.read(1)
     assert not server.service.exceptions
 
-I = 5  # [I:(I + 1)]
+
 @pytest.mark.parametrize(("server_version", "request_tag", "request_name",
                           "field_rep", "field_bin"), (
     *((version, tag, name, rep, fields)

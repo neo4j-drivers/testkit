@@ -3,7 +3,7 @@ from typing import Iterable
 from .bolt_protocol import get_bolt_protocol
 from .errors import ServerExit
 from .packstream import PackStream
-from .parsing import ServerLine
+from .parsing import ScriptFailure
 from .util import hex_repr
 
 
@@ -37,19 +37,32 @@ class Channel:
             # Check that the server protocol version is among the ones supported
             # by the driver.
             supported_version = self.bolt_protocol.protocol_version
-            requested_versions = self.bolt_protocol.decode_versions(request)
+            requested_versions = set(
+                self.bolt_protocol.decode_versions(request)
+            )
             if supported_version in requested_versions:
                 response = bytes(
                     (0, 0, supported_version[1], supported_version[0])
                 )
             else:
-                self.wire.write(b"\x00\x00\x00\x00")
-                self.wire.send()
-                raise ServerExit(
-                    "Failed handshake, stub server talks protocol {}. "
-                    "Driver sent handshake: {}".format(supported_version,
-                                                       hex_repr(request))
-                )
+                fallback_versions = (requested_versions
+                                     & self.bolt_protocol.equivalent_versions)
+                if fallback_versions:
+                    version = sorted(fallback_versions, reverse=True)[0]
+                    response = bytes((0, 0, version[1], version[0]))
+                else:
+                    try:
+                        self._log("S: <HANDSHAKE> %s",
+                                  hex_repr(b"\x00\x00\x00\x00"))
+                        self.wire.write(b"\x00\x00\x00\x00")
+                        self.wire.send()
+                    except OSError:
+                        pass
+                    raise ScriptFailure(
+                        "Failed handshake, stub server talks protocol {}. "
+                        "Driver sent handshake: {}".format(supported_version,
+                                                           hex_repr(request))
+                    )
         self.wire.write(response)
         self.wire.send()
         self._log("S: <HANDSHAKE> %s", hex_repr(response))

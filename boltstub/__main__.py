@@ -25,12 +25,11 @@ import sys
 
 from argparse import ArgumentParser
 from logging import getLogger, INFO
-
-from . import (
-    BoltStubService,
-    ScriptDeviation,
+from . import BoltStubService
+from .parsing import (
+    parse_file,
+    ScriptFailure,
 )
-from .parsing import parse_file
 from .watcher import watch
 
 
@@ -115,7 +114,7 @@ def main():
                 extra = ""
                 if hasattr(error, 'script') and error.script.filename:
                     extra += " in {!r}".format(error.script.filename)
-                if isinstance(error, ScriptDeviation):
+                if isinstance(error, ScriptFailure):
                     print("Script mismatch{}:\n{}\n".format(extra, error))
                 else:
                     print("Error{}:\n{}\n".format(extra, error))

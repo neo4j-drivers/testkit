@@ -955,7 +955,11 @@ class BlockList(Block):
             yield from block.server_lines
 
 
-class ScriptDeviation(RuntimeError):
+class ScriptFailure(RuntimeError):
+    pass
+
+
+class ScriptDeviation(ScriptFailure):
     def __init__(self, expected_lines: List[Line], received: Line):
         assert expected_lines
         self.expected_lines = expected_lines

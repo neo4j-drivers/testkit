@@ -37,7 +37,7 @@ from .packstream import PackStream
 from .parsing import (
     parse_file,
     Script,
-    ScriptDeviation,
+    ScriptFailure,
 )
 from .wiring import (
     ReadWakeup,
@@ -122,7 +122,7 @@ class BoltStubService:
                     log.info("[#%04X>#%04X]  S: <EXIT> %s",
                              self.client_address.port_number,
                              self.server_address.port_number, e)
-                except ScriptDeviation as e:
+                except ScriptFailure as e:
                     e.script = script
                     service.exceptions.append(e)
                 except Exception as e:
