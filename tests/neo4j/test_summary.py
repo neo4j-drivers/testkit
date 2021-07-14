@@ -6,6 +6,7 @@ from ..shared import (
 )
 from .shared import (
     get_driver,
+    get_neo4j_resolved_host_and_port,
     get_server_info,
 )
 
@@ -100,6 +101,13 @@ class TestDirectDriver(TestkitTestCase):
         self.assertTrue(summary.server_info.agent.startswith("Neo4j/"))
         version = summary.server_info.agent[6:].split(".")
         self.assertEqual(version[:2], get_server_info().version.split("."))
+
+    def test_address(self):
+        summary = self.get_summary("RETURN 1 AS number")
+        if isinstance(summary, dict) and get_driver_name() in ["java"]:
+            self.skipTest("Java 4.2 backend does not support summary")
+        self.assertEqual(summary.server_info.address,
+                         "%s:%s" % get_neo4j_resolved_host_and_port())
 
     def _assert_counters(self, summary, nodes_created=0, nodes_deleted=0,
                          relationships_created=0, relationships_deleted=0,

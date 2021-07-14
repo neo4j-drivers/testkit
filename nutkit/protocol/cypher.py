@@ -24,6 +24,9 @@ class CypherNull:
     def __str__(self):
         return "<null>"
 
+    def __repr__(self):
+        return "<{}>".format(self.__class__.__name__)
+
     def __eq__(self, other):
         return isinstance(other, CypherNull)
 
@@ -33,10 +36,10 @@ class CypherList:
         self.value = value
 
     def __str__(self):
-        v = []
-        for x in self.value:
-            v.append(str(x))
-        return "List {}".format(v)
+        return str(list(map(str, self.value)))
+
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
 
     def __eq__(self, other):
         return isinstance(other, CypherList) and other.value == self.value
@@ -47,10 +50,10 @@ class CypherMap:
         self.value = value
 
     def __str__(self):
-        v = {}
-        for k in self.value:
-            v[k] = str(self.value[k])
-        return "Map {}".format(v)
+        return str({k: str(str(self.value[k])) for k in self.value})
+
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
 
     def __eq__(self, other):
         return isinstance(other, CypherMap) and other.value == self.value
@@ -63,6 +66,9 @@ class CypherInt:
     def __str__(self):
         return str(self.value)
 
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
+
     def __eq__(self, other):
         return isinstance(other, CypherInt) and other.value == self.value
 
@@ -73,6 +79,9 @@ class CypherBool:
 
     def __str__(self):
         return str(self.value)
+
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
 
     def __eq__(self, other):
         return isinstance(other, CypherBool) and other.value == self.value
@@ -85,6 +94,9 @@ class CypherFloat:
     def __str__(self):
         return str(self.value)
 
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
+
     def __eq__(self, other):
         return isinstance(other, CypherFloat) and other.value == self.value
 
@@ -95,6 +107,9 @@ class CypherString:
 
     def __str__(self):
         return self.value
+
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
 
     def __eq__(self, other):
         return isinstance(other, CypherString) and other.value == self.value
@@ -107,8 +122,13 @@ class Node:
         self.props = props
 
     def __str__(self):
-        return "Node (id={}, labels={}, props={})".format(
+        return "Node(id={}, labels={}, props={})".format(
             self.id, self.labels, self.props)
+
+    def __repr__(self):
+        return "<{}(id={}, labels={}, props={})>".format(
+            self.__class__.__name__, self.id, self.labels, self.props
+        )
 
     def __eq__(self, other):
         if not isinstance(other, Node):
@@ -131,9 +151,17 @@ class Relationship:
 
     def __str__(self):
         return (
-            "Relationship (id={}, startNodeId={}, endNodeId={}, type={}, "
+            "Relationship(id={}, startNodeId={}, endNodeId={}, type={}, "
             "props={})".format(self.id, self.startNodeId, self.endNodeId,
                                self.type, self.props)
+        )
+
+    def __repr__(self):
+        return (
+            "<{}(id={}, startNodeId={}, endNodeId={}, type={}, "
+            "props={})>".format(self.__class__.__name__, self.id,
+                                self.startNodeId, self.endNodeId, self.type,
+                                self.props)
         )
 
     def __eq__(self, other):
@@ -155,8 +183,14 @@ class Path:
         self.relationships = relationships
 
     def __str__(self):
-        return ("Path (nodes={}, relationships={})".format(self.nodes,
-                                                           self.relationships))
+        return "Path(nodes={}, relationships={})".format(
+            self.nodes, self.relationships
+        )
+
+    def __repr__(self):
+        return "<{}(nodes={}, relationships={})>".format(
+            self.__class__.__name__, self.nodes, self.relationships
+        )
 
     def __eq__(self, other):
         if not isinstance(other, Path):
