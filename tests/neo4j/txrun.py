@@ -92,8 +92,6 @@ class TestTxRun(TestkitTestCase):
             tx.commit()
 
     def test_should_not_run_valid_query_in_invalid_tx(self):
-        if get_driver_name() in ["python"]:
-            self.skipTest("executes the second RUN")
         if get_driver_name() in ["go"]:
             self.skipTest('Could not rollback transaction')
 
