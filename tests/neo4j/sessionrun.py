@@ -207,6 +207,54 @@ class TestSessionRun(TestkitTestCase):
             rec = result.next()
             self.assertEqual(rec, exp)
 
+    def test_partial_iteration(self):
+        # Verifies that not consuming all records works
+        self._session1 = self._driver.session("r", fetchSize=2)
+        result = self._session1.run("UNWIND RANGE(0, 1000) AS x RETURN x")
+        for x in range(0, 4):
+            exp = types.Record(values=[types.CypherInt(x)])
+            rec = result.next()
+            self.assertEqual(rec, exp)
+        self._session1.close()
+        self._session1 = None
+
+        # not consumed all records & starting a new session
+        self._session1 = self._driver.session("r", fetchSize=2)
+        result = self._session1.run("UNWIND RANGE(2000, 3000) AS x RETURN x")
+        for x in range(2000, 2004):
+            exp = types.Record(values=[types.CypherInt(x)])
+            rec = result.next()
+            self.assertEqual(rec, exp)
+
+        # not consumed all records & reusing the previous session
+        result = self._session1.run("UNWIND RANGE(4000, 5000) AS x RETURN x")
+        for x in range(4000, 4004):
+            exp = types.Record(values=[types.CypherInt(x)])
+            rec = result.next()
+            self.assertEqual(rec, exp)
+
+        self._session1.close()
+        self._session1 = None
+
+    def test_session_reuse(self):
+        def _test():
+            self._session1 = self._driver.session("r", fetchSize=2)
+            result = self._session1.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
+            if consume:
+                result.consume()
+            result = self._session1.run("UNWIND [5,6,7,8] AS x RETURN x")
+            records = list(map(lambda record: record.values, result))
+            self.assertEqual(records,
+                             [[i] for i in map(types.CypherInt, range(5, 9))])
+            summary = result.consume()
+            self.assertIsInstance(summary, types.Summary)
+            self._session1.close()
+            self._session1 = None
+
+        for consume in (True, False):
+            with self.subTest("consume" if consume else "no consume"):
+                _test()
+
     def test_iteration_nested(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Nested results not working in 4.2 and earlier. "

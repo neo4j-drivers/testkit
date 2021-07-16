@@ -10,6 +10,7 @@ import os
 
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
+from tests.shared import dns_resolve_single
 
 
 env_neo4j_host = "TEST_NEO4J_HOST"
@@ -37,6 +38,11 @@ def get_neo4j_host_and_port():
         raise Exception("Missing Neo4j hostname, set %s" % env_neo4j_host)
     port = os.environ.get(env_neo4j_bolt_port, 7687)
     return host, port
+
+
+def get_neo4j_resolved_host_and_port():
+    host, port = get_neo4j_host_and_port()
+    return dns_resolve_single(host), port
 
 
 def get_neo4j_host_and_http_port():
