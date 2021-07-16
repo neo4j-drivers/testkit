@@ -140,7 +140,7 @@ class TestTxRun(TestkitTestCase):
 
     def test_tx_configuration(self):
         self._session = self._driver.session("r")
-        tx = self._session.beginTransaction(txMeta={"foo": "bar"}, timeout=3)
+        tx = self._session.beginTransaction(txMeta={"foo": "bar"}, timeout=3000)
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
         values = []
         if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):

@@ -149,7 +149,7 @@ class TestSessionRun(TestkitTestCase):
         )
         with self.assertRaises(types.DriverError) as e:
             result = self._session2.run("MATCH (a:Node) SET a.property = 2",
-                                        timeout=250)
+                                        timeout=1000)
             result.consume()
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
