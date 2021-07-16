@@ -81,7 +81,7 @@ class TestSessionRunParameters(TestkitTestCase):
         self._server.done()
 
     def test_empty_query(self):
-        if get_driver_name() in ["javascript", "java", "python"]:
+        if get_driver_name() in ["javascript", "java"]:
             self.skipTest("rejects empty string")
         # Driver should pass empty string to server
         self._start_server("empty_query.script")

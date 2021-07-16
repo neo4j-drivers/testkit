@@ -185,8 +185,7 @@ class Summary:
                 return True
 
         from tests.shared import get_driver_name
-        if get_driver_name() in ["python", "java", "javascript", "go",
-                                 "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             if "address" in data["serverInfo"]:
                 import warnings
                 warnings.warn(
@@ -209,8 +208,7 @@ class Summary:
                     "Backend supports well-formatted counter. "
                     "Remove the backwards compatibility check!"
                 )
-        if get_driver_name() in ["python", "java", "javascript", "go",
-                                 "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             if "counters" in data:
                 import warnings
                 warnings.warn(

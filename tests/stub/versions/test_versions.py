@@ -152,8 +152,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_address_in_summary(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["python", "java", "javascript", "go",
-                                 "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in ("4x3", "4x2", "4x1", "4x0", "3"):
             with self.subTest(version):
@@ -161,8 +160,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_obtain_summary_twice(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["python", "java", "javascript", "go",
-                                 "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         with self._get_session(
             self.script_path("v4x3_return_1.script"),
