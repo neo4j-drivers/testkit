@@ -136,6 +136,6 @@ class TestTxFuncRun(TestkitTestCase):
             return values
 
         self._session = self._driver.session("w")
-        res = self._session.readTransaction(run, timeout=3,
+        res = self._session.readTransaction(run, timeout=3000,
                                             txMeta={"foo": "bar"})
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
