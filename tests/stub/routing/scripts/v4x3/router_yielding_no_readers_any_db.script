@@ -1,0 +1,7 @@
+!: BOLT #VERSION#
+!: AUTO RESET
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: ROUTE #ROUTINGCTX# [] "*"
+S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": [], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]}}

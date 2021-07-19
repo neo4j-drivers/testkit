@@ -2,8 +2,11 @@ from collections import defaultdict
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.shared import get_driver_name
-from tests.stub.shared import get_ip_addresses
+from tests.shared import (
+    get_dns_resolved_server_address,
+    get_driver_name,
+    get_ip_addresses,
+)
 from ._routing import RoutingBase
 
 
@@ -27,6 +30,32 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
 
+    def test_should_successfully_get_routing_table(self):
+        # TODO: remove this block once all languages support routing table test
+        #       API
+        # TODO: when all driver support this,
+        #       test_should_successfully_get_routing_table_with_context
+        #       and all tests (ab)using verifyConnectivity to refresh the RT
+        #       should be updated. Tests for verifyConnectivity should be added.
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        vars_ = self.get_vars()
+        self.start_server(self._routingServer1, "router_adb.script",
+                          vars_=vars_)
+        driver.updateRoutingTable(self.adb)
+        self._routingServer1.done()
+        rt = driver.getRoutingTable(self.adb)
+        driver.close()
+        assert rt.database == self.adb
+        assert rt.ttl == 1000
+        assert rt.routers == [vars_["#HOST#"] + ":9000"]
+        assert sorted(rt.readers) == [vars_["#HOST#"] + ":9010",
+                                      vars_["#HOST#"] + ":9011"]
+        assert sorted(rt.writers) == [vars_["#HOST#"] + ":9020",
+                                      vars_["#HOST#"] + ":9021"]
+
     # Checks that routing is used to connect to correct server and that
     # parameters for session run is passed on to the target server
     # (not the router).
@@ -39,11 +68,14 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('r', database=self.adb)
         result = session.run("RETURN 1 as n")
         sequence = self.collectRecords(result)
+        summary = result.consume()
         session.close()
         driver.close()
 
         self._routingServer1.done()
         self._readServer1.done()
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
         self.assertEqual([1], sequence)
 
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
@@ -55,11 +87,14 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('r')
         result = session.run("RETURN 1 as n")
         sequence = self.collectRecords(result)
+        summary = result.consume()
         session.close()
         driver.close()
 
         self._routingServer1.done()
         self._readServer1.done()
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
         self.assertEqual([1], sequence)
 
     # Same test as for session.run but for transaction run.
@@ -73,12 +108,15 @@ class RoutingV4x3(RoutingBase):
         tx = session.beginTransaction()
         result = tx.run("RETURN 1 as n")
         sequence = self.collectRecords(result)
+        summary = result.consume()
         tx.commit()
         session.close()
         driver.close()
 
         self._routingServer1.done()
         self._readServer1.done()
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
         self.assertEqual([1], sequence)
 
     def test_should_send_system_bookmark_with_route(self):
@@ -111,6 +149,9 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([1], sequence2)
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet']:
+            self.skipTest("crashes the backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -118,10 +159,12 @@ class RoutingV4x3(RoutingBase):
 
         session = driver.session('r', database=self.adb)
         sequences = []
+        summaries = []
 
         def work(tx):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collectRecords(result))
+            summaries.append(result.consume())
 
         session.readTransaction(work)
         session.close()
@@ -130,6 +173,9 @@ class RoutingV4x3(RoutingBase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertEqual([[1]], sequences)
+        self.assertEqual(len(summaries), 1)
+        self.assertEqual(summaries[0].server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
 
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
         # TODO remove this block once all languages wor
@@ -158,7 +204,7 @@ class RoutingV4x3(RoutingBase):
                     self.assertEqual(
                         'org.neo4j.driver.exceptions.SessionExpiredException',
                         e.errorType)
-            failed = True
+                failed = True
         driver.close()
 
         self._routingServer1.done()
@@ -201,21 +247,26 @@ class RoutingV4x3(RoutingBase):
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_session_run(self):
+        # FIXME: test assumes that first writer in RT will be contacted first
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(self._writeServer1, "writer.script")
 
         session = driver.session('w', database=self.adb)
-        session.run("RETURN 1 as n")
+        res = session.run("RETURN 1 as n")
+        summary = res.consume()
         session.close()
         driver.close()
 
         self._routingServer1.done()
         self._writeServer1.done()
+        assert (summary.server_info.address
+                == get_dns_resolved_server_address(self._writeServer1))
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_tx_run(self):
+        # FIXME: test assumes that first writer in RT will be contacted first
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -223,24 +274,34 @@ class RoutingV4x3(RoutingBase):
 
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
+        res = tx.run("RETURN 1 as n")
+        summary = res.consume()
         tx.commit()
         session.close()
         driver.close()
 
         self._routingServer1.done()
         self._writeServer1.done()
+        assert (summary.server_info.address
+                == get_dns_resolved_server_address(self._writeServer1))
 
     def test_should_write_successfully_on_writer_using_tx_function(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['dotnet']:
+            self.skipTest("crashes the backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(self._writeServer1, "writer_tx.script")
 
         session = driver.session('w', database=self.adb)
+        res = None
+        summary = None
 
         def work(tx):
-            tx.run("RETURN 1 as n")
+            nonlocal res, summary
+            res = tx.run("RETURN 1 as n")
+            summary = res.consume()
 
         session.writeTransaction(work)
         session.close()
@@ -248,6 +309,9 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer1.done()
+        self.assertIsNotNone(res)
+        assert (summary.server_info.address
+                == get_dns_resolved_server_address(self._writeServer1))
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
         # TODO remove this block once all languages work
@@ -263,11 +327,19 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', database=self.adb)
         sequences = []
 
+        work_count = 1
         def work(tx):
-            result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
-            result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            nonlocal work_count
+            try:
+                result = tx.run("RETURN %i.1 as n" % work_count)
+                sequences.append(self.collectRecords(result))
+                result = tx.run("RETURN %i.2 as n" % work_count)
+                sequences.append(self.collectRecords(result))
+            finally:
+                # don't simply increase work_count: there is a second writer in
+                # in the RT that the driver could try to contact. In that case
+                # the tx function will be called 3 times in total
+                work_count = 2
 
         session.writeTransaction(work)
         session.close()
@@ -275,6 +347,12 @@ class RoutingV4x3(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer1.done()
+        if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
+            self.assertEqual(self._writeServer1.count_responses("<ACCEPT>"), 1)
+        else:
+            self.assertLessEqual(
+                self._writeServer1.count_responses("<ACCEPT>"), 2
+            )
         self.assertEqual([[1], [1]], sequences)
         self.assertEqual(self.route_call_count(self._routingServer1), 2)
 
@@ -382,6 +460,11 @@ class RoutingV4x3(RoutingBase):
                         'org.neo4j.driver.exceptions.SessionExpiredException',
                         e.errorType
                     )
+                elif get_driver_name() in ['python']:
+                    self.assertEqual(
+                        "<class 'neo4j.exceptions.SessionExpired'>",
+                        e.errorType
+                    )
                 failed = True
         driver.close()
 
@@ -393,6 +476,8 @@ class RoutingV4x3(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -419,6 +504,8 @@ class RoutingV4x3(RoutingBase):
         session.close()
         driver.close()
 
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -441,6 +528,11 @@ class RoutingV4x3(RoutingBase):
             if get_driver_name() in ['java']:
                 self.assertEqual(
                     'org.neo4j.driver.exceptions.ServiceUnavailableException',
+                    e.errorType
+                )
+            elif get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.ServiceUnavailable'>",
                     e.errorType
                 )
             failed = True
@@ -477,12 +569,19 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(self):
         # TODO remove this block once all languages work
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(
             self._writeServer1,
-            "writer_yielding_not_a_leader_failure.script"
+            "writer_yielding_failure_on_run.script",
+            vars_={
+                **self.get_vars(),
+                "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader", '
+                             '"message": "blabla"}'
+            }
         )
 
         session = driver.session('w', database=self.adb)
@@ -495,10 +594,107 @@ class RoutingV4x3(RoutingBase):
                     'org.neo4j.driver.exceptions.SessionExpiredException',
                     e.errorType
                 )
+            elif get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.NotALeader'>",
+                    e.errorType
+                )
+                self.assertEqual(
+                    "Neo.ClientError.Cluster.NotALeader",
+                    e.code
+                )
             failed = True
         session.close()
         driver.close()
 
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
+        self._routingServer1.done()
+        self._writeServer1.done()
+        self.assertTrue(failed)
+
+    def test_should_fail_when_writing_on_writer_that_returns_forbidden_on_read_only_database(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(
+            self._writeServer1,
+            "writer_yielding_failure_on_run.script",
+            vars_={
+                **self.get_vars(),
+                "#FAILURE#":
+                    '{"code": '
+                    '"Neo.ClientError.General.ForbiddenOnReadOnlyDatabase", '
+                    '"message": "Unable to write"}'
+            }
+        )
+
+        session = driver.session('w', database=self.adb)
+        failed = False
+        try:
+            session.run("RETURN 1 as n").consume()
+        except types.DriverError as e:
+            if get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.ForbiddenOnReadOnlyDatabase'>",
+                    e.errorType
+                )
+                self.assertEqual(
+                    "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase",
+                    e.code
+                )
+            failed = True
+        session.close()
+        driver.close()
+
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
+        self._routingServer1.done()
+        self._writeServer1.done()
+        self.assertTrue(failed)
+
+    def test_should_fail_when_writing_on_writer_that_returns_database_unavailable(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(
+            self._writeServer1,
+            "writer_yielding_failure_on_run.script",
+            vars_={
+                **self.get_vars(),
+                "#FAILURE#":
+                    '{"code": '
+                    '"Neo.ClientError.General.DatabaseUnavailable", '
+                    '"message": "Database is busy doing store copy"}'
+            }
+        )
+
+        session = driver.session('w', database=self.adb)
+        failed = False
+        try:
+            session.run("RETURN 1 as n").consume()
+        except types.DriverError as e:
+            if get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.ClientError'>",
+                    e.errorType
+                )
+                self.assertEqual(
+                    "Neo.ClientError.General.DatabaseUnavailable",
+                    e.code
+                )
+            failed = True
+        session.close()
+        driver.close()
+
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -507,12 +703,19 @@ class RoutingV4x3(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(
             self._writeServer1,
-            "writer_yielding_not_a_leader_failure.script"
+            "writer_yielding_failure_on_run.script",
+            vars_={
+                **self.get_vars(),
+                "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader",'
+                             ' "message": "blabla"}'
+            }
         )
 
         session = driver.session('w', database=self.adb)
@@ -536,10 +739,17 @@ class RoutingV4x3(RoutingBase):
                         'org.neo4j.driver.exceptions.SessionExpiredException',
                         e.errorType
                     )
+                elif get_driver_name() in ['python']:
+                    self.assertEqual(
+                        "<class 'neo4j.exceptions.NotALeader'>",
+                        e.errorType
+                    )
                 failed = True
 
         driver.close()
 
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -548,12 +758,19 @@ class RoutingV4x3(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("consume not implemented in backend")
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(
             self._writeServer1,
-            "writer_tx_yielding_not_a_leader_failure.script"
+            "writer_tx_yielding_failure_on_run.script",
+            vars_={
+                **self.get_vars(),
+                "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader", '
+                             '"message": "blabla"}'
+            }
         )
 
         session = driver.session('w', database=self.adb)
@@ -567,10 +784,17 @@ class RoutingV4x3(RoutingBase):
                     'org.neo4j.driver.exceptions.SessionExpiredException',
                     e.errorType
                 )
+            elif get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.NotALeader'>",
+                    e.errorType
+                )
             failed = True
         session.close()
         driver.close()
 
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -579,12 +803,20 @@ class RoutingV4x3(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(
             self._writeServer1,
-            "writer_tx_yielding_not_a_leader_failure.script"
+            "writer_tx_yielding_failure_on_run.script",
+            vars_={
+                **self.get_vars(),
+                "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader", '
+                             '"message": "blabla"}'
+            }
         )
 
         session = driver.session('w', database=self.adb)
@@ -601,10 +833,17 @@ class RoutingV4x3(RoutingBase):
                     'org.neo4j.driver.exceptions.SessionExpiredException',
                     e.errorType
                 )
+            elif get_driver_name() in ['python']:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.NotALeader'>",
+                    e.errorType
+                )
             failed = True
         session.close()
         driver.close()
 
+        self.assertNotIn(self._writeServer1.address,
+                         driver.getRoutingTable(self.adb).writers)
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -1152,6 +1391,34 @@ class RoutingV4x3(RoutingBase):
         self._readServer1.done()
         self._writeServer1.done()
         self.assertEqual([[1]], sequences)
+
+    def test_should_fail_on_routing_table_with_no_reader(self):
+        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+            self.skipTest("needs routing table API support")
+        self.start_server(
+            self._routingServer1,
+            "router_yielding_no_readers_any_db.script"
+        )
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        failed = False
+        try:
+            driver.updateRoutingTable()
+        except types.DriverError as exc:
+            failed = True
+            if get_driver_name() in ['python']:
+                self.assertEqual(
+                    exc.errorType,
+                    "<class 'neo4j.exceptions.ServiceUnavailable'>"
+                )
+
+        self.assertTrue(failed)
+        routing_table = driver.getRoutingTable()
+        self.assertEqual(routing_table.routers, [])
+        self.assertEqual(routing_table.readers, [])
+        self.assertEqual(routing_table.writers, [])
+        self._routingServer1.done()
+        driver.close()
 
     def test_should_accept_routing_table_with_single_router(self):
         # TODO remove this block once all languages work

@@ -119,8 +119,13 @@ class TestRetry(TestkitTestCase):
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
 
-        with self.assertRaises(types.DriverError):  # Check further...
+        with self.assertRaises(types.DriverError) as e:  # Check further...
             session.writeTransaction(once)
+        if get_driver_name() in ['python']:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.IncompleteCommit'>",
+                e.exception.errorType
+            )
 
         self.assertEqual(num_retries, 1)
         session.close()

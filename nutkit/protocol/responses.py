@@ -177,16 +177,140 @@ class Summary:
     """
 
     def __init__(self, **data):
+        # TODO: remove block when all drivers support the address field
+        # ----------------------------------------------------------------------
+        class AnyAddress:
+            """Fake address that will match anything"""
+            def __eq__(self, _):
+                return True
+
+        from tests.shared import get_driver_name
+        if get_driver_name() in ["python", "java", "javascript", "go",
+                                 "dotnet"]:
+            if "address" in data["serverInfo"]:
+                import warnings
+                warnings.warn(
+                    "Backend supports address field in Summary.serverInfo. "
+                    "Remove the backwards compatibility check!"
+                )
+            else:
+                data["serverInfo"]["address"] = AnyAddress()
+        # ----------------------------------------------------------------------
+        # TODO: remove block when all drivers support the fields
+        # ----------------------------------------------------------------------
+        from tests.shared import get_driver_name
+        if get_driver_name() in ["javascript"]:
+            # already sends counters but the wrong format and not all fields
+            if "_stats" in data["counters"]:
+                del data["counters"]
+            else:
+                import warnings
+                warnings.warn(
+                    "Backend supports well-formatted counter. "
+                    "Remove the backwards compatibility check!"
+                )
+        if get_driver_name() in ["python", "java", "javascript", "go",
+                                 "dotnet"]:
+            if "counters" in data:
+                import warnings
+                warnings.warn(
+                    "Backend supports counters field in Summary. "
+                    "Remove the backwards compatibility check!"
+                )
+            else:
+                data["counters"] = {
+                    "constraintsAdded": None,
+                    "constraintsRemoved": None,
+                    "containsSystemUpdates": None,
+                    "containsUpdates": None,
+                    "indexesAdded": None,
+                    "indexesRemoved": None,
+                    "labelsAdded": None,
+                    "labelsRemoved": None,
+                    "nodesCreated": None,
+                    "nodesDeleted": None,
+                    "propertiesSet": None,
+                    "relationshipsCreated": None,
+                    "relationshipsDeleted": None,
+                    "systemUpdates": None
+                }
+            if "query" in data:
+                import warnings
+                warnings.warn(
+                    "Backend supports query field in Summary. "
+                    "Remove the backwards compatibility check!"
+                )
+            else:
+                data["query"] = {
+                    "text": None,
+                    "parameters": None
+                }
+            for field in (
+                "database", "notifications", "plan", "profile",
+                "queryType", "resultAvailableAfter", "resultConsumedAfter"
+            ):
+                if field in data:
+                    import warnings
+                    warnings.warn(
+                        "Backend supports %s field in Summary. "
+                        "Remove the backwards compatibility check!" % field
+                    )
+                else:
+                    data[field] = None
+        # ----------------------------------------------------------------------
+        self.counters = SummaryCounters(**data["counters"])
+        self.database = data["database"]
+        self.notifications = data["notifications"]
+        self.plan = data["plan"]
+        self.profile = data["profile"]
+        self.query = SummaryQuery(**data["query"])
+        self.query_type = data["queryType"]
+        self.result_available_after = data["resultAvailableAfter"]
+        self.result_consumed_after = data["resultConsumedAfter"]
         self.server_info = ServerInfo(**data["serverInfo"])
 
 
 class ServerInfo:
-    """ Represents server info that is included within Summary response.
+    """ Represents server info that is included in the Summary response. """
+
+    def __init__(self, address, agent, protocolVersion):
+        self.address = address
+        self.agent = agent
+        self.protocol_version = protocolVersion
+
+
+class SummaryCounters:
+    """ Represents the counters info that is included in the Summary response.
     """
 
-    def __init__(self, protocolVersion, agent):
-        self.protocol_version = protocolVersion
-        self.agent = agent
+    def __init__(self, constraintsAdded, constraintsRemoved,
+                 containsSystemUpdates, containsUpdates, indexesAdded,
+                 indexesRemoved, labelsAdded, labelsRemoved, nodesCreated,
+                 nodesDeleted, propertiesSet, relationshipsCreated,
+                 relationshipsDeleted, systemUpdates):
+        self.constraints_added = constraintsAdded
+        self.constraints_removed = constraintsRemoved
+        self.contains_system_updates = containsSystemUpdates
+        self.contains_updates = containsUpdates
+        self.indexes_added = indexesAdded
+        self.indexes_removed = indexesRemoved
+        self.labels_added = labelsAdded
+        self.labels_removed = labelsRemoved
+        self.nodes_created = nodesCreated
+        self.nodes_deleted = nodesDeleted
+        self.properties_set = propertiesSet
+        self.relationships_created = relationshipsCreated
+        self.relationships_deleted = relationshipsDeleted
+        self.system_updates = systemUpdates
+
+
+class SummaryQuery:
+    """ Represents the query info that is included in the Summary response.
+    """
+
+    def __init__(self, text, parameters):
+        self.text = text
+        self.parameters = parameters
 
 
 class Bookmarks:
@@ -215,6 +339,20 @@ class RetryableDone:
 
     def __init__(self):
         pass
+
+
+class RoutingTable:
+    def __init__(self, database, ttl, routers, readers, writers):
+        """ Sent from the backend in response to GetRoutingTable.
+
+        routers, readers, and writers are all supposed to be lists of addresses
+        as strings.
+        """
+        self.database = database
+        self.ttl = ttl
+        self.routers = routers
+        self.readers = readers
+        self.writers = writers
 
 
 class BaseError(Exception):

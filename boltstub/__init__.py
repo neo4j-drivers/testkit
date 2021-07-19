@@ -37,7 +37,7 @@ from .packstream import PackStream
 from .parsing import (
     parse_file,
     Script,
-    ScriptDeviation,
+    ScriptFailure,
 )
 from .wiring import (
     ReadWakeup,
@@ -122,7 +122,7 @@ class BoltStubService:
                     log.info("[#%04X>#%04X]  S: <EXIT> %s",
                              self.client_address.port_number,
                              self.server_address.port_number, e)
-                except ScriptDeviation as e:
+                except ScriptFailure as e:
                     e.script = script
                     service.exceptions.append(e)
                 except Exception as e:
@@ -157,28 +157,33 @@ class BoltStubService:
             self.server.handle_request()
             self.server.server_close()
 
-    def stop(self):
-        if self.script.context.restarting or self.script.context.concurrent:
-            self.server.shutdown()
+    def _close_socket(self):
         self.server.socket.close()
 
-    def stop_async(self):
-        Thread(target=self.stop, daemon=True).start()
+    def _stop_server(self):
+        if self.script.context.restarting or self.script.context.concurrent:
+            self.server.shutdown()
+
+    def stop(self):
+        self._close_socket()
+        self._stop_server()
 
     def try_skip_to_end(self):
-        self.stop()
+        self._close_socket()
         with self.actors_lock:
             for actor in self.actors:
                 actor.try_skip_to_end()
+        self._stop_server()
 
     def try_skip_to_end_async(self):
         Thread(target=self.try_skip_to_end, daemon=True).start()
 
     def close_all_connections(self):
-        self.stop()
+        self._close_socket()
         with self.actors_lock:
             for actor in self.actors:
                 actor.exit()
+        self._stop_server()
 
     def close_all_connections_async(self):
         Thread(target=self.close_all_connections, daemon=True).start()
@@ -223,14 +228,15 @@ class BoltActor:
                     # `try_skip_to_end` being called from the interrupt handler
                     # in `__main__.py` which spawns a new thread. Without this
                     # `sleep`, the main thread that keeps calling
-                    # `script.consume` only releases Script's internal lock only
-                    # so briefly that `try_skip_to_end` hangs unnecessarily long
+                    # `script.consume` only releases Script's internal lock  so
+                    # briefly that `try_skip_to_end` hangs unnecessarily long
                     time.sleep(0.000001)
                     continue
-        except (ConnectionError, OSError):
+        except (ConnectionError, OSError) as e:
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.
+            self.log("S: <BROKEN> %r", e)
             return
         self.log("Script finished")
 

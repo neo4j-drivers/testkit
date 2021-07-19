@@ -11,7 +11,10 @@ TEST_BACKEND_PORT  Port on backend host, default is 9876
 import inspect
 import os
 import re
+import socket
 import unittest
+
+import ifaddr
 
 from nutkit import protocol
 from nutkit.backend import Backend
@@ -31,6 +34,46 @@ def new_backend():
     return Backend(host, port)
 
 
+def get_ip_addresses(exclude_loopback=True):
+    def pick_address(adapter_):
+        ip6 = None
+        for address_ in adapter_.ips:
+            if address_.is_IPv4:
+                return address_.ip
+            elif ip6 is None:
+                ip6 = address_.ip
+        return ip6
+
+    ips = []
+    for adapter in ifaddr.get_adapters():
+        if exclude_loopback:
+            name = adapter.nice_name.lower()
+            if name == "lo" or "loopback" in name:
+                continue
+        address = pick_address(adapter)
+        if address:
+            ips.append(address)
+
+    return ips
+
+
+def dns_resolve(host_name):
+    _, _, ip_addresses = socket.gethostbyname_ex(host_name)
+    return ip_addresses
+
+
+def dns_resolve_single(host_name):
+    ips = dns_resolve(host_name)
+    if len(ips) != 1:
+        raise ValueError("%s resolved to %i instead of 1 IP address"
+                         % (host_name, len(ips)))
+    return ips[0]
+
+
+def get_dns_resolved_server_address(server):
+    return "%s:%i" % (dns_resolve_single(server.host), server.port)
+
+
 def driver_feature(*features):
     features = set(features)
 
@@ -46,11 +89,7 @@ def driver_feature(*features):
     def driver_feature_decorator(func):
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
-            needed = set(map(lambda f: f.value, features))
-            supported = test_case._driver_features
-            missing = needed - supported
-            if missing:
-                test_case.skipTest("Needs support for %s" % ", ".join(missing))
+            test_case.skip_if_missing_driver_features(*features)
             return func(*args, **kwargs)
         return wrapper
     return driver_feature_decorator
@@ -125,6 +164,17 @@ class TestkitTestCase(unittest.TestCase):
                  "stub.versions.ProtocolVersions"),
                 (r"^stub\.transport\.[^.]+\.TestTransport\.",
                  "stub.transport.Transport."),
+                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV4x3\.",
+                 "stub.authorization.AuthorizationTests."),
+                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV4x1\.",
+                 "stub.authorization.AuthorizationTestsV4."),
+                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV3\.",
+                 "stub.authorization.AuthorizationTestsV3."),
+                (r"^stub\.authorization\.[^.]+\.TestNoRoutingAuthorization\.",
+                 "stub.authorization.NoRoutingAuthorizationTests."),
+                (r"^stub\.server_side_routing\.test_server_side_routing\."
+                 r"TestServerSideRouting\.",
+                 "stub.serversiderouting.ServerSideRouting."),
             ):
                 id_ = re.sub(exp, sub, id_)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
@@ -135,6 +185,19 @@ class TestkitTestCase(unittest.TestCase):
             raise Exception("Should be SkipTest or RunTest, "
                             "received {}: {}".format(type(response),
                                                      response))
+
+    def driver_missing_features(self, *features):
+        needed = set(map(lambda f: f.value, features))
+        supported = self._driver_features
+        return needed - supported
+
+    def driver_supports_features(self, *features):
+        return not self.driver_missing_features(*features)
+
+    def skip_if_missing_driver_features(self, *features):
+        missing = self.driver_missing_features(*features)
+        if missing:
+            self.skipTest("Needs support for %s" % ", ".join(missing))
 
     def script_path(self, *path):
         base_path = os.path.dirname(inspect.getfile(self.__class__))

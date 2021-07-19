@@ -5,7 +5,7 @@
 
 C: RUN "RETURN 1 as n" {} {"db": "adb"}
    PULL {"n": 1000}
-S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
+S: FAILURE #FAILURE#
    IGNORED
 C: RESET
 S: SUCCESS {}

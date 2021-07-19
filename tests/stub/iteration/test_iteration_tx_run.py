@@ -48,6 +48,9 @@ class TestIterationTxRun(TestkitTestCase):
     def test_all(self):
         self._iterate(-1, "tx_pull_all.script", [1, 2, 3])
 
+    def test_all_slow_connection(self):
+        self._iterate(-1, "tx_pull_all_slow_connection.script", [1, 2, 3])
+
     def test_batch_v3(self):
         # there is no incremental pulling for BOLTv3
         self._iterate(2, "tx_pull_all.script", [1, 2, 3], protocol_version="v3")

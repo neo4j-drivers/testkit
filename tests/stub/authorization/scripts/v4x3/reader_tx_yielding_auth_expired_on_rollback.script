@@ -1,0 +1,14 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+C: BEGIN {"mode": "r", "db": "adb"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+   PULL {"n": 1000}
+S: SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"type": "r"}
+C: ROLLBACK
+S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+   <EXIT>

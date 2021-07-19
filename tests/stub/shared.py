@@ -15,10 +15,9 @@ import signal
 import subprocess
 import sys
 import tempfile
+from textwrap import wrap
 from threading import Thread
 import time
-
-import ifaddr
 
 
 if platform.system() == "Windows":
@@ -31,7 +30,15 @@ else:
     POPEN_EXTRA_KWARGS = {}
 
 
-class StubServerUncleanExit(Exception):
+class StubServerError(Exception):
+    pass
+
+
+class StubServerUncleanExit(StubServerError):
+    pass
+
+
+class StubServerScriptNotFinished(StubServerError):
     pass
 
 
@@ -211,7 +218,7 @@ class StubServer:
 
         If the server exited with anything but 0, or a connection is open that
         cannot reach the end of the script, this functions terminates the
-        process, dumps the output of the server and raises StubServerUncleanExit
+        process, dumps the output of the server and raises StubServerError
 
 
         Note about fully played scripts:
@@ -225,10 +232,10 @@ class StubServer:
             # be started.
             return
         try:
-            if self._interrupt():
+            if self._poll(.1) or self._interrupt():
                 pass
             elif self._interrupt():
-                raise StubServerUncleanExit(
+                raise StubServerScriptNotFinished(
                     "Stub server didn't finish the script."
                 )
             elif not self._interrupt():
@@ -236,6 +243,8 @@ class StubServer:
                 self._process.wait()
                 raise StubServerUncleanExit("Stub server hanged.")
             if self._process.returncode not in (0, INTERRUPT_EXIT_CODE):
+                if self._process.returncode == 3:
+                    raise StubServerScriptNotFinished("Script never started.")
                 raise StubServerUncleanExit(
                     "Stub server exited unclean ({})".format(
                         self._process.returncode
@@ -262,14 +271,50 @@ class StubServer:
             self._interrupt(0)
             self._kill()
 
-    def count_requests_re(self, pattern):
+    def _wait_for_silence(self, seconds, max_wait_seconds=5):
+        max_wait = int(max_wait_seconds / (seconds / 2) + .5)
+        self._read_pipes()
+        buf_lens = len(self._stdout_lines), len(self._stderr_lines)
+        last_change_before = 0
+        while self._process and max_wait:
+            max_wait -= 1
+            time.sleep(seconds / 2)
+            self._read_pipes()
+            new_buf_lens = len(self._stdout_lines), len(self._stderr_lines)
+            if buf_lens != new_buf_lens:
+                last_change_before = 0
+            else:
+                last_change_before += 1
+            if last_change_before >= 2:
+                break
+            buf_lens = new_buf_lens
+
+    def get_negotiated_bolt_version(self):
+        handshake_prefix = "<HANDSHAKE>"
+        handshakes = self.get_responses("<HANDSHAKE>")
+        if not handshakes:
+            return 0,
+        assert len(handshakes) == 1
+        handshake = handshakes[0][len(handshake_prefix):]
+        handshake = re.sub(r"\s", "", handshake)
+        version = list(int(b, 16) for b in wrap(handshake, 2))
+        while len(version) > 1 and not version[0]:
+            version.pop(0)
+        version.reverse()
+        return tuple(version)
+
+    def count_requests_re(self, pattern, silence_period=0.1):
         if isinstance(pattern, re.Pattern):
             return self.count_requests(pattern)
-        return self.count_requests(re.compile(pattern))
+        return self.count_requests(re.compile(pattern),
+                                   silence_period=silence_period)
 
-    def count_requests(self, pattern):
-        self._read_pipes()
-        count = 0
+    def count_requests(self, pattern, silence_period=0.1):
+        return len(self.get_requests(pattern, silence_period))
+
+    def get_requests(self, pattern, silence_period=0.1):
+        self._wait_for_silence(silence_period)
+        res = []
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
@@ -281,19 +326,22 @@ class StubServer:
                 continue
             line = line[match.end():]
             if isinstance(pattern, re.Pattern):
-                count += bool(pattern.match(line))
+                if pattern.match(line):
+                    res.append(line)
             else:
-                count += line.startswith(pattern)
-        return count
+                if line.startswith(pattern):
+                    res.append(line)
+        return res
 
-    def count_responses_re(self, pattern):
+    def count_responses_re(self, pattern, silence_period=0.1):
         if isinstance(pattern, re.Pattern):
             return self.count_responses(pattern)
-        return self.count_responses(re.compile(pattern))
+        return self.count_responses(re.compile(pattern),
+                                    silence_period=silence_period)
 
-    def count_responses(self, pattern):
-        self._read_pipes()
-        count = 0
+    def get_responses(self, pattern, silence_period=0.1):
+        self._wait_for_silence(silence_period)
+        res = []
         for line in self._stdout_lines:
             # lines start with something like "10:08:33  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
@@ -305,10 +353,15 @@ class StubServer:
                 continue
             line = line[match.end():]
             if isinstance(pattern, re.Pattern):
-                count += bool(pattern.match(line))
+                if pattern.match(line):
+                    res.append(line)
             else:
-                count += line.startswith(pattern)
-        return count
+                if line.startswith(pattern):
+                    res.append(line)
+        return res
+
+    def count_responses(self, pattern, silence_period=0.1):
+        return len(self.get_responses(pattern, silence_period))
 
     @property
     def stdout(self):
@@ -329,26 +382,3 @@ class StubServer:
 scripts_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "scripts"
 )
-
-
-def get_ip_addresses(exclude_loopback=True):
-    def pick_address(adapter_):
-        ip6 = None
-        for address_ in adapter_.ips:
-            if address_.is_IPv4:
-                return address_.ip
-            elif ip6 is None:
-                ip6 = address_.ip
-        return ip6
-
-    ips = []
-    for adapter in ifaddr.get_adapters():
-        if exclude_loopback:
-            name = adapter.nice_name.lower()
-            if name == "lo" or "loopback" in name:
-                continue
-        address = pick_address(adapter)
-        if address:
-            ips.append(address)
-
-    return ips

@@ -13,7 +13,7 @@ class Driver:
                                  connectionTimeoutMs=connectionTimeoutMs)
         res = backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+            raise Exception("Should be Driver but was %s" % res)
         self._driver = res
 
     def verifyConnectivity(self):
@@ -57,3 +57,18 @@ class Driver:
 
     def resolveDomainName(self, name):
         return self._domainNameResolverFn(name)
+
+    def updateRoutingTable(self, database=None, bookmarks=None):
+        req = protocol.ForcedRoutingTableUpdate(
+            self._driver.id, database=database, bookmarks=bookmarks
+        )
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Driver):
+            return Exception("Should be Driver")
+
+    def getRoutingTable(self, database=None):
+        req = protocol.GetRoutingTable(self._driver.id, database=database)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.RoutingTable):
+            raise Exception("Should be RoutingTable")
+        return res

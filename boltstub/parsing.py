@@ -2,6 +2,7 @@ import abc
 from collections import OrderedDict
 from copy import deepcopy
 import json
+import math
 from os import path
 import re
 from textwrap import wrap
@@ -22,6 +23,9 @@ from .errors import (
     BoltUnknownVersion,
     ServerExit,
 )
+from .packstream import Structure
+from .simple_jolt.transformers import decode as jolt_decode
+from .simple_jolt import types as jolt_types
 
 
 def load_parser():
@@ -69,6 +73,8 @@ class LineError(lark.GrammarError):
 
 
 class Line(str, abc.ABC):
+    allow_jolt_wildcard = False
+
     def __new__(cls, line_number: int, raw_line, content: str):
         obj = super(Line, cls).__new__(cls, raw_line)
         obj.line_number = line_number
@@ -88,8 +94,8 @@ class Line(str, abc.ABC):
     def canonical(self):
         pass
 
-    @staticmethod
-    def parse_line(line):
+    @classmethod
+    def parse_line(cls, line):
         def splart(s):
             parts = s.split(maxsplit=1)
             while len(parts) < 2:
@@ -97,7 +103,7 @@ class Line(str, abc.ABC):
             return parts
 
         content = line.content
-        tag, data = splart(content.strip())
+        name, data = splart(content.strip())
         fields = []
         decoder = json.JSONDecoder()
         while data:
@@ -109,9 +115,37 @@ class Line(str, abc.ABC):
                     line,
                     "message fields must be white space separated json"
                 ) from e
+            try:
+                decoded = jolt_decode(decoded)
+            except (ValueError, AssertionError) as e:
+                raise LineError(
+                    line,
+                    "message fields failed JOLT parser"
+                ) from e
+            decoded = cls._jolt_to_struct(line, decoded)
             fields.append(decoded)
             data = data[end:]
-        return tag, fields
+        return name, fields
+
+    @classmethod
+    def _jolt_to_struct(cls, line, decoded):
+        if isinstance(decoded, jolt_types.JoltWildcard):
+            if not cls.allow_jolt_wildcard:
+                raise LineError(
+                    line, "{} does not allow for JOLT wildcard values"
+                          .format(cls.__name__)
+                )
+            else:
+                return decoded
+        if isinstance(decoded, jolt_types.JoltType):
+            return Structure.from_jolt_type(decoded)
+        if isinstance(decoded, (list, tuple)):
+            return type(decoded)(Line._jolt_to_struct(line, d)
+                                 for d in decoded)
+        if isinstance(decoded, dict):
+            return {k: Line._jolt_to_struct(line, v)
+                    for k, v in decoded.items()}
+        return decoded
 
 
 class BangLine(Line):
@@ -196,6 +230,8 @@ class BangLine(Line):
 
 
 class ClientLine(Line):
+    allow_jolt_wildcard = True
+
     def __new__(cls, *args, **kwargs):
         obj = super(ClientLine, cls).__new__(cls, *args, **kwargs)
         obj.parsed = cls.parse_line(obj)
@@ -212,7 +248,7 @@ class ClientLine(Line):
         return ClientLine.field_match(fields, msg.fields)
 
     @staticmethod
-    def dict_match(should, is_):
+    def _dict_match(should, is_):
         accepted_keys = set()
         for should_key in should:
             should_key_unescaped = re.sub(r"\\([\[\]\\\{\}])", r"\1",
@@ -243,6 +279,12 @@ class ClientLine(Line):
             if should == "*":
                 return True
             should = re.sub(r"\\([\\*])", r"\1", should)
+        if isinstance(should, jolt_types.JoltWildcard):
+            if isinstance(is_, Structure):
+                return is_.match_jolt_wildcard(should)
+            return type(is_) in should.types
+        if isinstance(is_, Structure):
+            return is_ == should
         if type(should) != type(is_):
             return False
         if isinstance(should, (list, tuple)):
@@ -251,8 +293,10 @@ class ClientLine(Line):
             return all(ClientLine.field_match(a, b)
                        for a, b in zip(should, is_))
         if isinstance(should, dict):
-            return ClientLine.dict_match(should, is_)
-        return should == is_
+            return ClientLine._dict_match(should, is_)
+        if isinstance(should, float) and math.isnan(should):
+            return isinstance(is_, float) and math.isnan(is_)
+        return is_ == should
 
 
 class ServerLine(Line):
@@ -911,7 +955,11 @@ class BlockList(Block):
             yield from block.server_lines
 
 
-class ScriptDeviation(RuntimeError):
+class ScriptFailure(RuntimeError):
+    pass
+
+
+class ScriptDeviation(ScriptFailure):
     def __init__(self, expected_lines: List[Line], received: Line):
         assert expected_lines
         self.expected_lines = expected_lines

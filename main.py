@@ -367,7 +367,7 @@ def main(settings, configurations):
                 run_fail_wrapper(
                     runner_container.run_neo4j_tests,
                     suite, hostname, neo4j.username, neo4j.password,
-                    neo4j_config.scheme
+                    neo4j_config
                 )
             else:
                 print("No test suite specified for %s" % server_name)
@@ -402,7 +402,7 @@ def main(settings, configurations):
             run_fail_wrapper(
                 runner_container.run_selected_neo4j_tests,
                 get_selected_tests(), hostname, neo4j.username, neo4j.password,
-                neo4j_config.scheme
+                neo4j_config
             )
 
         # Check that all connections to Neo4j has been closed.

@@ -1,6 +1,7 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
 )
@@ -46,8 +47,11 @@ class NoRouting(TestkitTestCase):
                         userAgent="007")
 
         session = driver.session('r', database="adb")
-        session.run("RETURN 1 as n")
+        res = session.run("RETURN 1 as n")
+        summary = res.consume()
         session.close()
         driver.close()
 
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
         self._server.done()
