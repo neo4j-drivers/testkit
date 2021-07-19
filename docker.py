@@ -1,3 +1,4 @@
+import pathlib
 import os
 import re
 import subprocess
@@ -5,6 +6,16 @@ import subprocess
 
 _running = {}
 _created_tags = set()
+
+
+def _docker_path(path):
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    path = path.absolute()
+    if path.drive:
+        return str(pathlib.PurePosixPath("/" + path.drive[:-1],
+                                         *path.parts[1:]))
+    return str(path.as_posix())
 
 
 class Container:
@@ -67,7 +78,7 @@ def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
     cmd = ["docker", "create", "--name", name]
     if mount_map is not None:
         for k in mount_map:
-            src, dst = os.path.abspath(k), os.path.abspath(mount_map[k])
+            src, dst = _docker_path(k), mount_map[k]
             cmd.extend(["-v", "%s:%s" % (src, dst)])
     if host_map is not None:
         for k in host_map:
@@ -111,7 +122,7 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
     cmd = ["docker", "run", "--name", name, "--rm", "--detach"]
     if mount_map is not None:
         for k in mount_map:
-            cmd.extend(["-v", "%s:%s" % (k, mount_map[k])])
+            cmd.extend(["-v", "%s:%s" % (_docker_path(k), mount_map[k])])
     if host_map is not None:
         for k in host_map:
             cmd.extend(["--add-host", "%s:%s" % (k, host_map[k])])
