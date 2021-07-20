@@ -25,9 +25,6 @@ class TestTxFuncRun(TestkitTestCase):
         # >= 4.0 supports multiple result streams on the connection. From this
         # view it is not possible to see that those streams are actually used.
         # (see stub tests for this verification).
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("Fails for some reason")
-
         def run(tx, i, n):
             return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x",
                           {"i": types.CypherInt(i), "n": types.CypherInt(n)})
