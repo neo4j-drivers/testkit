@@ -93,7 +93,7 @@ class TestTxRun(TestkitTestCase):
 
     def test_should_not_run_valid_query_in_invalid_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Could not rollback transaction')
+            self.skipTest('Neither accepts tx.rollback nor session.close')
 
         self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
@@ -102,8 +102,6 @@ class TestTxRun(TestkitTestCase):
 
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
-
-        tx.rollback()
 
     def test_should_fail_run_in_a_commited_tx(self):
         self._session = self._driver.session("w")
