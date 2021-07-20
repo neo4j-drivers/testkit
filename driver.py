@@ -84,16 +84,16 @@ class Container:
     """ Represents the driver running in a Docker container.
     """
 
-    def __init__(self, container, gluePath):
+    def __init__(self, container, glue_path):
         self._container = container
-        self._gluePath = gluePath
+        self._glue_path = glue_path
 
     def _default_env(self):
         env = {}
         # Copy TEST_ variables that might have been set explicit
-        for varName in os.environ:
-            if varName.startswith("TEST_"):
-                env[varName] = os.environ[varName]
+        for var_name in os.environ:
+            if var_name.startswith("TEST_"):
+                env[var_name] = os.environ[var_name]
         return env
 
     def _native_env(self, hostname, port, username, password,
@@ -115,38 +115,38 @@ class Container:
 
         # To support the legacy .net integration tests
         # TODO: Move this to testkit/driver/dotnet/*.py
-        ctrlArgs = ""
+        ctrl_args = ""
         if config.edition == "enterprise":
-            ctrlArgs += "-e "
-        ctrlArgs += config.version
-        env["NEOCTRL_ARGS"] = ctrlArgs
+            ctrl_args += "-e "
+        ctrl_args += config.version
+        env["NEOCTRL_ARGS"] = ctrl_args
 
         return env
 
     def build_driver_and_backend(self, artifacts_path):
         self._container.exec(
-            ["python3", self._gluePath + "build.py"],
+            ["python3", self._glue_path + "build.py"],
             env_map=self._default_env(), log_path=artifacts_path
 
         )
 
     def run_unit_tests(self):
         self._container.exec(
-                ["python3", self._gluePath + "unittests.py"],
+                ["python3", self._glue_path + "unittests.py"],
                 env_map=self._default_env())
 
     def run_stress_tests(self, hostname, port, username, password,
                          config: neo4j.Config) -> None:
         env = self._native_env(hostname, port, username, password, config)
         self._container.exec([
-            "python3", self._gluePath + "stress.py"],
+            "python3", self._glue_path + "stress.py"],
             env_map=env)
 
     def run_integration_tests(self, hostname, port, username, password,
                               config: neo4j.Config):
         env = self._native_env(hostname, port, username, password, config)
         self._container.exec([
-            "python3", self._gluePath + "integration.py"],
+            "python3", self._glue_path + "integration.py"],
             env_map=env)
 
     def start_backend(self):
@@ -158,7 +158,7 @@ class Container:
         # issues like 'detected possible backend crash', make sure that this
         # works simply by commenting detach and see that the backend starts.
         self._container.exec_detached(
-                ["python3", self._gluePath + "backend.py"],
+                ["python3", self._glue_path + "backend.py"],
                 env_map=env)
         # Wait until backend started
         # Use driver container to check for backend availability

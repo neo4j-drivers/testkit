@@ -1,3 +1,4 @@
+import pathlib
 import os
 import re
 import subprocess
@@ -5,6 +6,16 @@ import subprocess
 
 _running = {}
 _created_tags = set()
+
+
+def _docker_path(path):
+    if isinstance(path, str):
+        path = pathlib.Path(path)
+    path = path.absolute()
+    if path.drive:
+        return str(pathlib.PurePosixPath("/" + path.drive[:-1],
+                                         *path.parts[1:]))
+    return str(path.as_posix())
 
 
 class Container:
@@ -24,6 +35,7 @@ class Container:
         cmd.append(self.name)
         cmd.extend(command)
         if not log_path:
+            print(cmd)
             subprocess.run(cmd, check=True)
         else:
             out_path = os.path.join(log_path, "out.log")
@@ -34,6 +46,7 @@ class Container:
                     out_fd.flush()
                     err_fd.write(str(cmd) + "\n")
                     err_fd.flush()
+                    print(cmd)
                     subprocess.run(cmd, check=True,
                                    stdout=out_fd, stderr=err_fd)
                     out_fd.write("\n")
@@ -46,11 +59,12 @@ class Container:
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
         cmd.extend(command)
+        print(cmd)
         subprocess.run(cmd, check=True)
 
     def rm(self):
         cmd = ["docker", "rm", "-f", "-v", self.name]
-        print('docker rm -f -v "%s"' % self.name)
+        print(cmd)
         subprocess.run(cmd, check=False,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         del _running[self.name]
@@ -59,11 +73,12 @@ class Container:
 def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
                       port_map=None, env_map=None, working_folder=None,
                       network=None, aliases=None):
+    print(["docker", "rm", "-fv", name])
     subprocess.run(["docker", "rm", "-fv", name], check=True)
     cmd = ["docker", "create", "--name", name]
     if mount_map is not None:
         for k in mount_map:
-            src, dst = os.path.abspath(k), os.path.abspath(mount_map[k])
+            src, dst = _docker_path(k), mount_map[k]
             cmd.extend(["-v", "%s:%s" % (src, dst)])
     if host_map is not None:
         for k in host_map:
@@ -86,11 +101,13 @@ def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
     cmd.append(image)
     if command:
         cmd.extend(command)
+    print(cmd)
     subprocess.run(cmd, check=True)
 
 
 def start(name):
     cmd = ["docker", "start", name]
+    print(cmd)
     subprocess.run(cmd, check=True)
     container = Container(name)
     _running[name] = container
@@ -105,7 +122,7 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
     cmd = ["docker", "run", "--name", name, "--rm", "--detach"]
     if mount_map is not None:
         for k in mount_map:
-            cmd.extend(["-v", "%s:%s" % (k, mount_map[k])])
+            cmd.extend(["-v", "%s:%s" % (_docker_path(k), mount_map[k])])
     if host_map is not None:
         for k in host_map:
             cmd.extend(["--add-host", "%s:%s" % (k, host_map[k])])
@@ -127,6 +144,7 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
     cmd.append(image)
     if command:
         cmd.extend(command)
+    print(cmd)
     subprocess.run(cmd, check=True)
     container = Container(name)
     _running[name] = container
@@ -135,6 +153,7 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
 
 def network_connect(network, name):
     cmd = ["docker", "network", "connect", network, name]
+    print(cmd)
     subprocess.run(cmd, check=True)
 
 
@@ -163,6 +182,7 @@ def build_and_tag(tag_name, dockerfile_path, cwd=None, log_path=None):
         err_path = os.path.join(log_path, "build_{}_err.log".format(clean_tag))
         with open(out_path, "w") as out_fd:
             with open(err_path, "w") as err_fd:
+                print(["docker", "build", "--tag", tag_name, dockerfile_path])
                 subprocess.check_call([
                     "docker", "build", "--tag", tag_name, dockerfile_path
                 ], cwd=cwd, stdout=out_fd, stderr=err_fd)
@@ -176,7 +196,7 @@ def cleanup():
     if os.environ.get("TEST_DOCKER_RMI", "").lower() \
             in ("true", "y", "yes", "1", "on"):
         for t in _created_tags:
-            print('docker rmi "%s"' % t)
+            print('cleanup (docker rmi %s)' % t)
             subprocess.run(["docker", "rmi", t])
 
 
@@ -186,6 +206,6 @@ def remove_dangling():
         "docker", "images", "-a", "--filter=dangling=true", "-q"
     ], encoding="utf-8").splitlines()
     if len(images):
-        print("Cleaning up images: %s" % images)
+        print("Cleaning up dangling images (docker rmi %s)" % " ".join(images))
         # Sometimes fails, do not fail build due to that
         subprocess.run(["docker", "rmi", " ".join(images)])
