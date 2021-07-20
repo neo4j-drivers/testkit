@@ -11,6 +11,7 @@ orchestrate which suites that are executed in each context.
 
 import argparse
 import atexit
+import errno
 import os
 import shutil
 import subprocess
@@ -241,8 +242,9 @@ def main(settings, configurations):
     # wipe artifacts path
     try:
         shutil.rmtree(artifacts_path)
-    except OSError:
-        pass
+    except OSError as e:
+        if e.errno != errno.ENOENT:
+            raise
     os.makedirs(artifacts_path)
     os.makedirs(driver_run_artifacts_path)
     os.makedirs(driver_build_artifacts_path)

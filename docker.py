@@ -176,7 +176,7 @@ def cleanup():
     if os.environ.get("TEST_DOCKER_RMI", "").lower() \
             in ("true", "y", "yes", "1", "on"):
         for t in _created_tags:
-            print('docker rmi "%s"' % t)
+            print('cleanup (docker rmi %s)' % t)
             subprocess.run(["docker", "rmi", t])
 
 
