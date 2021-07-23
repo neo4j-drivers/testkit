@@ -142,11 +142,11 @@ class TestSessionRun(TestkitTestCase):
     def test_autocommit_transactions_should_support_timeout(self):
         self._session1 = self._driver.session("w")
         self._session1.run("MERGE (:Node)").consume()
-        tx1 = self._session1.beginTransaction()
-        tx1.run("MATCH (a:Node) SET a.property = 1").consume()
         self._session2 = self._driver.session(
             "w", bookmarks=self._session1.lastBookmarks()
         )
+        tx1 = self._session1.beginTransaction()
+        tx1.run("MATCH (a:Node) SET a.property = 1").consume()
         with self.assertRaises(types.DriverError) as e:
             result = self._session2.run("MATCH (a:Node) SET a.property = 2",
                                         timeout=1000)

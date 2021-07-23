@@ -13,6 +13,8 @@ All cypher types are sent from backend as:
     }
 """
 
+import math
+
 
 class CypherNull:
     """ Represents null/nil as sent/received to/from the database
@@ -88,8 +90,18 @@ class CypherBool:
 
 
 class CypherFloat:
+    """This float type compares nan == nan as true intentionally.
+
+    This type is meant for capturing what values are sent over the wire rather
+    than true float arithmetics.
+    """
     def __init__(self, value):
         self.value = value
+        if isinstance(value, float):
+            if math.isinf(value):
+                self.value = "+Infinity" if value > 0 else "-Infinity"
+            if math.isnan(value):
+                self.value = "NaN"
 
     def __str__(self):
         return str(self.value)
@@ -113,6 +125,23 @@ class CypherString:
 
     def __eq__(self, other):
         return isinstance(other, CypherString) and other.value == self.value
+
+
+class CypherBytes:
+    def __init__(self, value):
+        self.value = value
+        if isinstance(value, (bytes, bytearray)):
+            # e.g. "ff 01"
+            self.value = " ".join("{:02x}".format(byte) for byte in value)
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.__str__())
+
+    def __eq__(self, other):
+        return isinstance(other, CypherBytes) and other.value == self.value
 
 
 class Node:
