@@ -48,8 +48,18 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def test_timeout(self):
         self._start_server("1_second_exceeds.script")
         with self.assertRaises(types.DriverError) as exc:
-            self._session.run("timeout")
-        self._session.run("in time")
+            result = self._session.run("timeout")
+            # TODO It will be removed as soon as JS Driver
+            # has async iterator api
+            if get_driver_name() in ['javascript']:
+                result.next()
+
+        result = self._session.run("in time")
+        # TODO It will be removed as soon as JS Driver
+        # has async iterator api
+        if get_driver_name() in ['javascript']:
+            result.next()
+
         self._server.done()
         self._assert_is_timout_exception(exc.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 2)
@@ -62,7 +72,12 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         self._start_server("1_second_exceeds_tx.script")
         tx = self._session.beginTransaction()
         with self.assertRaises(types.DriverError) as exc:
-            tx.run("timeout")
+            result = tx.run("timeout")
+            # TODO It will be removed as soon as JS Driver
+            # has async iterator api
+            if get_driver_name() in ['javascript']:
+                result.next()
+
         tx = self._session.beginTransaction()
         res = tx.run("in time")
         res.next()
@@ -85,7 +100,12 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             retries += 1
             if retries == 1:
                 with self.assertRaises(types.DriverError) as exc:
-                    tx.run("RETURN 1 AS n")
+                    result = tx.run("RETURN 1 AS n")
+                    # TODO It will be removed as soon as JS Driver
+                    # has async iterator api
+                    if get_driver_name() in ['javascript']:
+                        result.next()
+
                 self._assert_is_timout_exception(exc.exception)
                 self._on_failed_retry_assertions()
                 raise exc.exception
