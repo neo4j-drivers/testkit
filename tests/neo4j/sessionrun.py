@@ -121,6 +121,8 @@ class TestSessionRun(TestkitTestCase):
         isinstance(result.next(), types.NullRecord)
 
     def test_autocommit_transactions_should_support_metadata(self):
+        metadata = {"foo": types.CypherFloat(1.5),
+                    "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
         server_version = get_server_info().version
         if server_version.startswith("3."):
@@ -130,14 +132,12 @@ class TestSessionRun(TestkitTestCase):
         else:
             self.fail("Unknown server version %s should be 3.x or 4.x." %
                       server_version)
-        result = self._session1.run(query, {}, {"foo": "bar"})
+        result = self._session1.run(
+            query, txMeta={k: v.value for k, v in metadata.items()}
+        )
         record = result.next()
         self.assertIsInstance(record, types.Record)
-        self.assertEqual(len(record.values), 1)
-        self.assertEqual(
-            types.CypherMap({"foo": types.CypherString("bar")}),
-            record.values[0]
-        )
+        self.assertEqual(record.values, [types.CypherMap(metadata)])
 
     def test_autocommit_transactions_should_support_timeout(self):
         self._session1 = self._driver.session("w")
@@ -149,7 +149,7 @@ class TestSessionRun(TestkitTestCase):
         tx1.run("MATCH (a:Node) SET a.property = 1").consume()
         with self.assertRaises(types.DriverError) as e:
             result = self._session2.run("MATCH (a:Node) SET a.property = 2",
-                                        timeout=1000)
+                                        timeout=250)
             result.consume()
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:

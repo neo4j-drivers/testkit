@@ -102,7 +102,13 @@ class TestTxFuncRun(TestkitTestCase):
             raise ApplicationCodeException("No thanks")
 
         self._session1 = self._driver.session("w")
-        with self.assertRaises(types.FrontendError):
+        expected_exc = types.FrontendError
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript"]:
+            expected_exc = types.DriverError
+        if get_driver_name() in ["dotnet"]:
+            expected_exc = types.BackendError
+        with self.assertRaises(expected_exc):
             self._session1.writeTransaction(run)
         bookmarks = self._session1.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
@@ -119,7 +125,13 @@ class TestTxFuncRun(TestkitTestCase):
             raise ApplicationCodeException("No thanks")
 
         self._session1 = self._driver.session("w")
-        with self.assertRaises(types.FrontendError):
+        expected_exc = types.FrontendError
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript"]:
+            expected_exc = types.DriverError
+        if get_driver_name() in ["dotnet"]:
+            expected_exc = types.BackendError
+        with self.assertRaises(expected_exc):
             self._session1.writeTransaction(run)
 
         # Try to retrieve the node, it shouldn't be there
@@ -130,6 +142,10 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertIsInstance(record, types.NullRecord)
 
     def test_tx_func_configuration(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "java"]:
+            self.skipTest("Does not send metadata")
+
         def run(tx):
             values = []
             result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
@@ -145,7 +161,7 @@ class TestTxFuncRun(TestkitTestCase):
 
             return values
 
-        metadata = {"foo": types.CypherInt(1),
+        metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("w")
         res = self._session1.readTransaction(
@@ -154,23 +170,25 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
     def test_tx_timeout(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "java"]:
+            self.skipTest("Query update2 does not time out.")
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Backend crashes.")
+
         def create(tx):
             tx.run("MERGE (:Node)").consume()
 
         def update1(tx):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
-            try:
+
+            with self.assertRaises(types.FrontendError):
                 self._session2.writeTransaction(update2, timeout=250)
-            except types.FrontendError:
-                # some drivers will re-surface the ApplicationCodeException
-                # raised in update2
-                pass
 
         def update2(tx):
             nonlocal exc
             with self.assertRaises(types.DriverError) as e:
-                result = tx.run("MATCH (a:Node) SET a.property = 2")
-                result.consume()
+                tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e
             # transaction has failed and we don't want the driver to retry it
             raise ApplicationCodeException

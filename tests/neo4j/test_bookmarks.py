@@ -33,6 +33,9 @@ class TestBookmarks(TestkitTestCase):
         self.assertTrue(bookmarks)
 
     def test_can_pass_bookmark_into_next_session(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Backend seems to misinterpret query parameters")
         unique_id = uuid4().hex
 
         self._session = self._driver.session("w")
@@ -51,6 +54,7 @@ class TestBookmarks(TestkitTestCase):
         if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
             self.assertEqual(result.keys(), ["a"])
         records = [rec.values[0] for rec in result]
+        tx.commit()
         self.assertEqual(len(records), 1)
         thing = records[0]
         self.assertIsInstance(thing, types.CypherNode)

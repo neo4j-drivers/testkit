@@ -25,6 +25,9 @@ class TestTxRun(TestkitTestCase):
         super().tearDown()
 
     def test_can_commit_transaction(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest('Returns CypherNull as foo\'s value instead of "bar"')
         self._session1 = self._driver.session("w")
 
         tx = self._session1.beginTransaction()
@@ -46,7 +49,7 @@ class TestTxRun(TestkitTestCase):
 
         # Check the property value
         result = self._session1.run("MATCH (a) WHERE id(a) = $n "
-                                   "RETURN a.foo", {"n": node_id})
+                                    "RETURN a.foo", {"n": node_id})
         record = result.next()
         self.assertIsInstance(record, types.Record)
         self.assertEqual(len(record.values), 1)
@@ -100,11 +103,22 @@ class TestTxRun(TestkitTestCase):
         self.assertEqual(len(bookmarks), 0)
 
     def test_does_not_update_last_bookmark_on_failure(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Raises syntax error on session.close in tearDown.")
         self._session1 = self._driver.session("w")
         tx = self._session1.beginTransaction()
         with self.assertRaises(types.responses.DriverError):
-            tx.run("RETURN").next()
-            tx.commit()
+            result = tx.run("RETURN")
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["javascript"]:
+                result.next()
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            # go requires explicit rollback on a failed transaction but will
+            # complain about the transaction being broken.
+            with self.assertRaises(types.DriverError):
+                tx.rollback()
         bookmarks = self._session1.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
@@ -163,7 +177,10 @@ class TestTxRun(TestkitTestCase):
         tx.run('CREATE (:TXNode1)').consume()
         tx.commit()
         with self.assertRaises(types.responses.DriverError):
-            tx.run("RETURN 1")
+            result = tx.run("RETURN 1")
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["javascript"]:
+                result.next()
 
     def test_should_not_allow_run_on_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
@@ -173,7 +190,10 @@ class TestTxRun(TestkitTestCase):
         tx.run('CREATE (:TXNode1)').consume()
         tx.rollback()
         with self.assertRaises(types.responses.DriverError):
-            tx.run("RETURN 1")
+            result = tx.run("RETURN 1")
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["javascript"]:
+                result.next()
 
     def test_should_not_run_valid_query_in_invalid_tx(self):
         if get_driver_name() in ["go"]:
@@ -219,16 +239,32 @@ class TestTxRun(TestkitTestCase):
             tx2.run("CREATE ()").consume()
 
     def test_broken_transaction_should_not_break_session(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Raises syntax error on session.close in tearDown.")
         self._session1 = self._driver.session("r")
         tx = self._session1.beginTransaction()
         with self.assertRaises(types.DriverError):
-            tx.run("NOT CYPHER")
+            result = tx.run("NOT CYPHER")
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["javascript"]:
+                result.next()
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            # go requires explicit rollback on a failed transaction but will
+            # complain about the transaction being broken.
+            with self.assertRaises(types.DriverError):
+                tx.rollback()
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["java"]:
+            # requires explicit rollback on a failed transaction
+            tx.rollback()
         tx = self._session1.beginTransaction()
         tx.run("RETURN 1")
         tx.commit()
 
     def test_tx_configuration(self):
-        metadata = {"foo": types.CypherInt(1),
+        metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
         tx = self._session1.beginTransaction(
@@ -258,7 +294,7 @@ class TestTxRun(TestkitTestCase):
         )
         tx1 = self._session1.beginTransaction()
         tx1.run("MATCH (a:Node) SET a.property = 1").consume()
-        tx2 = self._session2.beginTransaction(timeout=1000)
+        tx2 = self._session2.beginTransaction(timeout=250)
         with self.assertRaises(types.DriverError) as e:
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
@@ -266,7 +302,8 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-            tx2.rollback()
+            with self.assertRaises(types.DriverError):
+                tx2.rollback()
             # does not set exception code
             return
         self.assertEqual(e.exception.code,
@@ -339,8 +376,8 @@ class TestTxRun(TestkitTestCase):
             values2 = list(map(lambda rec: rec.values[0], result2))
 
             self.assertEqual(values2, list(map(types.CypherInt, (5, 6, 7, 8))))
-            tx.commit()
             self.assertIsInstance(result2.next(), types.NullRecord)
+            tx.commit()
             self.assertEqual(values1, [types.CypherInt(1)])
             # TODO: what should result1.next() result in?
             # options:
@@ -367,6 +404,9 @@ class TestTxRun(TestkitTestCase):
                 _test()
 
     def test_unconsumed_result(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Backend seems to misinterpret query parameters")
         def _test():
             uuid_ = str(uuid.uuid1())
 
