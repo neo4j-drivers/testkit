@@ -1,3 +1,4 @@
+from math import isnan
 import os
 
 from nutkit.frontend import Driver
@@ -7,7 +8,7 @@ from tests.neo4j.shared import (
     env_neo4j_user,
     get_neo4j_host_and_port,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import TestkitTestCase, get_driver_name
 
 
 class TestDataTypes(TestkitTestCase):
@@ -50,22 +51,63 @@ class TestDataTypes(TestkitTestCase):
             types.CypherInt(-129),
             types.CypherInt(129),
             types.CypherInt(2147483647),
-            types.CypherInt(-2147483647),
-            #types.CypherFloat(9223372036854775807),       # TODO: Investigate
-            #types.CypherFloat(-9223372036854775807),
-            #types.CypherFloat(1.7976931348623157E+308),
-            #types.CypherFloat(2.2250738585072014e-308),
-            #types.CypherFloat(4.9E-324),
-            #types.CypherFloat(0.0),  # Js can not determine if it should be 0 or 0.0
-            types.CypherFloat(1.1),
+            types.CypherInt(-2147483648),
+
+            types.CypherFloat(0),
+            types.CypherFloat(0.0),
+            types.CypherFloat(float("inf")),
+            types.CypherFloat(float("-inf")),
+            types.CypherFloat(float("nan")),
+            types.CypherFloat(1),
+            types.CypherFloat(-1),
+            # max/min exponent
+            types.CypherFloat(2**1023),
+            types.CypherFloat(2**-1022),
+            # max/min mantissa
+            types.CypherFloat(9007199254740991),
+            types.CypherFloat(-9007199254740991),
+            types.CypherFloat(-(2 + 1 + 2e-51)),
+
             types.CypherString("1"),
             types.CypherString("-17∂ßå®"),
             types.CypherString("String"),
             types.CypherString(""),
+
+            types.CypherList([
+                types.CypherString("Hello"),
+                types.CypherInt(1337),
+                types.CypherString("Worlds!"),
+            ]),
+
+            types.CypherMap({
+                "a": types.CypherString("Hello"),
+                "b": types.CypherInt(1337),
+                "c": types.CypherString("Worlds!"),
+            }),
+
+            types.CypherBytes(bytearray([0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF])),
         ]
 
         self.create_driver_and_session()
         for val in vals:
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["javascript", "dotnet"]:
+                # Driver treats float as int
+                if (isinstance(val, types.CypherFloat)
+                        and float(val.value) % 1 == 0):
+                    continue
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+                # driver backend does not implement special float values
+                if (isinstance(val, types.CypherFloat)
+                        and isinstance(val.value, str)):
+                    continue
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+                # driver backend  does not implement byte values
+                if isinstance(val, types.CypherBytes):
+                    continue
+
             self.verify_can_echo(val)
 
     def test_should_echo_very_long_list(self):

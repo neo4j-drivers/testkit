@@ -1,8 +1,10 @@
 from nutkit.frontend.session import ApplicationCodeException
 import nutkit.protocol as types
-from tests.neo4j.shared import get_driver
+from tests.neo4j.shared import (
+    get_driver,
+    get_server_info,
+)
 from tests.shared import (
-    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -12,11 +14,13 @@ class TestTxFuncRun(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._driver = get_driver(self._backend)
-        self._session = None
+        self._session1 = None
+        self._session2 = None
 
     def tearDown(self):
-        if self._session:
-            self._session.close()
+        for session in (self._session1, self._session2):
+            if session:
+                session.close()
         self._driver.close()
         super().tearDown()
 
@@ -33,7 +37,7 @@ class TestTxFuncRun(TestkitTestCase):
             return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x",
                           {"i": types.CypherInt(i), "n": types.CypherInt(n)})
 
-        self._session = self._driver.session("r", fetchSize=2)
+        self._session1 = self._driver.session("r", fetchSize=2)
 
         # Todo: stash away the results for each level and test the behaviour
         #       of the driver when using them outside of the transaction.
@@ -70,7 +74,7 @@ class TestTxFuncRun(TestkitTestCase):
             self.assertEqual(res0.next(), types.NullRecord())
             return "done"
 
-        x = self._session.readTransaction(nested)
+        x = self._session1.readTransaction(nested)
         self.assertEqual(lasts, {0: 6, 1: 11, 2: 1001})
         self.assertEqual(x, "done")
 
@@ -81,9 +85,9 @@ class TestTxFuncRun(TestkitTestCase):
         def run(tx):
             tx.run("CREATE (n:SessionNode) RETURN n")
 
-        self._session = self._driver.session("w")
-        self._session.writeTransaction(run)
-        bookmarks = self._session.lastBookmarks()
+        self._session1 = self._driver.session("w")
+        self._session1.writeTransaction(run)
+        bookmarks = self._session1.lastBookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
@@ -97,10 +101,16 @@ class TestTxFuncRun(TestkitTestCase):
             tx.run("CREATE (n:SessionNode) RETURN n")
             raise ApplicationCodeException("No thanks")
 
-        self._session = self._driver.session("w")
-        with self.assertRaises(types.FrontendError):
-            self._session.writeTransaction(run)
-        bookmarks = self._session.lastBookmarks()
+        self._session1 = self._driver.session("w")
+        expected_exc = types.FrontendError
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript"]:
+            expected_exc = types.DriverError
+        if get_driver_name() in ["dotnet"]:
+            expected_exc = types.BackendError
+        with self.assertRaises(expected_exc):
+            self._session1.writeTransaction(run)
+        bookmarks = self._session1.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
@@ -114,18 +124,28 @@ class TestTxFuncRun(TestkitTestCase):
             node_id = result_.next().values[0].value
             raise ApplicationCodeException("No thanks")
 
-        self._session = self._driver.session("w")
-        with self.assertRaises(types.FrontendError):
-            self._session.writeTransaction(run)
+        self._session1 = self._driver.session("w")
+        expected_exc = types.FrontendError
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript"]:
+            expected_exc = types.DriverError
+        if get_driver_name() in ["dotnet"]:
+            expected_exc = types.BackendError
+        with self.assertRaises(expected_exc):
+            self._session1.writeTransaction(run)
 
         # Try to retrieve the node, it shouldn't be there
-        result = self._session.run(
+        result = self._session1.run(
                 "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
                 params={"nodeid": types.CypherInt(node_id)})
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
 
     def test_tx_func_configuration(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "java"]:
+            self.skipTest("Does not send metadata")
+
         def run(tx):
             values = []
             result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
@@ -133,9 +153,61 @@ class TestTxFuncRun(TestkitTestCase):
                 self.assertEqual(result.keys(), ["x"])
             for record in result:
                 values.append(record.values[0])
+            if get_server_info().version >= "4":
+                result = tx.run("CALL tx.getMetaData")
+                record = result.next()
+                self.assertIsInstance(record, types.Record)
+                self.assertEqual(record.values, [types.CypherMap(metadata)])
+
             return values
 
-        self._session = self._driver.session("w")
-        res = self._session.readTransaction(run, timeout=3000,
-                                            txMeta={"foo": "bar"})
+        metadata = {"foo": types.CypherFloat(1.5),
+                    "bar": types.CypherString("baz")}
+        self._session1 = self._driver.session("w")
+        res = self._session1.readTransaction(
+            run, timeout=3000, txMeta={k: v.value for k, v in metadata.items()}
+        )
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
+
+    def test_tx_timeout(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "java"]:
+            self.skipTest("Query update2 does not time out.")
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Backend crashes.")
+
+        def create(tx):
+            tx.run("MERGE (:Node)").consume()
+
+        def update1(tx):
+            tx.run("MATCH (a:Node) SET a.property = 1").consume()
+
+            with self.assertRaises(types.FrontendError):
+                self._session2.writeTransaction(update2, timeout=250)
+
+        def update2(tx):
+            nonlocal exc
+            with self.assertRaises(types.DriverError) as e:
+                tx.run("MATCH (a:Node) SET a.property = 2").consume()
+            exc = e
+            # transaction has failed and we don't want the driver to retry it
+            raise ApplicationCodeException
+
+        exc = None
+
+        self._session1 = self._driver.session("w")
+        self._session1.writeTransaction(create)
+        self._session2 = self._driver.session(
+            "w", bookmarks=self._session1.lastBookmarks()
+        )
+        self._session1.writeTransaction(update1)
+        # TODO remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            # does not set exception code
+            return
+        self.assertIsNotNone(exc)
+        self.assertEqual(exc.exception.code,
+                         "Neo.TransientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(exc.exception.errorType,
+                             "<class 'neo4j.exceptions.TransientError'>")
