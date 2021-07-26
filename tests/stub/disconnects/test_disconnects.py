@@ -177,7 +177,7 @@ class TestDisconnects(TestkitTestCase):
         expected_step = "after begin"
         if self._driverName in ["python", "go"]:
             expected_step = "after run"
-        elif self._driverName in ["javascript"]:
+        elif self._driverName in ["javascript", "dotnet"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
