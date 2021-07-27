@@ -3,7 +3,7 @@
 !: ALLOW RESTART
 
 C: HELLO "*"
-S: SUCCESS {"server": "Neo4j/4.3.1", "hints": {"connection.recv_timeout_seconds": 1}, "connection_id": "bolt-0"}
+S: SUCCESS {"server": "Neo4j/4.3.1", "hints": {"connection.recv_timeout_seconds": 1}, "connection_id": "bolt-2"}
 C: BEGIN {}
 S: SUCCESS {}
 {{

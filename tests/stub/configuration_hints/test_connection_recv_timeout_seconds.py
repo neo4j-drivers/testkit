@@ -174,7 +174,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
 class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
     def setUp(self):
-        super().setUp()
+        TestkitTestCase.setUp(self)
         self._server = StubServer(9010)
         self._router = StubServer(9000)
         self._router.start(path=self.script_path("router.script"), vars={
@@ -190,8 +190,13 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
         # is killed and it's output is dumped for analysis.
+        self._server.reset()
         self._router.reset()
-        super().tearDown()
+        if self._session:
+            self._session.close()
+        if self._driver:
+            self._driver.close()
+        TestkitTestCase.tearDown(self)
 
     def _assert_is_timout_exception(self, e):
         if get_driver_name() in ["python"]:
@@ -209,7 +214,9 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         self.assertEqual(rt.writers, [])
 
     def _assert_routing_table(self, timed_out, managed):
-        self.assertEqual(self._router.count_responses("<HANGUP>"), 0)
+        if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
+            self.assertEqual(self._router.count_responses("<HANGUP>"), 0)
+
         self._router.done()
         self._server.reset()
         if timed_out:
@@ -218,7 +225,10 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         else:
             self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
             self.assertEqual(self._router.count_requests("ROUTE"), 1)
-        self.assertEqual(self._router.count_responses("<ACCEPT>"), 1)
+
+        if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
+            self.assertLessEqual(self._router.count_responses("<ACCEPT>"), 1)
+
         rt = self._driver.getRoutingTable()
         self.assertEqual(rt.routers, [
             get_dns_resolved_server_address(self._router)
