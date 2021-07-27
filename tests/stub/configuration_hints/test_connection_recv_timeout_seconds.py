@@ -215,7 +215,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
 
     def _assert_routing_table(self, timed_out, managed):
         if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
-            self.assertEqual(self._router.count_responses("<HANGUP>"), 1)
+            self.assertEqual(self._router.count_responses("<HANGUP>"), 0)
 
         self._router.done()
         self._server.reset()
