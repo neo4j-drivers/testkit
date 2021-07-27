@@ -1,0 +1,10 @@
+!: BOLT 4.4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+
+C: RUN "*" "*" "*"
+S: SUCCESS {"t_first": 2001, "fields": ["n"]}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "banana", "db": "apple", "t_last": 2002, "stats": {"nodes-created": 1234}}
