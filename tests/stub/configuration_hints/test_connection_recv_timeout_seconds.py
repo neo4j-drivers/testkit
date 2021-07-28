@@ -77,6 +77,9 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             # has async iterator api
             if get_driver_name() in ['javascript']:
                 result.next()
+        # TODO Remove when explicit rollback requirement is removed
+        if get_driver_name() in ['java']:
+            tx.rollback()
 
         tx = self._session.beginTransaction()
         res = tx.run("in time")
@@ -140,12 +143,17 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         self._start_server("2_seconds_in_time_tx.script")
         tx = self._session.beginTransaction()
         result = tx.run("RETURN 1 AS n")
-        record = result.next()
+        records = []
+        while True:
+            next_record = result.next()
+            if isinstance(next_record, types.NullRecord):
+                break
+            records.append(next_record)
         tx.commit()
-        self.assertIsInstance(result.next(), types.NullRecord)
+        self.assertEqual(1, len(records))
         self._server.done()
-        self.assertIsInstance(record, types.Record)
-        self.assertEqual(record.values, [types.CypherInt(1)])
+        self.assertIsInstance(records[0], types.Record)
+        self.assertEqual(records[0].values, [types.CypherInt(1)])
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._server.count_responses("<BROKEN>"), 0)
 
@@ -182,7 +190,8 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         })
         auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                         credentials="pass")
-        uri = "neo4j://%s" % self._router.address
+        uri = "neo4j://%s:%s" % (dns_resolve_single(self._router.host),
+                                 self._router.port)
         self._driver = Driver(self._backend, uri, auth)
         self._session = self._driver.session("w")
         self._last_exc = None
