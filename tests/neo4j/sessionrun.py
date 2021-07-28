@@ -155,8 +155,6 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-            # does not set exception code
-            return
         self.assertEqual(e.exception.code,
                          "Neo.TransientError.Transaction.LockClientStopped")
         if get_driver_name() in ["python"]:
@@ -346,10 +344,6 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         with self.assertRaises(types.DriverError) as e:
             self._session1.run("X").consume()
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # does not set exception code
-            return
         self.assertEqual(e.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
 
@@ -357,10 +351,6 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         with self.assertRaises(types.DriverError) as e:
             self._session1.run("RETURN $x").consume()
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # does not set exception code
-            return
         self.assertEqual(e.exception.code,
                          "Neo.ClientError.Statement.ParameterMissing")
 
