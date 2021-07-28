@@ -31,9 +31,9 @@ class TestDirectDriver(TestkitTestCase):
 
     def test_custom_resolver(self):
         # TODO unify this
-        if get_driver_name() in ["go", "javascript", "dotnet"]:
+        if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("resolver not implemented in backend")
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["go", "java"]:
             self.skipTest("Does not call resolver for direct connections")
 
         host, port = get_neo4j_host_and_port()

@@ -1544,7 +1544,7 @@ class RoutingV4x3(RoutingBase):
         # TODO add support and remove this block
         if get_driver_name() in ['dotnet']:
             self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("resolver not implemented in backend")
         resolver_invoked = 0
 
@@ -1592,7 +1592,7 @@ class RoutingV4x3(RoutingBase):
         # TODO add support and remove this block
         if get_driver_name() in ['dotnet']:
             self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("resolver not implemented in backend")
 
         resolver_calls = defaultdict(lambda: 0)
@@ -1688,7 +1688,7 @@ class RoutingV4x3(RoutingBase):
         # TODO add support and remove this block
         if get_driver_name() in ['dotnet']:
             self.skipTest("needs ROUTE bookmark list support")
-        if get_driver_name() in ['go', 'dotnet']:
+        if get_driver_name() in ['dotnet']:
             self.skipTest("resolver not implemented in backend")
 
         def resolver(address):
