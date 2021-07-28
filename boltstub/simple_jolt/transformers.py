@@ -260,7 +260,17 @@ class JoltDictTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_simple(value, decode_cb):
-        raise NoSimpleRepresentation()
+        # JOLT does not define a simple dict type. However, for simplicity we
+        # allow users to specify simple dicts if the sigil is not in use.
+        # E.g., `{"Z": 1}` will be interpreted as an integer (because the sigil
+        # `Z` is defined as integer while `{"n": 1}` is interpreted as dict
+        # because there is no sigil `n`.
+        # Alternatively, if the dict not exactly one key
+        # (e.g., `{"Z": 1, "R": "1"}` or `{}`, it can also be unambiguously
+        # identified as a dict.
+        assert isinstance(value, dict)
+        assert all(map(lambda k: isinstance(k, str), value.keys()))
+        return {k: decode_cb(v) for k, v in value.items()}
 
     @staticmethod
     def _decode_full(value, decode_cb):

@@ -1,0 +1,22 @@
+!: BOLT 4.4
+!: AUTO HELLO
+!: AUTO GOODBYE
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+C: RUN {"U": "*"}{"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   RECORD [2]
+   SUCCESS {"type": "r"}
+C: ROLLBACK
+S: SUCCESS {}
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
