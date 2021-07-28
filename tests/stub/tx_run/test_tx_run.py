@@ -1,9 +1,6 @@
-from contextlib import contextmanager
-
 from nutkit.frontend import Driver
 from nutkit import protocol as types
 from tests.shared import (
-    get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
 )
