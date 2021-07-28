@@ -22,7 +22,7 @@ class NoRouting(TestkitTestCase):
         # TODO: "#ROUTING#": "" is the correct way to go
         #       (minimal data transmission)
         routing = ""
-        if get_driver_name() in ['java', 'dotnet', 'go']:
+        if get_driver_name() in ['java', 'dotnet']:
             routing = ', "routing": null'
         return {
             "#VERSION#": "4.1",
