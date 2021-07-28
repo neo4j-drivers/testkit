@@ -190,7 +190,8 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         })
         auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                         credentials="pass")
-        uri = "neo4j://%s" % self._router.address
+        uri = "neo4j://%s:%s" % (dns_resolve_single(self._router.host),
+                                 self._router.port)
         self._driver = Driver(self._backend, uri, auth)
         self._session = self._driver.session("w")
         self._last_exc = None
