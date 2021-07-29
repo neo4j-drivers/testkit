@@ -36,13 +36,19 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def _start_server(self, script):
         self._server.start(path=self.script_path(script))
 
-    def _assert_is_timout_exception(self, e):
+    def _assert_is_timeout_exception(self, e):
         if get_driver_name() in ["python"]:
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              e.errorType)
         elif get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
+                e.errorType)
+
+    def _assert_is_client_exception(self, e):
+        if get_driver_name() in ['java']:
+            self.assertEqual(
+                'org.neo4j.driver.exceptions.ClientException',
                 e.errorType)
 
     def _on_failed_retry_assertions(self):
@@ -65,7 +71,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             result.next()
 
         self._server.done()
-        self._assert_is_timout_exception(exc.exception)
+        self._assert_is_timeout_exception(exc.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 2)
         self.assertEqual(self._server.count_responses("<HANGUP>"), 2)
         self.assertEqual(self._server.count_requests('RUN "timeout"'), 1)
@@ -90,11 +96,41 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         res.next()
         tx.commit()
         self._server.done()
-        self._assert_is_timout_exception(exc.exception)
+        self._assert_is_timeout_exception(exc.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 2)
         self.assertEqual(self._server.count_responses("<HANGUP>"), 2)
         self.assertEqual(self._server.count_requests('RUN "timeout"'), 1)
         self.assertEqual(self._server.count_requests('RUN "in time"'), 1)
+
+    @driver_feature(types.Feature.CONF_HINT_CON_RECV_TIMEOUT)
+    def test_timeout_unmanaged_tx_should_fail_subsequent_usage_after_timeout(
+            self):
+        self._start_server("1_second_exceeds_tx.script")
+        tx = self._session.beginTransaction()
+        with self.assertRaises(types.DriverError) as exc:
+            result = tx.run("timeout")
+            # TODO It will be removed as soon as JS Driver
+            # has async iterator api
+            if get_driver_name() in ['javascript']:
+                result.next()
+
+        try:
+            result = tx.run("in time")
+            if get_driver_name() in ['javascript']:
+                result.next()
+        except types.DriverError as e:
+            self._assert_is_client_exception(e)
+
+        # TODO Remove when explicit rollback requirement is removed
+        if get_driver_name() in ['java']:
+            tx.rollback()
+
+        self._server.done()
+        self._assert_is_timeout_exception(exc.exception)
+        self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
+        self.assertEqual(self._server.count_responses("<HANGUP>"), 1)
+        self.assertEqual(self._server.count_requests('RUN "timeout"'), 1)
+        self.assertEqual(self._server.count_requests('RUN "in time"'), 0)
 
     @driver_feature(types.Feature.CONF_HINT_CON_RECV_TIMEOUT)
     def test_timeout_managed_tx_retry(self):
@@ -113,7 +149,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                     if get_driver_name() in ['javascript']:
                         result.next()
 
-                self._assert_is_timout_exception(exc.exception)
+                self._assert_is_timeout_exception(exc.exception)
                 self._on_failed_retry_assertions()
                 raise exc.exception
             result = tx.run("RETURN %i AS n" % retries)
@@ -211,7 +247,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
             self._driver.close()
         TestkitTestCase.tearDown(self)
 
-    def _assert_is_timout_exception(self, e):
+    def _assert_is_timeout_exception(self, e):
         if get_driver_name() in ["python"]:
             self.assertEqual("<class 'neo4j.exceptions.SessionExpired'>",
                              e.errorType)
@@ -220,7 +256,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
                 "org.neo4j.driver.exceptions.SessionExpiredException",
                 e.errorType)
         else:
-            super()._assert_is_timout_exception(e)
+            super()._assert_is_timeout_exception(e)
 
     def _on_failed_retry_assertions(self):
         rt = self._driver.getRoutingTable()
