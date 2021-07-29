@@ -38,8 +38,12 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
     def _assert_is_timout_exception(self, e):
         if get_driver_name() in ["python"]:
-            self.assertEqual(e.errorType,
-                             "<class 'neo4j.exceptions.ServiceUnavailable'>")
+            self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
+                             e.errorType)
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
+                e.errorType)
 
     def _on_failed_retry_assertions(self):
         pass
@@ -209,8 +213,12 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
 
     def _assert_is_timout_exception(self, e):
         if get_driver_name() in ["python"]:
-            self.assertEqual(e.errorType,
-                             "<class 'neo4j.exceptions.SessionExpired'>")
+            self.assertEqual("<class 'neo4j.exceptions.SessionExpired'>",
+                             e.errorType)
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.SessionExpiredException",
+                e.errorType)
         else:
             super()._assert_is_timout_exception(e)
 
