@@ -56,8 +56,8 @@ class TestOptimizations(TestkitTestCase):
                 self._server.reset()
 
     def double_read(self, mode, new_session, use_tx, routing,
-                    check_single_connection, check_no_reset, version="v4x3",
-                    consume=False):
+                    version="v4x3", consume=False,
+                    check_single_connection=False, check_no_reset=False):
         assert use_tx in (None, "commit", "rollback")
         script = "run_twice{}{}.script".format("_tx" if use_tx else "",
                                                "_discard" if consume else "")
@@ -144,7 +144,7 @@ class TestOptimizations(TestkitTestCase):
                                           + ("_routing" if routing
                                              else "_direct")):
                             self.double_read(mode, new_session, use_tx, routing,
-                                             True, False)
+                                             check_single_connection=True)
                         self._server.reset()
 
     @driver_feature(types.Feature.OPT_MINIMAL_RESETS)
@@ -169,8 +169,8 @@ class TestOptimizations(TestkitTestCase):
                                           + ("_discard" if consume
                                              else "_pull")):
                             self.double_read(mode, new_session, use_tx, False,
-                                             False, True, version=version,
-                                             consume=consume)
+                                             version=version, consume=consume,
+                                             check_no_reset=True)
                         self._server.reset()
 
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
