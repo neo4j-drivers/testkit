@@ -107,26 +107,25 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self):
         self._start_server("1_second_exceeds_tx.script")
         tx = self._session.beginTransaction()
-        with self.assertRaises(types.DriverError) as exc:
+        with self.assertRaises(types.DriverError) as first_run_error:
             result = tx.run("timeout")
             # TODO It will be removed as soon as JS Driver
             # has async iterator api
             if get_driver_name() in ['javascript']:
                 result.next()
 
-        try:
+        with self.assertRaises(types.DriverError) as second_run_error:
             result = tx.run("in time")
             if get_driver_name() in ['javascript']:
                 result.next()
-        except types.DriverError as e:
-            self._assert_is_client_exception(e)
 
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ['java']:
             tx.rollback()
 
         self._server.done()
-        self._assert_is_timeout_exception(exc.exception)
+        self._assert_is_timeout_exception(first_run_error.exception)
+        self._assert_is_client_exception(second_run_error.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._server.count_responses("<HANGUP>"), 1)
         self.assertEqual(self._server.count_requests('RUN "timeout"'), 1)
