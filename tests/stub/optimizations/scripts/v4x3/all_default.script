@@ -6,7 +6,7 @@ C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials":
 S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}
 {{
     # transaction
@@ -14,20 +14,29 @@ S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
     S: SUCCESS {}
     C: RUN "*" {} {}
     S: SUCCESS {"fields": ["1"]}
-    C: PULL {"n": "*"}
-    S: RECORD [1]
-       SUCCESS {}
+    {{
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+    ----
+        C: DISCARD {}
+    }}
+    S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {"type": "w", "bookmark": "bookmark:1"}
 ----
     # auto commit transaction
     C: RUN "*" {} {}
     S: SUCCESS {"fields": ["1"]}
-    C: PULL {"n": "*"}
+    {{
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+    ----
+        C: DISCARD {}
+    }}
     S: RECORD [1]
        SUCCESS {"type": "w", "bookmark": "bookmark:1"}
 }}
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}

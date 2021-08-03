@@ -1,0 +1,38 @@
+!: BOLT 4.3
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: ALLOW RESTART
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+
+{?
+    C: RUN "QUERY 1" "*" "*"
+    S: SUCCESS {"fields": ["1"]}
+    C: PULL "*"
+    S: RECORD [1]
+       RECORD [1]
+       SUCCESS {"has_more": true}
+    C: DISCARD "*"
+    S: SUCCESS {"type": "#TYPE#"}
+    {*
+        C: RESET
+        S: SUCCESS {}
+    *}
+?}
+
+C: RUN "QUERY 2" "*" "*"
+S: SUCCESS {"fields": ["1"]}
+C: PULL "*"
+S: RECORD [2]
+   RECORD [2]
+   SUCCESS {"has_more": true}
+C: DISCARD "*"
+S: SUCCESS {"type": "#TYPE#"}
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}

@@ -5,7 +5,7 @@
 
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}
 
 {?
@@ -16,12 +16,17 @@
     C: PULL "*"
     S: RECORD [1]
        SUCCESS {}
-    C: COMMIT
-    S: SUCCESS {"bookmark": "bookmark:1"}
+    {{
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bookmark:1"}
+    ----
+        C: ROLLBACK
+        S: SUCCESS {}
+    }}
 
     {*
         C: RESET
-        S: SUCCESS
+        S: SUCCESS {}
     *}
 ?}
 
@@ -32,10 +37,15 @@ S: SUCCESS {"fields": ["1"]}
 C: PULL "*"
 S: RECORD [2]
    SUCCESS {}
-C: COMMIT
-S: SUCCESS {"bookmark": "bookmark:2"}
+{{
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bookmark:2"}
+----
+    C: ROLLBACK
+    S: SUCCESS {}
+}}
 
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}

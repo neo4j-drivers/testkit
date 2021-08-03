@@ -5,7 +5,7 @@
 
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}
 
 {?
@@ -17,7 +17,7 @@
 
     {*
         C: RESET
-        S: SUCCESS
+        S: SUCCESS {}
     *}
 ?}
 
@@ -29,5 +29,5 @@ S: RECORD [2]
 
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}
