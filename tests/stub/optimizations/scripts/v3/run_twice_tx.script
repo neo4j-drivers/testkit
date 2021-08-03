@@ -1,0 +1,51 @@
+!: BOLT 3
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: ALLOW RESTART
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+
+{?
+    C: BEGIN "*"
+    S: SUCCESS {}
+    C: RUN "QUERY 1" "*" "*"
+    S: SUCCESS {"fields": ["1"]}
+    C: PULL_ALL
+    S: RECORD [1]
+       SUCCESS {}
+    {{
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bookmark:1"}
+    ----
+        C: ROLLBACK
+        S: SUCCESS {}
+    }}
+
+    {*
+        C: RESET
+        S: SUCCESS {}
+    *}
+?}
+
+C: BEGIN "*"
+S: SUCCESS {}
+C: RUN "QUERY 2" "*" "*"
+S: SUCCESS {"fields": ["1"]}
+C: PULL_ALL
+S: RECORD [2]
+   SUCCESS {}
+{{
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bookmark:2"}
+----
+    C: ROLLBACK
+    S: SUCCESS {}
+}}
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}

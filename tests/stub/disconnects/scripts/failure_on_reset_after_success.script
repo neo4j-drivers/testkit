@@ -4,9 +4,9 @@
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL {"n": 1000}
+S: RECORD [1]
    SUCCESS {}
 C: RESET
 S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to reset"}

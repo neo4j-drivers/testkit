@@ -4,7 +4,7 @@
 
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}
 C: BEGIN "*"
 S: SUCCESS {}
@@ -17,5 +17,5 @@ C: COMMIT
 S: SUCCESS {}
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}

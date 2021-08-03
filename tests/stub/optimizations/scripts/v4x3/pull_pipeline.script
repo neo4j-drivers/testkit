@@ -4,7 +4,7 @@
 
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}
 C: RUN "*" "*" "*"
    PULL "*"
@@ -13,5 +13,5 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "#TYPE#"}
 {*
     C: RESET
-    S: SUCCESS
+    S: SUCCESS {}
 *}

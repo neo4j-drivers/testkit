@@ -250,6 +250,9 @@ class TestDisconnects(TestkitTestCase):
     # FIXME: This test doesn't really fit here. It tests FAILURE handling, not
     #        handling sudden loss of connectivity.
     def test_fail_on_reset(self):
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self.skipTest("The failing RESET never gets issued by an optimized "
+                          "driver.")
         self._server.start(
             path=self.script_path("failure_on_reset_after_success.script"),
             vars=self.get_vars()
