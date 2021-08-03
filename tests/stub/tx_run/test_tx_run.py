@@ -45,6 +45,8 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             self.skipTest("Go driver does not allow closing a session with a "
                           "pending transaction")
+        if get_driver_name() in ["javascript"]:
+            self.skipTest("Sends RESET instead of ROLLBACK.")
         self._server.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )

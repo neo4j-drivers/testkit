@@ -1,6 +1,5 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: BEGIN {}
@@ -14,3 +13,7 @@ S: SUCCESS {"fields": ["x"], "qid": 7}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "bm"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

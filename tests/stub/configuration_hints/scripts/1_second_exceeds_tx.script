@@ -1,5 +1,4 @@
 !: BOLT 4.3
-!: AUTO GOODBYE
 !: ALLOW RESTART
 
 C: HELLO "*"
@@ -28,3 +27,7 @@ S: SUCCESS {}
         S: SUCCESS {}
     *}
 }}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

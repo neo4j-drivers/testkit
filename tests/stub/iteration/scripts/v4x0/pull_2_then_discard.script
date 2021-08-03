@@ -1,6 +1,5 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 {*
     C: RESET
@@ -26,3 +25,7 @@ S: SUCCESS {"type": "#MODE#"}
     C: RESET
     S: SUCCESS {}
 *}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

@@ -1,0 +1,8 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO RESET
+
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

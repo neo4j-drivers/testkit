@@ -1,6 +1,5 @@
 !: BOLT 4.3
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: ALLOW RESTART
 
 {*
@@ -55,3 +54,7 @@ S: SUCCESS {"type": "#TYPE#"}
     C: RESET
     S: SUCCESS {}
 *}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

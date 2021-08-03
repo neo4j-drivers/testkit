@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: BEGIN {"mode": "r", "db": "adb"}
@@ -12,3 +11,7 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

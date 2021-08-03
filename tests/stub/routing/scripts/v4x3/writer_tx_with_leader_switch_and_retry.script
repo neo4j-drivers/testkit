@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 !: ALLOW RESTART
 
@@ -45,3 +44,7 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 }}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

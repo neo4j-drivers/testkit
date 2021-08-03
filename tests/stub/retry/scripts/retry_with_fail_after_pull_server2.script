@@ -1,6 +1,5 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: BEGIN {}
 S: SUCCESS {}
@@ -12,3 +11,7 @@ S: SUCCESS {"fields": ["n"]}
 C: COMMIT
 S: SUCCESS {}
 #EXTRA_RESET_2#
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

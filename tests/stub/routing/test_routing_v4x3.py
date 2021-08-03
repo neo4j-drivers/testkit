@@ -695,8 +695,8 @@ class RoutingV4x3(RoutingBase):
         session.close()
         driver.close()
 
-        self.assertNotIn(self._writeServer1.address,
-                         driver.getRoutingTable(self.adb).writers)
+        self.assertIn(self._writeServer1.address,
+                      driver.getRoutingTable(self.adb).writers)
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -1671,12 +1671,15 @@ class RoutingV4x3(RoutingBase):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_default_db.script")
-        self.start_server(self._readServer1, "reader.script")
+        self.start_server(self._readServer1, "empty_reader.script")
 
         supports_multi_db = driver.supportsMultiDB()
 
+        # we don't expect the router or the reader to play the whole
+        # script
+        self._routingServer1.reset()
+        self._readServer1.reset()
         driver.close()
-        self._routingServer1.done()
         self.assertLessEqual(self._readServer1.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._readServer1.count_requests("RUN"), 0)
         self.assertEqual(self.should_support_multi_db(), supports_multi_db)
@@ -1891,7 +1894,6 @@ class RoutingV4x3(RoutingBase):
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
-
         if get_driver_name() in ['go']:
             self.skipTest("needs verifyConnectivity support")
         ip_addresses = get_ip_addresses()
@@ -1922,9 +1924,9 @@ class RoutingV4x3(RoutingBase):
             "router_yielding_reader1_and_exit.script"
         )
         driver.verifyConnectivity()
+        # we don't expect the second router to play the whole script
+        self._routingServer1.reset()
         driver.close()
-
-        self._routingServer1.done()
 
     def test_should_successfully_get_server_protocol_version(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,

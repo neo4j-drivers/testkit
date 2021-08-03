@@ -1,5 +1,4 @@
 !: BOLT 4.3
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*"}
@@ -40,3 +39,7 @@ S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
     C: RESET
     S: SUCCESS {}
 *}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

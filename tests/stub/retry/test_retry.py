@@ -55,10 +55,9 @@ class TestRetry(TestkitTestCase):
             "#EXTRA_RESET_2#": "",
             "#ERROR#": err,
         }
-        if self._driverName not in ["go", "python"]:
-            vars["#EXTRA_RESET_2#"] = "C: RESET\nS: SUCCESS {}"
-        if self._driverName in ["java", "javascript"]:
-            vars["#EXTRA_RESET_1#"] = "C: RESET\nS: SUCCESS {}"
+        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            vars["#EXTRA_RESET_1#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
+            vars["#EXTRA_RESET_2#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
 
         self._server.start(path=self.script_path(script), vars=vars)
         num_retries = 0

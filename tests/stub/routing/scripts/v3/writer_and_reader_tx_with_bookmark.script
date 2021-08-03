@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: BEGIN {"bookmarks": ["BookmarkA"]}
@@ -20,3 +19,7 @@ S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "BookmarkC"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

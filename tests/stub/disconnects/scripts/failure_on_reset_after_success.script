@@ -1,6 +1,5 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {}
@@ -10,3 +9,7 @@ S: RECORD [1]
    SUCCESS {}
 C: RESET
 S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to reset"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

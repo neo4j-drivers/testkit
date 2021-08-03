@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["NewBookmark"]}
@@ -8,3 +7,7 @@ C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["NewBookmark"]}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

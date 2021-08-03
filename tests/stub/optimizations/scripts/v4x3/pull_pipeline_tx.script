@@ -1,6 +1,5 @@
 !: BOLT 4.3
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 {*
     C: RESET
@@ -19,3 +18,7 @@ S: SUCCESS {}
     C: RESET
     S: SUCCESS {}
 *}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}
