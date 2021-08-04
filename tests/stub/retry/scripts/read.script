@@ -1,7 +1,6 @@
 !: BOLT 4
 !: AUTO HELLO
 !: AUTO RESET
-!: AUTO GOODBYE
 
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
@@ -12,3 +11,7 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

@@ -145,10 +145,9 @@ class TestRetryClustering(TestkitTestCase):
             "#EXTRA_RESET_2#": "",
             "#ERROR#": "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase",
         }
-        if get_driver_name() not in ["go", "python"]:
-            vars["#EXTRA_RESET_2#"] = "C: RESET\nS: SUCCESS {}"
-        if get_driver_name() in ["java", "javascript"]:
-            vars["#EXTRA_RESET_1#"] = "C: RESET\nS: SUCCESS {}"
+        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            vars["#EXTRA_RESET_1#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
+            vars["#EXTRA_RESET_2#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
 
         self._writeServer.start(
             path=self.script_path("retry_with_fail_after_pull_server1.script"),
@@ -194,10 +193,9 @@ class TestRetryClustering(TestkitTestCase):
             "#EXTRA_RESET_2#": "",
             "#ERROR#": err,
         }
-        if get_driver_name() not in ["go", "python"]:
-            vars["#EXTRA_RESET_2#"] = "C: RESET\nS: SUCCESS {}"
-        if get_driver_name() in ["java", "javascript"]:
-            vars["#EXTRA_RESET_1#"] = "C: RESET\nS: SUCCESS {}"
+        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            vars["#EXTRA_RESET_1#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
+            vars["#EXTRA_RESET_2#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
 
         self._writeServer.start(path=self.script_path(script), vars=vars)
         num_retries = 0

@@ -1,7 +1,6 @@
 !: BOLT #VERSION#
 !: AUTO RESET
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 {{
     C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": []}
@@ -12,3 +11,7 @@ S: SUCCESS {"fields": ["ttl", "servers"]}
 C: PULL {"n": -1}
 S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": [], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]]
    SUCCESS {"type": "r"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

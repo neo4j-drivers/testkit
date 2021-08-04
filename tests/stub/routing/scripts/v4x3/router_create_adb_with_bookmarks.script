@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO RESET
-!: AUTO GOODBYE
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
@@ -17,3 +16,7 @@ C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["SystemBookmark"]}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

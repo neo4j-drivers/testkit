@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {}
@@ -9,3 +8,7 @@ S: FAILURE #FAILURE#
    IGNORED
 C: RESET
 S: SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

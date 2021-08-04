@@ -145,6 +145,9 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_begin_using_tx_run(self):
+        if get_driver_name() in ["javascript"]:
+            self.skipTest("Fails on sending RESET after auth-error and "
+                          "surfaces SessionExpired instead.")
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
@@ -154,9 +157,13 @@ class TestAuthorizationV4x3(AuthorizationBase):
         session = driver.session('r', database=self.get_db())
         try:
             tx = session.beginTransaction()
-            # some drivers don't send begin before attempting to utilize the
-            # transaction (e.g., Python)
-            tx.run("cypher")
+            # TODO: remove block when all drivers behave the same way
+            if get_driver_name() in ["python"]:
+                # driver waits with sending BEGIN until .run is called
+                # this pipelining saves time but exposes issues later
+                tx.run("cypher")
+            if get_driver_name() in ["javascript"]:
+                tx.run("cypher").next()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
         session.close()

@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: BEGIN {}
@@ -9,3 +8,7 @@ C: RUN "RETURN 1 as n" {} {}
    PULL_ALL
 S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "Database is busy doing store copy"}
    IGNORED
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

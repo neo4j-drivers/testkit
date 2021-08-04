@@ -1,7 +1,6 @@
 !: BOLT #VERSION#
 !: AUTO RESET
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": []}
    PULL {"n": -1}
@@ -23,3 +22,7 @@ C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROU
 S: SUCCESS {"fields": ["ttl", "servers"]}
    RECORD [9223372036854775807, [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]]
    SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

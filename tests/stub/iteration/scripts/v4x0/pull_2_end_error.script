@@ -1,7 +1,6 @@
 !: BOLT 4
 !: AUTO RESET
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: RUN "RETURN 1 AS n" {} {}
    PULL { "n": 2 }
@@ -16,3 +15,7 @@ S: RECORD ["3"]
 C: PULL { "n": 2 }
 S: RECORD ["5"]
    FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

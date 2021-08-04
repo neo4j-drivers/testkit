@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}

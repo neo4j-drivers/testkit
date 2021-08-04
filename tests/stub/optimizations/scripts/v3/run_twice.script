@@ -1,6 +1,5 @@
 !: BOLT 3
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: ALLOW RESTART
 
 {*
@@ -31,3 +30,7 @@ S: RECORD [2]
     C: RESET
     S: SUCCESS {}
 *}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

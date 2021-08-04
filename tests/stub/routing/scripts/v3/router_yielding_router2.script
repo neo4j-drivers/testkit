@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO RESET
-!: AUTO GOODBYE
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
@@ -9,3 +8,7 @@ C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTIN
 S: SUCCESS {"fields": ["ttl", "servers"]}
    RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9012"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]]
    SUCCESS {"type": "r"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

@@ -1,9 +1,12 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: RUN "" "*" "*"
 S: SUCCESS {"fields": ["n"]}
 C: PULL "*"
 S: SUCCESS {"type": "w"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}
