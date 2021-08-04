@@ -9,4 +9,4 @@ C: PULL {"n": 1000}
 S: RECORD [1]
    SUCCESS {}
 C: RESET
-S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to reset"}
+S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "Unable to reset"}

@@ -8,6 +8,6 @@ S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {}
 C: PULL {"n": 1000}
-S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database is busy doing store copy"}
+S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "Database is busy doing store copy"}
 C: RESET
 S: SUCCESS {}

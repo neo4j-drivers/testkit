@@ -672,7 +672,7 @@ class RoutingV4x3(RoutingBase):
                 **self.get_vars(),
                 "#FAILURE#":
                     '{"code": '
-                    '"Neo.ClientError.General.DatabaseUnavailable", '
+                    '"Neo.TransientError.Database.DatabaseUnavailable", '
                     '"message": "Database is busy doing store copy"}'
             }
         )
@@ -684,11 +684,11 @@ class RoutingV4x3(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ['python']:
                 self.assertEqual(
-                    "<class 'neo4j.exceptions.ClientError'>",
+                    "<class 'neo4j.exceptions.TransientError'>",
                     e.errorType
                 )
                 self.assertEqual(
-                    "Neo.ClientError.General.DatabaseUnavailable",
+                    "Neo.TransientError.Database.DatabaseUnavailable",
                     e.code
                 )
             failed = True

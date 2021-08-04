@@ -10,5 +10,5 @@ C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
-S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database shut down."}
+S: FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "Database shut down."}
    <EXIT>
