@@ -1,6 +1,5 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {"mode": "r"}
@@ -8,3 +7,7 @@ C: RUN "RETURN 1 as n" {} {"mode": "r"}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

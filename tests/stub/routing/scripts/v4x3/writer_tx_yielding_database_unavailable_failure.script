@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: BEGIN {"db": "adb"}
@@ -11,3 +10,7 @@ C: PULL {"n": 1000}
 S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database is busy doing store copy"}
 C: RESET
 S: SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

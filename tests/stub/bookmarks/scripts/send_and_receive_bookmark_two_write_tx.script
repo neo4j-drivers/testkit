@@ -1,7 +1,6 @@
 !: BOLT 4
 !: AUTO HELLO
 !: AUTO RESET
-!: AUTO GOODBYE
 
 C: BEGIN {"bookmarks": ["neo4j:bookmark:v1:tx42"]}
 S: SUCCESS {}
@@ -19,3 +18,7 @@ S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

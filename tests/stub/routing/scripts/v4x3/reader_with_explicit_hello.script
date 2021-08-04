@@ -1,5 +1,4 @@
 !: BOLT #VERSION#
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
@@ -9,3 +8,7 @@ C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

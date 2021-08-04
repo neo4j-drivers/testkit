@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: RUN "RETURN 1 as n" {} {"mode": "r"}
 S: SUCCESS {"fields": ["n"]}

@@ -1,7 +1,6 @@
 !: BOLT 4.3
 !: AUTO HELLO
 !: AUTO RESET
-!: AUTO GOODBYE
 
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
@@ -13,3 +12,7 @@ S: FAILURE {"code": "Neo.ClientError.Statement.SyntaxError", "message": "X"}
 ?}
 C: RESET
 S: SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

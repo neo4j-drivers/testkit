@@ -1,6 +1,5 @@
 !: BOLT #VERSION#
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 !: ALLOW CONCURRENT
 
@@ -29,3 +28,7 @@
            SUCCESS {"type": "r"}
     }}
 +}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

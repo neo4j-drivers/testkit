@@ -1,7 +1,6 @@
 !: BOLT 3
 !: AUTO RESET
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: RUN "RETURN 1 AS n" {} {}
    PULL_ALL
@@ -13,3 +12,7 @@ S: SUCCESS {"fields": ["n.name"]}
    RECORD ["5"]
    RECORD ["6"]
    SUCCESS {"type": "w"}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

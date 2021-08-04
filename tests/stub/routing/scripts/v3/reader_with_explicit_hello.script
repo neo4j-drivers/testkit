@@ -1,5 +1,4 @@
 !: BOLT #VERSION#
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007" #EXTRA_HELLO_PROPS# #EXTR_HELLO_ROUTING_PROPS#}

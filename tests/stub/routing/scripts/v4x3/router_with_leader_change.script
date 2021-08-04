@@ -1,7 +1,6 @@
 !: BOLT #VERSION#
 !: AUTO RESET
 !: AUTO HELLO
-!: AUTO GOODBYE
 
 C: ROUTE #ROUTINGCTX# [] "adb"
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9020"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]}}
@@ -11,3 +10,7 @@ C: ROUTE #ROUTINGCTX# [] "adb"
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": [],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]}}
 C: ROUTE #ROUTINGCTX# [] "adb"
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9021"],"role": "WRITE"}, {"addresses": ["#HOST#:9006","#HOST#:9007"], "role": "READ"}, {"addresses": ["#HOST#:9000"], "role": "ROUTE"}]}}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

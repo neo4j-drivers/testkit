@@ -1,6 +1,5 @@
 !: BOLT 4
 !: AUTO HELLO
-!: AUTO GOODBYE
 !: AUTO RESET
 
 C: BEGIN {"tx_metadata": {"akey": "aval"}}
@@ -11,3 +10,7 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}
