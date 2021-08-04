@@ -317,7 +317,7 @@ class TestClientLine:
 class TestAutoLine:
     @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
     def test_matches_tag_name(self, auto_marker):
-        line = AutoLine(10, "%: MSG" % auto_marker, "MSG")
+        line = AutoLine(10, "%s: MSG" % auto_marker, "MSG")
         msg = TranslatedStructure("MSG", b"\x00")
         assert line.match(msg)
 
