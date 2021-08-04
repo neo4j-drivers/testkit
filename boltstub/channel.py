@@ -104,12 +104,15 @@ class Channel:
             self._buffered_msg = self._consume()
         return self._buffered_msg
 
+    def auto_respond(self, msg):
+        self.log("AUTO response:")
+        self.send_struct(self.bolt_protocol.get_auto_response(msg))
+
     def try_auto_consume(self, whitelist: Iterable[str]):
         next_msg = self.peek()
         if next_msg.name in whitelist:
             self._buffered_msg = None  # consume the message for real
             self.log("C: %s", next_msg)
-            self.log("AUTO response:")
-            self.send_struct(self.bolt_protocol.get_auto_response(next_msg))
+            self.auto_respond(next_msg)
             return True
         return False

@@ -8,6 +8,7 @@ from ..bolt_protocol import (
 )
 from ..errors import ServerExit
 from ..parsing import (
+    AutoLine,
     ClientLine,
     LineError,
     ServerLine,
@@ -311,6 +312,37 @@ class TestClientLine:
         line = ClientLine(10, "C: " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *received)
         assert match == line.match(msg)
+
+
+class TestAutoLine:
+    @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
+    def test_matches_tag_name(self, auto_marker):
+        line = AutoLine(10, "%: MSG" % auto_marker, "MSG")
+        msg = TranslatedStructure("MSG", b"\x00")
+        assert line.match(msg)
+
+    @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
+    def test_doesnt_match_wrong_tag_name(self, auto_marker):
+        line = AutoLine(10, "%s: MSG2" % auto_marker, "MSG2")
+        msg = TranslatedStructure("MSG", b"\x00")
+        assert not line.match(msg)
+
+    @pytest.mark.parametrize("fields", (
+        ["a"],
+        [1],
+        [1.2],
+        [-500],
+        [None],
+        [{"a": 1, "b": {"c": "c"}}],
+        [["str", 4]],
+        ["hello", "world"],
+        [["hello", "world"]],
+    ))
+    @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
+    def test_matches_any_field(self, fields, auto_marker):
+        line = AutoLine(10, "%s: MSG", "MSG")
+        msg = TranslatedStructure("MSG", b"\x00", *fields)
+        assert line.match(msg)
 
 
 @pytest.fixture()
