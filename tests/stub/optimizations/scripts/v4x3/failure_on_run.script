@@ -1,0 +1,26 @@
+!: BOLT 4.3
+!: AUTO HELLO
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+{?
+    C: BEGIN "*"
+    S: SUCCESS {}
+?}
+C: RUN "*" "*" "*"
+S: FAILURE {"code": "Neo.ClientError.Statement.SyntaxError", "message": "Git gud!"}
+{?
+    # for pipelining driver
+    C: PULL "*"
+    S: IGNORED
+?}
+{+
+    C: RESET
+    S: SUCCESS {}
++}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}
