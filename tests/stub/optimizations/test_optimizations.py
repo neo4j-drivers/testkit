@@ -177,7 +177,7 @@ class TestOptimizations(TestkitTestCase):
     def test_exactly_one_reset_on_failure(self):
         def test():
             script_path = self.script_path(
-                "v4x3", "failure_on_{}.script".format(fail_on)
+                version, "failure_on_{}.script".format(fail_on)
             )
             self._server.start(path=script_path)
             auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
@@ -198,12 +198,11 @@ class TestOptimizations(TestkitTestCase):
             driver.close()
             self._server.done()
             reset_count = self._server.count_requests("RESET")
-            self._server._dump()
             self.assertEqual(reset_count, 1)
 
-        for version in ("v3", "v4x3")[:1]:
-            for use_tx in (False, True)[:1]:
-                for fail_on in ("pull", "run", "begin")[1:2]:
+        for version in ("v3", "v4x3"):
+            for use_tx in (False, True):
+                for fail_on in ("pull", "run", "begin"):
                     if fail_on == "begin" and not use_tx:
                         continue
                     with self.subTest(version
