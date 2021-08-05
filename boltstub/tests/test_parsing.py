@@ -1,6 +1,7 @@
 from collections import defaultdict
 import lark
 import pytest
+import re
 from typing import (
     Iterator,
     Optional,
@@ -34,6 +35,24 @@ def assert_auto_block(block, lines=None):
     assert block.__class__ == parsing.AutoBlock
     if lines is not None:
         assert [line.canonical() for line in block.lines] == lines
+
+
+def assert_optional_auto_block(block, lines=None):
+    assert block.__class__ == parsing.OptionalBlock
+    assert len(block.block_list.blocks) == 1
+    assert_auto_block(block.block_list.blocks[0], lines)
+
+
+def assert_repeat0_auto_block(block, lines=None):
+    assert block.__class__ == parsing.Repeat0Block
+    assert len(block.block_list.blocks) == 1
+    assert_auto_block(block.block_list.blocks[0], lines)
+
+
+def assert_repeat1_auto_block(block, lines=None):
+    assert block.__class__ == parsing.Repeat1Block
+    assert len(block.block_list.blocks) == 1
+    assert_auto_block(block.block_list.blocks[0], lines)
 
 
 def assert_server_block(block, lines=None):
@@ -251,6 +270,26 @@ def test_auto_message_macros(extra_ws, auto_marker, unverified_script):
         assert_auto_block(inner_block, ["A: MSG"])
 
 
+@pytest.mark.parametrize(("line_marker", "assert_block_type"), (
+    ("C:", assert_client_block_block_list),
+    ("S:", assert_server_block_block_list),
+))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, {1}))
+def test_implicit_lines(line_marker, assert_block_type, extra_ws,
+                        unverified_script):
+    script = "%%s%s%%sMSG1%%sMSG2%%s" % line_marker % extra_ws
+    script = parsing.parse(script)
+    assert_block_type(script.block_list)
+
+
+@pytest.mark.parametrize("line_marker", ("A:", "?:", "*:", "+:"))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, {1}))
+def test_no_implicit_auto_lines(line_marker, extra_ws, unverified_script):
+    script = "%%s%s%%sMSG1%%sMSG2%%s" % line_marker % extra_ws
+    with pytest.raises(lark.UnexpectedCharacters):
+        parsing.parse(script)
+
+
 @pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
 def test_simple_alternative_block(extra_ws, unverified_script):
     script = "%s{{%sC:MSG1%s----%sC:MSG2%s}}%s" % extra_ws
@@ -391,16 +430,16 @@ def test_nested_blocks(outer, inner, unverified_script):
     (parsing.Repeat0Block, "{*", "*}"),
     (parsing.Repeat1Block, "{+", "+}")
 ))
-@pytest.mark.parametrize(("end_line", "fail"), (
-    ("C: YIP", False),
-    ("A: OR_THIS", False),
-    ("?: OR_THAT", False),
-    ("*: OR_THE_OTHER", False),
-    ("?: OR_EVEN_THIS", False),
-    ("S: NOPE", True),
+@pytest.mark.parametrize(("end_line", "fail", "last_block_assert"), (
+    ("C: YIP", False, assert_client_block),
+    ("A: OR_THIS", False, assert_auto_block),
+    ("?: OR_THAT", False, assert_optional_auto_block),
+    ("*: OR_THE_OTHER", False, assert_repeat0_auto_block),
+    ("+: OR_EVEN_THIS", False, assert_repeat1_auto_block),
+    ("S: NOPE", True, None),
 ))
-def test_line_after_nondeterministic_end_block(block_parts, end_line, fail,
-                                               unverified_script):
+def test_line_after_nondeterministic_end_block(
+        block_parts, end_line, fail, unverified_script, last_block_assert):
     script = """C: MSG1
     %s
         C: MSG2
@@ -416,7 +455,8 @@ def test_line_after_nondeterministic_end_block(block_parts, end_line, fail,
         assert len(script.block_list.blocks) == 3
         assert_client_block(script.block_list.blocks[0], ["C: MSG1"])
         assert isinstance(script.block_list.blocks[1], block_parts[0])
-        assert_client_block(script.block_list.blocks[2], [end_line])
+        end_line = re.sub(r"^[?*+]:", "A:", end_line)
+        last_block_assert(script.block_list.blocks[2], [end_line])
 
 
 @pytest.mark.parametrize("block_parts", (

@@ -516,6 +516,17 @@ class ClientBlock(Block):
 
 
 class AutoBlock(ClientBlock):
+    def __init__(self, line: AutoLine, line_number: int):
+        # AutoBlocks always have exactly one line. E.g., this syntax is invalid
+        #   A: HELLO
+        #      RESET
+        # Instead, it must be
+        #   A: HELLO
+        #   A: RESET
+        # This is to avoid ambiguity when it comes to `?:`, `*:`, and `+:`
+        # macros.
+        super(AutoBlock, self).__init__([line], line_number)
+
     def _consume(self, channel):
         msg = channel.consume(self.lines[self.index].line_number)
         channel.auto_respond(msg)
@@ -1151,21 +1162,16 @@ class ScriptTransformer(lark.Transformer):
 
     @lark.v_args(tree=True)
     def auto_block(self, tree):
-        return AutoBlock(
-            [child for child in tree.children if isinstance(child, AutoLine)],
-            tree.line
-        )
+        assert len(tree.children) == 1
+        assert isinstance(tree.children[0], AutoLine)
+        return AutoBlock(tree.children[0], tree.line)
 
     def _wrapped_auto_block(self, wrapper, tree):
+        assert len(tree.children) == 1
+        assert isinstance(tree.children[0], AutoLine)
         return wrapper(
             BlockList(
-                [
-                    AutoBlock(
-                        [child for child in tree.children if
-                         isinstance(child, AutoLine)],
-                        tree.line
-                    )
-                ],
+                [AutoBlock(tree.children[0], tree.line)],
                 tree.line
             ),
             tree.line

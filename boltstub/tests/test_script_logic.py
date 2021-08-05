@@ -718,7 +718,7 @@ class TestClientBlock:
             with multi_channel.assert_consume():
                 assert multi_block.try_consume(multi_channel)
         _assert_accepted_messages(multi_block, [])
-        assert not multi_block.msg_buffer
+        assert not multi_channel.msg_buffer
         assert multi_block.done()
         assert not multi_block.can_consume(multi_channel)
         assert not multi_block.try_consume(multi_channel)
@@ -727,25 +727,11 @@ class TestClientBlock:
 class TestAutoBlock:
     @pytest.fixture()
     def single_block(self):
-        return AutoBlock([
-            AutoLine(1, "A: MSG1", "MSG1"),
-        ], 1)
+        return AutoBlock(AutoLine(1, "A: MSG1", "MSG1"), 1)
 
     @pytest.fixture()
     def single_channel(self):
         return channel_factory(["MSG1", "NOMATCH"])
-
-    @pytest.fixture()
-    def multi_block(self):
-        return AutoBlock([
-            AutoLine(1, "A: MSG1", "MSG1"),
-            AutoLine(2, "A: MSG2", "MSG2"),
-            AutoLine(3, "A: MSG3", "MSG3"),
-        ], 1)
-
-    @pytest.fixture()
-    def multi_channel(self):
-        return channel_factory(["MSG1", "MSG2", "MSG3", "NOMATCH"])
 
     def test_single_block(self, single_block, single_channel):
         assert single_block.can_consume(single_channel)
@@ -769,30 +755,6 @@ class TestAutoBlock:
         assert msg.fields == ["MSG1"]
         assert not single_block.can_consume(single_channel)
         assert not single_block.try_consume(single_channel)
-
-    def test_multi_block(self, multi_block, multi_channel):
-        assert multi_block.can_consume(multi_channel)
-        assert not multi_block.done()
-        assert not multi_channel.msg_buffer
-        _assert_accepted_messages(multi_block, ["MSG1"])
-        multi_block.init(multi_channel)
-        assert not multi_block.done()
-        assert not multi_channel.msg_buffer
-        for i in range(3):
-            _assert_accepted_messages(multi_block,
-                                      ["MSG1", "MSG2", "MSG3"][i:(i + 1)])
-            assert multi_block.can_consume(multi_channel)
-            with multi_channel.assert_consume():
-                assert multi_block.try_consume(multi_channel)
-        _assert_accepted_messages(multi_block, [])
-        assert len(multi_channel.msg_buffer) == 3
-        for i, msg in enumerate(multi_channel.msg_buffer):
-            assert isinstance(msg, TranslatedStructure)
-            assert msg.name == "AUTO_REPLY"
-            assert msg.fields == ["MSG%i" % (i + 1)]
-        assert multi_block.done()
-        assert not multi_block.can_consume(multi_channel)
-        assert not multi_block.try_consume(multi_channel)
 
 
 class TestServerBlock:
