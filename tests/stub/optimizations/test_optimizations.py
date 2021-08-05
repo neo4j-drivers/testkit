@@ -173,6 +173,44 @@ class TestOptimizations(TestkitTestCase):
                                              check_no_reset=True)
                         self._server.reset()
 
+    @driver_feature(types.Feature.OPT_MINIMAL_RESETS)
+    def test_exactly_one_reset_on_failure(self):
+        def test():
+            script_path = self.script_path(
+                version, "failure_on_{}.script".format(fail_on)
+            )
+            self._server.start(path=script_path)
+            auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                            credentials="pass")
+            driver = Driver(self._backend, "bolt://%s" % self._server.address,
+                            auth)
+            session = driver.session("w")
+            if use_tx:
+                with self.assertRaises(types.DriverError):
+                    tx = session.beginTransaction()
+                    res = tx.run("CYPHER")
+                    res.next()
+            else:
+                with self.assertRaises(types.DriverError):
+                    res = session.run("CYPHER")
+                    res.next()
+            session.close()
+            driver.close()
+            self._server.done()
+            reset_count = self._server.count_requests("RESET")
+            self.assertEqual(reset_count, 1)
+
+        for version in ("v3", "v4x3"):
+            for use_tx in (False, True):
+                for fail_on in ("pull", "run", "begin"):
+                    if fail_on == "begin" and not use_tx:
+                        continue
+                    with self.subTest(version
+                                      + ("_tx" if use_tx else "_autocommit")
+                                      + "_{}".format(fail_on)):
+                        test()
+                    self._server.reset()
+
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
     def test_uses_implicit_default_arguments(self):
         def test():

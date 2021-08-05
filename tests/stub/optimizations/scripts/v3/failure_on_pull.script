@@ -1,0 +1,23 @@
+!: BOLT 3
+!: AUTO HELLO
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+{?
+    C: BEGIN "*"
+    S: SUCCESS {}
+?}
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL_ALL
+S: FAILURE {"code": "Neo.ClientError.MadeUp.Code", "message": "Something went wrong..."}
+{+
+    C: RESET
+    S: SUCCESS {}
++}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}

@@ -1,0 +1,26 @@
+!: BOLT 3
+!: AUTO HELLO
+
+{*
+    C: RESET
+    S: SUCCESS {}
+*}
+C: BEGIN "*"
+S: FAILURE {"code": "Neo.ClientError.MadeUp.Code", "message": "Something went wrong..."}
+{?
+    # for pipelining driver
+    C: RUN "*" "*" "*"
+    S: IGNORED
+    {?
+        C: PULL_ALL
+        S: IGNORED
+    ?}
+?}
+{+
+    C: RESET
+    S: SUCCESS {}
++}
+{?
+    C: GOODBYE
+    S: <EXIT>
+?}
