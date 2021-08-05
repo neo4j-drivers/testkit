@@ -306,7 +306,7 @@ class AutoLine(ClientLine):
         obj = super(AutoLine, cls).__new__(cls, *args, **kwargs)
         obj.parsed = cls.parse_line(obj)
         if obj.parsed[1]:
-            raise LineError(obj, "Auto-Line does not fields.")
+            raise LineError(obj, "Auto-Line does not allow for fields.")
         return obj
 
     def canonical(self):

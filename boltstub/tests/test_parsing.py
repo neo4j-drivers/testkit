@@ -246,24 +246,25 @@ def test_simple_dialogue(extra_ws, unverified_script):
                                       ["C: MSG1", "S: MSG2", "A: MSG3"])
 
 
-@pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
+@pytest.mark.parametrize(("auto_marker", "wrapper_block_class"), (
+    ("A", None),
+    ("?", parsing.OptionalBlock),
+    ("*", parsing.Repeat0Block),
+    ("+", parsing.Repeat1Block),
+))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0, 2}, {1}))
-def test_auto_message_macros(extra_ws, auto_marker, unverified_script):
+def test_auto_message_macros(extra_ws, auto_marker, wrapper_block_class,
+                             unverified_script):
     script = "%%s%s:%%sMSG%%s" % auto_marker % extra_ws
     script = parsing.parse(script)
-    if auto_marker == "A":
+    if not wrapper_block_class:
         assert_dialogue_blocks_block_list(script.block_list, ["A: MSG"])
     else:
         block_list = script.block_list
         assert block_list.__class__ == parsing.BlockList
         assert len(block_list.blocks) == 1
         wrapper_block = block_list.blocks[0]
-        if auto_marker == "?":
-            assert wrapper_block.__class__ == parsing.OptionalBlock
-        elif auto_marker == "*":
-            assert wrapper_block.__class__ == parsing.Repeat0Block
-        elif auto_marker == "+":
-            assert wrapper_block.__class__ == parsing.Repeat1Block
+        assert wrapper_block.__class__ == wrapper_block_class
         assert wrapper_block.block_list.__class__ == parsing.BlockList
         assert len(wrapper_block.block_list.blocks) == 1
         inner_block = wrapper_block.block_list.blocks[0]
