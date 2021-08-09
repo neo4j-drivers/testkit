@@ -299,6 +299,24 @@ class ClientLine(Line):
         return is_ == should
 
 
+class AutoLine(ClientLine):
+    allow_jolt_wildcard = False
+
+    def __new__(cls, *args, **kwargs):
+        obj = super(AutoLine, cls).__new__(cls, *args, **kwargs)
+        obj.parsed = cls.parse_line(obj)
+        if obj.parsed[1]:
+            raise LineError(obj, "Auto-Line does not allow for fields.")
+        return obj
+
+    def canonical(self):
+        return " ".join(("A:", self.parsed[0]))
+
+    def match(self, msg):
+        tag, fields = self.parsed
+        return tag == msg.name
+
+
 class ServerLine(Line):
     def __new__(cls, *args, **kwargs):
         obj = super(ServerLine, cls).__new__(cls, *args, **kwargs)
@@ -306,9 +324,19 @@ class ServerLine(Line):
         if not obj.command_match:
             obj.parsed = cls.parse_line(obj)
         else:
-            obj.parsed = None, []
-            cls._verify_command(obj)
+            if not cls._transform_auto(obj):
+                obj.parsed = None, []
+                cls._verify_command(obj)
         return obj
+
+    @staticmethod
+    def _transform_auto(obj):
+        if not obj.command_match:
+            return False
+        tag, args = obj.command_match.groups()
+        if tag != "AUTO":
+            return False
+        pass
 
     @staticmethod
     def _verify_command(obj):
@@ -485,6 +513,24 @@ class ClientBlock(Block):
     @property
     def server_lines(self):
         yield from ()
+
+
+class AutoBlock(ClientBlock):
+    def __init__(self, line: AutoLine, line_number: int):
+        # AutoBlocks always have exactly one line. E.g., this syntax is invalid
+        #   A: HELLO
+        #      RESET
+        # Instead, it must be
+        #   A: HELLO
+        #   A: RESET
+        # This is to avoid ambiguity when it comes to `?:`, `*:`, and `+:`
+        # macros.
+        super(AutoBlock, self).__init__([line], line_number)
+
+    def _consume(self, channel):
+        msg = channel.consume(self.lines[self.index].line_number)
+        channel.auto_respond(msg)
+        self.index += 1
 
 
 class ServerBlock(Block):
@@ -1069,6 +1115,11 @@ class ScriptTransformer(lark.Transformer):
                           tree.children[-1].strip())
 
     @lark.v_args(tree=True)
+    def auto_line(self, tree):
+        return AutoLine(tree.line, "".join(tree.children),
+                        tree.children[-1].strip())
+
+    @lark.v_args(tree=True)
     def server_line(self, tree):
         return ServerLine(tree.line, "".join(tree.children),
                           tree.children[-1].strip())
@@ -1108,6 +1159,35 @@ class ScriptTransformer(lark.Transformer):
             [child for child in tree.children if isinstance(child, ClientLine)],
             tree.line
         )
+
+    @lark.v_args(tree=True)
+    def auto_block(self, tree):
+        assert len(tree.children) == 1
+        assert isinstance(tree.children[0], AutoLine)
+        return AutoBlock(tree.children[0], tree.line)
+
+    def _wrapped_auto_block(self, wrapper, tree):
+        assert len(tree.children) == 1
+        assert isinstance(tree.children[0], AutoLine)
+        return wrapper(
+            BlockList(
+                [AutoBlock(tree.children[0], tree.line)],
+                tree.line
+            ),
+            tree.line
+        )
+
+    @lark.v_args(tree=True)
+    def auto_optional_block(self, tree):
+        return self._wrapped_auto_block(OptionalBlock, tree)
+
+    @lark.v_args(tree=True)
+    def auto_loop0_block(self, tree):
+        return self._wrapped_auto_block(Repeat0Block, tree)
+
+    @lark.v_args(tree=True)
+    def auto_loop1_block(self, tree):
+        return self._wrapped_auto_block(Repeat1Block, tree)
 
     @lark.v_args(tree=True)
     def server_block(self, tree):
