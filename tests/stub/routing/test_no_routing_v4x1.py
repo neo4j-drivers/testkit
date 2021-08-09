@@ -3,7 +3,7 @@ from nutkit.frontend import Driver
 from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
-    TestkitTestCase,
+    TestkitTestCase, driver_feature,
 )
 from tests.stub.shared import StubServer
 from ._routing import get_extra_hello_props
@@ -137,3 +137,150 @@ class NoRoutingV4x1(TestkitTestCase):
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self._server.done()
+
+    def test_should_error_on_rollback_failure_using_tx_rollback(self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_yielding_error_on_rollback.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb)
+        tx = session.beginTransaction()
+        res = tx.run("RETURN 1 as n")
+        summary = res.consume()
+
+        with self.assertRaises(types.DriverError) as exc:
+            tx.rollback()
+
+        session.close()
+        driver.close()
+
+        self.assertIsNotNone(exc)
+        self._assert_is_transient_exception(exc.exception)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
+        self._server.done()
+
+    @driver_feature(types.Feature.TMP_TRANSACTION_CLOSE)
+    def test_should_error_on_rollback_failure_using_tx_close(self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_yielding_error_on_rollback.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb)
+        tx = session.beginTransaction()
+        res = tx.run("RETURN 1 as n")
+        summary = res.consume()
+
+        with self.assertRaises(types.DriverError) as exc:
+            tx.close()
+
+        session.close()
+        driver.close()
+
+        self.assertIsNotNone(exc)
+        self._assert_is_transient_exception(exc.exception)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
+        self._server.done()
+
+    def test_should_error_on_rollback_failure_using_session_close(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_yielding_error_on_rollback.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb)
+        tx = session.beginTransaction()
+        res = tx.run("RETURN 1 as n")
+        summary = res.consume()
+
+        with self.assertRaises(types.DriverError) as exc:
+            session.close()
+
+        driver.close()
+
+        self.assertIsNotNone(exc)
+        self._assert_is_transient_exception(exc.exception)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
+        self._server.done()
+
+    @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
+    def test_should_accept_custom_fetch_size_using_driver_configuration(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_with_custom_fetch_size.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007", fetchSize=2)
+
+        session = driver.session('w', database=self.adb)
+        res = session.run("RETURN 1 as n")
+        records = list(res)
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)])], records)
+        self._server.done()
+
+    def test_should_accept_custom_fetch_size_using_session_configuration(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_with_custom_fetch_size.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb, fetchSize=2)
+        res = session.run("RETURN 1 as n")
+        records = list(res)
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)])], records)
+        self._server.done()
+
+    def _assert_is_transient_exception(self, e):
+        if get_driver_name() in ["java"]:
+            self.assertEqual("org.neo4j.driver.exceptions.TransientException",
+                             e.errorType)
+        self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
+                         e.code)
+        self.assertEqual("Unable to rollback", e.msg)

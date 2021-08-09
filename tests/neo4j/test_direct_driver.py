@@ -122,10 +122,6 @@ class TestDirectDriver(TestkitTestCase):
             return
         self.assertEqual(exc.code,
                          "Neo.ClientError.Database.DatabaseNotFound")
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["java"]:
-            # does not set exception message
-            return
         self.assertIn("test-database", exc.msg)
         self.assertIn("exist", exc.msg)
         if get_driver_name() in ["python"]:
