@@ -4,18 +4,19 @@
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 {{
-    C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
-       PULL {"n": 1000}
+    C: RUN "RETURN 1 as n" {} {"mode": "r"}
+       PULL_ALL
     S: SUCCESS {"fields": ["n"]}
        RECORD [1]
        SUCCESS {"type": "r"}
 ----
-    C: RUN "RETURN 5 as n" {} {"db": "adb"}
-       PULL {"n": 1000}
+    C: RUN "RETURN 5 as n" {} {}
+       PULL_ALL
     S: SUCCESS {"fields": ["n"]}
        RECORD [1]
        SUCCESS {"type": "r"}
 }}
+
 {?
     C: GOODBYE
     S: <EXIT>
