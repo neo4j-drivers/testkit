@@ -158,6 +158,9 @@ class TestDataTypes(TestkitTestCase):
         self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
 
     def test_should_echo_relationship(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["java"]:
+            self.skipTest("Backend does not serialize relationships.")
         self.create_driver_and_session()
 
         result = self._session.run("CREATE (a)-[r:KNOWS {since:1999}]->(b) "
@@ -179,6 +182,9 @@ class TestDataTypes(TestkitTestCase):
         ))
 
     def test_should_echo_path(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["java"]:
+            self.skipTest("Backend does not serialize paths.")
         self.create_driver_and_session()
 
         result = self._session.run("CREATE p=(a)-[ab:X]->(b)-[bc:X]->(c) "
@@ -211,7 +217,6 @@ class TestDataTypes(TestkitTestCase):
 
     # Work in progress
     def test_should_echo_very_long_map(self):
-
         test_list = [
                        types.CypherNull(None),
                        types.CypherInt(1),
@@ -230,7 +235,6 @@ class TestDataTypes(TestkitTestCase):
             self.verify_can_echo(types.CypherMap(long_map))
 
     def test_should_echo_nested_map(self):
-
         test_maps = {
             "a": types.CypherMap({"a": types.CypherInt(1),
                                   "b": types.CypherInt(2),
