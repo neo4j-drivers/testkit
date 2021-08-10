@@ -19,7 +19,9 @@ drivers = [
         ],
         "branch-translation": {
             "4.0": "4.2",
-            "4.1": "4.2"
+            "4.1": "4.2",
+            # TODO: until a 4.4 branch has been created
+            "4.4": "4.3",
         }
     },
     {
@@ -33,6 +35,10 @@ drivers = [
             "X  X     X",
             " XX   XXX ",
         ],
+        "branch-translation": {
+            # TODO: until a 4.4 branch has been created
+            "4.4": "4.3",
+        }
     },
     {
         "name": "python",
@@ -69,6 +75,10 @@ drivers = [
             " XX X    X",
             " XX X    X",
         ],
+        "branch-translation": {
+            # TODO: until a 4.4 branch has been created
+            "4.4": "4.3",
+        }
     }
 ]
 
@@ -129,7 +139,7 @@ def setup_environment():
     os.makedirs(temp_path, exist_ok=True)
     rmdir(driver_repo_path)
 
-    branch = os.environ.get("TEST_DRIVER_BRANCH", "4.3")
+    branch = os.environ.get("TEST_DRIVER_BRANCH", "4.4")
 
     return driver_repo_path, branch
 
@@ -198,9 +208,9 @@ def main():
 
     for driver in drivers:
         print_art(driver, branch, 2)
-        branch = translate_branch(driver, branch)
+        translated_branch = translate_branch(driver, branch)
         try:
-            clone_repo(driver, branch, driver_repo_path)
+            clone_repo(driver, translated_branch, driver_repo_path)
             update_environment(driver, driver_repo_path)
             success = run() and success
         finally:
