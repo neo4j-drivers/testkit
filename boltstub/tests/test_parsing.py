@@ -1,4 +1,6 @@
 from collections import defaultdict
+import itertools
+
 import lark
 import pytest
 import re
@@ -238,12 +240,15 @@ def test_auto_line_takes_no_fields(auto_marker, fields, unverified_script):
         parsing.parse(script)
 
 
+@pytest.mark.parametrize("order", itertools.permutations(range(3), 3))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(7, {0, 6}, {1, 3, 5}))
-def test_simple_dialogue(extra_ws, unverified_script):
-    script = "%sC:%sMSG1%sS:%sMSG2%sA:%sMSG3%s" % extra_ws
+def test_simple_dialogue(order, extra_ws, unverified_script):
+    lines = ["C:%sMSG1", "S:%sMSG2", "A:%sMSG3"]
+    script = "%s" + "%s".join(lines[i] for i in order) + "%s"
+    script = script % extra_ws
     script = parsing.parse(script)
     assert_dialogue_blocks_block_list(script.block_list,
-                                      ["C: MSG1", "S: MSG2", "A: MSG3"])
+                                      [lines[i] % " " for i in order])
 
 
 @pytest.mark.parametrize(("auto_marker", "wrapper_block_class"), (

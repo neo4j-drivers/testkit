@@ -1143,10 +1143,10 @@ class ScriptTransformer(lark.Transformer):
             if isinstance(child, lark.Token):
                 continue
             if (blocks
-                    and ((isinstance(child, ClientBlock)
-                          and isinstance(blocks[-1], ClientBlock))
-                         or (isinstance(child, ServerBlock)
-                             and isinstance(blocks[-1], ServerBlock)))):
+                    and ((child.__class__ == ClientBlock
+                          and blocks[-1].__class__ == ClientBlock)
+                         or (child.__class__ == ServerBlock
+                             and blocks[-1].__class__ == ServerBlock))):
                 blocks[-1].lines.extend(child.lines)
             else:
                 blocks.append(child)
@@ -1156,19 +1156,19 @@ class ScriptTransformer(lark.Transformer):
     @lark.v_args(tree=True)
     def client_block(self, tree):
         return ClientBlock(
-            [child for child in tree.children if isinstance(child, ClientLine)],
+            [child for child in tree.children if child.__class__ == ClientLine],
             tree.line
         )
 
     @lark.v_args(tree=True)
     def auto_block(self, tree):
         assert len(tree.children) == 1
-        assert isinstance(tree.children[0], AutoLine)
+        assert tree.children[0].__class__ == AutoLine
         return AutoBlock(tree.children[0], tree.line)
 
     def _wrapped_auto_block(self, wrapper, tree):
         assert len(tree.children) == 1
-        assert isinstance(tree.children[0], AutoLine)
+        assert tree.children[0].__class__ == AutoLine
         return wrapper(
             BlockList(
                 [AutoBlock(tree.children[0], tree.line)],
@@ -1192,7 +1192,7 @@ class ScriptTransformer(lark.Transformer):
     @lark.v_args(tree=True)
     def server_block(self, tree):
         return ServerBlock(
-            [child for child in tree.children if isinstance(child, ServerLine)],
+            [child for child in tree.children if child.__class__ == ServerLine],
             tree.line
         )
 
