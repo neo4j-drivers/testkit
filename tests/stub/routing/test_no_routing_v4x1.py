@@ -140,6 +140,10 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_error_on_rollback_failure_using_tx_rollback(self):
+        # TODO There is a pending unification task to fix this.
+        # Once fixed, this block should be removed.
+        if get_driver_name() in ["go"]:
+            self.skipTest("There is a pending unification task to fix this.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
@@ -169,6 +173,10 @@ class NoRoutingV4x1(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_TRANSACTION_CLOSE)
     def test_should_error_on_rollback_failure_using_tx_close(self):
+        # TODO There is a pending unification task to fix this.
+        # Once fixed, this block should be removed.
+        if get_driver_name() in ["go"]:
+            self.skipTest("There is a pending unification task to fix this.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
@@ -198,6 +206,10 @@ class NoRoutingV4x1(TestkitTestCase):
 
     def test_should_error_on_rollback_failure_using_session_close(
             self):
+        # TODO There is a pending unification task to fix this.
+        # Once fixed, this block should be removed.
+        if get_driver_name() in ["javascript", "go"]:
+            self.skipTest("There is a pending unification task to fix this.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
@@ -279,6 +291,6 @@ class NoRoutingV4x1(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)
-            self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
-                             e.code)
-            self.assertEqual("Unable to rollback", e.msg)
+        self.assertEqual("Unable to rollback", e.msg)
+        self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
+                         e.code)
