@@ -281,6 +281,6 @@ class NoRoutingV4x1(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)
-        self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
-                         e.code)
-        self.assertEqual("Unable to rollback", e.msg)
+            self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
+                             e.code)
+            self.assertEqual("Unable to rollback", e.msg)
