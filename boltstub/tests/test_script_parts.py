@@ -16,13 +16,16 @@ from ..parsing import (
 
 
 class TestClientLine:
+    LINE_MARKER = "C"
+    LINE_CLS = ClientLine
+
     def test_matches_tag_name(self):
-        line = ClientLine(10, "C: MSG", "MSG")
+        line = self.LINE_CLS(10, "%s: MSG" % self.LINE_MARKER, "MSG")
         msg = TranslatedStructure("MSG", b"\x00")
         assert line.match(msg)
 
     def test_doesnt_match_wrong_tag_name(self):
-        line = ClientLine(10, "C: MSG2", "MSG2")
+        line = self.LINE_CLS(10, "%s: MSG2" % self.LINE_MARKER, "MSG2")
         msg = TranslatedStructure("MSG", b"\x00")
         assert not line.match(msg)
 
@@ -41,7 +44,7 @@ class TestClientLine:
     def test_matches_fields(self, fields, wildcard):
         msg_fields = ["*" if wildcard else f for f in fields]
         content = "MSG " + " ".join(map(json.dumps, msg_fields))
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
@@ -62,7 +65,7 @@ class TestClientLine:
     def test_doesnt_match_wrong_fields(self, expected, received, flip):
         content = "MSG " + " ".join(map(json.dumps,
                                         received if flip else expected))
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00",
                                   *(expected if flip else received))
         assert not line.match(msg)
@@ -72,7 +75,7 @@ class TestClientLine:
     ))
     def test_matches_jolt_fields(self, field_repr, fields):
         content = "MSG " + field_repr
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
@@ -83,7 +86,7 @@ class TestClientLine:
     ))
     def test_matches_jolt_wildcard(self, field_repr, fields):
         content = "MSG " + field_repr
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
@@ -95,7 +98,7 @@ class TestClientLine:
     ))
     def test_does_not_match_wrong_jolt_fields(self, field_repr, fields):
         content = "MSG " + field_repr
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert not line.match(msg)
 
@@ -109,7 +112,7 @@ class TestClientLine:
     def test_does_not_matches_jolt_wildcard_wrong_fields(self, field_repr,
                                                          fields):
         content = "MSG " + field_repr
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert not line.match(msg)
 
@@ -139,7 +142,7 @@ class TestClientLine:
     ))
     def test_does_match_nested_jolt_wildcard(self, field_repr, fields):
         content = "MSG " + field_repr
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
@@ -170,7 +173,7 @@ class TestClientLine:
     def test_does_match_nested_jolt_wildcard_wrong_fields(self, field_repr,
                                                           fields):
         content = "MSG " + field_repr
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert not line.match(msg)
 
@@ -309,40 +312,14 @@ class TestClientLine:
                 expected[0] = {"key": expected[0]}
                 received[0] = {"key": received[0]}
         content = "MSG " + " ".join(map(json.dumps, expected))
-        line = ClientLine(10, "C: " + content, content)
+        line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *received)
         assert match == line.match(msg)
 
 
-class TestAutoLine:
-    @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
-    def test_matches_tag_name(self, auto_marker):
-        line = AutoLine(10, "%s: MSG" % auto_marker, "MSG")
-        msg = TranslatedStructure("MSG", b"\x00")
-        assert line.match(msg)
-
-    @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
-    def test_doesnt_match_wrong_tag_name(self, auto_marker):
-        line = AutoLine(10, "%s: MSG2" % auto_marker, "MSG2")
-        msg = TranslatedStructure("MSG", b"\x00")
-        assert not line.match(msg)
-
-    @pytest.mark.parametrize("fields", (
-        ["a"],
-        [1],
-        [1.2],
-        [-500],
-        [None],
-        [{"a": 1, "b": {"c": "c"}}],
-        [["str", 4]],
-        ["hello", "world"],
-        [["hello", "world"]],
-    ))
-    @pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
-    def test_matches_any_field(self, fields, auto_marker):
-        line = AutoLine(10, "%s: MSG", "MSG")
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert line.match(msg)
+class TestAutoLine(TestClientLine):
+    LINE_MARKER = "A"
+    LINE_CLS = AutoLine
 
 
 @pytest.fixture()
