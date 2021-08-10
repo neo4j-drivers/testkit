@@ -300,21 +300,9 @@ class ClientLine(Line):
 
 
 class AutoLine(ClientLine):
-    allow_jolt_wildcard = False
-
-    def __new__(cls, *args, **kwargs):
-        obj = super(AutoLine, cls).__new__(cls, *args, **kwargs)
-        obj.parsed = cls.parse_line(obj)
-        if obj.parsed[1]:
-            raise LineError(obj, "Auto-Line does not allow for fields.")
-        return obj
-
     def canonical(self):
-        return " ".join(("A:", self.parsed[0]))
-
-    def match(self, msg):
-        tag, fields = self.parsed
-        return tag == msg.name
+        return " ".join(("A:", self.parsed[0],
+                         *map(json.dumps, self.parsed[1])))
 
 
 class ServerLine(Line):
@@ -518,10 +506,10 @@ class ClientBlock(Block):
 class AutoBlock(ClientBlock):
     def __init__(self, line: AutoLine, line_number: int):
         # AutoBlocks always have exactly one line. E.g., this syntax is invalid
-        #   A: HELLO
+        #   A: HELLO "*"
         #      RESET
         # Instead, it must be
-        #   A: HELLO
+        #   A: HELLO "*"
         #   A: RESET
         # This is to avoid ambiguity when it comes to `?:`, `*:`, and `+:`
         # macros.

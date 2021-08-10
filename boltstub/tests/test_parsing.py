@@ -75,6 +75,24 @@ def assert_auto_block_block_list(block_list, lines=None):
     assert_auto_block(block_list.blocks[0], lines=lines)
 
 
+def assert_optional_auto_block_list(block_list, lines=None):
+    assert block_list.__class__ == parsing.BlockList
+    assert len(block_list.blocks) == 1
+    assert_optional_auto_block(block_list.blocks[0], lines=lines)
+
+
+def assert_repeat0_auto_block_list(block_list, lines=None):
+    assert block_list.__class__ == parsing.BlockList
+    assert len(block_list.blocks) == 1
+    assert_repeat0_auto_block(block_list.blocks[0], lines=lines)
+
+
+def assert_repeat1_auto_block_list(block_list, lines=None):
+    assert block_list.__class__ == parsing.BlockList
+    assert len(block_list.blocks) == 1
+    assert_repeat1_auto_block(block_list.blocks[0], lines=lines)
+
+
 def assert_server_block_block_list(block_list, lines=None):
     assert block_list.__class__ == parsing.BlockList
     assert len(block_list.blocks) == 1
@@ -207,7 +225,7 @@ bad_fields = (
     *(([bf, gf], True) for gf in good_fields for bf in bad_fields),
     *(([gf, gf], False) for gf in good_fields),
 ))
-@pytest.mark.parametrize("line_type", ("C:", "S:"))
+@pytest.mark.parametrize("line_type", ("C:", "S:", "A:", "?:", "*:", "+:"))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, None, {0, 1, 2}))
 def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
     if len(fields) == 1:
@@ -223,21 +241,18 @@ def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
     else:
         script = parsing.parse(script)
         block_assert_fns = {"C:": assert_client_block_block_list,
-                            "S:": assert_server_block_block_list}
+                            "S:": assert_server_block_block_list,
+                            "A:": assert_auto_block_block_list,
+                            "?:": assert_optional_auto_block_list,
+                            "*:": assert_repeat0_auto_block_list,
+                            "+:": assert_repeat1_auto_block_list}
+        if line_type in ("?:", "*:", "+:"):
+            canonical_line_type = "A:"
+        else:
+            canonical_line_type = line_type
         block_assert_fns[line_type](script.block_list, [
-            "%s MSG %s" % (line_type, " ".join(fields))
+            "%s MSG %s" % (canonical_line_type, " ".join(fields))
         ])
-
-
-@pytest.mark.parametrize("auto_marker", ("A", "?", "+", "*"))
-@pytest.mark.parametrize("fields", (
-    *([field] for field in good_fields),
-    *([gf1, gf2] for gf1 in good_fields for gf2 in good_fields),
-))
-def test_auto_line_takes_no_fields(auto_marker, fields, unverified_script):
-    script = auto_marker + ": MSG " + " ".join(fields)
-    with pytest.raises(parsing.LineError):
-        parsing.parse(script)
 
 
 @pytest.mark.parametrize("order", itertools.permutations(range(3), 3))
