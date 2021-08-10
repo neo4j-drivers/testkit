@@ -1,10 +1,7 @@
 !: BOLT 4.4
-!: AUTO HELLO
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"{}": "*"}
 S: SUCCESS {}
 C: RUN {"U": "*"}{"{}": "*"} {"{}": "*"}
@@ -15,11 +12,5 @@ S: RECORD [1]
    SUCCESS {"type": "r"}
 C: ROLLBACK
 S: SUCCESS {}
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

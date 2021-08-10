@@ -1,11 +1,8 @@
 !: BOLT 4.3
-!: AUTO HELLO
 !: ALLOW RESTART
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 
 {?
     C: RUN "QUERY 1" "*" "*"
@@ -16,10 +13,7 @@
        SUCCESS {"has_more": true}
     C: DISCARD "*"
     S: SUCCESS {"type": "#TYPE#"}
-    {*
-        C: RESET
-        S: SUCCESS {}
-    *}
+    *: RESET
 ?}
 
 C: RUN "QUERY 2" "*" "*"
@@ -31,11 +25,5 @@ S: RECORD [2]
 C: DISCARD "*"
 S: SUCCESS {"type": "#TYPE#"}
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

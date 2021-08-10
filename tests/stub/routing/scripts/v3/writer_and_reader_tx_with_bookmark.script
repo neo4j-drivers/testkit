@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"bookmarks": ["BookmarkA"]}
 S: SUCCESS {}
 C: RUN "CREATE (n {name:'Bob'})" {} {}
@@ -10,6 +10,7 @@ S: SUCCESS {}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "BookmarkB"}
+*: RESET
 C: BEGIN {"bookmarks": ["BookmarkB"]}
 S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
@@ -19,7 +20,5 @@ S: SUCCESS {"fields": ["name"]}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "BookmarkC"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

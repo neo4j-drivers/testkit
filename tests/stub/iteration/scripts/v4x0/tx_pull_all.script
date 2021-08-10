@@ -1,7 +1,7 @@
 !: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "CYPHER" {} {}
@@ -13,7 +13,5 @@ S: SUCCESS {"fields": ["x"], "qid": 7}
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "bm"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

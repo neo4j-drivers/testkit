@@ -1,11 +1,8 @@
 !: BOLT 4.3
-!: AUTO HELLO
 !: ALLOW RESTART
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 
 {?
     C: BEGIN "*"
@@ -25,11 +22,7 @@
         C: ROLLBACK
         S: SUCCESS {}
     }}
-
-    {*
-        C: RESET
-        S: SUCCESS {}
-    *}
+    *: RESET
 ?}
 
 C: BEGIN "*"
@@ -50,11 +43,5 @@ S: SUCCESS {"type": "#TYPE#"}
     S: SUCCESS {}
 }}
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

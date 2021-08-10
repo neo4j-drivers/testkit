@@ -1,8 +1,8 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 !: ALLOW RESTART
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"db": "adb"}
 S: SUCCESS {}
 {{
@@ -10,6 +10,7 @@ S: SUCCESS {}
        PULL {"n": 1000}
     S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
        IGNORED
+    *: RESET
     {?
         # Drivers that keep the connection alive after NotALeader will take this
         # path.
@@ -44,7 +45,5 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 }}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

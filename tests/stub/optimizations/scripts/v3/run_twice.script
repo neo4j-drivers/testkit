@@ -1,11 +1,8 @@
 !: BOLT 3
-!: AUTO HELLO
 !: ALLOW RESTART
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 
 {?
     C: RUN "QUERY 1" "*" "*"
@@ -14,10 +11,7 @@
     S: RECORD [1]
        SUCCESS {"type": "#TYPE#"}
 
-    {*
-        C: RESET
-        S: SUCCESS {}
-    *}
+    *: RESET
 ?}
 
 C: RUN "QUERY 2" "*" "*"
@@ -26,11 +20,5 @@ C: PULL_ALL
 S: RECORD [2]
    SUCCESS {"type": "#TYPE#"}
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

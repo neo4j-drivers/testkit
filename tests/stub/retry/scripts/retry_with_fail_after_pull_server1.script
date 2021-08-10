@@ -1,6 +1,6 @@
 !: BOLT 4
-!: AUTO HELLO
 
+A: HELLO {"{}": "*"}
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
@@ -10,7 +10,4 @@ S: SUCCESS {}
 C: RESET
 S: SUCCESS {}
 #EXTRA_RESET_1#
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+?: GOODBYE

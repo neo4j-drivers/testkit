@@ -1,7 +1,7 @@
 !: BOLT 3
-!: AUTO RESET
-!: AUTO HELLO
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "RETURN 1 AS n" {} {"[mode]": "*"}
    PULL_ALL
 S: SUCCESS {"fields": ["n.name"]}
@@ -12,7 +12,5 @@ S: SUCCESS {"fields": ["n.name"]}
    RECORD ["5"]
    RECORD ["6"]
    SUCCESS {"type": "#MODE#"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

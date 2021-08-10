@@ -1,8 +1,8 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 !: ALLOW CONCURRENT
 
+A: HELLO {"{}": "*"}
+*: RESET
 {+
     {{
         C: RUN "RETURN 1 as n" {} {"mode": "r"}
@@ -27,8 +27,6 @@
            RECORD [1]
            SUCCESS {"type": "r"}
     }}
+    *: RESET
 +}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+?: GOODBYE

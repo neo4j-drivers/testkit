@@ -1,20 +1,11 @@
 !: BOLT 4.3
-!: AUTO HELLO
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "*" "*" "*"
    PULL "*"
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "#TYPE#"}
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

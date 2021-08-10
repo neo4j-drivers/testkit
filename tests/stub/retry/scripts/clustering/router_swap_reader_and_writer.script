@@ -9,7 +9,4 @@ S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "ro
     C: ROUTE #ROUTINGCTX# [] null
     S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"WRITE"}, {"addresses": ["#HOST#:9003"], "role":"READ"}]}}
 ?}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+?: GOODBYE

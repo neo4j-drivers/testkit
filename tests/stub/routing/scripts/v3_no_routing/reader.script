@@ -1,8 +1,8 @@
 !: BOLT #VERSION#
-!: AUTO RESET
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
 {{
     C: RUN "RETURN 1 as n" {} {"mode": "r"}
        PULL_ALL
@@ -16,8 +16,5 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
        RECORD [1]
        SUCCESS {"type": "r"}
 }}
-
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

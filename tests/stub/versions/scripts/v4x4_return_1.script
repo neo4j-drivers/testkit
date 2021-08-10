@@ -1,9 +1,9 @@
 !: BOLT 4.4
-!: AUTO RESET
 !: AUTO GOODBYE
 
-C: HELLO "*"
+C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
 C: RUN "RETURN 1 AS n" {} {}
    PULL {"n": 1000}
 S: SUCCESS {"fields": ["n.name"]}

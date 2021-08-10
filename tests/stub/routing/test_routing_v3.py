@@ -57,7 +57,7 @@ class RoutingV3(RoutingV4x3):
         # instead of an empty routing table starting from version 4
         self.start_server(
             self._routingServer1,
-            "router_yielding_empty_response.script"
+            "router_yielding_empty_response_then_shuts_down.script"
         )
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)

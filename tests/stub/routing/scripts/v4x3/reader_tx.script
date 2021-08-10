@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"mode": "r", "db": "adb"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
@@ -11,7 +11,5 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

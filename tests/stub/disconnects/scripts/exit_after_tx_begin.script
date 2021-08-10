@@ -1,6 +1,6 @@
 !: BOLT 4
-!: AUTO HELLO
 !: AUTO RESET
 
+A: HELLO {"{}": "*"}
 C: BEGIN "*"
 S: <EXIT>

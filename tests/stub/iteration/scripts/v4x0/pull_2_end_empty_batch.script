@@ -1,7 +1,7 @@
 !: BOLT 4
-!: AUTO RESET
-!: AUTO HELLO
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "RETURN 1 AS n" {} {}
    PULL { "n": 2 }
 S: SUCCESS {"fields": ["n.name"]}
@@ -14,7 +14,5 @@ S: RECORD ["3"]
    SUCCESS {"has_more": true}
 C: PULL { "n": 2 }
 S: SUCCESS {"type": "w"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

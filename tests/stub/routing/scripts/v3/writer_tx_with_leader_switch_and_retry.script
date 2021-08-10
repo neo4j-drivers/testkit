@@ -1,8 +1,8 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 !: ALLOW RESTART
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {}
 S: SUCCESS {}
 {{
@@ -10,7 +10,8 @@ S: SUCCESS {}
        PULL_ALL
     S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
        IGNORED
-   {?
+    *: RESET
+    {?
         # Driver that keep the connection alive after NotALeader will take this
         # path.
         C: BEGIN {}
@@ -44,7 +45,5 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 }}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

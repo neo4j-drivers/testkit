@@ -1,13 +1,11 @@
 !: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "RETURN 1 as n" {} {"tx_timeout": 17}
    PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "w"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE
