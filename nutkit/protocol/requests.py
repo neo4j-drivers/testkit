@@ -51,6 +51,10 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
+        # TODO: remove assertion and condition as soon as all drivers support
+        #       driver-scoped fetch-size config
+        from .feature import Feature
+        assert hasattr(Feature, "TMP_DRIVER_FETCH_SIZE")
         if fetchSize is not None:
             self.fetchSize = fetchSize
 
