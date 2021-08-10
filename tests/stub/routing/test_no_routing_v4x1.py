@@ -3,7 +3,8 @@ from nutkit.frontend import Driver
 from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
-    TestkitTestCase, driver_feature,
+    TestkitTestCase,
+    driver_feature,
 )
 from tests.stub.shared import StubServer
 from ._routing import get_extra_hello_props
@@ -161,7 +162,6 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertIsNotNone(exc)
         self._assert_is_transient_exception(exc.exception)
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
@@ -191,7 +191,6 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertIsNotNone(exc)
         self._assert_is_transient_exception(exc.exception)
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
@@ -220,7 +219,6 @@ class NoRoutingV4x1(TestkitTestCase):
 
         driver.close()
 
-        self.assertIsNotNone(exc)
         self._assert_is_transient_exception(exc.exception)
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
