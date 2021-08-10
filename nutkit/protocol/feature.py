@@ -48,6 +48,7 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the TransactionClose request
     TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented fetch size configuration on driver creation
+    # TODO Update this one the decision has been made.
+    # Temporary driver feature. There is a pending decision on whether it should
+    # be supported in all drivers or be removed from all of them.
     TMP_DRIVER_FETCH_SIZE = "Temporary:DriverFetchSize"
