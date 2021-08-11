@@ -1,23 +1,35 @@
 !: BOLT #VERSION#
-!: AUTO RESET
+!: AUTO GOODBYE
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+# Added this block for GO
+{?
+    C: RESET
+    S: SUCCESS {}
+?}
 {{
-    C: RUN "RETURN 1 as n" {} {"mode": "r"}
+    C: RUN "RETURN 1 as n" {} {}
     S: SUCCESS {"fields": ["n"]}
     C: PULL_ALL
     S: RECORD [1]
-       SUCCESS {"type": "r"}
+       RECORD [5]
+       RECORD [7]
+       SUCCESS {}
 ----
     C: RUN "RETURN 5 as n" {} {}
     S: SUCCESS {"fields": ["n"]}
     C: PULL_ALL
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
+    S: <NOOP>
+       RECORD [1]
+       <NOOP>
+       RECORD [5]
+       <NOOP>
+       <NOOP>
+       RECORD [7]
+       SUCCESS {}
 }}
-
 {?
-    C: GOODBYE
-    S: <EXIT>
+    C: RESET
+    S: SUCCESS {}
 ?}
