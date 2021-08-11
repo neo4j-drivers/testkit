@@ -7,11 +7,7 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 {?
     C: ROUTE #ROUTINGCTX# [] "system"
     S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
-    {?
-        C: GOODBYE
-        S: SUCCESS {}
-           <EXIT>
-    ?}
+    ?: GOODBYE
 ?}
 C: ROUTE #ROUTINGCTX# [ "SystemBookmark" ] "adb"
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}

@@ -1,8 +1,8 @@
 !: BOLT #VERSION#
-!: AUTO RESET
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
 C: BEGIN {"db": "system"}
 S: SUCCESS {}
 C: RUN "CREATE database foo" {} {}
@@ -11,12 +11,11 @@ S: SUCCESS {"fields": []}
    SUCCESS {"type": "w"}
 C: COMMIT
 S: SUCCESS {"bookmark": "SystemBookmark"}
+*: RESET
 C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["SystemBookmark"]}
    PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

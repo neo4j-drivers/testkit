@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"mode": "r"}
 S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
    <EXIT>

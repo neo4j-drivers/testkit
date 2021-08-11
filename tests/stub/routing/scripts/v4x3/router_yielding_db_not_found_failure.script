@@ -1,15 +1,9 @@
 !: BOLT #VERSION#
-!: AUTO RESET
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
 C: ROUTE #ROUTINGCTX# [] "adb"
 S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
-{?
-    C: RESET
-    S: SUCCESS {}
-?}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

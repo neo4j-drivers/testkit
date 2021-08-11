@@ -1,10 +1,7 @@
 !: BOLT 3
-!: AUTO HELLO
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 {?
     C: BEGIN "*"
     S: SUCCESS {}
@@ -16,11 +13,5 @@ S: FAILURE {"code": "Neo.ClientError.Statement.SyntaxError", "message": "Git gud
     C: PULL_ALL
     S: IGNORED
 ?}
-{+
-    C: RESET
-    S: SUCCESS {}
-+}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
++: RESET
+?: GOODBYE

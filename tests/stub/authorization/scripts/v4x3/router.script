@@ -1,13 +1,7 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
 
+A: HELLO {"{}": "*"}
 C: ROUTE #ROUTINGCTX# [] "adb"
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
-{?
-    C: RESET
-    S: SUCCESS {}
-?}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+?: RESET
+?: GOODBYE

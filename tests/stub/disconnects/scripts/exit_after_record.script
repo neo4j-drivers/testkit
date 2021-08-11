@@ -1,7 +1,7 @@
 !: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["n"]}
 C: PULL "*"

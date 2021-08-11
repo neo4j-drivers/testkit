@@ -1612,7 +1612,7 @@ class RoutingV4x3(RoutingBase):
         )
         self.start_server(
             self._routingServer2,
-            "router_yielding_empty_response.script"
+            "router_yielding_empty_response_then_shuts_down.script"
         )
         self.start_server(self._routingServer3, "router_adb.script")
         self.start_server(self._readServer1, "reader_tx.script")
@@ -1701,7 +1701,7 @@ class RoutingV4x3(RoutingBase):
                         self._userAgent, resolver)
         self.start_server(
             self._routingServer1,
-            "router_yielding_empty_response.script"
+            "router_yielding_empty_response_then_shuts_down.script"
         )
         self.start_server(self._routingServer2, "router_adb.script")
         self.start_server(self._readServer1, "reader.script")

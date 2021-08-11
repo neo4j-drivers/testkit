@@ -1,10 +1,7 @@
 !: BOLT 4.4
-!: AUTO HELLO
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN {"U": "*"}{"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": {"Z": "*"}, "[qid]": -1}
@@ -19,11 +16,5 @@ C: PULL {"n": {"Z": "*"}, "[qid]": -1}
 S: RECORD [1]
    RECORD [2]
    SUCCESS {"type": "r"}
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

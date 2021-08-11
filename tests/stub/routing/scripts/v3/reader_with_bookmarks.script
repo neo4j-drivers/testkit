@@ -1,13 +1,11 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "RETURN 1 as n" {} {"mode": "r", "bookmarks{}": ["sys:1234", "foo:5678"]}
    PULL_ALL
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r", "bookmark": "foo:6678"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

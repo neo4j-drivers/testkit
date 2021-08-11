@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"db": "adb", "bookmarks": ["OldBookmark"]}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
@@ -10,7 +10,5 @@ S: SUCCESS {"fields": ["n"]}
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {"bookmark": "NewBookmark"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

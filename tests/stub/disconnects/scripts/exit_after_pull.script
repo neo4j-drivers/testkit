@@ -1,7 +1,7 @@
 !: BOLT 4
-!: AUTO HELLO
-!: AUTO RESET
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {}
 C: PULL {"n": 1000}

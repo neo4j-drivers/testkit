@@ -1,7 +1,7 @@
 !: BOLT #BOLT_VERSION#
-!: AUTO RESET
-!: AUTO HELLO
 
+A: HELLO {"{}": "*"}
+*: RESET
 C: RUN "RETURN 1 as n" {} {}
    PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
@@ -12,7 +12,5 @@ S: SUCCESS {"fields": ["n"]}
    <NOOP>
    <NOOP>
    SUCCESS {"type": "w"}
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+*: RESET
+?: GOODBYE

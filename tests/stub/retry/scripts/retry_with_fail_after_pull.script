@@ -1,6 +1,6 @@
 !: BOLT 4
-!: AUTO HELLO
 
+A: HELLO {"{}": "*"}
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
@@ -20,7 +20,4 @@ S: SUCCESS {"fields": ["n"]}
 C: COMMIT
 S: SUCCESS {}
 #EXTRA_RESET_2#
-{?
-    C: GOODBYE
-    S: <EXIT>
-?}
+?: GOODBYE

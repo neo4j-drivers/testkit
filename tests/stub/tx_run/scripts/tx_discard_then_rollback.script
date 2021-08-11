@@ -1,11 +1,7 @@
 !: BOLT 4.4
-!: AUTO HELLO
-!: AUTO GOODBYE
 
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+A: HELLO {"{}": "*"}
+*: RESET
 C: BEGIN {"{}": "*"}
 S: SUCCESS {}
 C: RUN {"U": "*"}{"{}": "*"} {"{}": "*"}
@@ -20,7 +16,5 @@ C: DISCARD {"n": -1, "[qid]": -1}
 S: SUCCESS {}
 C: ROLLBACK
 S: SUCCESS {}
-{*
-    C: RESET
-    S: SUCCESS {}
-*}
+*: RESET
+?: GOODBYE
