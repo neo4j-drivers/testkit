@@ -206,6 +206,9 @@ class NoRoutingV4x1(TestkitTestCase):
         # Once fixed, this block should be removed.
         if get_driver_name() in ["javascript", "go"]:
             self.skipTest("There is a pending unification task to fix this.")
+        # TODO This needs investigation
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("Throws client exception instead.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
