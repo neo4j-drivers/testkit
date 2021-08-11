@@ -146,8 +146,9 @@ class NoRoutingV4x1(TestkitTestCase):
             self.skipTest("There is a pending unification task to fix this.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_yielding_error_on_rollback.script"),
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_error_on_tx_completion.script"),
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -166,7 +167,7 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self._assert_is_transient_exception(exc.exception)
+        self._assert_is_transient_rollback_exception(exc.exception)
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self._server.done()
@@ -175,8 +176,9 @@ class NoRoutingV4x1(TestkitTestCase):
     def test_should_error_on_rollback_failure_using_tx_close(self):
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_yielding_error_on_rollback.script"),
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_error_on_tx_completion.script"),
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -195,7 +197,7 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self._assert_is_transient_exception(exc.exception)
+        self._assert_is_transient_rollback_exception(exc.exception)
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self._server.done()
@@ -209,8 +211,9 @@ class NoRoutingV4x1(TestkitTestCase):
         
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_yielding_error_on_rollback.script"),
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_error_on_tx_completion.script"),
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -228,7 +231,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         driver.close()
 
-        self._assert_is_transient_exception(exc.exception)
+        self._assert_is_transient_rollback_exception(exc.exception)
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self._server.done()
@@ -284,10 +287,187 @@ class NoRoutingV4x1(TestkitTestCase):
                           types.Record(values=[types.CypherInt(7)])], records)
         self._server.done()
 
-    def _assert_is_transient_exception(self, e):
+    @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
+    def test_should_pull_all_when_fetch_is_minus_one_using_driver_configuration(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_yielding_multiple_records.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007", fetchSize=-1)
+
+        session = driver.session('w', database=self.adb)
+        res = session.run("RETURN 1 as n")
+        records = list(res)
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)])], records)
+        self._server.done()
+
+    def test_should_error_on_commit_failure_using_tx_commit(self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_error_on_tx_completion.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb)
+        tx = session.beginTransaction()
+        res = tx.run("RETURN 5 as n")
+        summary = res.consume()
+
+        with self.assertRaises(types.DriverError) as exc:
+            tx.commit()
+
+        session.close()
+        driver.close()
+
+        self._assert_is_transient_commit_exception(exc.exception)
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
+        self._server.done()
+
+    def test_should_check_multi_db_support(self):
+        # TODO remove this block once all drivers support this
+        if get_driver_name() in ["go"]:
+            self.skipTest("Does not support CheckMultiDBSupport request")
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir, "hello.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        supports_multi_db = driver.supportsMultiDB()
+
+        driver.close()
+
+        self._assert_supports_multi_db(supports_multi_db=supports_multi_db)
+        self._server.done()
+
+    def test_should_accept_noop_during_records_streaming(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_yielding_multiple_records.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb)
+        res = session.run("RETURN 5 as n")
+        records = list(res)
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)])], records)
+        self._server.done()
+
+    def test_should_error_on_database_shutdown_using_tx_commit(self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_error_on_tx_completion.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb)
+        tx = session.beginTransaction()
+        res = tx.run("RETURN 7 as n")
+        summary = res.consume()
+
+        with self.assertRaises(types.DriverError) as exc:
+            tx.commit()
+
+        session.close()
+        driver.close()
+
+        self._assert_is_transient_commit_exception(
+            exc.exception, expected_msg="Database shut down.")
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._server))
+        self._server.done()
+
+    def test_should_error_on_database_shutdown_using_tx_run(self):
+        # TODO remove this block once all drivers support this
+        if get_driver_name() in ["go"]:
+            self.skipTest("Fails with pending transaction message")
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(
+                self.version_dir,
+                "writer_with_bookmark_yielding_error_on_run.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb,
+                                 bookmarks=["neo4j:bookmark:v1:tx0"])
+        tx = session.beginTransaction()
+
+        with self.assertRaises(types.DriverError) as exc:
+            res = tx.run("RETURN 1 as n")
+            res.consume()
+
+        session.close()
+        driver.close()
+
+        self._assert_is_transient_commit_exception(
+            exc.exception, expected_msg="Database shut down.")
+        self._server.done()
+
+    def _assert_is_transient_rollback_exception(
+            self, e, expected_msg="Unable to rollback"):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)
-        self.assertEqual("Unable to rollback", e.msg)
+            self.assertEqual(expected_msg, e.msg)
+        self.assertTrue(expected_msg in e.msg)
         self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
                          e.code)
+
+    def _assert_is_transient_commit_exception(
+            self, e, expected_msg="Unable to commit"):
+        if get_driver_name() in ["java"]:
+            self.assertEqual("org.neo4j.driver.exceptions.TransientException",
+                             e.errorType)
+            self.assertEqual(expected_msg, e.msg)
+        self.assertTrue(expected_msg in e.msg)
+        self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
+                         e.code)
+
+    def _assert_supports_multi_db(self, supports_multi_db):
+        self.assertTrue(supports_multi_db)

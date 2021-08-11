@@ -1,0 +1,10 @@
+!: BOLT #VERSION#
+!: AUTO GOODBYE
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+C: BEGIN {"db": "adb", "bookmarks": ["neo4j:bookmark:v1:tx0"]}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database shut down."}
+   <EXIT>
