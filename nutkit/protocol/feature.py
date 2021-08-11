@@ -45,3 +45,10 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented path and relationship types
     TMP_CYPHER_PATH_AND_RELATIONSHIP = "Temporary:CypherPathAndRelationship"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the TransactionClose request
+    TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"
+    # TODO Update this once the decision has been made.
+    # Temporary driver feature. There is a pending decision on whether it should
+    # be supported in all drivers or be removed from all of them.
+    TMP_DRIVER_FETCH_SIZE = "Temporary:DriverFetchSize"
