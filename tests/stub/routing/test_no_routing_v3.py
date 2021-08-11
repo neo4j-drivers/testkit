@@ -20,6 +20,9 @@ class NoRoutingV3(NoRoutingV4x1):
             "#ROUTING#": ''
         }
 
+    def test_should_accept_custom_fetch_size_using_driver_configuration(self):
+        pass
+
     def test_should_accept_custom_fetch_size_using_session_configuration(
             self):
         pass
