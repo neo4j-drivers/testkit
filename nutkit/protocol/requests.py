@@ -39,8 +39,9 @@ class NewDriver:
     Backend should respond with a Driver response or an Error response.
     """
 
-    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False, domainNameResolverRegistered=False,
-                 connectionTimeoutMs=None):
+    def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False,
+                 domainNameResolverRegistered=False,
+                 connectionTimeoutMs=None, fetchSize=None):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
@@ -50,6 +51,12 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
+        # TODO: remove assertion and condition as soon as all drivers support
+        #       driver-scoped fetch-size config
+        from .feature import Feature
+        assert hasattr(Feature, "TMP_DRIVER_FETCH_SIZE")
+        if fetchSize is not None:
+            self.fetchSize = fetchSize
 
 
 class AuthorizationToken:
@@ -225,6 +232,16 @@ class TransactionCommit:
 class TransactionRollback:
     """ Request to run a query in a specified transaction.
     Backend should respond with a Result response or an Error response.
+    """
+
+    def __init__(self, txId):
+        self.txId = txId
+
+
+class TransactionClose:
+    """ Request to close the transaction instance on the backend.
+    Backend should respond with a transaction response representing the closed
+    transaction or an error response.
     """
 
     def __init__(self, txId):

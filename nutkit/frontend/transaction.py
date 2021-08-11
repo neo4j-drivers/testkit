@@ -25,3 +25,9 @@ class Transaction:
         res = self._backend.sendAndReceive(req)
         if not isinstance(res, protocol.Transaction):
             raise Exception("Should be transaction but was: %s" % res)
+
+    def close(self):
+        req = protocol.TransactionClose(self._id)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Transaction):
+            raise Exception("Should be transaction but was: %s" % res)
