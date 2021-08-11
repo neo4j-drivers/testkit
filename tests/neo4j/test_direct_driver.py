@@ -131,19 +131,119 @@ class TestDirectDriver(TestkitTestCase):
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
+        server_info = get_server_info()
+        if server_info.max_protocol_version >= "4":
+            if not get_server_info().supports_multi_db:
+                self.skipTest("Needs multi DB support")
+            self._session = self._driver.session("w", database="system")
+
+            self._session.run("DROP DATABASE `test-database` IF EXISTS")\
+                .consume()
+            self._session.run("CREATE DATABASE `test-database`").consume()
+            self._session.close()
+
+            self._session = self._driver.session("r", database="test-database")
+            result = self._session.run("RETURN 1")
+            summary = result.consume()
+            self.assertEqual(summary.database, "test-database")
+
+            self._session.close()
+            self._session = self._driver.session("w", database="system")
+            self._session.run("DROP DATABASE `test-database` IF EXISTS").\
+                consume()
+        else:
+            self._session = self._driver.session("w", database="neo4j")
+            with self.assertRaises(types.DriverError) as e:
+                self._session.run("RETURN 1").consume()
+            if get_driver_name() in ["python"]:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.ConfigurationError'>",
+                    e.exception.errorType
+                )
+                self.assertIn(
+                    "database is not supported in Bolt Protocol Version(3, 0)",
+                    e.exception.msg
+                )
+
+    def test_multi_db_various_databases(self):
+        def get_names(result_, node=True):
+            names = set()
+            for record in result_:
+                self.assertEqual(len(record.values), 1)
+                if node:
+                    if self.driver_supports_features(
+                            types.Feature.TMP_RESULT_KEYS):
+                        self.assertEqual(result_.keys(), ["p"])
+                    p = record.values[0]
+                    self.assertIsInstance(p, types.CypherNode)
+                    self.assertIsInstance(p.props, types.CypherMap)
+                    name = p.props.value.get("name")
+                else:
+                    if self.driver_supports_features(
+                            types.Feature.TMP_RESULT_KEYS):
+                        self.assertEqual(result_.keys(), ["name"])
+                    name = record.values[0]
+                self.assertIsInstance(name, types.CypherString)
+                names.add(name.value)
+            return names
+
         if not get_server_info().supports_multi_db:
             self.skipTest("Needs multi DB support")
-        self._session = self._driver.session("w", database="system")
 
-        self._session.run("DROP DATABASE `test-database` IF EXISTS").consume()
-        self._session.run("CREATE DATABASE `test-database`").consume()
-        self._session.close()
+        self._driver = get_driver(self._backend)
 
-        self._session = self._driver.session("r", database="test-database")
-        result = self._session.run("RETURN 1")
-        summary = result.consume()
-        self.assertEqual(summary.database, "test-database")
-
+        self._session = self._driver.session("w")
+        # Test that default database is empty
+        self._session.run("MATCH (n) DETACH DELETE n").consume()
+        result = self._session.run("MATCH (p:Person) RETURN p")
+        self.assertIsInstance(result.next(), types.NullRecord)
         self._session.close()
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE `test-database` IF EXISTS").consume()
+        self._session.run("DROP DATABASE testa IF EXISTS").consume()
+        self._session.run("DROP DATABASE testb IF EXISTS").consume()
+        self._session.close()
+        self._session = self._driver.session("w", database="system")
+        result = self._session.run("SHOW DATABASES YIELD name")
+        self.assertEqual(get_names(result, node=False), {"system", "neo4j"})
+        result = self._session.run("CREATE DATABASE testa")
+        result.consume()
+        result = self._session.run("CREATE DATABASE testb")
+        result.consume()
+        self._session.close()
+
+        self._session = self._driver.session("w", database="testa")
+        result = self._session.run('CREATE (p:Person {name: "ALICE"})')
+        result.consume()
+        self._session.close()
+
+        self._session = self._driver.session("w", database="testb")
+        result = self._session.run('CREATE (p:Person {name: "BOB"})')
+        result.consume()
+        self._session.close()
+
+        self._session = self._driver.session("w")
+        # Test that default database is still empty
+        result = self._session.run("MATCH (p:Person) RETURN p")
+        self.assertIsInstance(result.next(), types.NullRecord)
+        self._session.close()
+
+        self._session = self._driver.session("w", database="testa")
+        result = self._session.run("MATCH (p:Person) RETURN p")
+        self.assertEqual(get_names(result), {"ALICE"})
+        self._session.close()
+
+        self._session = self._driver.session("w", database="testb")
+        result = self._session.run("MATCH (p:Person) RETURN p")
+        self.assertEqual(get_names(result), {"BOB"})
+        self._session.close()
+
+        self._session = self._driver.session("w", database="system")
+        self._session.run("DROP DATABASE testa IF EXISTS").consume()
+        self._session.close()
+
+        self._session = self._driver.session("w", database="system")
+        self._session.run("DROP DATABASE testb IF EXISTS").consume()
+        self._session.close()
+
+        self._session = self._driver.session("w")
+        self._session.run("MATCH (n) DETACH DELETE n").consume()

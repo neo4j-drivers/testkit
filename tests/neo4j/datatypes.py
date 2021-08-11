@@ -128,13 +128,11 @@ class TestDataTypes(TestkitTestCase):
             self.verify_can_echo(types.CypherList(long_list))
 
     def test_should_echo_very_long_string(self):
-
         self.create_driver_and_session()
         long_string = "*" * 10000
         self.verify_can_echo(types.CypherString(long_string))
 
     def test_should_echo_nested_lists(self):
-
         test_lists = [
             types.CypherList([types.CypherInt(1), types.CypherInt(2), types.CypherInt(3), types.CypherInt(4)]),
             types.CypherList([types.CypherString("a"), types.CypherString("b"), types.CypherString("c"), types.CypherString("˚C")]),
@@ -152,16 +150,73 @@ class TestDataTypes(TestkitTestCase):
 
         result = self._session.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
         record = result.next()
-        self.assertNotIsInstance(record, types.NullRecord)
+        self.assertIsInstance(record, types.Record)
 
         node = record.values[0]
         self.assertIsInstance(node, types.CypherNode)
         self.assertEqual(node.labels, types.CypherList([types.CypherString('TestLabel')]))
         self.assertEqual(node.props, types.CypherMap({"num": types.CypherInt(1), "txt": types.CypherString('abc')}))
 
+    def test_should_echo_relationship(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["java"]:
+            self.skipTest("Backend does not serialize relationships.")
+        self.create_driver_and_session()
+
+        result = self._session.run("CREATE (a)-[r:KNOWS {since:1999}]->(b) "
+                                   "RETURN a, b, r")
+        record = result.next()
+        self.assertIsInstance(record, types.Record)
+        values = record.values
+        self.assertEqual(len(values), 3)
+        a, b, r = values
+        self.assertIsInstance(a, types.CypherNode)
+        self.assertIsInstance(b, types.CypherNode)
+        self.assertIsInstance(r, types.CypherRelationship)
+        self.assertNotEqual(a.id, b.id)
+        self.assertEqual(a.id, r.startNodeId)
+        self.assertEqual(b.id, r.endNodeId)
+        self.assertEqual(r.type, types.CypherString("KNOWS"))
+        self.assertEqual(r.props, types.CypherMap(
+            {"since": types.CypherInt(1999)}
+        ))
+
+    def test_should_echo_path(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["java"]:
+            self.skipTest("Backend does not serialize paths.")
+        self.create_driver_and_session()
+
+        result = self._session.run("CREATE p=(a)-[ab:X]->(b)-[bc:X]->(c) "
+                                   "RETURN a, b, c, ab, bc, p")
+        record = result.next()
+        self.assertIsInstance(record, types.Record)
+        values = record.values
+        self.assertEqual(len(values), 6)
+        a, b, c, ab, bc, p = values
+
+        self.assertIsInstance(a, types.CypherNode)
+        self.assertIsInstance(b, types.CypherNode)
+        self.assertIsInstance(c, types.CypherNode)
+        self.assertIsInstance(ab, types.CypherRelationship)
+        self.assertIsInstance(bc, types.CypherRelationship)
+        self.assertIsInstance(p, types.CypherPath)
+
+        self.assertNotEqual(a.id, b.id)
+        self.assertNotEqual(a.id, c.id)
+        self.assertNotEqual(b.id, c.id)
+        self.assertEqual(ab, types.CypherRelationship(
+            ab.id, a.id, b.id, types.CypherString("X"), types.CypherMap({})
+        ))
+        self.assertEqual(bc, types.CypherRelationship(
+            bc.id, b.id, c.id, types.CypherString("X"), types.CypherMap({})
+        ))
+
+        self.assertEqual(p, types.CypherPath(types.CypherList([a, b, c]),
+                                             types.CypherList([ab, bc])))
+
     # Work in progress
     def test_should_echo_very_long_map(self):
-
         test_list = [
                        types.CypherNull(None),
                        types.CypherInt(1),
@@ -180,7 +235,6 @@ class TestDataTypes(TestkitTestCase):
             self.verify_can_echo(types.CypherMap(long_map))
 
     def test_should_echo_nested_map(self):
-
         test_maps = {
             "a": types.CypherMap({"a": types.CypherInt(1),
                                   "b": types.CypherInt(2),
