@@ -66,7 +66,7 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_server_info(self):
-        summary = self._get_summary("empty_summary.script")
+        summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self.assertEqual(summary.server_info.agent, "Neo4j/4.4.0")
@@ -79,22 +79,28 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_database(self):
-        summary = self._get_summary("empty_summary.script")
+        summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.database, "apple")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_query(self):
-        with self._get_session("empty_summary.script") as session:
-            result = session.run("RETURN 1 AS n",
-                                 params={"foo": types.CypherInt(123)})
-            summary = result.consume()
-        self.assertEqual(summary.query.text, "RETURN 1 AS n")
-        self.assertEqual(summary.query.parameters,
-                         {"foo": types.CypherInt(123)})
-        self.assertEqual(summary.query_type, "banana")
+        def _test():
+            script_name = "empty_summary_type_%.script" % query_type
+            with self._get_session(script_name) as session:
+                result = session.run("RETURN 1 AS n",
+                                     params={"foo": types.CypherInt(123)})
+                summary = result.consume()
+            self.assertEqual(summary.query.text, "RETURN 1 AS n")
+            self.assertEqual(summary.query.parameters,
+                             {"foo": types.CypherInt(123)})
+            self.assertEqual(summary.query_type, query_type)
+
+        for query_type in ("r", "w", "rw", "s"):
+            with self.subTest(query_type):
+                _test()
 
     def test_times(self):
-        summary = self._get_summary("empty_summary.script")
+        summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.result_available_after, 2001)
         self.assertEqual(summary.result_consumed_after, 2002)
 
@@ -106,7 +112,7 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_notifications(self):
-        summary = self._get_summary("empty_summary.script")
+        summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.notifications, None)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
@@ -257,7 +263,7 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_empty_summary(self):
-        summary = self._get_summary("empty_summary.script")
+        summary = self._get_summary("empty_summary_type_r.script")
         self._assert_counters(summary)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)

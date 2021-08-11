@@ -7,4 +7,4 @@ C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": "*"}
 S: RECORD [1]
-   SUCCESS {"type": "banana", "db": "apple"}
+   SUCCESS {"type": "r", "db": "apple"}
