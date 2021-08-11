@@ -24,6 +24,32 @@ class TestTxFuncRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    def test_simple_query(self):
+        def _test():
+            self._driver.close()
+            self._driver = get_driver(self._backend, userAgent="test")
+            self._session1 = self._driver.session("r", fetchSize=2)
+            tx = self._session1.beginTransaction()
+            result = tx.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
+            if consume:
+                result.consume()
+            else:
+                self.assertEqual(list(result), [
+                    types.Record([types.CypherInt(i)]) for i in range(1, 5)
+                ])
+            if rollback:
+                tx.rollback()
+            else:
+                tx.commit()
+            self._session1.close()
+            self._session1 = None
+
+        for consume in (True, False):
+            for rollback in (True, False):
+                with self.subTest("consume" if consume else "iterate"
+                                  + "_rollback" if rollback else "_commit"):
+                    _test()
+
     def test_iteration_nested(self):
         # Verifies that it is possible to nest results with small fetch sizes
         # within a transaction function.

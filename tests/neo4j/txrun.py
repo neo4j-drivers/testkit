@@ -24,6 +24,28 @@ class TestTxRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    def test_simple_query(self):
+        def work(tx):
+            result = tx.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
+            if consume:
+                result.consume()
+            else:
+                self.assertEqual(list(result), [
+                    types.Record([types.CypherInt(i)]) for i in range(1, 5)
+                ])
+
+        def _test():
+            self._driver.close()
+            self._driver = get_driver(self._backend, userAgent="test")
+            self._session1 = self._driver.session("r", fetchSize=2)
+            self._session1.readTransaction(work)
+            self._session1.close()
+            self._session1 = None
+
+        for consume in (True, False):
+            with self.subTest("consume" if consume else "iterate"):
+                _test()
+
     def test_can_commit_transaction(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
