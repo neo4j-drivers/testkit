@@ -140,8 +140,7 @@ class TestkitTestCase(unittest.TestCase):
             self.skipTest(response.reason)
 
         # TODO: remove this compatibility layer when all drivers are adapted
-        if get_driver_name() in ("python", "java", "javascript",
-                                 "go", "dotnet"):
+        if get_driver_name() in ("java", "javascript", "go", "dotnet"):
             for exp, sub in (
                 (r"^stub\.bookmarks\.test_bookmarks\.TestBookmarks",
                  "stub.bookmark.Tx"),

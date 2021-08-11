@@ -356,3 +356,13 @@ class Bolt4x3Protocol(Bolt4x2Protocol):
         masked = bytes(0 if i % 4 == 0 else b[i]
                        for i in range(len(b)))
         return BoltProtocol.decode_versions(masked)
+
+
+class Bolt4x4Protocol(Bolt4x3Protocol):
+
+    protocol_version = (4, 4)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = {(4, 3)}
+
+    server_agent = "Neo4j/4.4.0"

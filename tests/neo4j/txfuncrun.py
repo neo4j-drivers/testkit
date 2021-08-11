@@ -2,6 +2,7 @@ from nutkit.frontend.session import ApplicationCodeException
 import nutkit.protocol as types
 from tests.neo4j.shared import get_driver
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -94,35 +95,44 @@ class TestTxFuncRun(TestkitTestCase):
             raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
-        try:
+        with self.assertRaises(types.FrontendError):
             self._session.writeTransaction(run)
-        except Exception:
-            throwed = True
-        self.assertTrue(throwed)
         bookmarks = self._session.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
         if get_driver_name() in ["java"]:
             self.skipTest("Client exceptions not properly handled in backend")
-        nodeid = -1
+        node_id = -1
 
         def run(tx):
-            result = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
-            global nodeid
-            nodeid = result.next().values[0].value
+            nonlocal node_id
+            result_ = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
+            node_id = result_.next().values[0].value
             raise ApplicationCodeException("No thanks")
 
         self._session = self._driver.session("w")
-        try:
+        with self.assertRaises(types.FrontendError):
             self._session.writeTransaction(run)
-        except Exception:
-            throwed = True
-        self.assertTrue(throwed)
 
         # Try to retrieve the node, it shouldn't be there
         result = self._session.run(
                 "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
-                params={"nodeid": types.CypherInt(nodeid)})
+                params={"nodeid": types.CypherInt(node_id)})
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
+
+    def test_tx_func_configuration(self):
+        def run(tx):
+            values = []
+            result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
+            if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
+                self.assertEqual(result.keys(), ["x"])
+            for record in result:
+                values.append(record.values[0])
+            return values
+
+        self._session = self._driver.session("w")
+        res = self._session.readTransaction(run, timeout=3000,
+                                            txMeta={"foo": "bar"})
+        self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))

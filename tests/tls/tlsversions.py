@@ -24,7 +24,7 @@ class TestTlsVersions(TestkitTestCase):
         super().tearDown()
 
     def test_1_1(self):
-        if self._driver in ["dotnet", "python"]:
+        if self._driver in ["dotnet"]:
             self.skipTest("TLS 1.1 is not supported")
 
         self._server = TlsServer("trustedRoot_thehost", minTls="1", maxTls="1")

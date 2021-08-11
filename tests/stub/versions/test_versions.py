@@ -116,16 +116,19 @@ class TestProtocolVersions(TestkitTestCase):
             self.skipTest("4.3 protocol not implemented")
         self._run("4x3")
 
+    def test_supports_bolt4x4(self):
+        self._run("4x4")
+
     def test_supports_bolt_3x0(self):
         self._run("3")
 
     def test_server_version(self):
-        for version in ("4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("4x4", "4x3", "4x2", "4x1", "4x0", "3"):
             with self.subTest(version):
                 self._run(version, check_version=True)
 
     def test_server_agent(self):
-        for version in ("4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("4x4", "4x3", "4x2", "4x1", "4x0", "3"):
             for agent, reject in (
                 ("Neo4j/4.3.0", False),
                 ("Neo4j/4.1.0", False),
@@ -152,8 +155,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_address_in_summary(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["python", "java", "javascript", "go",
-                                 "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in ("4x3", "4x2", "4x1", "4x0", "3"):
             with self.subTest(version):
@@ -161,12 +163,11 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_obtain_summary_twice(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["python", "java", "javascript", "go",
-                                 "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         with self._get_session(
-            self.script_path("v4x3_return_1.script"),
-            vars_={"#SERVER_AGENT#": "Neo4j/4.3.0"}
+            self.script_path("v4x4_return_1.script"),
+            vars_={"#SERVER_AGENT#": "Neo4j/4.4.0"}
         ) as session:
             result = session.run("RETURN 1 AS n")
             summary = result.consume()
