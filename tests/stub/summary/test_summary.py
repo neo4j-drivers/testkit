@@ -85,7 +85,7 @@ class TestSummary(TestkitTestCase):
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_query(self):
         def _test():
-            script_name = "empty_summary_type_%.script" % query_type
+            script_name = "empty_summary_type_%s.script" % query_type
             with self._get_session(script_name) as session:
                 result = session.run("RETURN 1 AS n",
                                      params={"foo": types.CypherInt(123)})
@@ -99,6 +99,7 @@ class TestSummary(TestkitTestCase):
             with self.subTest(query_type):
                 _test()
 
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_times(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.result_available_after, 2001)
