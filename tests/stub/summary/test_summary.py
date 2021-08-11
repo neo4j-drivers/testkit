@@ -261,36 +261,8 @@ class TestSummary(TestkitTestCase):
         self._assert_counters(summary)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
-    def test_full_summary_false_flags(self):
-        summary = self._get_summary("full_summary_false_flags.script")
-        self._assert_counters(
-            summary, constraints_added=1001, constraints_removed=1002,
-            indexes_added=1003, indexes_removed=1004,
-            labels_added=1005, labels_removed=1006,
-            nodes_created=1007, nodes_deleted=1008,
-            properties_set=1009,
-            relationships_created=1010, relationships_deleted=1011,
-            system_updates=1012,
-            contains_updates=False, contains_system_updates=False
-        )
-
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_full_summary_no_flags(self):
-        summary = self._get_summary("full_summary_no_flags.script")
-        self._assert_counters(
-            summary, constraints_added=1001, constraints_removed=1002,
-            indexes_added=1003, indexes_removed=1004,
-            labels_added=1005, labels_removed=1006,
-            nodes_created=1007, nodes_deleted=1008,
-            properties_set=1009,
-            relationships_created=1010, relationships_deleted=1011,
-            system_updates=1012,
-            contains_updates=True, contains_system_updates=True
-        )
-
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
-    def test_full_summary_true_flags(self):
-        summary = self._get_summary("full_summary_true_flags.script")
+        summary = self._get_summary("full_summary.script")
         self._assert_counters(
             summary, constraints_added=1001, constraints_removed=1002,
             indexes_added=1003, indexes_removed=1004,
@@ -394,11 +366,4 @@ class TestSummary(TestkitTestCase):
         summary = self._get_summary("partial_summary_system_updates.script")
         self._assert_counters(
             summary, system_updates=1234, contains_system_updates=True
-        )
-
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
-    def test_partial_summary_true_flags(self):
-        summary = self._get_summary("partial_summary_true_flags.script")
-        self._assert_counters(
-            summary, contains_updates=True, contains_system_updates=True
         )
