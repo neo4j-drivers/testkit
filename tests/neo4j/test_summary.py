@@ -10,10 +10,8 @@ from .shared import (
     get_server_info,
 )
 
-# TODO: migrate rest of test_bolt_driver.py
 
-
-class TestDirectDriver(TestkitTestCase):
+class TestSummary(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._driver = get_driver(self._backend)
