@@ -1,5 +1,4 @@
 !: BOLT #VERSION#
-!: AUTO GOODBYE
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
@@ -13,12 +12,7 @@ S: SUCCESS {}
        SUCCESS {"type": "r"}
     C: ROLLBACK
     S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to rollback"}
-    C: RESET
-    S: SUCCESS {}
-    {?
-        C: RESET
-        S: SUCCESS {}
-    ?}
+    +: RESET
 ----
     C: RUN "RETURN 5 as n" {} {}
     S: SUCCESS {"fields": ["n"]}
@@ -27,12 +21,7 @@ S: SUCCESS {}
        SUCCESS {"type": "r"}
     C: COMMIT
     S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to commit"}
-    C: RESET
-    S: SUCCESS {}
-    {?
-        C: RESET
-        S: SUCCESS {}
-    ?}
+    +: RESET
 ----
     C: RUN "RETURN 7 as n" {} {}
     S: SUCCESS {"fields": ["n"]}
@@ -43,3 +32,4 @@ S: SUCCESS {}
     S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database shut down."}
        <EXIT>
 }}
+?: GOODBYE

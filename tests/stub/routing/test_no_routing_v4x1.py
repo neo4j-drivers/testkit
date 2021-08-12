@@ -208,7 +208,7 @@ class NoRoutingV4x1(TestkitTestCase):
         # Once fixed, this block should be removed.
         if get_driver_name() in ["javascript", "go"]:
             self.skipTest("There is a pending unification task to fix this.")
-        
+
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(
@@ -348,7 +348,7 @@ class NoRoutingV4x1(TestkitTestCase):
             self.skipTest("Does not support CheckMultiDBSupport request")
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir, "hello.script"),
+            path=self.script_path(self.version_dir, "optional_hello.script"),
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,

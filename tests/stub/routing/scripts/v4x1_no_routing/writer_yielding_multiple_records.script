@@ -1,13 +1,8 @@
 !: BOLT #VERSION#
-!: AUTO GOODBYE
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-# Added this block for GO
-{?
-    C: RESET
-    S: SUCCESS {}
-?}
+*: RESET
 {{
     C: RUN "RETURN 1 as n" {} {"db": "adb"}
     S: SUCCESS {"fields": ["n"]}
@@ -29,7 +24,5 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
        RECORD [7]
        SUCCESS {}
 }}
-{?
-    C: RESET
-    S: SUCCESS {}
-?}
+*: RESET
+?: GOODBYE
