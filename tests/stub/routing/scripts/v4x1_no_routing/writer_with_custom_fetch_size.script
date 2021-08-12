@@ -12,10 +12,14 @@ C: RUN "RETURN 1 as n" {} {"db": "adb"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 2}
 S: RECORD [1]
-   RECORD [5]
+   RECORD [3]
    SUCCESS {"has_more": true}
 C: PULL {"n": 2}
-S: RECORD [7]
+S: RECORD [5]
+   RECORD [7]
+   SUCCESS {"has_more": true}
+C: PULL {"n": 2}
+S: RECORD [9]
    SUCCESS {}
 C: RESET
 S: SUCCESS {}
