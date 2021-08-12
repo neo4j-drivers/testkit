@@ -54,6 +54,11 @@ class TestDirectDriver(TestkitTestCase):
         self.assertIsInstance(summary.plan, dict)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_can_obtain_profile_info(self):
+        summary = self.get_summary("PROFILE CREATE (n) RETURN n")
+        self.assertIsInstance(summary.profile, dict)
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_notification_info(self):
         summary = self.get_summary("CREATE (n) RETURN n")
         self.assertIsNone(summary.notifications)
