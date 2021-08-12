@@ -1,6 +1,7 @@
 !: BOLT #VERSION#
-!: AUTO RESET
-!: AUTO GOODBYE
 
+?: GOODBYE
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+?: GOODBYE
