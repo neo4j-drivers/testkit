@@ -3,7 +3,7 @@
 ## Running all test suites within docker containers
 
 Requirements on host:
-  * Python3.6 >=
+  * Python 3.7 >=
   * Docker 19.03 >=
 
 Environment variables:
@@ -60,7 +60,12 @@ python3 main.py --help
 
 While developing the driver it is useful and much faster to manually build and
 start the drivers testkit backend and run integration or stub tests against
-that. For this setup no Docker containters are needed.
+that. For this setup no Docker containters are needed. Therefore, packages
+required by testkit must be installed (if you haven't already):
+
+```console
+python3 -m pip install -Ur requiremets.txt 
+```
 
 To run integration tests you need to:
   * Provide the tests with a running Neo4j instance. This instance can be
@@ -90,7 +95,7 @@ To run integration tests you need to:
     To run a single named test using a local Neo4j database:
     ```console
     export TEST_NEO4J_HOST=localhost
-    python3 -m unittest tests.neo4j.datatypes.TestDataTypes.testShouldEchoBack
+    python3 -m unittest tests.neo4j.datatypes.TestDataTypes.test_should_echo_back
     ```
   
   * Alternatively, it's possible to use the option `--tests RUN_SELECTED_TESTS`
