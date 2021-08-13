@@ -52,3 +52,6 @@ class Feature(Enum):
     # Temporary driver feature. There is a pending decision on whether it should
     # be supported in all drivers or be removed from all of them.
     TMP_DRIVER_FETCH_SIZE = "Temporary:DriverFetchSize"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented it.
+    TMP_DRIVER_MAX_TX_RETRY_TIME = "Temporary:DriverMaxTxRetryTime"
