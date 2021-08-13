@@ -178,31 +178,31 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_should_reject_server_using_verify_connectivity_bolt_3x0(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go"]:
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="3")
 
     def test_should_reject_server_using_verify_connectivity_bolt_4x0(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go"]:
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="4.0")
 
     def test_should_reject_server_using_verify_connectivity_bolt_4x1(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go"]:
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="4.1")
 
     def test_should_reject_server_using_verify_connectivity_bolt_4x2(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go"]:
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="4.2")
 
     def test_should_reject_server_using_verify_connectivity_bolt_4x3(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go"]:
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="4.3")
 
