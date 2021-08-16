@@ -40,8 +40,8 @@ class NewDriver:
     """
 
     def __init__(self, uri, authToken, userAgent=None, resolverRegistered=False,
-                 domainNameResolverRegistered=False,
-                 connectionTimeoutMs=None, fetchSize=None):
+                 domainNameResolverRegistered=False, connectionTimeoutMs=None,
+                 fetchSize=None, maxTxRetryTimeMs=None):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
@@ -57,6 +57,11 @@ class NewDriver:
         assert hasattr(Feature, "TMP_DRIVER_FETCH_SIZE")
         if fetchSize is not None:
             self.fetchSize = fetchSize
+        # TODO: remove assertion and condition as soon as all drivers support
+        #       driver-scoped fetch-size config
+        assert hasattr(Feature, "TMP_DRIVER_MAX_TX_RETRY_TIME")
+        if maxTxRetryTimeMs is not None:
+            self.maxTxRetryTimeMs = maxTxRetryTimeMs
 
 
 class AuthorizationToken:

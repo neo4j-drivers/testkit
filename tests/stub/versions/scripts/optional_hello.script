@@ -1,0 +1,16 @@
+!: BOLT #VERSION#
+
+{?
+    C: GOODBYE
+    S: SUCCESS
+?}
+C: HELLO {"{}": "*"}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+{*
+    C: RESET
+    S: SUCCESS
+*}
+{?
+    C: GOODBYE
+    S: SUCCESS
+?}
