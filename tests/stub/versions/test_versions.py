@@ -112,8 +112,6 @@ class TestProtocolVersions(TestkitTestCase):
         self._run("4x2")
 
     def test_supports_bolt_4x3(self):
-        if get_driver_name() in ['java']:
-            self.skipTest("4.3 protocol not implemented")
         self._run("4x3")
 
     def test_supports_bolt4x4(self):
@@ -178,3 +176,63 @@ class TestProtocolVersions(TestkitTestCase):
         summary = result.consume()
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
+
+    def test_should_reject_server_using_verify_connectivity_bolt_3x0(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(version="3")
+
+    def test_should_reject_server_using_verify_connectivity_bolt_4x0(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(version="4.0")
+
+    def test_should_reject_server_using_verify_connectivity_bolt_4x1(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(version="4.1")
+
+    def test_should_reject_server_using_verify_connectivity_bolt_4x2(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(version="4.2")
+
+    def test_should_reject_server_using_verify_connectivity_bolt_4x3(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(version="4.3")
+
+    def test_should_reject_server_using_verify_connectivity_bolt_4x4(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(version="4.4")
+
+    def _test_should_reject_server_using_verify_connectivity(self, version):
+        uri = "bolt://%s" % self._server.address
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic"))
+        script_path = self.script_path("optional_hello.script")
+        variables = {
+            "#VERSION#": version,
+            "#SERVER_AGENT#": "AgentSmith/0.0.1"
+        }
+        self._server.start(path=script_path, vars=variables)
+
+        with self.assertRaises(types.DriverError) as e:
+            driver.verifyConnectivity()
+
+        self._assert_is_untrusted_server_exception(e.exception)
+        self._server.done()
+        driver.close()
+
+    def _assert_is_untrusted_server_exception(self, e):
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.UntrustedServerException",
+                e.errorType)

@@ -6,6 +6,7 @@ from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
     get_ip_addresses,
+    driver_feature
 )
 from ._routing import RoutingBase
 
@@ -244,6 +245,84 @@ class RoutingV4x3(RoutingBase):
         self._routingServer1.done()
         self._readServer1.done()
         self.assertTrue(failed)
+
+    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME)
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(
+            self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent, maxTxRetryTimeMs=5000)
+        self.start_server(self._routingServer1,
+                          "router_adb_multi_no_bookmarks.script")
+        self.start_server(
+            self._readServer1,
+            "reader_tx_with_unexpected_interruption.script"
+        )
+        self.start_server(
+            self._readServer2,
+            "reader_tx_with_unexpected_interruption.script"
+        )
+
+        session = driver.session('r', database=self.adb)
+
+        def work(tx):
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
+            tx.commit()
+
+        with self.assertRaises(types.DriverError) as exc:
+            session.readTransaction(work)
+
+        session.close()
+        driver.close()
+
+        if get_driver_name() in ['java']:
+            self.assertEqual(
+                'org.neo4j.driver.exceptions.SessionExpiredException',
+                exc.exception.errorType
+            )
+        self._routingServer1.done()
+        self._readServer1.done()
+        self._readServer2.done()
+
+    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME)
+    def test_should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(
+            self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent, maxTxRetryTimeMs=5000)
+        self.start_server(self._routingServer1,
+                          "router_adb_multi_no_bookmarks.script")
+        self.start_server(
+            self._writeServer1,
+            "writer_tx_with_unexpected_interruption.script"
+        )
+        self.start_server(
+            self._writeServer2,
+            "writer_tx_with_unexpected_interruption.script"
+        )
+
+        session = driver.session('w', database=self.adb)
+
+        def work(tx):
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
+            tx.commit()
+
+        with self.assertRaises(types.DriverError) as exc:
+            session.writeTransaction(work)
+
+        session.close()
+        driver.close()
+
+        if get_driver_name() in ['java']:
+            self.assertEqual(
+                'org.neo4j.driver.exceptions.SessionExpiredException',
+                exc.exception.errorType
+            )
+        self._routingServer1.done()
+        self._writeServer1.done()
+        self._writeServer2.done()
 
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_session_run(self):
@@ -1964,3 +2043,39 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(self.server_agent, agent)
         self._routingServer1.done()
         self._readServer1.done()
+
+    def test_should_fail_when_driver_closed_using_session_run(
+            self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._readServer1, "reader.script")
+
+        session = driver.session('r', database=self.adb)
+        result = session.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        summary = result.consume()
+        session.close()
+        session = driver.session('r', database=self.adb)
+        driver.close()
+
+        failed_on_run = False
+        try:
+            session.run("RETURN 1 as n")
+        except types.DriverError as e:
+            if get_driver_name() in ['java']:
+                self.assertEqual(
+                    'java.lang.IllegalStateException',
+                    e.errorType
+                )
+            failed_on_run = True
+
+        self.assertTrue(failed_on_run)
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
+        self.assertEqual([1], sequence)

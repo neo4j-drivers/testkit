@@ -4,8 +4,8 @@ from .. import protocol
 
 class Driver:
     def __init__(self, backend, uri, authToken, userAgent=None, resolverFn=None,
-                 domainNameResolverFn=None,
-                 connectionTimeoutMs=None, fetchSize=None):
+                 domainNameResolverFn=None, connectionTimeoutMs=None,
+                 fetchSize=None, maxTxRetryTimeMs=None):
         self._backend = backend
         self._resolverFn = resolverFn
         self._domainNameResolverFn = domainNameResolverFn
@@ -14,7 +14,7 @@ class Driver:
             resolverRegistered=resolverFn is not None,
             domainNameResolverRegistered=domainNameResolverFn is not None,
             connectionTimeoutMs=connectionTimeoutMs,
-            fetchSize=fetchSize)
+            fetchSize=fetchSize, maxTxRetryTimeMs=maxTxRetryTimeMs)
         res = backend.sendAndReceive(req)
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be Driver but was %s" % res)
