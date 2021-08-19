@@ -172,6 +172,18 @@ class NullRecord:
         return isinstance(other, NullRecord)
 
 
+class RecordList:
+    """ Represents list of records returned from ResultList request."""
+
+    def __init__(self, records=None):
+        record_list = []
+        if records is not None:
+            for record in records:
+                record_list.append(Record(values=record['values']))
+
+        self.records = record_list
+
+
 class Summary:
     """ Represents summary returned from a ResultConsume request.
     """

@@ -260,8 +260,10 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(3)]),
                           types.Record(values=[types.CypherInt(5)]),
-                          types.Record(values=[types.CypherInt(7)])], records)
+                          types.Record(values=[types.CypherInt(7)]),
+                          types.Record(values=[types.CypherInt(9)])], records)
         self._server.done()
 
     def test_should_accept_custom_fetch_size_using_session_configuration(
@@ -285,8 +287,39 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(3)]),
                           types.Record(values=[types.CypherInt(5)]),
-                          types.Record(values=[types.CypherInt(7)])], records)
+                          types.Record(values=[types.CypherInt(7)]),
+                          types.Record(values=[types.CypherInt(9)])], records)
+        self._server.done()
+
+    @driver_feature(types.Feature.TMP_RESULT_LIST)
+    def test_should_pull_custom_size_and_then_all_using_session_configuration(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_with_custom_fetch_size.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb, fetchSize=2)
+        res = session.run("RETURN 5 as n")
+        record_list = res.list()
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(3)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)]),
+                          types.Record(values=[types.CypherInt(9)])],
+                         record_list.records)
         self._server.done()
 
     @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
@@ -449,6 +482,64 @@ class NoRoutingV4x1(TestkitTestCase):
 
         self._assert_is_transient_commit_exception(
             exc.exception, expected_msg="Database shut down.")
+        self._server.done()
+
+    def test_should_read_successfully_with_database_name_using_session_run(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(
+                self.version_dir,
+                "reader_yielding_multiple_records.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('r', database=self.adb)
+        res = session.run("RETURN 1 as n")
+        records = list(res)
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)])], records)
+        self._server.done()
+
+    def test_should_read_successfully_with_database_name_using_tx_function(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(
+                self.version_dir,
+                "reader_tx_yielding_multiple_records.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('r', database=self.adb)
+        records = None
+
+        def work(tx):
+            nonlocal records
+            result = tx.run("RETURN 1 as n")
+            records = list(result)
+
+        session.readTransaction(work)
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)])], records)
         self._server.done()
 
     def _assert_is_transient_rollback_exception(
