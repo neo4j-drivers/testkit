@@ -55,3 +55,6 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented it.
     TMP_DRIVER_MAX_TX_RETRY_TIME = "Temporary:DriverMaxTxRetryTime"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented it.
+    TMP_RESULT_LIST = "Temporary:ResultList"

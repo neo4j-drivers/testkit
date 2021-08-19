@@ -24,6 +24,10 @@ class NoRoutingV3(NoRoutingV4x1):
             self):
         pass
 
+    def test_should_pull_custom_size_and_then_all_using_session_configuration(
+            self):
+        pass
+
     def test_should_read_successfully_with_database_name_using_session_run(
             self):
         pass
