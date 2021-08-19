@@ -274,6 +274,15 @@ class ResultConsume:
         self.resultId = resultId
 
 
+class ResultList:
+    """ Request to retrieve the entire result stream of records. Backend should
+    respond with RecordList or an Error if an error occurred.
+    """
+
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
 class RetryablePositive:
     """ Request to commit the retryable transaction.
     Backend responds with either a RetryableTry response (if it failed to

@@ -291,6 +291,35 @@ class NoRoutingV4x1(TestkitTestCase):
                           types.Record(values=[types.CypherInt(9)])], records)
         self._server.done()
 
+    @driver_feature(types.Feature.TMP_RESULT_LIST)
+    def test_should_pull_custom_size_and_then_all_using_session_configuration(
+            self):
+        uri = "bolt://%s" % self._server.address
+        self._server.start(
+            path=self.script_path(self.version_dir,
+                                  "writer_with_custom_fetch_size.script"),
+            vars=self.get_vars()
+        )
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken(scheme="basic", principal="p",
+                                                 credentials="c"),
+                        userAgent="007")
+
+        session = driver.session('w', database=self.adb, fetchSize=2)
+        res = session.run("RETURN 5 as n")
+        record_list = res.list()
+
+        session.close()
+        driver.close()
+
+        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
+                          types.Record(values=[types.CypherInt(3)]),
+                          types.Record(values=[types.CypherInt(5)]),
+                          types.Record(values=[types.CypherInt(7)]),
+                          types.Record(values=[types.CypherInt(9)])],
+                         record_list.records)
+        self._server.done()
+
     @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
     def test_should_pull_all_when_fetch_is_minus_one_using_driver_configuration(
             self):
