@@ -3,8 +3,8 @@
 ## Running all test suites within docker containers
 
 Requirements on host:
-  * Python 3.7 >=
-  * Docker 19.03 >=
+  * Python >= 3.7
+  * Docker >= 19.03
 
 Environment variables:
   * `TEST_DRIVER_NAME`  
@@ -41,77 +41,8 @@ python3 main.py
 
 ## Local development
 
-### Running a subset of tests or configurations
 
-When running testkit locally from the command line you can specify which test 
-types you want to run and what configurations you want to run against. 
-For example:
-```console
-python3 main.py --tests TESTKIT_TESTS UNIT_TESTS --configs 4.0-community 4.1-enterprise
-```
-
-To see a list of available test types and configurations use:
-
-```
-python3 main.py --help
-```
-
-### Running tests against backend on host
-
-While developing the driver it is useful and much faster to manually build and
-start the drivers testkit backend and run integration or stub tests against
-that. For this setup no Docker containters are needed. Therefore, packages
-required by testkit must be installed (if you haven't already):
-
-```console
-python3 -m pip install -Ur requiremets.txt 
-```
-
-To run integration tests you need to:
-  * Provide the tests with a running Neo4j instance. This instance can be
-    running locally (Jar or Docker) or on a server somewhere (be careful, the
-    tests might destroy data).
-
-    Example on how to start latest Neo4j server locally in Docker:
-    ```console
-    docker run --name neo4j --env NEO4J_AUTH=neo4j/pass -p7687:7687 --rm neo4j:latest
-    ```
-
-    For security reasonse there are NO DEFAULT settings for the Neo4j host that
-    the tests are running against. The environment variable TEST_NEO4J_HOST 
-    needs to be set to the correct location.
-
-  * Start the drivers testkit backend.
-    The framework defaults to connect to port 9876 on localhost. If the backend
-    is running on another host or port the environment variables 
-    `TEST_BACKEND_HOST` and `TEST_BACKEND_PORT` needs to be set in the
-    environment where the tests are invoked.
-
-  * Run the integration tests using standard Python unittest syntax. The 
-    integration tests are all prefixed with tests.neo4j.XXX. Where XXX can be a
-    single Python file (without the .py), a class in the single Python file or a
-    single test.
-
-    To run a single named test using a local Neo4j database:
-    ```console
-    export TEST_NEO4J_HOST=localhost
-    python3 -m unittest tests.neo4j.datatypes.TestDataTypes.test_should_echo_back
-    ```
-  
-  * Alternatively, it's possible to use the option `--tests RUN_SELECTED_TESTS`
-    to build the driver backend and run the tested in the `TEST_SELECTOR`
-    environment variable. This will start all dependencies needed (such as neo4j
-    or tls servers). It's especially useful during the development of new tests 
-    when used in combination with `run_all.py` enabling to run one specific test
-    against all known drivers.
-    * The command-line param `--run-only-selected <test_selector>` is a shortcut
-      for setting the `TEST_SELECTOR` environment variable and running the 
-      command with `--tests RUN_SELECTED_TESTS`.
-
-Running stub tests locally is simpler than running the integration tests:
-  * Start the drivers testkit backend, see above.
-  * Run the stub tests same way as the integration tests but they are rooted at
-    tests.stub instead of tests.neo4j
+### Configuration variables
 
 Environment variables used to control how tests are executed:
   * `TEST_NEO4J_HOST`  
@@ -131,14 +62,106 @@ Environment variables used to control how tests are executed:
     Defaults to 9876, normally not needed.
 All of these variables are normally set by the main runner.
 
+### Running a subset of tests or configurations
+
+When running testkit locally from the command line you can specify which test 
+types you want to run. In addition the Neo4j version and edition against which 
+the tests should be executed can be configured  via the `--configs` parameter:
+
+
+```console
+python3 main.py --tests TESTKIT_TESTS UNIT_TESTS --configs 4.0-community 4.1-enterprise
+```
+
+To see a list of available test types and configurations use:
+
+```console
+python3 main.py --help
+```
+
+The `--tests` parameter refers to a prefined set subset of all available tests.
+
+### Running tests against a specific backend
+
+When developing a driver or providing a testkit backend for that specific driver
+it is useful to be able to run testkit against a locally running backend. That
+backend will be most likely started from your IDE and making use of a non-packaged
+version of your driver, thus avoiding the step of fully building both the specific
+driver and its backend. Therefore such a setup does not require Docker containers.
+
+Testkit requires some packages to do this, which can be installed via pip:
+
+```console
+python3 -m pip install -Ur requirements.txt
+```
+
+The backend can run on the same host that runs the testkit tests or on a remote 
+machine.
+
+#### Integration tests
+
+To run integration tests you need to:
+  * Provide the tests with a running Neo4j instance. This instance can be
+    running locally (Jar or Docker) or on a server somewhere (be careful, the
+    tests might destroy data).
+
+    Example on how to start latest Neo4j server locally in Docker:
+    ```console
+    docker run --name neo4j --env NEO4J_AUTH=neo4j/pass -p7687:7687 --rm neo4j:latest
+    ```
+
+    For security reasonse there is no default setting for the Neo4j host that
+    the tests are running against, as the tests will modify the databases contents.
+    The environment variable `TEST_NEO4J_HOST` needs to be set to the correct location.
+    In the example above that would be `localhost`.
+
+  * Start the drivers testkit backend.
+    testkit tries to connect to the backend on port 9876 on localhost by default.
+    If the backend is running on another host or port the environment variables 
+    `TEST_BACKEND_HOST` and `TEST_BACKEND_PORT` needs to be set in the
+    environment where the tests are invoked.
+
+  * Run the integration tests using standard Python unittest syntax. The 
+    integration tests are all prefixed with `tests.neo4j.XXX`, where XXX can be a
+    single Python file (without the .py), a class in the single Python file or a
+    single test.
+    For non-Python people: All tests are stored under `tests`, folder names will
+    become package or module names according the above definition.
+
+    To run a single named test using a local Neo4j database:
+    ```console
+    export TEST_NEO4J_HOST=localhost
+    python3 -m unittest tests.neo4j.datatypes.TestDataTypes.test_should_echo_back
+    ```
+#### Stub tests
+
+Running stub tests locally is simpler than running the integration tests as they
+don't need a running Neo4j instance (hence stub tests, using a scripted stub).
+
+  * Start the drivers testkit backend, see above.
+  * Run the stub tests same way as the integration tests but they are rooted at
+    tests.stub instead of tests.neo4j
+
+#### Orchestrate backend from testkit
+
+Alternatively, it's possible to use the option `--tests RUN_SELECTED_TESTS`
+to build the driver backend and run the tested in the `TEST_SELECTOR`
+environment variable. This will start all dependencies needed (such as neo4j
+or tls servers). It's especially useful during the development of new tests 
+when used in combination with `run_all.py` enabling to run one specific test
+against all known drivers.
+* The command-line param `--run-only-selected <test_selector>` is a shortcut
+  for setting the `TEST_SELECTOR` environment variable and running the 
+  command with `--tests RUN_SELECTED_TESTS`.
+
+
 ## Running all test suites for all known drivers within docker containers 
 
 This test runner will clone and run the tests for each known driver repository. 
 
 Requirements on host:
-
-  * Python3.6 >=
-  * Docker 19.03 >=
+  * Python >= 3.7
+  * Docker >= 19.03
 
 Environment variables:
   * `TEST_DRIVER_BRANCH`  
