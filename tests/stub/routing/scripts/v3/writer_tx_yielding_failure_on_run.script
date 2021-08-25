@@ -5,9 +5,9 @@ A: HELLO {"{}": "*"}
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
-   PULL_ALL
 S: FAILURE #FAILURE#
-   IGNORED
+C: PULL_ALL
+S: IGNORED
 C: RESET
 S: SUCCESS {}
 *: RESET

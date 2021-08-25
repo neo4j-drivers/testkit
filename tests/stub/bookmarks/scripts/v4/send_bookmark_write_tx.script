@@ -5,9 +5,9 @@ A: HELLO {"{}": "*"}
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   SUCCESS {"type": "w"}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "w"}
 C: COMMIT
 S: SUCCESS {"bookmark": "bm"}
 *: RESET

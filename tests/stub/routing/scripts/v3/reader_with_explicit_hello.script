@@ -4,7 +4,7 @@ C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent":
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 *: RESET
 C: RUN "RETURN 1 as n" {} {"mode": "r"}
-   PULL_ALL
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL_ALL
+S: RECORD [1]
    SUCCESS {"type": "r"}

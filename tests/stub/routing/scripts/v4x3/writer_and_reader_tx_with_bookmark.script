@@ -5,18 +5,18 @@ A: HELLO {"{}": "*"}
 C: BEGIN {"db": "adb", "bookmarks": ["BookmarkA"]}
 S: SUCCESS {}
 C: RUN "CREATE (n {name:'Bob'})" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["name"]}
-   SUCCESS {"type": "w"}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "w"}
 C: COMMIT
 S: SUCCESS {"bookmark": "BookmarkB"}
 *: RESET
 C: BEGIN {"db": "adb", "bookmarks": ["BookmarkB"]}
 S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["name"]}
-   RECORD ["Bob"]
+C: PULL {"n": 1000}
+S: RECORD ["Bob"]
    SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "BookmarkC"}
