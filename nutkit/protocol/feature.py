@@ -58,3 +58,5 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented it.
     TMP_RESULT_LIST = "Temporary:ResultList"
+
+    API_REACTIVE = "API:reactive"

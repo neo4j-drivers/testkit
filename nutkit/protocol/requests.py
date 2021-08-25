@@ -334,3 +334,58 @@ class GetRoutingTable:
     def __init__(self, driverId, database=None):
         self.driverId = driverId
         self.database = database
+
+
+class NewRxSession:
+    def __init__(self, driverId, accessMode, bookmarks=None,
+                 database=None, fetchSize=None):
+        self.driverId = driverId
+        self.accessMode = accessMode
+        self.bookmarks = bookmarks
+        self.database = database
+        self.fetchSize = fetchSize
+
+
+class RxSessionWriteTransaction:
+    def __init__(self, sessionId, txMeta=None, timeout=None):
+        self.sessionId = sessionId
+        self.txMeta = txMeta
+        self.timeout = timeout
+
+
+class RxSubscribe:
+    def __init__(self, publisher_id):
+        self.publisherId = publisher_id
+
+
+class RxGetSubscription:
+    def __init__(self, subscriber_id):
+        self.subscriberId = subscriber_id
+
+
+class RxSubscriptionRequest:
+    def __init__(self, subscriber_id, n):
+        self.subscriberId = subscriber_id
+        self.n = n
+
+
+class RxExecuteTransaction:
+    def __init__(self, session_id):
+        self.sessionId = session_id
+
+
+class RxTransactionRun:
+    def __init__(self, txId, cypher, params):
+        self.txId = txId
+        self.cypher = cypher
+        self.params = params
+
+
+class RxRecords:
+    def __init__(self, result_id):
+        self.resultId = result_id
+
+
+class RxNext:
+    def __init__(self, subscriber_id):
+        self.subscriberId = subscriber_id

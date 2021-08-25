@@ -434,3 +434,18 @@ class BackendError(BaseError):
 
     def __str__(self):
         return "BackendError : " + self.msg
+
+
+class RxPublisher:
+    def __init__(self, id):
+        self.id = id
+
+
+class RxSubscriber:
+    def __init__(self, id):
+        self.id = id
+
+
+class RxSubscription:
+    def __init__(self, id):
+        self.id = id

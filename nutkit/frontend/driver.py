@@ -1,3 +1,4 @@
+from .rx_session import RxSession
 from .session import Session
 from .. import protocol
 
@@ -55,6 +56,16 @@ class Driver:
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session")
         return Session(self, self._backend, res)
+
+    def rx_session(self, accessMode, bookmarks=None, database=None,
+                   fetchSize=None):
+        req = protocol.NewRxSession(self._driver.id, accessMode,
+                                    bookmarks=bookmarks, database=database,
+                                    fetchSize=fetchSize)
+        res = self._backend.sendAndReceive(req)
+        if not isinstance(res, protocol.Session):
+            raise Exception("Should be session")
+        return RxSession(self, self._backend, res)
 
     def resolve(self, address):
         return self._resolverFn(address)

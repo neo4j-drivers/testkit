@@ -426,18 +426,58 @@ class RoutingV4x3(RoutingBase):
         session.close()
         driver.close()
 
+    @driver_feature(types.Feature.API_REACTIVE)
+    def test_should_write_successfully_on_leader_switch_using_tx_function_rx(
+            self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent, None)
+        self.start_server(self._routingServer1,
+                          "router_adb_multi_no_bookmarks.script")
+        self.start_server(
+            self._writeServer1,
+            "writer_tx_with_leader_switch_and_retry.script"
+        )
+
+        session = driver.rx_session('w', database=self.adb)
+        sequences = []
+
+        def collect_records(subscriber):
+            sequence = []
+            for i in range(1000):
+                next = subscriber.next()
+                if isinstance(next, types.NullRecord):
+                    break
+                sequence.append(next.values[0].value)
+            return sequence
+
+        work_count = 1
+
+        def work(tx):
+            nonlocal work_count
+            try:
+                rx_result = tx.run("RETURN %i.1 as n" % work_count)
+                records_publisher = rx_result.records()
+                subscriber = records_publisher.subscribe()
+                subscription = subscriber.get_subscription()
+                subscription.request(1000)
+                sequences.append(collect_records(subscriber))
+                rx_result = tx.run("RETURN %i.2 as n" % work_count)
+                records_publisher = rx_result.records()
+                subscriber = records_publisher.subscribe()
+                subscription = subscriber.get_subscription()
+                subscription.request(1000)
+                sequences.append(collect_records(subscriber))
+            finally:
+                work_count = work_count + 1
+
+        session.write_transaction(work_fn=work).subscribe_and_consume()
+
         self._routingServer1.done()
         self._writeServer1.done()
-        if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
-            self.assertEqual(self._writeServer1.count_responses("<ACCEPT>"), 1)
-        else:
-            self.assertLessEqual(
-                self._writeServer1.count_responses("<ACCEPT>"), 2
-            )
         self.assertEqual([[1], [1]], sequences)
-        self.assertEqual(self.route_call_count(self._routingServer1), 2)
 
-    def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
+    def test_should_retry_write_until_success_with_leader_change_using_tx_function(
+            self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("requires investigation")
