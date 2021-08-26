@@ -44,6 +44,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
                 e.errorType)
+        elif get_driver_name() in ["go"]:
+            self.assertIn("i/o timeout", e.msg)
 
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ['java']:
@@ -87,6 +89,10 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             # has async iterator api
             if get_driver_name() in ['javascript']:
                 result.next()
+        # TODO remove once Go driver does not raise the last seen error upon tx closure
+        if get_driver_name() in ['go']:
+            with self.assertRaises(types.DriverError) as exc:
+                tx.close()
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ['java']:
             tx.rollback()
@@ -119,6 +125,11 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             if get_driver_name() in ['javascript']:
                 result.next()
 
+        # TODO remove once Go driver does not raise the last seen error upon tx closure
+        if get_driver_name() in ['go']:
+            with self.assertRaises(types.DriverError) as exc:
+                tx.close()
+                
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ['java']:
             tx.rollback()
