@@ -6,16 +6,16 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 C: BEGIN {"db": "system"}
 S: SUCCESS {}
 C: RUN "CREATE database foo" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": []}
-   SUCCESS {"type": "w"}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "w"}
 C: COMMIT
 S: SUCCESS {"bookmark": "SystemBookmark"}
 *: RESET
 C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["SystemBookmark"]}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL {"n": 1000}
+S: RECORD [1]
    SUCCESS {"type": "r"}
 *: RESET
 ?: GOODBYE

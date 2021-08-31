@@ -4,8 +4,8 @@ C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent":
 S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
 *: RESET
 C: RUN "RETURN 1 AS n" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   SUCCESS {"type": "w"}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "w"}
 *: RESET
 ?: GOODBYE
