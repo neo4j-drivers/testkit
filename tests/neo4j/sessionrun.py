@@ -241,7 +241,8 @@ class TestSessionRun(TestkitTestCase):
             self._session1 = self._driver.session("r", fetchSize=2)
             result = self._session1.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
             if consume:
-                result.consume()
+                summary = result.consume()
+                self.assertIsInstance(summary, types.Summary)
             else:
                 self.assertEqual(list(result), [
                     types.Record([types.CypherInt(i)]) for i in range(1, 5)
