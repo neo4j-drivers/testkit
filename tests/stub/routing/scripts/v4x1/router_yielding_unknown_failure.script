@@ -8,7 +8,7 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 ----
     C: RUN "CALL dbms.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r", "db": "system", "[bookmarks]": []}
 }}
-S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
 C: PULL {"n": -1}
-S: IGNORED
+S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
+   IGNORED
    <EXIT>

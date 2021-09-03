@@ -4,8 +4,10 @@ A: HELLO {"{}": "*"}
 *: RESET
 C: RUN "RETURN 1 as n" {} {}
 S: FAILURE #FAILURE#
-C: PULL_ALL
-S: IGNORED
+{?
+    C: PULL_ALL
+    S: IGNORED
+?}
 C: RESET
 S: SUCCESS {}
 *: RESET

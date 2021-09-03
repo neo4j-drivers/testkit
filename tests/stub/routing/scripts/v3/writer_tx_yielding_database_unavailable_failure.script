@@ -6,7 +6,9 @@ C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Database is busy doing store copy"}
-C: PULL_ALL
-S: IGNORED
+{?
+    C: PULL_ALL
+    S: IGNORED
+?}
 *: RESET
 ?: GOODBYE

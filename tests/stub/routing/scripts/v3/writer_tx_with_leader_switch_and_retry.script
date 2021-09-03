@@ -8,8 +8,10 @@ S: SUCCESS {}
 {{
     C: RUN "RETURN 1.1 as n" {} {}
     S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
-    C: PULL_ALL
-    S: IGNORED
+    {?
+        C: PULL_ALL
+        S: IGNORED
+    ?}
     *: RESET
     {?
         # Driver that keep the connection alive after NotALeader will take this

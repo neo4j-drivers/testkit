@@ -6,8 +6,10 @@ C: BEGIN {"db": "adb"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: FAILURE #FAILURE#
-C: PULL {"n": 1000}
-S: IGNORED
+{?
+    C: PULL {"n": 1000}
+    S: IGNORED
+?}
 C: RESET
 S: SUCCESS {}
 *: RESET
