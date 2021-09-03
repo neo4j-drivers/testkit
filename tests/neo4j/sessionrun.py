@@ -234,6 +234,26 @@ class TestSessionRun(TestkitTestCase):
         self._session1.close()
         self._session1 = None
 
+    def test_simple_query(self):
+        def _test():
+            self._driver.close()
+            self._driver = get_driver(self._backend, userAgent="test")
+            self._session1 = self._driver.session("r", fetchSize=2)
+            result = self._session1.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
+            if consume:
+                summary = result.consume()
+                self.assertIsInstance(summary, types.Summary)
+            else:
+                self.assertEqual(list(result), [
+                    types.Record([types.CypherInt(i)]) for i in range(1, 5)
+                ])
+            self._session1.close()
+            self._session1 = None
+
+        for consume in (True, False):
+            with self.subTest("consume" if consume else "iterate"):
+                _test()
+
     def test_session_reuse(self):
         def _test():
             self._session1 = self._driver.session("r", fetchSize=2)
