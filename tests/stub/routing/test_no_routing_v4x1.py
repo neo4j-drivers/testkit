@@ -55,6 +55,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         session = driver.session('r', database=self.adb)
         res = session.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
         session.close()
         driver.close()
@@ -77,6 +78,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         session = driver.session('w', database=self.adb)
         res = session.run("RETURN 5 as n")
+        list(res)
         summary = res.consume()
         session.close()
         driver.close()
@@ -105,6 +107,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         session = driver.session('w', database=self.adb)
         res = session.run("RETURN 5 as n")
+        list(res)
         summary = res.consume()
         session.close()
         driver.close()
@@ -131,6 +134,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         session = driver.session('w', database=self.adb)
         res = session.run("RETURN 5 as n")
+        list(res)
         summary = res.consume()
         session.close()
         driver.close()
@@ -159,6 +163,7 @@ class NoRoutingV4x1(TestkitTestCase):
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
         res = tx.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
 
         with self.assertRaises(types.DriverError) as exc:
@@ -226,6 +231,7 @@ class NoRoutingV4x1(TestkitTestCase):
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
         res = tx.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
 
         with self.assertRaises(types.DriverError) as exc:
@@ -364,6 +370,7 @@ class NoRoutingV4x1(TestkitTestCase):
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
         res = tx.run("RETURN 5 as n")
+        list(res)
         summary = res.consume()
 
         with self.assertRaises(types.DriverError) as exc:
@@ -439,6 +446,7 @@ class NoRoutingV4x1(TestkitTestCase):
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
         res = tx.run("RETURN 7 as n")
+        list(res)
         summary = res.consume()
 
         with self.assertRaises(types.DriverError) as exc:

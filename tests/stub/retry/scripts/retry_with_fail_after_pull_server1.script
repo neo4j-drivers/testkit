@@ -5,9 +5,9 @@
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {}
-   FAILURE {"code": "#ERROR#", "message": "<whatever>"}
+C: PULL {"n": 1000}
+S: FAILURE {"code": "#ERROR#", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 #EXTRA_RESET_1#

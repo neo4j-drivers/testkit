@@ -4,9 +4,9 @@
 !: AUTO GOODBYE
 
 C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   <NOOP>
+C: PULL {"n": 1000}
+S: <NOOP>
    <NOOP>
    RECORD [1]
    <NOOP>

@@ -5,9 +5,9 @@
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL {"n": 1000}
+S: RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
 S: FAILURE {"code": "#ERROR#", "message": "<whatever>"}
@@ -17,9 +17,9 @@ S: SUCCESS {}
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL {"n": 1000}
+S: RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}

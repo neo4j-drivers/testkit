@@ -5,7 +5,7 @@
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL {"n": 1000}
+S: RECORD [1]
    SUCCESS {"type": "r"}

@@ -4,7 +4,7 @@
 !: AUTO GOODBYE
 
 C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system" #BOOKMARKS#}
-   PULL {"n": -1}
 S: SUCCESS {"fields": ["ttl", "servers"]}
-   RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
+C: PULL {"n": -1}
+S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9021"], "role":"WRITE"}]]
    SUCCESS {"type": "r", "bookmark": "sys:2234"}
