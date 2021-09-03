@@ -1,0 +1,13 @@
+!: BOLT 4.3
+
+A: HELLO {"user_agent": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "realm": "foobar", "[routing]": null, "[ticket]": ""}
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE

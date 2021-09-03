@@ -1,4 +1,3 @@
-from ._routing import get_extra_hello_props
 from .test_no_routing_v4x1 import NoRoutingV4x1
 
 
@@ -12,7 +11,6 @@ class NoRoutingV3(NoRoutingV4x1):
         return {
             "#VERSION#": "3",
             "#SERVER_AGENT#": "Neo4j/3.5.0",
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#USER_AGENT#": '007',
             "#ROUTING#": ''
         }

@@ -442,7 +442,6 @@ class RoutingV4x3(RoutingBase):
                 == get_dns_resolved_server_address(self._writeServer1))
 
     def test_should_write_successfully_on_leader_switch_using_tx_function(self):
-        # TODO remove this block once all languages work
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, None)
         self.start_server(self._routingServer1,

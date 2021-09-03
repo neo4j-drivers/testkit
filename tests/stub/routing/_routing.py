@@ -11,14 +11,6 @@ from tests.shared import (
 from tests.stub.shared import StubServer
 
 
-def get_extra_hello_props():
-    if get_driver_name() in ["java"]:
-        return ', "realm": ""'
-    elif get_driver_name() in ["javascript"]:
-        return ', "realm": "", "ticket": ""'
-    return ""
-
-
 # This should be the latest/current version of the protocol.
 # Older protocol that needs to be tested inherits from this and override
 # to handle variations.
@@ -40,7 +32,7 @@ class RoutingBase(TestkitTestCase):
         self._uri_with_context = self._uri_template_with_context % (
             self._routingServer1.host, self._routingServer1.port)
         self._auth = types.AuthorizationToken(
-            scheme="basic", principal="p", credentials="c")
+            "basic", principal="p", credentials="c")
         self._userAgent = "007"
 
     def tearDown(self):
@@ -53,6 +45,8 @@ class RoutingBase(TestkitTestCase):
         self._writeServer1.reset()
         self._writeServer2.reset()
         self._writeServer3.reset()
+        self._routingServer1._dump()
+        self._writeServer1._dump()
         super().tearDown()
 
     @property
@@ -79,9 +73,7 @@ class RoutingBase(TestkitTestCase):
             "#SERVER_AGENT#": self.server_agent,
             "#ROUTINGCTX#": (
                 '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}')
-            ,
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
+                + ':9000", "region": "china", "policy": "my_policy"}'),
         }
 
         return v

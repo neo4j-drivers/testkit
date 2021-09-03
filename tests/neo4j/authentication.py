@@ -37,7 +37,7 @@ class TestAuthenticationBasic(TestkitTestCase):
 
     @cluster_unsafe_test
     def testErrorOnIncorrectCredentials(self):
-        auth_token = types.AuthorizationToken(scheme="basic",
+        auth_token = types.AuthorizationToken("basic",
                                               principal="fake",
                                               credentials="fake")
         # TODO: Expand this to check errorType is AuthenticationError
@@ -48,7 +48,7 @@ class TestAuthenticationBasic(TestkitTestCase):
     @cluster_unsafe_test
     def testSuccessOnProvideRealmWithBasicToken(self):
         auth_token = types.AuthorizationToken(
-            scheme="basic",
+            "basic",
             realm="native",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
             credentials=os.environ.get(env_neo4j_pass, "pass"))
@@ -57,7 +57,7 @@ class TestAuthenticationBasic(TestkitTestCase):
     @cluster_unsafe_test
     def testSuccessOnBasicToken(self):
         auth_token = types.AuthorizationToken(
-            scheme="basic",
+            "basic",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
             credentials=os.environ.get(env_neo4j_pass, "pass"))
         self.verifyConnectivity(auth_token)

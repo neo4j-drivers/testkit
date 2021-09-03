@@ -16,7 +16,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9010)
-        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+        auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth)
@@ -238,7 +238,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         self._router.start(path=self.script_path("router.script"), vars={
             "#HOST#": dns_resolve_single(self._router.host)
         })
-        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+        auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "neo4j://%s:%s" % (dns_resolve_single(self._router.host),
                                  self._router.port)

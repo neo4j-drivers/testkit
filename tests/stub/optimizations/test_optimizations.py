@@ -29,7 +29,7 @@ class TestOptimizations(TestkitTestCase):
             script = "pull_pipeline{}.script".format("_tx" if use_tx else "")
             self._server.start(path=self.script_path("v4x3", script),
                                vars={"#TYPE#": mode[0]})
-            auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+            auth = types.AuthorizationToken("basic", principal="neo4j",
                                             credentials="pass")
             driver = Driver(self._backend, "bolt://%s" % self._server.address,
                             auth)
@@ -66,7 +66,7 @@ class TestOptimizations(TestkitTestCase):
         if routing:
             self._router.start(path=self.script_path("v4x3", "router.script"),
                                vars={"#HOST#": self._router.host})
-        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+        auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         if routing:
             uri = "neo4j://%s" % self._router.address
@@ -185,7 +185,7 @@ class TestOptimizations(TestkitTestCase):
                     vars={"#HOST#": self._router.host}
                 )
             self._server.start(path=script_path)
-            auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+            auth = types.AuthorizationToken("basic", principal="neo4j",
                                             credentials="pass")
             if routing:
                 driver = Driver(self._backend,
@@ -242,7 +242,7 @@ class TestOptimizations(TestkitTestCase):
             else:
                 self._server.start(path=self.script_path("v4x3",
                                                          "all_default.script"))
-            auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+            auth = types.AuthorizationToken("basic", principal="neo4j",
                                             credentials="pass")
             if routing:
                 driver = Driver(self._backend,

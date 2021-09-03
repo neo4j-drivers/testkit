@@ -5,6 +5,17 @@ from enum import Enum
 
 
 class Feature(Enum):
+    # === FUNCTIONAL FEATURES ===
+    # The driver supports single-sign-on (SSO) by providing a bearer auth token
+    # API.
+    AUTH_BEARER = "Feature:Auth:Bearer"
+    # The driver supports custom authentication by providing a dedicated auth
+    # token API.
+    AUTH_CUSTOM = "Feature:Auth:Custom"
+    # The driver supports Kerberos authentication by providing a dedicated auth
+    # token API.
+    AUTH_KERBEROS = "Feature:Auth:Kerberos"
+
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver
     # shouldn't reuse any open connections for anything other than finishing

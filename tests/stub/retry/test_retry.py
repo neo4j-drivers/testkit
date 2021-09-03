@@ -33,7 +33,7 @@ class TestRetry(TestkitTestCase):
             record = result.next()
             return record.values[0]
 
-        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+        auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
@@ -69,7 +69,7 @@ class TestRetry(TestkitTestCase):
             record = result.next()
             return record.values[0]
 
-        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+        auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
@@ -113,7 +113,7 @@ class TestRetry(TestkitTestCase):
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
             result.next()
-        auth = types.AuthorizationToken(scheme="basic")
+        auth = types.AuthorizationToken("basic", principal="", credentials="")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
@@ -150,7 +150,8 @@ class TestRetry(TestkitTestCase):
                 exception = exc_.exception
                 raise exception
 
-            auth = types.AuthorizationToken(scheme="basic")
+            auth = types.AuthorizationToken("basic", principal="",
+                                            credentials="")
             driver = Driver(self._backend,
                             "bolt://%s" % self._server.address, auth)
             session = driver.session(mode[0])

@@ -1,0 +1,14 @@
+!: BOLT 4.3
+
+# Server versions pre 4.4 require empty principal field. So for backwards compatibility, we expect the driver to send it.
+A: HELLO {"user_agent": "*", "scheme": "kerberos", "principal": "", "ticket": "QmFuYW5hIQ=="}
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE

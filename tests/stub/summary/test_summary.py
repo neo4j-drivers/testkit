@@ -28,7 +28,8 @@ class TestSummary(TestkitTestCase):
     def _get_session(self, script, vars_=None):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic"))
+                        types.AuthorizationToken("basic", principal="",
+                                                 credentials=""))
         self._server.start(path=self.script_path(script), vars=vars_)
         session = driver.session("w", fetchSize=1000)
         try:

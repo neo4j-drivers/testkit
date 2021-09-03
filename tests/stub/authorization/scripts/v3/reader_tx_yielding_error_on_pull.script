@@ -6,5 +6,5 @@ S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
 C: PULL_ALL
-S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+S: FAILURE #ERROR#
    <EXIT>

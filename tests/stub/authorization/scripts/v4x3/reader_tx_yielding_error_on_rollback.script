@@ -8,6 +8,6 @@ C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
-C: COMMIT
-S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+C: ROLLBACK
+S: FAILURE #ERROR#
    <EXIT>

@@ -9,5 +9,5 @@ S: SUCCESS {"fields": ["n"]}
    RECORD [1]
    SUCCESS {"type": "r"}
 C: ROLLBACK
-S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+S: FAILURE #ERROR#
    <EXIT>

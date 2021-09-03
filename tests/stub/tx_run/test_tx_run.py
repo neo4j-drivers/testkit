@@ -13,7 +13,8 @@ class TestTxRun(TestkitTestCase):
         self._server = StubServer(9001)
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri,
-                              types.AuthorizationToken(scheme="basic"))
+                              types.AuthorizationToken("basic", principal="",
+                                                       credentials=""))
         self._session = None
 
     def tearDown(self):

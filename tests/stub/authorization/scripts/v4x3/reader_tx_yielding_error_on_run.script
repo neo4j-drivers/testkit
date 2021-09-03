@@ -4,5 +4,5 @@ A: HELLO {"{}": "*"}
 C: BEGIN {"mode": "r", "db": "adb"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
-S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+S: FAILURE #ERROR#
    <EXIT>
