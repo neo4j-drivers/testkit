@@ -134,7 +134,7 @@ class RoutingV4x3(RoutingBase):
 
         session = driver.session('w', database='system')
         tx = session.beginTransaction()
-        tx.run("CREATE database foo")
+        list(tx.run("CREATE database foo"))
         tx.commit()
 
         session2 = driver.session('w', bookmarks=session.lastBookmarks(),
@@ -334,6 +334,7 @@ class RoutingV4x3(RoutingBase):
 
         session = driver.session('w', database=self.adb)
         res = session.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
         session.close()
         driver.close()
@@ -354,6 +355,7 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
         res = tx.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
         tx.commit()
         session.close()
@@ -380,6 +382,7 @@ class RoutingV4x3(RoutingBase):
         def work(tx):
             nonlocal res, summary
             res = tx.run("RETURN 1 as n")
+            list(res)
             summary = res.consume()
 
         session.writeTransaction(work)
@@ -437,7 +440,8 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[1], [1]], sequences)
         self.assertEqual(self.route_call_count(self._routingServer1), 2)
 
-    def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
+    def test_should_retry_write_until_success_with_leader_change_using_tx_function(
+            self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['dotnet', 'go']:
             self.skipTest("requires investigation")
@@ -942,7 +946,7 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', bookmarks=["OldBookmark"],
                                  database=self.adb)
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
+        list(tx.run("RETURN 1 as n"))
         tx.commit()
         last_bookmarks = session.lastBookmarks()
         session.close()
@@ -985,7 +989,7 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', bookmarks=["BookmarkA"],
                                  database=self.adb)
         tx = session.beginTransaction()
-        tx.run("CREATE (n {name:'Bob'})")
+        list(tx.run("CREATE (n {name:'Bob'})"))
         tx.commit()
         first_bookmark = session.lastBookmarks()
         tx = session.beginTransaction()
@@ -1480,7 +1484,7 @@ class RoutingV4x3(RoutingBase):
             sequences.append(self.collectRecords(result))
 
         session.readTransaction(work)
-        session.run("RETURN 1 as n").consume()
+        list(session.run("RETURN 1 as n"))
         session.close()
         driver.close()
 
@@ -1568,7 +1572,7 @@ class RoutingV4x3(RoutingBase):
             database=self.adb
         )
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
+        list(tx.run("RETURN 1 as n"))
         tx.commit()
         last_bookmarks = session.lastBookmarks()
         session.close()
@@ -2014,7 +2018,9 @@ class RoutingV4x3(RoutingBase):
         self.start_server(self._readServer1, "reader.script")
 
         session = driver.session('r', database=self.adb)
-        summary = session.run("RETURN 1 as n").consume()
+        result = session.run("RETURN 1 as n")
+        list(result)
+        summary = result.consume()
         protocol_version = summary.server_info.protocol_version
         session.close()
         driver.close()
@@ -2035,7 +2041,9 @@ class RoutingV4x3(RoutingBase):
                           "reader_with_explicit_hello.script")
 
         session = driver.session('r', database=self.adb)
-        summary = session.run("RETURN 1 as n").consume()
+        result = session.run("RETURN 1 as n")
+        list(result)
+        summary = result.consume()
         agent = summary.server_info.agent
         session.close()
         driver.close()

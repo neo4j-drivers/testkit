@@ -5,9 +5,9 @@ A: HELLO {"{}": "*"}
 C: BEGIN {"bookmarks{}": #BOOKMARKS# }
 S: SUCCESS {}
 C: RUN "MATCH (n) RETURN n.name AS name" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["name"]}
-   SUCCESS {}
+C: PULL {"n": 1000}
+S: SUCCESS {}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
 *: RESET
