@@ -429,6 +429,17 @@ class RoutingV4x3(RoutingBase):
         session.close()
         driver.close()
 
+        self._routingServer1.done()
+        self._writeServer1.done()
+        if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
+            self.assertEqual(self._writeServer1.count_responses("<ACCEPT>"), 1)
+        else:
+            self.assertLessEqual(
+                self._writeServer1.count_responses("<ACCEPT>"), 2
+            )
+        self.assertEqual([[1], [1]], sequences)
+        self.assertEqual(self.route_call_count(self._routingServer1), 2)
+
     def test_should_retry_write_until_success_with_leader_change_using_tx_function(
             self):
         # TODO remove this block once all languages work
