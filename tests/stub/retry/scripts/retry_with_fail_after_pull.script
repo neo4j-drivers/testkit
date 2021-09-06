@@ -5,18 +5,18 @@
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {}
-   FAILURE {"code": "#ERROR#", "message": "<whatever>"}
+C: PULL {"n": 1000}
+S: FAILURE {"code": "#ERROR#", "message": "<whatever>"}
 C: RESET
 S: SUCCESS {}
 #EXTRA_RESET_1#
 C: BEGIN {}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL {"n": 1000}
+S: RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}

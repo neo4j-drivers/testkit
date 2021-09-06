@@ -6,8 +6,8 @@
 C: BEGIN {"bookmarks{}": ["b1", "b2"]}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
-   PULL {"n": 1000}
 S: SUCCESS {"fields": ["n"]}
-   SUCCESS {"type": "r"}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}

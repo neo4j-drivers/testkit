@@ -4,7 +4,7 @@
 !: AUTO RESET
 
 C: RUN "RETURN 1 as n" {} {}
-   PULL_ALL
 S: SUCCESS {"fields": ["n"]}
-   RECORD [1]
+C: PULL_ALL
+S: RECORD [1]
    SUCCESS {"type": "w"}

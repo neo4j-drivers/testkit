@@ -35,7 +35,7 @@ class TestTxBeginParameters(TestkitTestCase):
              bookmarks=None, tx_meta=None, timeout=None):
         def work(tx_):
             # Need to do something on the tx, driver might do lazy begin
-            tx_.run("RETURN 1 as n")
+            list(tx_.run("RETURN 1 as n"))
 
         # FIXME: params are not used and dotnet fails when using them
         session = self._driver.session(session_access_mode, bookmarks=bookmarks)
