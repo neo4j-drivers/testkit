@@ -7,6 +7,7 @@ from ..shared import (
     TestkitTestCase,
 )
 from .shared import (
+    cluster_unsafe_test,
     get_authorization,
     get_driver,
     get_neo4j_host_and_http_port,
@@ -29,6 +30,7 @@ class TestDirectDriver(TestkitTestCase):
             self._driver.close()
         super().tearDown()
 
+    @cluster_unsafe_test
     def test_custom_resolver(self):
         # TODO unify this
         if get_driver_name() in ["javascript", "dotnet"]:
@@ -88,13 +90,16 @@ class TestDirectDriver(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_supports_multi_db(self):
+        def work(tx):
+            return tx.run("RETURN 1 as n").consume()
+
         self._driver = get_driver(self._backend)
         self._session = self._driver.session("w")
-        summary = self._session.run("RETURN 1 as n").consume()
+        summary = self._session.readTransaction(work)
         result = self._driver.supportsMultiDB()
         server_version = tuple(map(int, get_server_info().version.split(".")))
 
-        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3)):
+        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3), (4, 4)):
             self.assertTrue(result)
             # This is the default database name if not set explicitly on the
             # Neo4j Server
@@ -129,6 +134,7 @@ class TestDirectDriver(TestkitTestCase):
                              "<class 'neo4j.exceptions.ClientError'>")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    @cluster_unsafe_test
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
         server_info = get_server_info()
@@ -165,12 +171,13 @@ class TestDirectDriver(TestkitTestCase):
                     e.exception.msg
                 )
 
+    @cluster_unsafe_test
     def test_multi_db_various_databases(self):
         def get_names(result_, node=True):
             names = set()
             for record in result_:
-                self.assertEqual(len(record.values), 1)
                 if node:
+                    self.assertEqual(len(record.values), 1)
                     if self.driver_supports_features(
                             types.Feature.TMP_RESULT_KEYS):
                         self.assertEqual(result_.keys(), ["p"])
@@ -179,10 +186,13 @@ class TestDirectDriver(TestkitTestCase):
                     self.assertIsInstance(p.props, types.CypherMap)
                     name = p.props.value.get("name")
                 else:
+                    idx = 0
                     if self.driver_supports_features(
                             types.Feature.TMP_RESULT_KEYS):
-                        self.assertEqual(result_.keys(), ["name"])
-                    name = record.values[0]
+                        keys = result_.keys()
+                        self.assertIn("name", keys)
+                        idx = keys.index("name")
+                    name = record.values[idx]
                 self.assertIsInstance(name, types.CypherString)
                 names.add(name.value)
             return names
@@ -203,7 +213,7 @@ class TestDirectDriver(TestkitTestCase):
         self._session.run("DROP DATABASE testb IF EXISTS").consume()
         self._session.close()
         self._session = self._driver.session("w", database="system")
-        result = self._session.run("SHOW DATABASES YIELD name")
+        result = self._session.run("SHOW DATABASES")
         self.assertEqual(get_names(result, node=False), {"system", "neo4j"})
         result = self._session.run("CREATE DATABASE testa")
         result.consume()

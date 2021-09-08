@@ -2,7 +2,9 @@ import uuid
 
 import nutkit.protocol as types
 from tests.neo4j.shared import (
-    get_driver, get_server_info,
+    cluster_unsafe_test,
+    get_driver,
+    get_server_info,
 )
 from tests.shared import (
     get_driver_name,
@@ -24,6 +26,7 @@ class TestTxRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    @cluster_unsafe_test
     def test_simple_query(self):
         def _test():
             self._driver.close()
@@ -51,6 +54,7 @@ class TestTxRun(TestkitTestCase):
                                   + "_rollback" if rollback else "_commit"):
                     _test()
 
+    @cluster_unsafe_test
     def test_can_commit_transaction(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -82,6 +86,7 @@ class TestTxRun(TestkitTestCase):
         self.assertEqual(len(record.values), 1)
         self.assertEqual(record.values[0], types.CypherString("bar"))
 
+    @cluster_unsafe_test
     def test_can_rollback_transaction(self):
         self._session1 = self._driver.session("w")
 
@@ -108,6 +113,7 @@ class TestTxRun(TestkitTestCase):
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
 
+    @cluster_unsafe_test
     def test_updates_last_bookmark_on_commit(self):
         # Verifies that last bookmark is set on the session upon
         # successful commit.
@@ -119,6 +125,7 @@ class TestTxRun(TestkitTestCase):
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
+    @cluster_unsafe_test
     def test_does_not_update_last_bookmark_on_rollback(self):
         # Verifies that last bookmark is set on the session upon
         # succesful commit.
@@ -129,6 +136,7 @@ class TestTxRun(TestkitTestCase):
         bookmarks = self._session1.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @cluster_unsafe_test
     def test_does_not_update_last_bookmark_on_failure(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -149,6 +157,7 @@ class TestTxRun(TestkitTestCase):
         bookmarks = self._session1.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @cluster_unsafe_test
     def test_should_be_able_to_rollback_a_failure(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Could not rollback transaction')
@@ -158,6 +167,7 @@ class TestTxRun(TestkitTestCase):
             tx.run("RETURN").next()
         tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_not_commit_a_failure(self):
         self._session1 = self._driver.session("r")
         tx = self._session1.beginTransaction()
@@ -166,6 +176,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.commit()
 
+    @cluster_unsafe_test
     def test_should_not_rollback_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
@@ -176,6 +187,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_not_rollback_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
@@ -186,6 +198,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_not_commit_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise exception')
@@ -196,6 +209,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.commit()
 
+    @cluster_unsafe_test
     def test_should_not_allow_run_on_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
@@ -209,6 +223,7 @@ class TestTxRun(TestkitTestCase):
             if get_driver_name() in ["javascript"]:
                 result.next()
 
+    @cluster_unsafe_test
     def test_should_not_allow_run_on_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
@@ -222,6 +237,7 @@ class TestTxRun(TestkitTestCase):
             if get_driver_name() in ["javascript"]:
                 result.next()
 
+    @cluster_unsafe_test
     def test_should_not_run_valid_query_in_invalid_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Neither accepts tx.rollback nor session.close')
@@ -234,6 +250,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
 
+    @cluster_unsafe_test
     def test_should_fail_run_in_a_commited_tx(self):
         self._session1 = self._driver.session("w")
         tx = self._session1.beginTransaction()
@@ -241,6 +258,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
 
+    @cluster_unsafe_test
     def test_should_fail_run_in_a_rollbacked_tx(self):
         self._session1 = self._driver.session("w")
         tx = self._session1.beginTransaction()
@@ -248,6 +266,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
 
+    @cluster_unsafe_test
     def test_should_fail_to_run_query_for_invalid_bookmark(self):
         self._session1 = self._driver.session("w")
         tx1 = self._session1.beginTransaction()
@@ -265,6 +284,7 @@ class TestTxRun(TestkitTestCase):
             tx2 = self._session1.beginTransaction()
             tx2.run("CREATE ()").consume()
 
+    @cluster_unsafe_test
     def test_broken_transaction_should_not_break_session(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -290,6 +310,7 @@ class TestTxRun(TestkitTestCase):
         tx.run("RETURN 1")
         tx.commit()
 
+    @cluster_unsafe_test
     def test_tx_configuration(self):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
@@ -311,6 +332,7 @@ class TestTxRun(TestkitTestCase):
         tx.commit()
         self.assertEqual(values, list(map(types.CypherInt, range(1, 5))))
 
+    @cluster_unsafe_test
     def test_tx_timeout(self):
         self._session1 = self._driver.session("w")
         tx0 = self._session1.beginTransaction()
@@ -339,6 +361,7 @@ class TestTxRun(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")
 
+    @cluster_unsafe_test
     def test_consume_after_commit(self):
         self._session1 = self._driver.session("w", fetchSize=2)
         tx = self._session1.beginTransaction()
@@ -358,6 +381,7 @@ class TestTxRun(TestkitTestCase):
         #   - throw exception
         #   - Commit should've buffered all records and return them now
 
+    @cluster_unsafe_test
     def test_parallel_queries(self):
         def _test():
             self._session1 = self._driver.session("w", fetchSize=2)
@@ -383,6 +407,7 @@ class TestTxRun(TestkitTestCase):
             with self.subTest("inverted" if invert_fetching else "in_order"):
                 _test()
 
+    @cluster_unsafe_test
     def test_interwoven_queries(self):
         def _test():
             self._session1 = self._driver.session("w", fetchSize=2)
@@ -430,10 +455,12 @@ class TestTxRun(TestkitTestCase):
                               % run_q2_before_q1_fetch):
                 _test()
 
+    @cluster_unsafe_test
     def test_unconsumed_result(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
             self.skipTest("Backend seems to misinterpret query parameters")
+
         def _test():
             uuid_ = str(uuid.uuid1())
 

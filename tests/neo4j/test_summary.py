@@ -5,6 +5,7 @@ from ..shared import (
     TestkitTestCase,
 )
 from .shared import (
+    cluster_unsafe_test,
     get_driver,
     get_neo4j_resolved_host_and_port,
     get_server_info,
@@ -24,13 +25,15 @@ class TestSummary(TestkitTestCase):
         super().tearDown()
 
     def get_summary(self, query, params=None, **kwargs):
+        def work(tx):
+            result = tx.run(query, params=params, **kwargs)
+            for _ in result:
+                pass
+            summary = result.consume()
+            return summary
         params = {} if params is None else params
         self._session = self._driver.session("w")
-        result = self._session.run(query, params=params, **kwargs)
-        for _ in result:
-            pass
-        summary = result.consume()
-        return summary
+        return self._session.writeTransaction(work)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_summary_after_consuming_result(self):
@@ -105,6 +108,7 @@ class TestSummary(TestkitTestCase):
         version = summary.server_info.agent[6:].split(".")
         self.assertEqual(version[:2], get_server_info().version.split("."))
 
+    @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
         summary = self.get_summary("RETURN 1 AS number")
         if isinstance(summary, dict) and get_driver_name() in ["java"]:
@@ -141,6 +145,7 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_RESULT_KEYS,
                     types.Feature.TMP_FULL_SUMMARY)
+    @cluster_unsafe_test
     def test_summary_counters_case_2(self):
         if not get_server_info().supports_multi_db:
             self.skipTest("Needs multi DB support")

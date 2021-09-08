@@ -7,10 +7,14 @@ TEST_NEO4J_HOST    Neo4j server host, no default, required
 TEST_NEO4J_PORT    Neo4j server port, default is 7687
 """
 import os
+from warnings import warn
 
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
-from tests.shared import dns_resolve_single
+from tests.shared import (
+    dns_resolve_single,
+    TestkitTestCase,
+)
 
 
 env_neo4j_host = "TEST_NEO4J_HOST"
@@ -36,7 +40,7 @@ def get_neo4j_host_and_port():
     host = os.environ.get(env_neo4j_host)
     if not host:
         raise Exception("Missing Neo4j hostname, set %s" % env_neo4j_host)
-    port = os.environ.get(env_neo4j_bolt_port, 7687)
+    port = int(os.environ.get(env_neo4j_bolt_port, 7687))
     return host, port
 
 
@@ -58,14 +62,16 @@ def get_neo4j_scheme():
     return scheme
 
 
-def get_driver(backend, uri=None, **kwargs):
+def get_driver(backend, uri=None, auth=None, **kwargs):
     """ Returns default driver for tests that do not test this aspect
     """
     if uri is None:
         scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_port()
         uri = "%s://%s:%d" % (scheme, host, port)
-    return Driver(backend, uri, get_authorization(), **kwargs)
+    if auth is None:
+        auth = get_authorization()
+    return Driver(backend, uri, auth, **kwargs)
 
 
 class ServerInfo:
@@ -86,6 +92,7 @@ class ServerInfo:
             "4.1": "4.1",
             "4.2": "4.2",
             "4.3": "4.3",
+            "4.4": "4.4",
         }[".".join(self.version.split(".")[:2])]
 
 
@@ -96,3 +103,17 @@ def get_server_info():
         cluster=(os.environ.get(env_neo4j_cluster, "False").lower()
                  in ("true", "yes", "y", "1"))
     )
+
+
+def cluster_unsafe_test(func):
+    def wrapper(*args, **kwargs):
+        if len(args) >= 1 and isinstance(args[0], TestkitTestCase):
+            if get_server_info().cluster:
+                args[0].skipTest("Test does not support cluster")
+            else:
+                return func(*args, **kwargs)
+        else:
+            warn("cluster_unsafe_test should only be used to decorate "
+                 "TestkitTestCase methods.")
+            return func(*args, **kwargs)
+    return wrapper
