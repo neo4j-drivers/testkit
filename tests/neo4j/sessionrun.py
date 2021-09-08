@@ -1,5 +1,6 @@
 import nutkit.protocol as types
 from tests.neo4j.shared import (
+    cluster_unsafe_test,
     get_driver,
     get_server_info,
 )
@@ -24,6 +25,7 @@ class TestSessionRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    @cluster_unsafe_test
     def test_iteration_smaller_than_fetch_size(self):
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can
@@ -45,6 +47,7 @@ class TestSessionRun(TestkitTestCase):
             rec = result.next()
             self.assertEqual(rec, exp)
 
+    @cluster_unsafe_test
     def test_can_return_node(self):
         self._session1 = self._driver.session("w")
         result = self._session1.run("CREATE (a:Person {name:'Alice'}) RETURN a")
@@ -64,6 +67,7 @@ class TestSessionRun(TestkitTestCase):
         isinstance(result.next(), types.NullRecord)
 
     @driver_feature(types.Feature.TMP_CYPHER_PATH_AND_RELATIONSHIP)
+    @cluster_unsafe_test
     def test_can_return_relationship(self):
         self._session1 = self._driver.session("w")
         result = self._session1.run("CREATE ()-[r:KNOWS {since:1999}]->() "
@@ -82,6 +86,7 @@ class TestSessionRun(TestkitTestCase):
         isinstance(result.next(), types.NullRecord)
 
     @driver_feature(types.Feature.TMP_CYPHER_PATH_AND_RELATIONSHIP)
+    @cluster_unsafe_test
     def test_can_return_path(self):
         self._session1 = self._driver.session("w")
         result = self._session1.run(
@@ -120,33 +125,36 @@ class TestSessionRun(TestkitTestCase):
 
         isinstance(result.next(), types.NullRecord)
 
+    @cluster_unsafe_test
     def test_autocommit_transactions_should_support_metadata(self):
-        self._session1 = self._driver.session("r")
-        server_version = get_server_info().version
-        if server_version.startswith("3."):
+        server_info = get_server_info()
+        if server_info.version.startswith("3."):
+            if server_info.edition != "enterprise":
+                self.skipTest("cannot query tx meta data in community edition")
             query = "CALL dbms.getTXMetaData"
-        elif server_version.startswith("4."):
+        elif server_info.version.startswith("4."):
             query = "CALL tx.getMetaData"
         else:
             self.fail("Unknown server version %s should be 3.x or 4.x." %
-                      server_version)
-        result = self._session1.run(query, {}, {"foo": "bar"})
+                      server_info.version)
+        metadata = {"foo": types.CypherString("bar")}
+        self._session1 = self._driver.session("r")
+        result = self._session1.run(
+            query, txMeta={k: v.value for k, v in metadata.items()}
+        )
         record = result.next()
         self.assertIsInstance(record, types.Record)
-        self.assertEqual(len(record.values), 1)
-        self.assertEqual(
-            types.CypherMap({"foo": types.CypherString("bar")}),
-            record.values[0]
-        )
+        self.assertEqual(record.values, [types.CypherMap(metadata)])
 
+    @cluster_unsafe_test
     def test_autocommit_transactions_should_support_timeout(self):
         self._session1 = self._driver.session("w")
         self._session1.run("MERGE (:Node)").consume()
-        tx1 = self._session1.beginTransaction()
-        tx1.run("MATCH (a:Node) SET a.property = 1").consume()
         self._session2 = self._driver.session(
             "w", bookmarks=self._session1.lastBookmarks()
         )
+        tx1 = self._session1.beginTransaction()
+        tx1.run("MATCH (a:Node) SET a.property = 1").consume()
         with self.assertRaises(types.DriverError) as e:
             result = self._session2.run("MATCH (a:Node) SET a.property = 2",
                                         timeout=250)
@@ -161,6 +169,7 @@ class TestSessionRun(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")
 
+    @cluster_unsafe_test
     def test_regex_in_parameter(self):
         self._session1 = self._driver.session("r")
         result = self._session1.run(
@@ -175,6 +184,7 @@ class TestSessionRun(TestkitTestCase):
             [types.CypherString("A B C")],
         ])
 
+    @cluster_unsafe_test
     def test_regex_inline(self):
         self._session1 = self._driver.session("r")
         result = self._session1.run(
@@ -188,6 +198,7 @@ class TestSessionRun(TestkitTestCase):
             [types.CypherString("A B C")],
         ])
 
+    @cluster_unsafe_test
     def test_iteration_larger_than_fetch_size(self):
         # Verifies that correct number of records are retrieved and that the
         # parameter is respected. Uses parameter to generate a long list of
@@ -205,6 +216,7 @@ class TestSessionRun(TestkitTestCase):
             rec = result.next()
             self.assertEqual(rec, exp)
 
+    @cluster_unsafe_test
     def test_iteration_nested(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Nested results not working in 4.2 and earlier. "
@@ -243,6 +255,7 @@ class TestSessionRun(TestkitTestCase):
             self.assertEqual(res1.next(), types.NullRecord())
         self.assertEqual(res0.next(), types.NullRecord())
 
+    @cluster_unsafe_test
     def test_recover_from_invalid_query(self):
         # Verifies that an error is returned on an invalid query and that
         # the session can function with a valid query afterwards.
@@ -261,6 +274,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(
             result.next(), types.Record(values=[types.CypherInt(1)]))
 
+    @cluster_unsafe_test
     def test_recover_from_fail_on_streaming(self):
         self._session1 = self._driver.session("r")
         result = self._session1.run("UNWIND [1, 0, 2] AS x RETURN 10 / x")
@@ -276,6 +290,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(
             result.next(), types.Record(values=[types.CypherInt(1)]))
 
+    @cluster_unsafe_test
     def test_updates_last_bookmark(self):
         self._session1 = self._driver.session("w")
         result = self._session1.run("CREATE (n:SessionNode) RETURN n")
@@ -292,6 +307,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(len(new_bookmarks), 1)
         self.assertNotIn(new_bookmarks[0], bookmarks)
 
+    @cluster_unsafe_test
     def test_fails_on_bad_syntax(self):
         self._session1 = self._driver.session("w")
         with self.assertRaises(types.DriverError) as e:
@@ -299,6 +315,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(e.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
 
+    @cluster_unsafe_test
     def test_fails_on_missing_parameter(self):
         self._session1 = self._driver.session("w")
         with self.assertRaises(types.DriverError) as e:
@@ -306,6 +323,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(e.exception.code,
                          "Neo.ClientError.Statement.ParameterMissing")
 
+    @cluster_unsafe_test
     def test_long_string(self):
         string = "A" * 2 ** 20
         query = "RETURN '{}'".format(string)

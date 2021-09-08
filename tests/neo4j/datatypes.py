@@ -3,9 +3,7 @@ import os
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.neo4j.shared import (
-    env_neo4j_pass,
-    env_neo4j_user,
-    get_neo4j_host_and_port,
+    get_driver
 )
 from tests.shared import TestkitTestCase
 
@@ -13,8 +11,6 @@ from tests.shared import TestkitTestCase
 class TestDataTypes(TestkitTestCase):
     def setUp(self):
         super().setUp()
-        self._host, self._port = get_neo4j_host_and_port()
-        self._scheme = "bolt://%s:%d" % (self._host, self._port)
         self._session = None
         self._driver = None
 
@@ -26,19 +22,18 @@ class TestDataTypes(TestkitTestCase):
         super().tearDown()
 
     def create_driver_and_session(self):
-        auth_token = types.AuthorizationToken(
-            scheme="basic",
-            principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass")
-        )
-        self._driver = Driver(self._backend, self._scheme, auth_token)
+        self._driver = get_driver(self._backend)
         self._session = self._driver.session("w")
 
     def verify_can_echo(self, val):
-        result = self._session.run("RETURN $x as y", params={"x": val})
-        record = result.next()
+        def work(tx):
+            result = tx.run("RETURN $x as y", params={"x": val})
+            record_ = result.next()
+            assert isinstance(result.next(), types.NullRecord)
+            return record_
+
+        record = self._session.readTransaction(work)
         self.assertEqual(record, types.Record(values=[val]))
-        assert isinstance(result.next(), types.NullRecord)
 
     def test_should_echo_back(self):
         vals = [
@@ -106,11 +101,16 @@ class TestDataTypes(TestkitTestCase):
         self.verify_can_echo(types.CypherList(test_lists))
 
     def test_should_echo_node(self):
+        def work(tx):
+            result = tx.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
+            record_ = result.next()
+            self.assertIsInstance(result.next(), types.NullRecord)
+            return record_
+
         self.create_driver_and_session()
 
-        result = self._session.run("CREATE (n:TestLabel {num: 1, txt: 'abc'}) RETURN n")
-        record = result.next()
-        self.assertNotIsInstance(record, types.NullRecord)
+        record = self._session.writeTransaction(work)
+        self.assertIsInstance(record, types.Record)
 
         node = record.values[0]
         self.assertIsInstance(node, types.CypherNode)
@@ -186,6 +186,3 @@ class TestDataTypes(TestkitTestCase):
         }
         self.create_driver_and_session()
         self.verify_can_echo(types.CypherMap(test_map))
-
-    # def test_path(self):
-        # todo: need to implement the cypher path type to do this test.

@@ -7,6 +7,7 @@ from ..shared import (
     TestkitTestCase,
 )
 from .shared import (
+    cluster_unsafe_test,
     get_authorization,
     get_driver,
     get_neo4j_host_and_http_port,
@@ -29,6 +30,7 @@ class TestDirectDriver(TestkitTestCase):
             self._driver.close()
         super().tearDown()
 
+    @cluster_unsafe_test
     def test_custom_resolver(self):
         # TODO unify this
         if get_driver_name() in ["javascript", "dotnet"]:
@@ -88,9 +90,12 @@ class TestDirectDriver(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_supports_multi_db(self):
+        def work(tx):
+            return tx.run("RETURN 1 as n").consume()
+
         self._driver = get_driver(self._backend)
         self._session = self._driver.session("w")
-        summary = self._session.run("RETURN 1 as n").consume()
+        summary = self._session.readTransaction(work)
         result = self._driver.supportsMultiDB()
         server_version = tuple(map(int, get_server_info().version.split(".")))
 
@@ -129,6 +134,7 @@ class TestDirectDriver(TestkitTestCase):
                              "<class 'neo4j.exceptions.ClientError'>")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    @cluster_unsafe_test
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
         if not get_server_info().supports_multi_db:

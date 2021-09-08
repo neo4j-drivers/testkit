@@ -1,5 +1,10 @@
 from tests.neo4j.shared import get_driver
 import nutkit.protocol as types
+from tests.neo4j.shared import (
+    cluster_unsafe_test,
+    get_driver,
+    get_server_info,
+)
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -18,6 +23,7 @@ class TestTxRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    @cluster_unsafe_test
     def test_updates_last_bookmark_on_commit(self):
         # Verifies that last bookmark is set on the session upon
         # succesful commit.
@@ -29,6 +35,7 @@ class TestTxRun(TestkitTestCase):
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
+    @cluster_unsafe_test
     def test_does_not_update_last_bookmark_on_rollback(self):
         # Verifies that last bookmark is set on the session upon
         # succesful commit.
@@ -39,6 +46,7 @@ class TestTxRun(TestkitTestCase):
         bookmarks = self._session.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @cluster_unsafe_test
     def test_does_not_update_last_bookmark_on_failure(self):
         session = self._driver.session("w")
         tx = session.beginTransaction()
@@ -48,6 +56,7 @@ class TestTxRun(TestkitTestCase):
         bookmarks = session.lastBookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @cluster_unsafe_test
     def test_should_be_able_to_rollback_a_failure(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Could not rollback transaction')
@@ -57,6 +66,7 @@ class TestTxRun(TestkitTestCase):
             tx.run("RETURN").next()
         tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_not_rollback_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
@@ -67,6 +77,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_not_rollback_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise the exception')
@@ -77,6 +88,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_not_commit_a_commited_tx(self):
         if get_driver_name() in ["go"]:
             self.skipTest('Does not raise exception')
@@ -87,6 +99,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.commit()
 
+    @cluster_unsafe_test
     def test_should_not_run_valid_query_in_invalid_tx(self):
         if get_driver_name() in ["python"]:
             self.skipTest("executes the second RUN")
@@ -103,6 +116,7 @@ class TestTxRun(TestkitTestCase):
 
         tx.rollback()
 
+    @cluster_unsafe_test
     def test_should_fail_run_in_a_commited_tx(self):
         self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
@@ -110,6 +124,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
 
+    @cluster_unsafe_test
     def test_should_fail_run_in_a_rollbacked_tx(self):
         self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
@@ -117,6 +132,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
 
+    @cluster_unsafe_test
     def test_should_fail_to_run_query_for_invalid_bookmark(self):
         session = self._driver.session("w")
         tx1 = session.beginTransaction()
