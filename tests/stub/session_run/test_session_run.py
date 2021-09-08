@@ -54,7 +54,7 @@ class TestSessionRun(TestkitTestCase):
     def test_discard_on_session_close_consumed_result(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript"]:
-            self.skipTest("Teast makes backend/driver hang")
+            self.skipTest("Test makes backend/driver hang")
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
