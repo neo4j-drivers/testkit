@@ -4,9 +4,9 @@
 !: AUTO GOODBYE
 
 C: RUN "RETURN 1 AS n" {} {}
-   PULL { "n": 2 }
 S: SUCCESS {"fields": ["n.name"]}
-   RECORD ["1"]
+C: PULL { "n": 2 }
+S: RECORD ["1"]
    RECORD ["2"]
    SUCCESS {"has_more": true}
 C: PULL { "n": 2 }
