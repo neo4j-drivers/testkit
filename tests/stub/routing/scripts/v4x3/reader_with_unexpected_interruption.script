@@ -3,5 +3,4 @@
 A: HELLO {"{}": "*"}
 *: RESET
 C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
-   PULL {"n": 1000}
 S: <EXIT>
