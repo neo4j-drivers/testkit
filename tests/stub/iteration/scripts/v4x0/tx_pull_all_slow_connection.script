@@ -6,7 +6,7 @@ C: BEGIN {}
 S: SUCCESS {}
 C: RUN "CYPHER" {} {}
 S: SUCCESS {"fields": ["x"], "qid": 7}
-C: PULL {"n": -1}
+C: PULL {"n": -1, "[qid]": 7}
 S: <SLEEP> 1
    RECORD [1]
    RECORD [2]
