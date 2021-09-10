@@ -50,8 +50,8 @@ def initialise_configurations():
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
         edition = "enterprise" if enterprise else "community"
-        name = "%s-%s%s%s" % (version, edition,
-                              "-cluster" if cluster else "", scheme)
+        name = "%s-%s%s-%s" % (version, edition,
+                               "-cluster" if cluster else "", scheme)
         return neo4j.Config(
             name=name,
             image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
@@ -114,7 +114,6 @@ def initialise_configurations():
             # nightly build of official backwards-compatible version
             ("4.3.4",     True,     True,     "neo4j", 60),
             # latest version
-            # nightly builds are only available as enterprise edition
             ("4.4.0-dev", False,    False,    "bolt",   0),
             ("4.4.0-dev", False,    False,    "neo4j",  0),
             ("4.4.0-dev", True,     False,    "bolt",  90),
