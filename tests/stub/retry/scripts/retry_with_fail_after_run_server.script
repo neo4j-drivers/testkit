@@ -1,0 +1,31 @@
+!: BOLT 4
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: ALLOW RESTART
+
+C: BEGIN {}
+S: SUCCESS {}
+{{
+    C: RUN "RETURN 1" {} {}
+    S: FAILURE {"code": "#ERROR#", "message": "<whatever>"}
+    {?
+        C: PULL "*"
+        S: IGNORED
+    ?}
+    {+
+        C: RESET
+        S: SUCCESS {}
+    +}
+----
+    C: RUN "RETURN 2" {} {}
+    S: SUCCESS {"fields": ["1"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+    {*
+        C: RESET
+        S: SUCCESS {}
+    *}
+}}

@@ -182,6 +182,40 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
         self._readServer.done()
 
+    def test_close_connection_on_retriable_cluster_error(self):
+        num_retries = 0
+
+        def work(tx):
+            nonlocal num_retries
+            num_retries += 1
+            result = tx.run("RETURN " + str(num_retries))
+            record = result.next()
+            return record.values[0]
+
+        self._routingServer.start(
+            path=self.script_path("clustering", "router_retry_once.script"),
+            vars=self.get_vars()
+        )
+        vars = {
+            "#ERROR#": "Neo.ClientError.Cluster.NotALeader",
+        }
+        self._writeServer.start(
+            path=self.script_path("retry_with_fail_after_run_server.script"),
+            vars=vars
+        )
+
+        driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
+        session = driver.session("r")
+        session.writeTransaction(work)
+
+        session.close()
+        driver.close()
+        self._writeServer.done()
+        self._routingServer.done()
+
+        self.assertEqual(self._writeServer.count_responses("<ACCEPT>"), 2)
+        self.assertEqual(num_retries, 2)
+
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(
             path=self.script_path("clustering", "router.script"),
