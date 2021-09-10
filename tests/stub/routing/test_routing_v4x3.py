@@ -225,7 +225,6 @@ class RoutingV4x3(RoutingBase):
         if get_driver_name() in ['javascript']:
             self.skipTest("requires investigation")
         self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
-            interrupting_reader_script=
             "reader_with_unexpected_interruption_on_run.script"
         )
 
