@@ -1500,8 +1500,7 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(3, try_count)
 
     @driver_feature(types.Feature.OPT_PULL_PIPELINING)
-    def test_should_retry_write_tx_and_rediscovery_until_success(
-            self):
+    def test_should_retry_write_tx_and_rediscovery_until_success(self):
         self._should_retry_write_tx_and_rediscovery_until_success(
             "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
         )
