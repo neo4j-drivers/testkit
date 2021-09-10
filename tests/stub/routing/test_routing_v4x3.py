@@ -273,7 +273,6 @@ class RoutingV4x3(RoutingBase):
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_on_run_using_tx_run(
             self):
         self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(
-            interrupting_reader_script=
             "reader_tx_with_unexpected_interruption_on_run.script"
         )
 
