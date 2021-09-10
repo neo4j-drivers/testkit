@@ -1450,7 +1450,6 @@ class RoutingV4x3(RoutingBase):
     def test_should_retry_read_tx_and_rediscovery_until_success_on_pull_failure(
             self):
         self._should_retry_read_tx_and_rediscovery_until_success(
-            interrupting_reader_script=
             "reader_tx_with_unexpected_interruption_on_pull.script"
         )
 
