@@ -50,7 +50,7 @@ def initialise_configurations():
                 or not cluster and scheme in ("neo4j", "bolt"))
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
-                              "-cluster" if cluster else "", scheme)
+                               "-cluster" if cluster else "", scheme)
         return neo4j.Config(
             name=name,
             image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
