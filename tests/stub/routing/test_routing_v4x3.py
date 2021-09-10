@@ -1503,7 +1503,6 @@ class RoutingV4x3(RoutingBase):
     def test_should_retry_write_tx_and_rediscovery_until_success(
             self):
         self._should_retry_write_tx_and_rediscovery_until_success(
-            interrupting_writer_script=
             "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
         )
 
