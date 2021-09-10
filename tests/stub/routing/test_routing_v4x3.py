@@ -216,7 +216,6 @@ class RoutingV4x3(RoutingBase):
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
             self):
         self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
-            interrupting_reader_script=
             "reader_with_unexpected_interruption_on_pipelined_pull.script"
         )
 
