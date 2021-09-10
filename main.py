@@ -115,6 +115,8 @@ def initialise_configurations():
             ("4.3.4",     True,     True,     "neo4j", 60),
             # latest version
             # nightly builds are only available as enterprise edition
+            ("4.4.0-dev", False,    False,    "bolt",   0),
+            ("4.4.0-dev", False,    False,    "neo4j",  0),
             ("4.4.0-dev", True,     False,    "bolt",  90),
             ("4.4.0-dev", True,     False,    "neo4j",  0),
             ("4.4.0-dev", True,     True,     "neo4j", 90),
