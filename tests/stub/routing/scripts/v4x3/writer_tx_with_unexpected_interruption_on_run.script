@@ -1,0 +1,8 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO RESET
+
+C: BEGIN {"db": "adb"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: <EXIT>

@@ -1,0 +1,10 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {}
+C: PULL_ALL
+S: <EXIT>
