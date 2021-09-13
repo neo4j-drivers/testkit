@@ -3,9 +3,10 @@ import os
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.neo4j.shared import (
+    cluster_unsafe_test,
     env_neo4j_user,
     env_neo4j_pass,
-    get_neo4j_host_and_port,
+    get_driver,
 )
 from tests.shared import TestkitTestCase
 
@@ -13,8 +14,6 @@ from tests.shared import TestkitTestCase
 class TestAuthenticationBasic(TestkitTestCase):
     def setUp(self):
         super().setUp()
-        self._host, self._port = get_neo4j_host_and_port()
-        self._scheme = "bolt://%s:%d" % (self._host, self._port)
         self._driver = None
         self._session = None
 
@@ -26,15 +25,17 @@ class TestAuthenticationBasic(TestkitTestCase):
         super().tearDown()
 
     def createDriverAndSession(self, token):
-        self._driver = Driver(self._backend, self._scheme, token)
+        self._driver = get_driver(self._backend, auth=token)
         self._session = self._driver.session("r")
 
+    @cluster_unsafe_test
     def verifyConnectivity(self, auth_token):
         self.createDriverAndSession(auth_token)
         result = self._session.run("RETURN 2 as Number")
         self.assertEqual(
             result.next(), types.Record(values=[types.CypherInt(2)]))
 
+    @cluster_unsafe_test
     def testErrorOnIncorrectCredentials(self):
         auth_token = types.AuthorizationToken(scheme="basic",
                                               principal="fake",
@@ -44,6 +45,7 @@ class TestAuthenticationBasic(TestkitTestCase):
             self.verifyConnectivity(auth_token)
 
     # Tests both basic with realm specified and also custom auth token. All
+    @cluster_unsafe_test
     def testSuccessOnProvideRealmWithBasicToken(self):
         auth_token = types.AuthorizationToken(
             scheme="basic",
@@ -52,6 +54,7 @@ class TestAuthenticationBasic(TestkitTestCase):
             credentials=os.environ.get(env_neo4j_pass, "pass"))
         self.verifyConnectivity(auth_token)
 
+    @cluster_unsafe_test
     def testSuccessOnBasicToken(self):
         auth_token = types.AuthorizationToken(
             scheme="basic",
