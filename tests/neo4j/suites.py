@@ -38,55 +38,28 @@ suite_3x5.addTests(loader.loadTestsFromModule(txrun))
 """
 Suite for Neo4j 4.0
 """
-suite_4x0 = unittest.TestSuite()
-suite_4x0.addTests(loader.loadTestsFromModule(datatypes))
-suite_4x0.addTests(loader.loadTestsFromModule(sessionrun))
-suite_4x0.addTests(loader.loadTestsFromModule(authentication))
-suite_4x0.addTests(loader.loadTestsFromModule(test_bookmarks))
-suite_4x0.addTests(loader.loadTestsFromModule(test_direct_driver))
-suite_4x0.addTests(loader.loadTestsFromModule(test_summary))
-suite_4x0.addTests(loader.loadTestsFromModule(txfuncrun))
-suite_4x0.addTests(loader.loadTestsFromModule(txrun))
+suite_4x0 = suite_3x5
 
 
 """
 Suite for Neo4j 4.1
 """
-suite_4x1 = unittest.TestSuite()
-suite_4x1.addTests(loader.loadTestsFromModule(datatypes))
-suite_4x1.addTests(loader.loadTestsFromModule(sessionrun))
-suite_4x1.addTests(loader.loadTestsFromModule(authentication))
-suite_4x1.addTests(loader.loadTestsFromModule(test_bookmarks))
-suite_4x1.addTests(loader.loadTestsFromModule(test_direct_driver))
-suite_4x1.addTests(loader.loadTestsFromModule(test_summary))
-suite_4x1.addTests(loader.loadTestsFromModule(txfuncrun))
-suite_4x1.addTests(loader.loadTestsFromModule(txrun))
+suite_4x1 = suite_4x0
 
 """
 Suite for Neo4j 4.2
 """
-suite_4x2 = unittest.TestSuite()
-suite_4x2.addTests(loader.loadTestsFromModule(datatypes))
-suite_4x2.addTests(loader.loadTestsFromModule(sessionrun))
-suite_4x2.addTests(loader.loadTestsFromModule(authentication))
-suite_4x2.addTests(loader.loadTestsFromModule(test_bookmarks))
-suite_4x2.addTests(loader.loadTestsFromModule(test_direct_driver))
-suite_4x2.addTests(loader.loadTestsFromModule(test_summary))
-suite_4x2.addTests(loader.loadTestsFromModule(txfuncrun))
-suite_4x2.addTests(loader.loadTestsFromModule(txrun))
+suite_4x2 = suite_4x1
 
 """
 Suite for Neo4j 4.3
 """
-suite_4x3 = unittest.TestSuite()
-suite_4x3.addTests(loader.loadTestsFromModule(datatypes))
-suite_4x3.addTests(loader.loadTestsFromModule(sessionrun))
-suite_4x3.addTests(loader.loadTestsFromModule(authentication))
-suite_4x3.addTests(loader.loadTestsFromModule(test_bookmarks))
-suite_4x3.addTests(loader.loadTestsFromModule(test_direct_driver))
-suite_4x3.addTests(loader.loadTestsFromModule(test_summary))
-suite_4x3.addTests(loader.loadTestsFromModule(txfuncrun))
-suite_4x3.addTests(loader.loadTestsFromModule(txrun))
+suite_4x3 = suite_4x2
+
+"""
+Suite for Neo4j 4.4
+"""
+suite_4x4 = suite_4x3
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -104,6 +77,8 @@ if __name__ == "__main__":
         suite = suite_4x2
     elif name == "4.3":
         suite = suite_4x3
+    elif name == "4.4":
+        suite = suite_4x4
 
     if not suite:
         print("Unknown suite name: " + name)

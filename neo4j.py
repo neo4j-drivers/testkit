@@ -45,8 +45,8 @@ class Standalone:
             env_map=env_map,
             network=network)
 
-    def address(self):
-        return (self._hostname, self._port)
+    def addresses(self):
+        return [(self._hostname, self._port)]
 
     def stop(self):
         self._container.rm()
@@ -74,8 +74,8 @@ class Cluster:
         for core in self._cores:
             core.start(self._image, initial_members, network)
 
-    def address(self):
-        return ("core0", 7687)
+    def addresses(self):
+        return [("core%d" % i, 7687) for i in range(self._num_cores)]
 
     def stop(self):
         for core in self._cores:

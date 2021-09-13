@@ -2,11 +2,10 @@ from uuid import uuid4
 
 import nutkit.protocol as types
 from tests.neo4j.shared import (
+    cluster_unsafe_test,
     get_driver,
-    get_server_info,
 )
 from tests.shared import (
-    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -24,6 +23,7 @@ class TestBookmarks(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    @cluster_unsafe_test
     def test_can_obtain_bookmark_after_commit(self):
         self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
@@ -32,6 +32,7 @@ class TestBookmarks(TestkitTestCase):
         bookmarks = self._session.lastBookmarks()
         self.assertTrue(bookmarks)
 
+    @cluster_unsafe_test
     def test_can_pass_bookmark_into_next_session(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -62,6 +63,7 @@ class TestBookmarks(TestkitTestCase):
         self.assertEqual(thing.props.value["uuid"],
                          types.CypherString(unique_id))
 
+    @cluster_unsafe_test
     def test_no_bookmark_after_rollback(self):
         self._session = self._driver.session("w")
         tx = self._session.beginTransaction()
