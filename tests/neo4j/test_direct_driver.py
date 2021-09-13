@@ -121,10 +121,6 @@ class TestDirectDriver(TestkitTestCase):
             result = self._session.run("RETURN 1")
             result.next()
         exc = e.exception
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # does not set exception code or message
-            return
         self.assertEqual(exc.code,
                          "Neo.ClientError.Database.DatabaseNotFound")
         self.assertIn("test-database", exc.msg)

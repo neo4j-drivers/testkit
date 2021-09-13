@@ -224,10 +224,6 @@ class TestTxFuncRun(TestkitTestCase):
             "w", bookmarks=self._session1.lastBookmarks()
         )
         self._session1.writeTransaction(update1)
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # does not set exception code
-            return
         self.assertIsNotNone(exc)
         self.assertEqual(exc.exception.code,
                          "Neo.TransientError.Transaction.LockClientStopped")
