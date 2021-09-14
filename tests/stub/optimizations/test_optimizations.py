@@ -258,12 +258,14 @@ class TestOptimizations(TestkitTestCase):
                     res.consume()
                 else:
                     res.next()
+                    res.next()
                 tx.commit()
             else:
                 res = session.run("CYPHER")
                 if consume:
                     res.consume()
                 else:
+                    res.next()
                     res.next()
 
             session.close()
@@ -282,3 +284,78 @@ class TestOptimizations(TestkitTestCase):
                         test()
                     self._server.reset()
                     self._router.reset()
+
+    @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
+    def test_uses_implicit_default_arguments_multi_query(self):
+        def test():
+            self._server.start(path=self.script_path(
+                "v4x3", "all_default_multi_query.script"
+            ))
+            auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                            credentials="pass")
+            driver = Driver(self._backend, "bolt://%s" % self._server.address,
+                            auth)
+            session = driver.session("w")  # write is default
+            tx = session.beginTransaction()
+            res = tx.run("CYPHER")
+            if consume1:
+                res.consume()
+            else:
+                res.next()
+                res.next()
+            res = tx.run("CYPHER")
+            if consume2:
+                res.consume()
+            else:
+                res.next()
+                res.next()
+            tx.commit()
+
+            session.close()
+            driver.close()
+            self._server.done()
+
+        for consume1 in (True, False):
+            for consume2 in (True, False):
+                with self.subTest(("discard1" if consume1 else "pull1")
+                                  + ("_discard2" if consume2 else "_pull2")):
+                    test()
+                self._server.reset()
+                self._router.reset()
+
+    @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
+    def test_uses_implicit_default_arguments_multi_query_nested(self):
+        def test():
+            self._server.start(path=self.script_path(
+                "v4x3", "all_default_multi_query_nested.script"
+            ))
+            auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+                                            credentials="pass")
+            driver = Driver(self._backend, "bolt://%s" % self._server.address,
+                            auth)
+            session = driver.session("w")  # write is default
+            tx = session.beginTransaction()
+            res1 = tx.run("CYPHER")
+            res1.next()
+            res2 = tx.run("CYPHER")
+            if consume2:
+                res2.consume()
+            else:
+                res2.next()
+                res2.next()
+            if consume1:
+                res1.consume()
+            else:
+                res1.next()
+            tx.commit()
+
+            session.close()
+            driver.close()
+            self._server.done()
+
+        for consume1 in (True, False):
+            for consume2 in (True, False):
+                with self.subTest(("discard1" if consume1 else "pull1")
+                                  + ("_discard2" if consume2 else "_pull2")):
+                    test()
+                self._server.reset()

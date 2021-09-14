@@ -8,12 +8,21 @@ S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
     C: BEGIN {}
     S: SUCCESS {}
     C: RUN "*" {} {}
-    S: SUCCESS {"fields": ["1"]}
+    S: SUCCESS {"fields": ["1"], "qid": 1}
     {{
         C: PULL {"n": "*"}
         S: RECORD [1]
+           SUCCESS {"has_more": true}
+        {{
+            C: PULL {"n": "*"}
+            S: RECORD [1]
+        ----
+            # Drivers that pipeline a PULL will takes this path in the discarding tests
+            C: DISCARD {"n": "*"}
+        }}
     ----
-        C: DISCARD {}
+        # Drivers that don't pipeline a PULL will takes this path in the discarding tests
+        C: DISCARD {"n": "*"}
     }}
     S: SUCCESS {}
     C: COMMIT
@@ -25,11 +34,19 @@ S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
     {{
         C: PULL {"n": "*"}
         S: RECORD [1]
+           SUCCESS {"has_more": true}
+        {{
+            C: PULL {"n": "*"}
+            S: RECORD [1]
+        ----
+            # Drivers that pipeline a PULL will takes this path in the discarding tests
+            C: DISCARD {"n": "*"}
+        }}
     ----
-        C: DISCARD {}
+        # Drivers that don't pipeline a PULL will takes this path in the discarding tests
+        C: DISCARD {"n": "*"}
     }}
-    S: RECORD [1]
-       SUCCESS {"type": "w", "bookmark": "bookmark:1"}
+    S: SUCCESS {"type": "w", "bookmark": "bookmark:1"}
 }}
 *: RESET
 ?: GOODBYE
