@@ -14,6 +14,11 @@ class Feature(Enum):
     # The driver caches connections (e.g., in a pool) and doesn't start a new
     # one (with hand-shake, HELLO, etc.) for each query.
     OPT_CONNECTION_REUSE = "Optimization:ConnectionReuse"
+    # The driver first tries to SUCCESSfully BEGIN a transaction before calling
+    # the user-defined transaction function. This way, the (potentially costly)
+    # transaction function is not started until a working transaction has been
+    # established.
+    OPT_EAGER_TX_BEGIN = "Optimization:EagerTransactionBegin"
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
