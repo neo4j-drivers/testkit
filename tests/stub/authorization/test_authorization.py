@@ -162,7 +162,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                 # driver waits with sending BEGIN until .run is called
                 # this pipelining saves time but exposes issues later
                 tx.run("cypher")
-            if get_driver_name() in ["javascript"]:
+            if get_driver_name() in ["javascript", "dotnet"]:
                 tx.run("cypher").next()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
