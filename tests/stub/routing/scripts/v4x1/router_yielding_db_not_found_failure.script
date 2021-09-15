@@ -4,9 +4,9 @@ C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent":
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 *: RESET
 C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": []}
-   PULL {"n": -1}
 S: SUCCESS {"fields": ["ttl", "servers"]}
-   FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
+C: PULL {"n": -1}
+S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
 {?
     C: RESET
     S: SUCCESS {}

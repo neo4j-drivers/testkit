@@ -1,0 +1,11 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "r", "db": "apple"}
+*: RESET
+?: GOODBYE

@@ -6,6 +6,7 @@ from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
     get_ip_addresses,
+    driver_feature
 )
 from ._routing import RoutingBase
 
@@ -133,7 +134,7 @@ class RoutingV4x3(RoutingBase):
 
         session = driver.session('w', database='system')
         tx = session.beginTransaction()
-        tx.run("CREATE database foo")
+        list(tx.run("CREATE database foo"))
         tx.commit()
 
         session2 = driver.session('w', bookmarks=session.lastBookmarks(),
@@ -177,15 +178,15 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(summaries[0].server_info.address,
                          get_dns_resolved_server_address(self._readServer1))
 
-    def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(self):
+    def _should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
+            self, interrupting_reader_script):
         # TODO remove this block once all languages wor
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(self._readServer1,
-                          "reader_with_unexpected_interruption.script")
+        self.start_server(self._readServer1, interrupting_reader_script)
 
         session = driver.session('r', database=self.adb)
         failed = False
@@ -211,17 +212,31 @@ class RoutingV4x3(RoutingBase):
         self._readServer1.done()
         self.assertTrue(failed)
 
-    def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(self):
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
+            self):
+        self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
+            "reader_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_on_run_using_session_run(
+            self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['javascript']:
+            self.skipTest("requires investigation")
+        self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
+            "reader_with_unexpected_interruption_on_run.script"
+        )
+
+    def _should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(
+            self, interrupting_reader_script):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(
-            self._readServer1,
-            "reader_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._readServer1, interrupting_reader_script)
 
         session = driver.session('r', database=self.adb)
         tx = session.beginTransaction()
@@ -245,6 +260,116 @@ class RoutingV4x3(RoutingBase):
         self._readServer1.done()
         self.assertTrue(failed)
 
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(
+            self):
+        self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(
+            "reader_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_on_run_using_tx_run(
+            self):
+        self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(
+            "reader_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def _should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(
+            self, interrupting_reader_script):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent, maxTxRetryTimeMs=5000)
+        self.start_server(self._routingServer1,
+                          "router_adb_multi_no_bookmarks.script")
+        self.start_server(self._readServer1, interrupting_reader_script)
+        self.start_server(self._readServer2, interrupting_reader_script)
+
+        session = driver.session('r', database=self.adb)
+
+        def work(tx):
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
+            tx.commit()
+
+        with self.assertRaises(types.DriverError) as exc:
+            session.readTransaction(work)
+
+        session.close()
+        driver.close()
+
+        if get_driver_name() in ['java']:
+            self.assertEqual(
+                'org.neo4j.driver.exceptions.SessionExpiredException',
+                exc.exception.errorType
+            )
+        self._routingServer1.done()
+        self._readServer1.done()
+        self._readServer2.done()
+
+    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME,
+                    types.Feature.OPT_PULL_PIPELINING)
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(
+            self):
+        self._should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(
+            "reader_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME)
+    def test_should_fail_when_reading_from_unexpectedly_interrupting_readers_on_run_using_tx_function(
+            self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['javascript']:
+            self.skipTest("requires investigation")
+        self._should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(
+            "reader_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def _should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(
+            self, interrupting_writer_script):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent, maxTxRetryTimeMs=5000)
+        self.start_server(self._routingServer1,
+                          "router_adb_multi_no_bookmarks.script")
+        self.start_server(self._writeServer1, interrupting_writer_script)
+        self.start_server(self._writeServer2, interrupting_writer_script)
+
+        session = driver.session('w', database=self.adb)
+
+        def work(tx):
+            # drivers doing eager loading will fail here
+            tx.run("RETURN 1 as n")
+            # else they should fail here
+            tx.commit()
+
+        with self.assertRaises(types.DriverError) as exc:
+            session.writeTransaction(work)
+
+        session.close()
+        driver.close()
+
+        if get_driver_name() in ['java']:
+            self.assertEqual(
+                'org.neo4j.driver.exceptions.SessionExpiredException',
+                exc.exception.errorType
+            )
+        self._routingServer1.done()
+        self._writeServer1.done()
+        self._writeServer2.done()
+
+    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME,
+                    types.Feature.OPT_PULL_PIPELINING)
+    def test_should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(
+            self):
+        self._should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(
+            "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME)
+    def test_should_fail_when_writing_to_unexpectedly_interrupting_writers_on_run_using_tx_function(
+            self):
+        self._should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(
+            "writer_tx_with_unexpected_interruption_on_run.script"
+        )
+
     # Checks that write server is used
     def test_should_write_successfully_on_writer_using_session_run(self):
         # FIXME: test assumes that first writer in RT will be contacted first
@@ -255,6 +380,7 @@ class RoutingV4x3(RoutingBase):
 
         session = driver.session('w', database=self.adb)
         res = session.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
         session.close()
         driver.close()
@@ -275,6 +401,7 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
         res = tx.run("RETURN 1 as n")
+        list(res)
         summary = res.consume()
         tx.commit()
         session.close()
@@ -301,6 +428,7 @@ class RoutingV4x3(RoutingBase):
         def work(tx):
             nonlocal res, summary
             res = tx.run("RETURN 1 as n")
+            list(res)
             summary = res.consume()
 
         session.writeTransaction(work)
@@ -356,7 +484,8 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[1], [1]], sequences)
         self.assertEqual(self.route_call_count(self._routingServer1), 2)
 
-    def test_should_retry_write_until_success_with_leader_change_using_tx_function(self):
+    def _should_retry_write_until_success_with_leader_change_using_tx_function(
+            self, leader_switch_script):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
@@ -366,10 +495,7 @@ class RoutingV4x3(RoutingBase):
             self._routingServer1,
             "router_with_leader_change.script"
         )
-        self.start_server(
-            self._writeServer1,
-            "writer_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._writeServer1, leader_switch_script)
         self.start_server(self._writeServer2, "writer_tx.script")
 
         session = driver.session('w', database=self.adb)
@@ -392,7 +518,27 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[]], sequences)
         self.assertEqual(2, num_retries)
 
-    def test_should_retry_write_until_success_with_leader_shutdown_during_tx_using_tx_function(self):
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_retry_write_until_success_with_leader_change_using_tx_function(
+            self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['python']:
+            self.skipTest("requires investigation")
+        self._should_retry_write_until_success_with_leader_change_using_tx_function(
+            "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function(
+            self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ['javascript', 'python']:
+            self.skipTest("requires investigation")
+        self._should_retry_write_until_success_with_leader_change_using_tx_function(
+            "writer_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_retry_write_until_success_with_leader_shutdown_during_tx_using_tx_function(
+            self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
@@ -428,17 +574,15 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[], []], sequences)
         self.assertEqual(2, num_retries)
 
-    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(self):
+    def _should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(
+            self, interrupting_writer_script):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(
-            self._writeServer1,
-            "writer_with_unexpected_interruption.script"
-        )
+        self.start_server(self._writeServer1, interrupting_writer_script)
 
         session = driver.session('w', database=self.adb)
         failed = False
@@ -472,7 +616,27 @@ class RoutingV4x3(RoutingBase):
         self._writeServer1.done()
         self.assertTrue(failed)
 
-    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(self):
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(
+            self):
+        self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(
+            "writer_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_on_run_using_session_run(
+            self):
+        self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(
+            "writer_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_on_pull_using_session_run(
+            self):
+        self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(
+            "writer_with_unexpected_interruption_on_pull.script"
+        )
+
+    def _should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(
+            self, interrupting_writer_script):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
@@ -481,10 +645,7 @@ class RoutingV4x3(RoutingBase):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(
-            self._writeServer1,
-            "writer_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._writeServer1, interrupting_writer_script)
 
         session = driver.session('w', database=self.adb)
         tx = session.beginTransaction()
@@ -510,7 +671,27 @@ class RoutingV4x3(RoutingBase):
         self._writeServer1.done()
         self.assertTrue(failed)
 
-    def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(self):
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(
+            self):
+        self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(
+            "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_on_run_using_tx_run(
+            self):
+        self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(
+            "writer_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_on_pull_using_tx_run(
+            self):
+        self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(
+            "writer_tx_with_unexpected_interruption_on_pull.script"
+        )
+
+    def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(
+            self):
         # TODO add support and remove this block
         if get_driver_name() in ['go']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -861,7 +1042,7 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', bookmarks=["OldBookmark"],
                                  database=self.adb)
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
+        list(tx.run("RETURN 1 as n"))
         tx.commit()
         last_bookmarks = session.lastBookmarks()
         session.close()
@@ -904,7 +1085,7 @@ class RoutingV4x3(RoutingBase):
         session = driver.session('w', bookmarks=["BookmarkA"],
                                  database=self.adb)
         tx = session.beginTransaction()
-        tx.run("CREATE (n {name:'Bob'})")
+        list(tx.run("CREATE (n {name:'Bob'})"))
         tx.commit()
         first_bookmark = session.lastBookmarks()
         tx = session.beginTransaction()
@@ -921,18 +1102,13 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(["BookmarkB"], first_bookmark)
         self.assertEqual(["BookmarkC"], second_bookmark)
 
-    def test_should_retry_read_tx_until_success_on_error(self):
+    def _should_retry_read_tx_until_success_on_error(
+            self, interrupting_reader_script):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(
-            self._readServer1,
-            "reader_tx_with_unexpected_interruption.script"
-        )
-        self.start_server(
-            self._readServer2,
-            "reader_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._readServer1, interrupting_reader_script)
+        self.start_server(self._readServer2, interrupting_reader_script)
 
         session = driver.session('r', database=self.adb)
         sequences = []
@@ -968,6 +1144,22 @@ class RoutingV4x3(RoutingBase):
         self._readServer2.done()
         self.assertEqual([[1]], sequences)
         self.assertEqual(2, try_count)
+
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_retry_read_tx_until_success_on_error(self):
+        self._should_retry_read_tx_until_success_on_error(
+            "reader_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_retry_read_tx_until_success_on_run_error(self):
+        self._should_retry_read_tx_until_success_on_error(
+            "reader_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_retry_read_tx_until_success_on_pull_error(self):
+        self._should_retry_read_tx_until_success_on_error(
+            "reader_tx_with_unexpected_interruption_on_pull.script"
+        )
 
     def test_should_retry_read_tx_until_success_on_no_connection(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1020,18 +1212,13 @@ class RoutingV4x3(RoutingBase):
         #       that `try_count == 2`. When doing so be aware that drivers could
         #       do round robin, e.g. Java.
 
-    def test_should_retry_write_tx_until_success_on_error(self):
+    def test_should_retry_write_tx_until_success_on_error(
+            self, interrupting_writer_script):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
-        self.start_server(
-            self._writeServer1,
-            "writer_tx_with_unexpected_interruption.script"
-        )
-        self.start_server(
-            self._writeServer2,
-            "writer_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._writeServer1, interrupting_writer_script)
+        self.start_server(self._writeServer2, interrupting_writer_script)
 
         session = driver.session('w', database=self.adb)
         sequences = []
@@ -1067,6 +1254,22 @@ class RoutingV4x3(RoutingBase):
         self._writeServer2.done()
         self.assertEqual([[]], sequences)
         self.assertEqual(2, try_count)
+
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_retry_write_tx_until_success_on_error(self):
+        self._should_retry_write_tx_until_success_on_error(
+            "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_retry_write_tx_until_success_on_run_error(self):
+        self._should_retry_write_tx_until_success_on_error(
+            "writer_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_retry_write_tx_until_success_on_pull_error(self):
+        self._should_retry_write_tx_until_success_on_error(
+            "writer_tx_with_unexpected_interruption_on_pull.script"
+        )
 
     def test_should_retry_write_tx_until_success_on_no_connection(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1119,7 +1322,8 @@ class RoutingV4x3(RoutingBase):
         #       that `try_count == 2`. When doing so be aware that drivers could
         #       do round robin, e.g. Java.
 
-    def test_should_retry_read_tx_and_rediscovery_until_success(self):
+    def _should_retry_read_tx_and_rediscovery_until_success(
+            self, interrupting_reader_script):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
@@ -1131,15 +1335,9 @@ class RoutingV4x3(RoutingBase):
         )
         self.start_server(self._routingServer2,
                           "router_yielding_reader2_adb.script")
-        self.start_server(
-            self._readServer1,
-            "reader_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._readServer1, interrupting_reader_script)
         self.start_server(self._readServer2, "reader_tx.script")
-        self.start_server(
-            self._readServer3,
-            "reader_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._readServer3, interrupting_reader_script)
 
         session = driver.session('r', database=self.adb)
         sequences = []
@@ -1163,7 +1361,26 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[1]], sequences)
         self.assertEqual(3, try_count)
 
-    def test_should_retry_write_tx_and_rediscovery_until_success(self):
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_retry_read_tx_and_rediscovery_until_success(self):
+        self._should_retry_read_tx_and_rediscovery_until_success(
+            "reader_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_retry_read_tx_and_rediscovery_until_success_on_run_failure(
+            self):
+        self._should_retry_read_tx_and_rediscovery_until_success(
+            "reader_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_retry_read_tx_and_rediscovery_until_success_on_pull_failure(
+            self):
+        self._should_retry_read_tx_and_rediscovery_until_success(
+            "reader_tx_with_unexpected_interruption_on_pull.script"
+        )
+
+    def _should_retry_write_tx_and_rediscovery_until_success(
+            self, interrupting_writer_script):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
@@ -1175,15 +1392,9 @@ class RoutingV4x3(RoutingBase):
         )
         self.start_server(self._routingServer2,
                           "router_yielding_reader2_adb.script")
-        self.start_server(
-            self._writeServer1,
-            "writer_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._writeServer1, interrupting_writer_script)
         self.start_server(self._writeServer2, "writer_tx.script")
-        self.start_server(
-            self._writeServer3,
-            "writer_tx_with_unexpected_interruption.script"
-        )
+        self.start_server(self._writeServer3, interrupting_writer_script)
 
         session = driver.session('w', database=self.adb)
         sequences = []
@@ -1207,7 +1418,26 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual([[]], sequences)
         self.assertEqual(3, try_count)
 
-    def test_should_use_initial_router_for_discovery_when_others_unavailable(self):
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    def test_should_retry_write_tx_and_rediscovery_until_success(self):
+        self._should_retry_write_tx_and_rediscovery_until_success(
+            "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
+        )
+
+    def test_should_retry_write_tx_and_rediscovery_until_success_on_run_failure(
+            self):
+        self._should_retry_write_tx_and_rediscovery_until_success(
+            "writer_tx_with_unexpected_interruption_on_run.script"
+        )
+
+    def test_should_retry_write_tx_and_rediscovery_until_success_on_pull_failure(
+            self):
+        self._should_retry_write_tx_and_rediscovery_until_success(
+            "writer_tx_with_unexpected_interruption_on_pull.script"
+        )
+
+    def test_should_use_initial_router_for_discovery_when_others_unavailable(
+            self):
         # TODO add support and remove this block
         if get_driver_name() in ['go']:
             self.skipTest("verifyConnectivity not implemented in backend")
@@ -1386,7 +1616,7 @@ class RoutingV4x3(RoutingBase):
             sequences.append(self.collectRecords(result))
 
         session.readTransaction(work)
-        session.run("RETURN 1 as n").consume()
+        list(session.run("RETURN 1 as n"))
         session.close()
         driver.close()
 
@@ -1469,7 +1699,7 @@ class RoutingV4x3(RoutingBase):
             database=self.adb
         )
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
+        list(tx.run("RETURN 1 as n"))
         tx.commit()
         last_bookmarks = session.lastBookmarks()
         session.close()
@@ -1884,7 +2114,9 @@ class RoutingV4x3(RoutingBase):
         self.start_server(self._readServer1, "reader.script")
 
         session = driver.session('r', database=self.adb)
-        summary = session.run("RETURN 1 as n").consume()
+        result = session.run("RETURN 1 as n")
+        list(result)
+        summary = result.consume()
         protocol_version = summary.server_info.protocol_version
         session.close()
         driver.close()
@@ -1905,7 +2137,9 @@ class RoutingV4x3(RoutingBase):
                           "reader_with_explicit_hello.script")
 
         session = driver.session('r', database=self.adb)
-        summary = session.run("RETURN 1 as n").consume()
+        result = session.run("RETURN 1 as n")
+        list(result)
+        summary = result.consume()
         agent = summary.server_info.agent
         session.close()
         driver.close()
@@ -1913,3 +2147,39 @@ class RoutingV4x3(RoutingBase):
         self.assertEqual(self.server_agent, agent)
         self._routingServer1.done()
         self._readServer1.done()
+
+    def test_should_fail_when_driver_closed_using_session_run(
+            self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._readServer1, "reader.script")
+
+        session = driver.session('r', database=self.adb)
+        result = session.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        summary = result.consume()
+        session.close()
+        session = driver.session('r', database=self.adb)
+        driver.close()
+
+        failed_on_run = False
+        try:
+            session.run("RETURN 1 as n")
+        except types.DriverError as e:
+            if get_driver_name() in ['java']:
+                self.assertEqual(
+                    'java.lang.IllegalStateException',
+                    e.errorType
+                )
+            failed_on_run = True
+
+        self.assertTrue(failed_on_run)
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
+        self.assertEqual([1], sequence)

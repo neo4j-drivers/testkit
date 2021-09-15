@@ -7,9 +7,11 @@ C: BEGIN {}
 S: SUCCESS {}
 {{
     C: RUN "RETURN 1.1 as n" {} {}
-       PULL_ALL
     S: FAILURE {"code": "Neo.ClientError.Cluster.NotALeader", "message": "blabla"}
-       IGNORED
+    {?
+        C: PULL_ALL
+        S: IGNORED
+    ?}
     *: RESET
     {?
         # Driver that keep the connection alive after NotALeader will take this
@@ -17,14 +19,14 @@ S: SUCCESS {}
         C: BEGIN {}
         S: SUCCESS {}
         C: RUN "RETURN 2.1 as n" {} {}
-           PULL_ALL
         S: SUCCESS {"fields": ["n"]}
-           RECORD [1]
+        C: PULL_ALL
+        S: RECORD [1]
            SUCCESS {"type": "w"}
         C: RUN "RETURN 2.2 as n" {} {}
-           PULL_ALL
         S: SUCCESS {"fields": ["n"]}
-           RECORD [1]
+        C: PULL_ALL
+        S: RECORD [1]
            SUCCESS {"type": "w"}
         C: COMMIT
         S: SUCCESS {}
@@ -33,14 +35,14 @@ S: SUCCESS {}
     # Driver that closes the connection after NotALeader will take this path
     # after a reconnect.
     C: RUN "RETURN 2.1 as n" {} {}
-       PULL_ALL
     S: SUCCESS {"fields": ["n"]}
-       RECORD [1]
+    C: PULL_ALL
+    S: RECORD [1]
        SUCCESS {"type": "w"}
     C: RUN "RETURN 2.2 as n" {} {}
-       PULL_ALL
     S: SUCCESS {"fields": ["n"]}
-       RECORD [1]
+    C: PULL_ALL
+    S: RECORD [1]
        SUCCESS {"type": "w"}
     C: COMMIT
     S: SUCCESS {}

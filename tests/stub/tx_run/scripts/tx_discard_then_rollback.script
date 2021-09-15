@@ -6,12 +6,12 @@ C: BEGIN {"{}": "*"}
 S: SUCCESS {}
 C: RUN {"U": "*"}{"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
-{+
+{*
     C: PULL {"n": {"Z": "*"}, "[qid]": -1}
     S: RECORD [1]
        RECORD [2]
        SUCCESS {"type": "r", "has_more": true}
-+}
+*}
 C: DISCARD {"n": -1, "[qid]": -1}
 S: SUCCESS {}
 C: ROLLBACK

@@ -18,6 +18,12 @@ class Result:
         req = protocol.ResultConsume(self._result.id)
         return self._backend.sendAndReceive(req)
 
+    def list(self):
+        """ Retrieves the entire result stream.
+        """
+        req = protocol.ResultList(self._result.id)
+        return self._backend.sendAndReceive(req)
+
     def keys(self):
         return self._result.keys
 

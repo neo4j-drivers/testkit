@@ -1,0 +1,12 @@
+!: BOLT 4.3
+!: ALLOW CONCURRENT
+
+C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "routing": {"{}": "*"}}
+S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:0"}
+*: RESET
+{*
+    C: ROUTE "*" "*" "*"
+    S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9001"], "role":"READ"}, {"addresses": ["#HOST#:9001"], "role":"WRITE"}]}}
+    *: RESET
+*}
+?: GOODBYE

@@ -46,75 +46,83 @@ test_flags = {
 
 
 def initialise_configurations():
-    configurations = []
-    configurations.append(neo4j.Config(
-        name="4.2-cluster",
-        image="neo4j:4.2-enterprise",
-        version="4.2",
-        edition="enterprise",
-        cluster=True,
-        suite="",  # TODO: Define cluster suite
-        scheme="neo4j",
-        download=None,
-        stress_test_duration=90))
+    def generate_config(version, enterprise, cluster, scheme, stress_test):
+        assert (cluster and scheme == "neo4j"
+                or not cluster and scheme in ("neo4j", "bolt"))
+        edition = "enterprise" if enterprise else "community"
+        name = "%s-%s%s-%s" % (version, edition,
+                               "-cluster" if cluster else "", scheme)
+        return neo4j.Config(
+            name=name,
+            image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
+            version=version,
+            edition=edition,
+            cluster=cluster,
+            suite=version,
+            scheme=scheme,
+            download=None,
+            stress_test_duration=stress_test
+        )
 
-    configurations.append(neo4j.Config(
-        name="3.5-enterprise",
-        image="neo4j:3.5-enterprise",
-        version="3.5",
-        edition="enterprise",
-        cluster=False,
-        suite="3.5",
-        scheme="bolt",
-        download=None,
-        stress_test_duration=0))
-
-    configurations.append(neo4j.Config(
-        name="4.0-community",
-        version="4.0",
-        image="neo4j:4.0",
-        edition="community",
-        cluster=False,
-        suite="4.0",
-        scheme="neo4j",
-        download=None,
-        stress_test_duration=0))
-
-    configurations.append(neo4j.Config(
-        name="4.1-enterprise",
-        image="neo4j:4.1-enterprise",
-        version="4.1",
-        edition="enterprise",
-        cluster=False,
-        suite="4.1",
-        scheme="neo4j",
-        download=None,
-        stress_test_duration=0))
-
-    if in_teamcity:
-        configurations.append(neo4j.Config(
-            name="4.2-tc-enterprise",
-            image="neo4j:4.2.3-enterprise",
-            version="4.2",
-            edition="enterprise",
-            cluster=False,
-            suite="4.2",
-            scheme="neo4j",
+    def generate_tc_config(version, enterprise, cluster, scheme, stress_test):
+        if not in_teamcity:
+            return None
+        assert (cluster and scheme == "neo4j"
+                or not cluster and scheme in ("neo4j", "bolt"))
+        edition = "enterprise" if enterprise else "community"
+        name = "%s-tc-%s%s-%s" % (version, edition,
+                                  "-cluster" if cluster else "", scheme)
+        version_without_drop = ".".join(version.split(".")[:2])
+        return neo4j.Config(
+            name=name,
+            image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
+            version=version_without_drop,
+            edition=edition,
+            cluster=cluster,
+            suite=version_without_drop,
+            scheme=scheme,
             download=teamcity.DockerImage(
-                "neo4j-enterprise-4.2.4-docker-loadable.tar"),
-            stress_test_duration=0))
+                "neo4j-%s-%s-docker-loadable.tar" % (edition, version)
+            ),
+            stress_test_duration=stress_test
+        )
 
-        configurations.append(neo4j.Config(
-            name="4.3-tc-enterprise",
-            image="neo4j:4.3.0-drop03.0-enterprise",
-            version="4.3",
-            edition="enterprise",
-            cluster=False,
-            suite="4.3",
-            scheme="neo4j",
-            download=teamcity.DockerImage(
-                "neo4j-enterprise-4.3.0-drop03.0-docker-loadable.tar"),
-            stress_test_duration=0))
+    configurations = [
+        generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
+        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+            # LTS version
+            # 3.5 servers only support routing scheme if configured as cluster
+            ("3.5",    False,       False,    "bolt",   0),
+            ("3.5",    True,        False,    "bolt",   0),
+            ("3.5",    True,        True,     "neo4j", 60),
+            # not officially supported versions
+            ("4.0",    True,        False,    "neo4j",  0),
+            ("4.1",    True,        False,    "neo4j",  0),
+            ("4.2",    True,        False,    "neo4j",  0),
+            # official backwards-compatibility
+            ("4.3",    False,       False,    "bolt",   0),
+            ("4.3",    False,       False,    "neo4j",  0),
+            ("4.3",    True,        False,    "bolt",   0),
+            ("4.3",    True,        False,    "neo4j",  0),
+            ("4.3",    True,        True,     "neo4j", 90),
+        )
+    ]
+    configurations += [
+        generate_tc_config(version_, enterprise_, cluster_, scheme_,
+                           stress_test_)
+        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+            # nightly build of official backwards-compatible version
+            ("4.3.4",     True,     True,     "neo4j", 60),
+            # latest version
+            ("4.4.0-dev", False,    False,    "bolt",   0),
+            ("4.4.0-dev", False,    False,    "neo4j",  0),
+            ("4.4.0-dev", True,     False,    "bolt",  90),
+            ("4.4.0-dev", True,     False,    "neo4j",  0),
+            ("4.4.0-dev", True,     True,     "neo4j", 90),
+        )
+    ]
+
+    configurations = list(filter(lambda conf: conf is not None, configurations))
     return configurations
 
 
@@ -340,25 +348,28 @@ def main(settings, configurations):
 
         # Start a Neo4j server
         if cluster:
-            print("Starting neo4j cluster (%s)" % server_name)
+            print("\n    Starting neo4j cluster (%s)\n" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
                                    neo4j_artifacts_path)
         else:
-            print("Starting neo4j standalone server (%s)" % server_name)
+            print("\n    Starting neo4j standalone server (%s)\n" % server_name)
             server = neo4j.Standalone(neo4j_config.image,
                                       server_name,
                                       neo4j_artifacts_path,
                                       "neo4jserver", 7687,
                                       neo4j_config.edition)
         server.start(networks[0])
-        hostname, port = server.address()
+        addresses = server.addresses()
+        hostname, port = addresses[0]
 
         # Wait until server is listening before running tests
         # Use driver container to check for Neo4j availability since connect
         # will be done from there
-        print("Waiting for neo4j service port to be available")
-        driver_container.poll_host_and_port_until_available(hostname, port)
+        for address in addresses:
+            print("Waiting for neo4j service at %s to be available"
+                  % (address,))
+            driver_container.poll_host_and_port_until_available(*address)
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:

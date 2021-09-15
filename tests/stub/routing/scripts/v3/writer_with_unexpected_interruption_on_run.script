@@ -1,0 +1,6 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {}
+S: <EXIT>

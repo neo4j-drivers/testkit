@@ -1,0 +1,11 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"t_first": 2001, "fields": ["n"]}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "r", "db": "apple", "t_last": 2002, "stats": {"system-updates": 1234}}
+*: RESET
+?: GOODBYE

@@ -1,20 +1,14 @@
 !: BOLT #VERSION#
-!: AUTO GOODBYE
 
 C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
-C: BEGIN {"db": "adb"}
-S: SUCCESS {}
-C: RUN "RETURN 1 as n" {} {}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
 S: SUCCESS {"fields": ["n"]}
-C: PULL {"n": 1000}
+C: PULL { "n": 1000 }
 S: RECORD [1]
+   RECORD [5]
+   RECORD [7]
    SUCCESS {"type": "r"}
-C: ROLLBACK
-S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to rollback"}
-C: RESET
-S: SUCCESS {}
-{?
-    C: RESET
-    S: SUCCESS {}
-?}
+*: RESET
+?: GOODBYE

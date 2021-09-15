@@ -43,7 +43,7 @@ class TestBookmarksV4(TestkitTestCase):
         )
         session = self._driver.session("w")
         tx = session.beginTransaction()
-        tx.run("RETURN 1 as n")
+        list(tx.run("RETURN 1 as n"))
         tx.commit()
         bookmarks = session.lastBookmarks()
         session.close()
