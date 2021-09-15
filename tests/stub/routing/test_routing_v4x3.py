@@ -1212,7 +1212,7 @@ class RoutingV4x3(RoutingBase):
         #       that `try_count == 2`. When doing so be aware that drivers could
         #       do round robin, e.g. Java.
 
-    def test_should_retry_write_tx_until_success_on_error(
+    def _should_retry_write_tx_until_success_on_error(
             self, interrupting_writer_script):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
