@@ -1,6 +1,7 @@
 from nutkit.frontend import Driver
 from nutkit import protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -10,18 +11,30 @@ from tests.stub.shared import StubServer
 class TestTxRun(TestkitTestCase):
     def setUp(self):
         super().setUp()
-        self._server = StubServer(9001)
-        uri = "bolt://%s" % self._server.address
-        self._driver = Driver(self._backend, uri,
-                              types.AuthorizationToken("basic", principal="",
-                                                       credentials=""))
+        self._router = StubServer(9000)
+        self._server1 = StubServer(9010)
+        self._server2 = StubServer(9011)
         self._session = None
 
     def tearDown(self):
         if self._session is not None:
             self._session.close()
-        self._server.done()
+        self._router.reset()
+        self._server1.reset()
+        self._server2.reset()
         super().tearDown()
+
+    def _create_direct_driver(self):
+        uri = "bolt://%s" % self._server1.address
+        self._driver = Driver(self._backend, uri,
+                              types.AuthorizationToken("basic", principal="",
+                                                       credentials=""))
+
+    def _create_routing_driver(self):
+        uri = "neo4j://%s" % self._router.address
+        self._driver = Driver(self._backend, uri,
+                              types.AuthorizationToken("basic", principal="",
+                                                       credentials=""))
 
     def test_rollback_tx_on_session_close_untouched_result(self):
         # TODO: remove this block once all languages work
@@ -30,7 +43,8 @@ class TestTxRun(TestkitTestCase):
                           "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver requires result.next() to send PULL")
-        self._server.start(
+        self._create_direct_driver()
+        self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
         self._session = self._driver.session("r", fetchSize=2)
@@ -39,7 +53,7 @@ class TestTxRun(TestkitTestCase):
         # closing session while tx is open and result is not consumed at all
         self._session.close()
         self._session = None
-        self._server.done()
+        self._server1.done()
 
     def test_rollback_tx_on_session_close_unfinished_result(self):
         # TODO: remove this block once all languages work
@@ -48,9 +62,10 @@ class TestTxRun(TestkitTestCase):
                           "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Sends RESET instead of ROLLBACK.")
-        self._server.start(
+        self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
+        self._create_direct_driver()
         self._session = self._driver.session("r", fetchSize=2)
         tx = self._session.beginTransaction()
         result = tx.run("RETURN 1 AS n")
@@ -58,7 +73,7 @@ class TestTxRun(TestkitTestCase):
         # closing session while tx is open and result is not fully consumed
         self._session.close()
         self._session = None
-        self._server.done()
+        self._server1.done()
 
     def test_rollback_tx_on_session_close_consumed_result(self):
         # TODO: remove this block once all languages work
@@ -67,9 +82,10 @@ class TestTxRun(TestkitTestCase):
                           "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver sends RESET instead of ROLLBACK")
-        self._server.start(
+        self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
+        self._create_direct_driver()
         self._session = self._driver.session("r", fetchSize=2)
         tx = self._session.beginTransaction()
         result = tx.run("RETURN 1 AS n")
@@ -77,7 +93,7 @@ class TestTxRun(TestkitTestCase):
         # closing session while tx is open and result has been manually consumed
         self._session.close()
         self._session = None
-        self._server.done()
+        self._server1.done()
 
     def test_rollback_tx_on_session_close_finished_result(self):
         # TODO: remove this block once all languages work
@@ -86,7 +102,8 @@ class TestTxRun(TestkitTestCase):
                           "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver sends RESET instead of ROLLBACK")
-        self._server.start(
+        self._create_direct_driver()
+        self._server1.start(
             path=self.script_path("tx_pull_then_rollback.script")
         )
         self._session = self._driver.session("r", fetchSize=2)
@@ -96,4 +113,86 @@ class TestTxRun(TestkitTestCase):
         # closing session while tx is open
         self._session.close()
         self._session = None
-        self._server.done()
+        self._server1.done()
+
+    def _eager_tx_func_run(self, script, routing=False):
+        if routing:
+            self._create_routing_driver()
+            self._router.start(
+                path=self.script_path("router_switch_server.script"),
+                vars={"#HOST#": self._server1.host}
+            )
+            self._server2.start(path=self.script_path("tx_commit.script"))
+        else:
+            self._create_direct_driver()
+        self._server1.start(path=self.script_path(script))
+
+        tx_func_count = 0
+
+        def work(tx):
+            nonlocal tx_func_count
+            tx_func_count += 1
+            list(tx.run("RETURN 1 AS n"))
+
+        self._session = self._driver.session("w")
+        exc = None
+        try:
+            self._session.writeTransaction(work)
+        except types.DriverError as e:
+            exc = e
+
+        self._session.close()
+        self._session = None
+
+        return exc, tx_func_count
+
+    @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
+    def test_eager_begin_on_tx_func_run_with_disconnect_on_begin(self):
+        exc, tx_func_count = self._eager_tx_func_run(
+            "tx_disconnect_on_begin.script", routing=True
+        )
+        # Driver should retry tx on disconnect after BEGIN and call the tx func
+        # exactly once (after the disconnect). The disconnect should make the
+        # driver fetch a new routing table which will point to server2 the
+        # second time. This server will let the tx succeed.
+        self.assertIsNone(exc)
+        self.assertEqual(tx_func_count, 1)
+        self._router.done()
+        self.assertEqual(self._router.count_requests("ROUTE"), 2)
+        self._server1.done()
+        self._server2.done()
+
+    @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
+    def test_eager_begin_on_tx_func_run_with_error_on_begin(self):
+        exc, tx_func_count = self._eager_tx_func_run("tx_error_on_begin.script",
+                                                     routing=False)
+        # Driver should raise error on non-transient error after BEGIN, and
+        # never call the tx func.
+        self.assertEqual("Neo.ClientError.MadeUp.Code", exc.code)
+        self.assertEqual(tx_func_count, 0)
+        self._server1.done()
+
+    def _eager_tx_run(self, script):
+        self._create_direct_driver()
+        self._server1.start(path=self.script_path(script))
+
+        self._session = self._driver.session("w")
+        with self.assertRaises(types.DriverError) as exc:
+            self._session.beginTransaction()
+
+        self._session.close()
+        self._session = None
+
+        return exc.exception
+
+    @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
+    def test_eager_begin_on_tx_run_with_disconnect_on_begin(self):
+        exc = self._eager_tx_run("tx_disconnect_on_begin.script")
+        if get_driver_name() in ["python"]:
+            self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
+                             exc.errorType)
+
+    @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
+    def test_eager_begin_on_tx_run_with_error_on_begin(self):
+        exc = self._eager_tx_run("tx_error_on_begin.script")
+        self.assertEqual("Neo.ClientError.MadeUp.Code", exc.code)

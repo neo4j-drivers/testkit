@@ -520,9 +520,6 @@ class RoutingV4x3(RoutingBase):
     @driver_feature(types.Feature.OPT_PULL_PIPELINING)
     def test_should_retry_write_until_success_with_leader_change_using_tx_function(
             self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ['python']:
-            self.skipTest("requires investigation")
         self._should_retry_write_until_success_with_leader_change_using_tx_function(
             "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
         )
@@ -530,7 +527,7 @@ class RoutingV4x3(RoutingBase):
     def test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['javascript', 'python']:
+        if get_driver_name() in ['javascript']:
             self.skipTest("requires investigation")
         self._should_retry_write_until_success_with_leader_change_using_tx_function(
             "writer_tx_with_unexpected_interruption_on_run.script"
