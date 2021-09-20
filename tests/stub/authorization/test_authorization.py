@@ -158,11 +158,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         try:
             tx = session.beginTransaction()
             # TODO: remove block when all drivers behave the same way
-            if get_driver_name() in ["python"]:
-                # driver waits with sending BEGIN until .run is called
-                # this pipelining saves time but exposes issues later
-                tx.run("cypher")
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["javascript"]:
                 tx.run("cypher").next()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)

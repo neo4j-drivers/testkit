@@ -96,9 +96,9 @@ class TestDisconnects(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
-        expected_step = "after first next"
-        if self._driverName in ["go", "java", "dotnet", "python"]:
-            expected_step = "after run"
+        expected_step = "after run"
+        if self._driverName in ["javascript"]:
+            expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
     def test_disconnect_after_hello(self):
@@ -115,9 +115,9 @@ class TestDisconnects(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
-        expected_step = "after first next"
-        if self._driverName in ["go", "python", "java"]:
-            expected_step = "after run"
+        expected_step = "after run"
+        if self._driverName in ["dotnet", "javascript"]:
+            expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
     def test_disconnect_session_on_run(self):
@@ -130,10 +130,9 @@ class TestDisconnects(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
-        expected_step = "after first next"
-        if self._driverName in ["go", "python", "java"]:
-            # Go reports this error earlier
-            expected_step = "after run"
+        expected_step = "after run"
+        if self._driverName in ["dotnet", "javascript"]:
+            expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
     def test_disconnect_on_pull(self):
@@ -175,7 +174,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after begin"
-        if self._driverName in ["python", "go"]:
+        if self._driverName in ["go"]:
             expected_step = "after run"
         elif self._driverName in ["javascript"]:
             expected_step = "after first next"
