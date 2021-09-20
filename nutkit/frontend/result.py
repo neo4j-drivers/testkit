@@ -12,6 +12,18 @@ class Result:
         req = protocol.ResultNext(self._result.id)
         return self._backend.sendAndReceive(req)
 
+    def single(self):
+        """ Returns one record if there is exactly one. Raises error otherwise.
+        """
+        req = protocol.ResultSingle(self._result.id)
+        return self._backend.sendAndReceive(req)
+
+    def peek(self):
+        """ Returns the next Record or NullRecord without consuming it
+        """
+        req = protocol.ResultPeek(self._result.id)
+        return self._backend.sendAndReceive(req)
+
     def consume(self):
         """ Discards all records in result and returns summary.
         """
