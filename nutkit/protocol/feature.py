@@ -6,6 +6,14 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a method for the result to peek at the next record in
+    # the result stream without advancing it (i.e. without consuming any
+    # records)
+    API_RESULT_PEEK = "Feature:API:Result.Peek"
+    # The driver offers a method for the result to retrieve exactly one record.
+    # This methods asserts that exactly one record in left in the result stream,
+    # else it will raise an exception.
+    API_RESULT_SINGLE = "Feature:API:Result.Single"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"

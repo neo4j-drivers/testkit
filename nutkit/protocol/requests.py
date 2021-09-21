@@ -269,7 +269,31 @@ class TransactionClose:
 class ResultNext:
     """ Request to retrieve the next record on a result living on the backend.
     Backend should respond with a Record if there is a record, an Error if an
-    error occured while retrieving next record or NullRecord if there were no
+    error occurred while retrieving next record or NullRecord if there were no
+    error and no record.
+    """
+
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
+class ResultSingle:
+    """ Request to expect and return exactly one record in the result stream.
+    Backend should respond with a Record if exactly one record was found.
+    If more or fewer records are left in the result stream, or if any other
+    error occurs while retrieving the records, an Error response should be
+    returned.
+    """
+
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
+class ResultPeek:
+    """ Request to return the next result in the Stream without consuming it
+    (i.e. without advancing the position in the stream).
+    Backend should respond with a Record if there is a record, an Error if an
+    error occurred while retrieving next record or NullRecord if there were no
     error and no record.
     """
 
