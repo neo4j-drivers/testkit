@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: RUN {"U": "*"}{"{}": "*"} {"{}": "*"}
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": {"Z": "*"}, "[qid]": -1}
 S: RECORD [1]
