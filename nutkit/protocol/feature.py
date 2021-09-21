@@ -5,6 +5,16 @@ from enum import Enum
 
 
 class Feature(Enum):
+    # === FUNCTIONAL FEATURES ===
+    # The driver offers a method for the result to peek at the next record in
+    # the result stream without advancing it (i.e. without consuming any
+    # records)
+    API_RESULT_PEEK = "Feature:API:Result.Peek"
+    # The driver offers a method for the result to retrieve exactly one record.
+    # This methods asserts that exactly one record in left in the result stream,
+    # else it will raise an exception.
+    API_RESULT_SINGLE = "Feature:API:Result.Single"
+
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver
     # shouldn't reuse any open connections for anything other than finishing
