@@ -19,7 +19,7 @@ class TestSessionRun(TestkitTestCase):
     def tearDown(self):
         if self._session is not None:
             self._session.close()
-        self._server.done()
+        self._server.reset()
         super().tearDown()
 
     def test_discard_on_session_close_untouched_result(self):
@@ -89,3 +89,4 @@ class TestSessionRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as exc:
             self._session.run("RETURN 1 AS n")
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
+        self._server.done()

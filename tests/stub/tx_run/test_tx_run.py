@@ -22,7 +22,6 @@ class TestTxRun(TestkitTestCase):
         self._router.reset()
         self._server1.reset()
         self._server2.reset()
-        self._server1._dump()
         super().tearDown()
 
     def _create_direct_driver(self):
