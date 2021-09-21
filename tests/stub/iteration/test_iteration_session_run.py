@@ -75,7 +75,7 @@ class TestIterationSessionRun(TestkitTestCase):
         def test():
             uri = "bolt://%s" % self._server.address
             driver = Driver(self._backend, uri,
-                            types.AuthorizationToken("basic",  principal="",
+                            types.AuthorizationToken("basic", principal="",
                                                      credentials=""))
             self._server.start(
                 path=self.script_path(version, script),
