@@ -181,7 +181,8 @@ class TestAuthorizationV4x3(AuthorizationBase):
         try:
             result = tx.run("RETURN 1 as n")
             # TODO remove consume() once all drivers report the error on run
-            result.consume()
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.consume()
         except types.DriverError as e:
             self.assert_is_authorization_error(error=e)
         session.close()
