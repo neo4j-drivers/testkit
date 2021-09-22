@@ -61,15 +61,45 @@ drivers = [
         ],
     },
     {
+        "name": "java-async",
+        "repo": "https://github.com/neo4j/neo4j-java-driver.git",
+        "art": [
+            "   X   XX       XX    XXX  X  X  X  X   CCC",
+            "   X  X  X     X  X  X     X  X  XX X  CC  ",
+            "   X  XXXX     XXXX  XXX   X  X  X XX  C   ",
+            "X  X  X  X     X  X     X   XX   X XX  C   ",
+            "X  X  X  X     X  X     X   XX   X  X  CC  ",
+            " XX   X  X     X  X  XXX    XX   X  X   CCC",
+        ],
+        "extra-env": {
+            "TEST_BACKEND_SERVER": "async"
+        },
+    },
+    {
+        "name": "java-reactive",
+        "repo": "https://github.com/neo4j/neo4j-java-driver.git",
+        "art": [
+            "   X   XX      XXX   X  X",
+            "   X  X  X     X  X  X  X",
+            "   X  XXXX     XXX    XX ",
+            "X  X  X  X     X XX  X  X",
+            "X  X  X  X     X  X  X  X",
+            " XX   X  X     X  X  X  X",
+        ],
+        "extra-env": {
+            "TEST_BACKEND_SERVER": "reactive"
+        },
+    },
+    {
         "name": "dotnet",
         "repo": "https://github.com/neo4j/neo4j-dotnet-driver.git",
         "art": [
-            "    X    X",
-            "    XX   X",
-            "    X X  X",
-            "    X   XX",
-            " XX X    X",
-            " XX X    X",
+            "    X  X",
+            "    XX X",
+            "    X XX",
+            "    X XX",
+            " XX X  X",
+            " XX X  X",
         ],
         "branch-translation": {
             # TODO: until a 4.4 branch has been created
@@ -161,6 +191,7 @@ def update_environment(driver, repo_path):
     os.environ['TEST_DRIVER_NAME'] = driver.get('name')
     os.environ['ARTIFACTS_DIR'] = os.path.join(".", "artifacts",
                                                driver.get("name"))
+    os.environ.update(driver.get("extra-env", {}))
 
 
 def run():
