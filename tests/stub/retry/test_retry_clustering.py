@@ -192,16 +192,13 @@ class TestRetryClustering(TestkitTestCase):
             record = result.next()
             return record.values[0]
 
+        vars_ = self.get_vars()
+        vars_.update({
+            "#ERROR#": "Neo.ClientError.Cluster.NotALeader",
+        })
         self._routingServer.start(
             path=self.script_path("clustering", "router_retry_once.script"),
-            vars=self.get_vars()
-        )
-        vars = {
-            "#ERROR#": "Neo.ClientError.Cluster.NotALeader",
-        }
-        self._writeServer.start(
-            path=self.script_path("retry_with_fail_after_run_server.script"),
-            vars=vars
+            vars=vars_
         )
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
@@ -210,10 +207,10 @@ class TestRetryClustering(TestkitTestCase):
 
         session.close()
         driver.close()
-        self._writeServer.done()
         self._routingServer.done()
 
-        self.assertEqual(self._writeServer.count_responses("<ACCEPT>"), 2)
+        self.assertGreaterEqual(self._routingServer.count_responses("<ACCEPT>"),
+                                2)
         self.assertEqual(num_retries, 2)
 
     def _run_with_transient_error(self, script, err):
