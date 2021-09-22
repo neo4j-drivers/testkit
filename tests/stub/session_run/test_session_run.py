@@ -83,7 +83,7 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Driver reports error too late.")
         self._server.start(
-            path=self.script_path("session_yield_error_on_run.script")
+            path=self.script_path("session_error_on_run.script")
         )
         self._session = self._driver.session("r")
         with self.assertRaises(types.DriverError) as exc:
