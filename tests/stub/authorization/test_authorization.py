@@ -43,6 +43,12 @@ class AuthorizationBase(TestkitTestCase):
             self.assertEqual(
                 "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
             )
+        elif driver == 'go':
+            self.assertEqual('Neo.ClientError.Security.TokenExpired',
+                             error.code)
+            self.assertIn(
+                "Token expired", error.msg
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -179,9 +185,14 @@ class TestAuthorizationV4x3(AuthorizationBase):
         with self.assertRaises(types.DriverError) as exc:
             tx = session.beginTransaction()
             # TODO: remove block when all drivers behave the same way
-            if get_driver_name() in ["javascript"]:
+            if get_driver_name() in ["javascript", "go"]:
                 tx.run("cypher").next()
         error_assertion(exc.exception)
+        with self.assertRaises(types.DriverError):
+            if get_driver_name() in ['go']:
+                # session will throw upon closure if there is a pending tx
+                # tx will throw the last seen error upon closure
+                tx.close()
         session.close()
         driver.close()
 
@@ -221,6 +232,11 @@ class TestAuthorizationV4x3(AuthorizationBase):
                 result.consume()            
 
         error_assertion(exc.exception)
+        if get_driver_name() in ['go']:
+            # session will throw upon closure if there is a pending tx
+            # tx will throw the last seen error upon closure
+            with self.assertRaises(types.DriverError):
+                tx.close()
         session.close()
         driver.close()
 
@@ -255,6 +271,11 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 as n")
             result.next()
         error_assertion(exc.exception)
+        if get_driver_name() in ['go']:
+            # session will throw upon closure if there is a pending tx
+            # tx will throw the last seen error upon closure
+            with self.assertRaises(types.DriverError):
+                tx.close()
         session.close()
         driver.close()
 
