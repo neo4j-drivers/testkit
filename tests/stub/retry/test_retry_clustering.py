@@ -111,24 +111,6 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
         self._readServer.done()
 
-    def test_retry_ForbiddenOnReadOnlyDatabase(self):
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("Behaves strange")
-
-        self._run_with_transient_error(
-            "retry_with_fail_after_pull.script",
-            "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase"
-        )
-
-    def test_retry_NotALeader(self):
-        if get_driver_name() in ['dotnet']:
-            self.skipTest("Behaves strange")
-
-        self._run_with_transient_error(
-            "retry_with_fail_after_pull.script",
-            "Neo.ClientError.Cluster.NotALeader"
-        )
-
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
         if get_driver_name() in ['dotnet']:
             self.skipTest("Behaves strange")
@@ -182,7 +164,18 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
         self._readServer.done()
 
-    def test_close_connection_on_retriable_cluster_error(self):
+    def test_closes_connection_on_leader_switch_before_retrying(self):
+        self._connection_closes_upon_retriable_cluster_error(
+            "Neo.ClientError.Cluster.NotALeader"
+        )
+
+    def test_closes_connection_on_readable_database_error_before_retrying(self):
+        self._connection_closes_upon_retriable_cluster_error(
+            "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase"
+        )
+
+    def _connection_closes_upon_retriable_cluster_error(self,
+                                                        error):
         num_retries = 0
 
         def work(tx):
@@ -194,21 +187,18 @@ class TestRetryClustering(TestkitTestCase):
 
         vars_ = self.get_vars()
         vars_.update({
-            "#ERROR#": "Neo.ClientError.Cluster.NotALeader",
+            "#ERROR#": error,
         })
         self._routingServer.start(
             path=self.script_path("clustering", "router_retry_once.script"),
             vars=vars_
         )
-
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session("r")
         session.writeTransaction(work)
-
         session.close()
         driver.close()
         self._routingServer.done()
-
         self.assertGreaterEqual(self._routingServer.count_responses("<ACCEPT>"),
                                 2)
         self.assertEqual(num_retries, 2)
