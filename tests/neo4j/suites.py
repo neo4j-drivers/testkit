@@ -5,13 +5,13 @@ Defines suites of test to run in different setups
 import sys
 import unittest
 
-import tests.neo4j.authentication as authentication
-import tests.neo4j.datatypes as datatypes
-import tests.neo4j.sessionrun as sessionrun
+import tests.neo4j.test_authentication as test_authentication
+import tests.neo4j.test_datatypes as test_datatypes
+import tests.neo4j.test_session_run as test_session_run
 import tests.neo4j.test_direct_driver as test_direct_driver
 import tests.neo4j.test_summary as test_summary
-import tests.neo4j.txfuncrun as txfuncrun
-import tests.neo4j.txrun as txrun
+import tests.neo4j.test_tx_func_run as test_tx_func_run
+import tests.neo4j.test_tx_run as test_tx_run
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -24,13 +24,13 @@ loader = unittest.TestLoader()
 Suite for Neo4j 3.5
 """
 suite_3x5 = unittest.TestSuite()
-suite_3x5.addTests(loader.loadTestsFromModule(datatypes))
-suite_3x5.addTests(loader.loadTestsFromModule(sessionrun))
-suite_3x5.addTests(loader.loadTestsFromModule(authentication))
+suite_3x5.addTests(loader.loadTestsFromModule(test_datatypes))
+suite_3x5.addTests(loader.loadTestsFromModule(test_session_run))
+suite_3x5.addTests(loader.loadTestsFromModule(test_authentication))
 suite_3x5.addTests(loader.loadTestsFromModule(test_direct_driver))
 suite_3x5.addTests(loader.loadTestsFromModule(test_summary))
-suite_3x5.addTests(loader.loadTestsFromModule(txfuncrun))
-suite_3x5.addTests(loader.loadTestsFromModule(txrun))
+suite_3x5.addTests(loader.loadTestsFromModule(test_tx_func_run))
+suite_3x5.addTests(loader.loadTestsFromModule(test_tx_run))
 
 """
 Suite for Neo4j 4.0
