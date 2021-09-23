@@ -188,8 +188,8 @@ class TestAuthorizationV4x3(AuthorizationBase):
             if get_driver_name() in ["javascript", "go"]:
                 tx.run("cypher").next()
         error_assertion(exc.exception)
-        with self.assertRaises(types.DriverError):
-            if get_driver_name() in ['go']:
+        if get_driver_name() in ['go']:
+            with self.assertRaises(types.DriverError):
                 # session will throw upon closure if there is a pending tx
                 # tx will throw the last seen error upon closure
                 tx.close()
