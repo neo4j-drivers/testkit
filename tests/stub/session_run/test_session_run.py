@@ -20,7 +20,7 @@ class TestSessionRun(TestkitTestCase):
     def tearDown(self):
         if self._session is not None:
             self._session.close()
-        self._server.done()
+        self._server.reset()
         super().tearDown()
 
     def test_discard_on_session_close_untouched_result(self):
@@ -77,4 +77,17 @@ class TestSessionRun(TestkitTestCase):
         # closing session while tx is open
         self._session.close()
         self._session = None
+        self._server.done()
+
+    def test_raises_error_on_session_run(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "dotnet"]:
+            self.skipTest("Driver reports error too late.")
+        self._server.start(
+            path=self.script_path("session_error_on_run.script")
+        )
+        self._session = self._driver.session("r")
+        with self.assertRaises(types.DriverError) as exc:
+            self._session.run("RETURN 1 AS n")
+        self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
         self._server.done()

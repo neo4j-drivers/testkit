@@ -1,0 +1,15 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: FAILURE {"code": "Neo.ClientError.MadeUp.Code", "message": "Something went wrong..."}
+{?
+    # For drivers that pipeline a PULL after RUN
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: IGNORED
+?}
++: RESET
+?: GOODBYE

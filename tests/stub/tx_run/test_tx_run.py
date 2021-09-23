@@ -196,3 +196,53 @@ class TestTxRun(TestkitTestCase):
     def test_eager_begin_on_tx_run_with_error_on_begin(self):
         exc = self._eager_tx_run("tx_error_on_begin.script")
         self.assertEqual("Neo.ClientError.MadeUp.Code", exc.code)
+
+    def test_raises_error_on_tx_run(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "dotnet"]:
+            self.skipTest("Driver reports error too late.")
+        self._server1.start(
+            path=self.script_path("tx_error_on_run.script")
+        )
+        self._create_direct_driver()
+        self._session = self._driver.session("r")
+        tx = self._session.beginTransaction()
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("RETURN 1 AS n")
+        self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
+        # TODO: remove whole try/catch once all drivers allow to rollback a
+        #       failed transaction silently.
+        try:
+            tx.rollback()
+        except types.DriverError as exc:
+            if get_driver_name() in ["go"]:
+                self.assertEqual(exc.code, "Neo.ClientError.MadeUp.Code")
+            else:
+                raise
+
+    def test_raises_error_on_tx_func_run(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "dotnet"]:
+            self.skipTest("Driver reports error too late.")
+        work_call_count = 0
+
+        def work(tx):
+            nonlocal work_call_count
+            self.assertEqual(work_call_count, 0)
+            work_call_count += 1
+
+            with self.assertRaises(types.DriverError) as exc_:
+                tx.run("RETURN 1 AS n")
+            self.assertEqual(exc_.exception.code, "Neo.ClientError.MadeUp.Code")
+            raise exc_.exception
+
+        if get_driver_name() in ["javascript_", "dotnet_"]:
+            self.skipTest("Driver reports error too late.")
+        self._server1.start(
+            path=self.script_path("tx_error_on_run.script")
+        )
+        self._create_direct_driver()
+        self._session = self._driver.session("r")
+        with self.assertRaises(types.DriverError) as exc:
+            self._session.readTransaction(work)
+        self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")

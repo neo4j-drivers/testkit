@@ -20,8 +20,6 @@ drivers = [
         "branch-translation": {
             "4.0": "4.2",
             "4.1": "4.2",
-            # TODO: until a 4.4 branch has been created
-            "4.4": "4.3",
         }
     },
     {
@@ -36,8 +34,6 @@ drivers = [
             " XX   XXX ",
         ],
         "branch-translation": {
-            # TODO: until a 4.4 branch has been created
-            "4.4": "4.3",
         }
     },
     {
