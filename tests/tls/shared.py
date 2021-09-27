@@ -41,7 +41,7 @@ class TlsServer:
         )
         # Wait until something is written to know it started
         line = self._process.stdout.readline()
-        print(line)
+        print(line, end="")
 
     def _close_pipes(self):
         self._process.stdout.close()
@@ -67,6 +67,8 @@ class TlsServer:
         raise Exception("Timeout")
 
     def _dump(self):
+        # self._close_pipes()
+        # return
         sys.stdout.flush()
         print(">>>> Captured TLS server stdout")
         for line in self._process.stdout:
@@ -92,12 +94,12 @@ class TlsServer:
             self._kill()
 
 
-def try_connect(backend, server, scheme, host):
+def try_connect(backend, server, scheme, host, **driver_config):
     url = "%s://%s:%d" % (scheme, host, 6666)
     # Doesn't really matter
     auth = AuthorizationToken(scheme="basic", principal="neo4j",
                               credentials="pass")
-    driver = Driver(backend, url, auth)
+    driver = Driver(backend, url, auth, **driver_config)
     session = driver.session("r")
     try:
         session.run("RETURN 1 as n")

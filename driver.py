@@ -37,8 +37,13 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
     cas_path = os.path.join(docker_image_path, "CAs")
     shutil.rmtree(cas_path, ignore_errors=True)
     cas_source_path = os.path.join(testkit_path, "tests", "tls",
-                                   "certs", "driver")
+                                   "certs", "driver", "trusted")
     shutil.copytree(cas_source_path, cas_path)
+    custom_cas_path = os.path.join(docker_image_path, "CustomCAs")
+    shutil.rmtree(custom_cas_path, ignore_errors=True)
+    custom_cas_source_path = os.path.join(testkit_path, "tests", "tls",
+                                          "certs", "driver", "custom")
+    shutil.copytree(custom_cas_source_path, custom_cas_path)
 
     # This will use the driver folder as build context.
     docker.build_and_tag(image_name, docker_image_path, log_path=artifacts_path)

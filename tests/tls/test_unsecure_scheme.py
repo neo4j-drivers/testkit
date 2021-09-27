@@ -1,4 +1,6 @@
+from nutkit import protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -37,4 +39,14 @@ class TestUnsecureScheme(TestkitTestCase):
                 self._server = TlsServer("trustedRoot_thehost")
                 self.assertFalse(try_connect(self._backend, self._server,
                                              scheme, "thehost"))
+            self._server.reset()
 
+    @driver_feature(types.Feature.API_SSL_CONFIG)
+    def test_secure_server_explicitly_disabled_encryption(self):
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._server = TlsServer("trustedRoot_thehost")
+                self.assertFalse(try_connect(self._backend, self._server,
+                                             scheme, "thehost",
+                                             encrypted=False))
+            self._server.reset()

@@ -118,7 +118,13 @@ def get_driver_features(backend):
         response = backend.sendAndReceive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
             raise Exception("Response is not instance of FeatureList")
-        return set(response.features)
+        # TODO: remove this block once all drivers list this feature
+        #       they all support the functionality already
+        features = set(response.features)
+        if get_driver_name() in ["python", "java", "go", "dotnet"]:
+            assert protocol.Feature.API_SSL_SCHEMES not in features
+            features.add(protocol.Feature.API_SSL_SCHEMES)
+        return features
     except (OSError, protocol.BaseError) as e:
         warnings.warn("Could not fetch FeatureList: %s" % e)
         return set()

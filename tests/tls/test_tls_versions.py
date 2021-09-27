@@ -1,3 +1,4 @@
+import nutkit.protocol as types
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -23,15 +24,26 @@ class TestTlsVersions(TestkitTestCase):
             self._server = None
         super().tearDown()
 
+    def _try_connect(self):
+        if self.driver_supports_features(types.Feature.API_SSL_SCHEMES):
+            return try_connect(self._backend, self._server,
+                               "neo4j+s", "thehost")
+        elif self.driver_supports_features(types.Feature.API_SSL_CONFIG):
+            return try_connect(self._backend, self._server, "neo4j", "thehost",
+                               )
+        self.skipTest("Needs support for either of %s" % ", ".join(
+            map(lambda f: f.value, (
+               types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG
+            ))
+        ))
+
     def test_1_1(self):
         if self._driver in ["dotnet"]:
             self.skipTest("TLS 1.1 is not supported")
 
         self._server = TlsServer("trustedRoot_thehost", minTls="1", maxTls="1")
-        self.assertTrue(try_connect(self._backend, self._server,
-                                    "neo4j+s", "thehost"))
+        self.assertTrue(self._try_connect())
 
     def test_1_2(self):
         self._server = TlsServer("trustedRoot_thehost", minTls="2", maxTls="2")
-        self.assertTrue(try_connect(self._backend, self._server,
-                                    "neo4j+s", "thehost"))
+        self.assertTrue(self._try_connect())
