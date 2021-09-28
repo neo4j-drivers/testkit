@@ -46,6 +46,9 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 e.errorType)
         elif get_driver_name() in ["go"]:
             self.assertIn("i/o timeout", e.msg)
+        elif get_driver_name() in ["dotnet"]:
+            self.assertIn("ServiceUnavailableError",
+                          e.errorType)
 
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ['java']:
