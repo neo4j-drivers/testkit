@@ -15,10 +15,13 @@ class TestTxRun(TestkitTestCase):
         self._server1 = StubServer(9010)
         self._server2 = StubServer(9011)
         self._session = None
+        self._driver = None
 
     def tearDown(self):
         if self._session is not None:
             self._session.close()
+        if self._driver is not None:
+            self._driver.close()
         self._router.reset()
         self._server1.reset()
         self._server2.reset()
@@ -38,9 +41,6 @@ class TestTxRun(TestkitTestCase):
 
     def test_rollback_tx_on_session_close_untouched_result(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("Driver does not allow closing a session with a "
-                          "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver requires result.next() to send PULL")
         self._create_direct_driver()
@@ -57,9 +57,6 @@ class TestTxRun(TestkitTestCase):
 
     def test_rollback_tx_on_session_close_unfinished_result(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("Go driver does not allow closing a session with a "
-                          "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Sends RESET instead of ROLLBACK.")
         self._server1.start(
@@ -77,9 +74,6 @@ class TestTxRun(TestkitTestCase):
 
     def test_rollback_tx_on_session_close_consumed_result(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("Go driver does not allow closing a session with a "
-                          "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._server1.start(
@@ -97,9 +91,6 @@ class TestTxRun(TestkitTestCase):
 
     def test_rollback_tx_on_session_close_finished_result(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("Go driver does not allow closing a session with a "
-                          "pending transaction")
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._create_direct_driver()
@@ -246,3 +237,32 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as exc:
             self._session.readTransaction(work)
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
+
+    def _test_failed_tx_run(self, rollback):
+        self._server1.start(
+            path=self.script_path("tx_error_on_run.script")
+        )
+        self._create_direct_driver()
+        self._session = self._driver.session("r")
+        tx = self._session.beginTransaction()
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("RETURN 1 AS n").consume()
+        self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
+        if rollback:
+            tx.rollback()
+        self._session.close()
+        self._session = None
+        self._driver.close()
+        self._driver = None
+
+    def test_failed_tx_run_allows_rollback(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            self.skipTest("Driver re-raises error on tx.rollback()")
+        self._test_failed_tx_run(rollback=True)
+
+    def test_failed_tx_run_allows_skipping_rollback(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            self.skipTest("Driver requires tx.rollback()")
+        self._test_failed_tx_run(rollback=False)

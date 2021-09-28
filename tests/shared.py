@@ -174,6 +174,7 @@ class TestkitTestCase(unittest.TestCase):
                 (r"^stub\.server_side_routing\.test_server_side_routing\."
                  r"TestServerSideRouting\.",
                  "stub.serversiderouting.ServerSideRouting."),
+                (r"^neo4j\.test_session_run\.", "neo4j.sessionrun."),
             ):
                 id_ = re.sub(exp, sub, id_)
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
