@@ -269,14 +269,14 @@ def main(thisPath, driverName, testkitBranch, driverRepo):
         # Teamcity).
         s = {
             "name": "4.2-tc-enterprise",
-            "image": "neo4j:4.2.3-enterprise",
+            "image": "neo4j:4.2.12-enterprise",
             "version": "4.2",
             "edition": "enterprise",
             "cluster": False,
             "suite": "4.2",
             "scheme": "neo4j",
             "download": teamcity.DockerImage(
-                "neo4j-enterprise-4.2.4-docker-loadable.tar")
+                "neo4j-enterprise-4.2.12-docker-loadable.tar")
         }
         neo4jServers.append(s)
 
