@@ -229,7 +229,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 as n")
             # TODO remove consume() once all drivers report the error on run
             if get_driver_name() in ["javascript", "dotnet"]:
-                result.consume()            
+                result.consume()
 
         error_assertion(exc.exception)
         if get_driver_name() in ['go']:
@@ -1016,7 +1016,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         script_fn = script_fn % ("_minimal" if implicit_defaults else "")
         self.start_server(self._server, script_fn)
 
-        auth = types.AuthorizationToken("kerberos", ticket="QmFuYW5hIQ==")
+        auth = types.AuthorizationToken("kerberos", credentials="QmFuYW5hIQ==")
         driver = Driver(self._backend, self._uri, auth)
         session = driver.session("r")
         list(session.run("RETURN 1 AS n"))

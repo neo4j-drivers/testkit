@@ -73,7 +73,7 @@ class AuthorizationToken:
         - credentials (str)
         - realm (str, optional)
     scheme == "kerberos"
-        - ticket (str)
+        - credentials (str)
     scheme == "bearer"
         - credentials (str)
     further schemes should be handled with a multi-purpose auth API
