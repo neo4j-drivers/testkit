@@ -7,7 +7,6 @@ from tests.shared import (
     driver_feature,
 )
 from tests.stub.shared import StubServer
-from ._routing import get_extra_hello_props
 
 
 class NoRoutingV4x1(TestkitTestCase):
@@ -33,7 +32,6 @@ class NoRoutingV4x1(TestkitTestCase):
         return {
             "#VERSION#": self.bolt_version,
             "#SERVER_AGENT#": self.server_agent,
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#USER_AGENT#": '007',
             "#ROUTING#": routing
         }
@@ -49,7 +47,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -72,7 +70,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -101,7 +99,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=no_routing_context_vars
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -128,7 +126,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=custom_agent_context_vars
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent=custom_agent)
 
@@ -156,7 +154,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -187,7 +185,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -222,7 +220,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -252,7 +250,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007", fetchSize=2)
 
@@ -279,7 +277,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -307,7 +305,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -336,7 +334,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007", fetchSize=-1)
 
@@ -361,7 +359,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -392,7 +390,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -412,7 +410,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -437,7 +435,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -471,7 +469,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -500,7 +498,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 
@@ -526,7 +524,7 @@ class NoRoutingV4x1(TestkitTestCase):
             vars=self.get_vars()
         )
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="p",
+                        types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
                         userAgent="007")
 

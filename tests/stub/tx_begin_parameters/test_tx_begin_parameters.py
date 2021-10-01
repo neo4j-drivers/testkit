@@ -22,7 +22,8 @@ class TestTxBeginParameters(TestkitTestCase):
         self._driverName = get_driver_name()
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri,
-                              types.AuthorizationToken(scheme="basic"))
+                              types.AuthorizationToken("basic", principal="",
+                                                       credentials=""))
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server

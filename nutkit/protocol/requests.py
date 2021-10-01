@@ -66,15 +66,28 @@ class NewDriver:
 
 class AuthorizationToken:
     """ Not a request but used in NewDriver request
+
+    The fields depend on the chosen scheme:
+    scheme == "basic"
+        - principal (str)
+        - credentials (str)
+        - realm (str, optional)
+    scheme == "kerberos"
+        - credentials (str)
+    scheme == "bearer"
+        - credentials (str)
+    further schemes should be handled with a multi-purpose auth API
+    (custom auth)
+        - principal (str, optional)
+        - credentials (str, optional)
+        - realm (str, optional)
+        - parameters (dict[str, Any], optional)
     """
 
-    def __init__(self, scheme="none", principal="",
-                 credentials="", realm="", ticket=""):
+    def __init__(self, scheme, **kwargs):
         self.scheme = scheme
-        self.principal = principal
-        self.credentials = credentials
-        self.realm = realm
-        self.ticket = ticket
+        for attr, value in kwargs.items():
+            setattr(self, attr, value)
 
 
 class VerifyConnectivity:

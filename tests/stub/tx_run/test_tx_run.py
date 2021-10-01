@@ -30,12 +30,14 @@ class TestTxRun(TestkitTestCase):
     def _create_direct_driver(self):
         uri = "bolt://%s" % self._server1.address
         self._driver = Driver(self._backend, uri,
-                              types.AuthorizationToken(scheme="basic"))
+                              types.AuthorizationToken("basic", principal="",
+                                                       credentials=""))
 
     def _create_routing_driver(self):
         uri = "neo4j://%s" % self._router.address
         self._driver = Driver(self._backend, uri,
-                              types.AuthorizationToken(scheme="basic"))
+                              types.AuthorizationToken("basic", principal="",
+                                                       credentials=""))
 
     def test_rollback_tx_on_session_close_untouched_result(self):
         # TODO: remove this block once all languages work

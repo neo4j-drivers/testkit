@@ -15,7 +15,7 @@ class TestRetryClustering(TestkitTestCase):
         self._writeServer = StubServer(9003)
         self._uri = ("neo4j://%s?region=china&policy=my_policy"
                      % self._routingServer.address)
-        self._auth = types.AuthorizationToken(scheme="basic", principal="p",
+        self._auth = types.AuthorizationToken("basic", principal="p",
                                               credentials="c")
         self._userAgent = "007"
 
@@ -228,15 +228,7 @@ class TestRetryClustering(TestkitTestCase):
             "#ROUTINGCTX#":
                 '{"address": "' + host
                 + ':9001", "region": "china", "policy": "my_policy"}',
-            "#EXTRA_HELLO_PROPS#": self.get_extra_hello_props(),
         }
         v["#HELLO_ROUTINGCTX#"] = v["#ROUTINGCTX#"]
 
         return v
-
-    def get_extra_hello_props(self):
-        if get_driver_name() in ["java"]:
-            return ', "realm": ""'
-        elif get_driver_name() in ["javascript"]:
-            return ', "realm": "", "ticket": ""'
-        return ""

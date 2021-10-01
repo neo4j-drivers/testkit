@@ -12,7 +12,7 @@ class TestBookmarksV4(TestkitTestCase):
         super().setUp()
         self._server = StubServer(9001)
         uri = "bolt://%s" % self._server.address
-        auth = AuthorizationToken(scheme="basic")
+        auth = AuthorizationToken("basic", principal="", credentials="")
         self._driver = Driver(self._backend, uri, auth)
 
     def tearDown(self):

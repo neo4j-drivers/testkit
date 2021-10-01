@@ -14,6 +14,15 @@ class Feature(Enum):
     # This methods asserts that exactly one record in left in the result stream,
     # else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
+    # The driver supports single-sign-on (SSO) by providing a bearer auth token
+    # API.
+    AUTH_BEARER = "Feature:Auth:Bearer"
+    # The driver supports custom authentication by providing a dedicated auth
+    # token API.
+    AUTH_CUSTOM = "Feature:Auth:Custom"
+    # The driver supports Kerberos authentication by providing a dedicated auth
+    # token API.
+    AUTH_KERBEROS = "Feature:Auth:Kerberos"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver

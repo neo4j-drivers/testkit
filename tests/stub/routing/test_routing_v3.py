@@ -1,7 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from ...shared import get_driver_name
-from ._routing import get_extra_hello_props
 from .test_routing_v4x3 import RoutingV4x3
 
 
@@ -20,7 +19,6 @@ class RoutingV3(RoutingV4x3):
                 '{"address": "' + host
                 + ':9000", "region": "china", "policy": "my_policy"}'
             ),
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#EXTR_HELLO_ROUTING_PROPS#": "",
             "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#": ""
         }
