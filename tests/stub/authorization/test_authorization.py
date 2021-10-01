@@ -49,6 +49,13 @@ class AuthorizationBase(TestkitTestCase):
             self.assertIn(
                 "Token expired", error.msg
             )
+        elif driver == 'java':
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.TokenExpiredException",
+                error.errorType)
+            self.assertEqual('Neo.ClientError.Security.TokenExpired',
+                             error.code)
+            self.assertIn("Token expired", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
