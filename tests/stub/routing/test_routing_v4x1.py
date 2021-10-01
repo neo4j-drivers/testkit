@@ -1,7 +1,6 @@
 import json
 
 from nutkit.frontend import Driver
-from ._routing import get_extra_hello_props
 from .test_routing_v4x3 import RoutingV4x3
 
 
@@ -16,7 +15,6 @@ class RoutingV4x1(RoutingV4x3):
             "#VERSION#": self.bolt_version,
             "#HOST#": host,
             "#SERVER_AGENT#": self.server_agent,
-            "#EXTRA_HELLO_PROPS#": get_extra_hello_props(),
             "#ROUTINGCTX#": (
                 '{"address": "' + host
                 + ':9000", "region": "china", "policy": "my_policy"}'

@@ -33,7 +33,7 @@ def get_authorization():
     """
     user = os.environ.get(env_neo4j_user, 'neo4j')
     passw = os.environ.get(env_neo4j_pass, 'pass')
-    return AuthorizationToken(scheme="basic", principal=user, credentials=passw)
+    return AuthorizationToken("basic", principal=user, credentials=passw)
 
 
 def get_neo4j_host_and_port():

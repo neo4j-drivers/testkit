@@ -16,7 +16,7 @@ class TestDisconnects(TestkitTestCase):
         super().setUp()
         self._server = StubServer(9001)
         self._driverName = get_driver_name()
-        auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
+        auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth,
@@ -286,11 +286,7 @@ class TestDisconnects(TestkitTestCase):
         }
 
     def get_extra_hello_props(self):
-        if self._driverName == "javascript":
-            return ', "realm": "", "ticket": ""'
-        elif self._driverName == "java":
-            return ', "realm": ""'
-        elif self._driverName == "dotnet":
+        if self._driverName == "dotnet":
             return ', "routing": null'
         else:
             return ""

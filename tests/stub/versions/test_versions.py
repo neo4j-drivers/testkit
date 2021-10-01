@@ -27,7 +27,8 @@ class TestProtocolVersions(TestkitTestCase):
     def _get_session(self, script_path, vars_=None):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic"))
+                        types.AuthorizationToken("basic", principal="",
+                                                 credentials=""))
         self._server.start(path=script_path, vars=vars_)
         session = driver.session("w", fetchSize=1000)
         try:
@@ -216,7 +217,8 @@ class TestProtocolVersions(TestkitTestCase):
     def _test_should_reject_server_using_verify_connectivity(self, version):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic"))
+                        types.AuthorizationToken("basic", principal="",
+                                                 credentials=""))
         script_path = self.script_path("optional_hello.script")
         variables = {
             "#VERSION#": version,

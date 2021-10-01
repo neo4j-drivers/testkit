@@ -20,7 +20,8 @@ class TestIterationSessionRun(TestkitTestCase):
              protocol_version="v4x0"):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic"))
+                        types.AuthorizationToken("basic", principal="",
+                                                 credentials=""))
         self._server.start(path=self.script_path(protocol_version, script_fn))
         session = driver.session("w", fetchSize=n)
         result = session.run("RETURN 1 AS n")
@@ -74,7 +75,8 @@ class TestIterationSessionRun(TestkitTestCase):
         def test():
             uri = "bolt://%s" % self._server.address
             driver = Driver(self._backend, uri,
-                            types.AuthorizationToken(scheme="basic"))
+                            types.AuthorizationToken("basic", principal="",
+                                                     credentials=""))
             self._server.start(
                 path=self.script_path(version, script),
                 vars={"#MODE#": mode[0]}

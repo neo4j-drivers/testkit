@@ -97,8 +97,7 @@ class TlsServer:
 def try_connect(backend, server, scheme, host, **driver_config):
     url = "%s://%s:%d" % (scheme, host, 6666)
     # Doesn't really matter
-    auth = AuthorizationToken(scheme="basic", principal="neo4j",
-                              credentials="pass")
+    auth = AuthorizationToken("basic", principal="neo4j", credentials="pass")
     driver = Driver(backend, url, auth, **driver_config)
     session = driver.session("r")
     try:

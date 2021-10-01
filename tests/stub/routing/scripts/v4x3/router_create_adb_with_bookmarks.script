@@ -1,6 +1,6 @@
 !: BOLT #VERSION#
 
-C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 *: RESET
 C: BEGIN {"db": "system"}

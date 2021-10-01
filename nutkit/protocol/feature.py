@@ -23,6 +23,15 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The driver supports single-sign-on (SSO) by providing a bearer auth token
+    # API.
+    AUTH_BEARER = "Feature:Auth:Bearer"
+    # The driver supports custom authentication by providing a dedicated auth
+    # token API.
+    AUTH_CUSTOM = "Feature:Auth:Custom"
+    # The driver supports Kerberos authentication by providing a dedicated auth
+    # token API.
+    AUTH_KERBEROS = "Feature:Auth:Kerberos"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver
