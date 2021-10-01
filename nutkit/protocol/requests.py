@@ -78,10 +78,10 @@ class AuthorizationToken:
         - credentials (str)
     further schemes should be handled with a multi-purpose auth API
     (custom auth)
-        - principal (str)
-        - credentials (str)
-        - realm (str)
-        - parameters (dict[str, Any])
+        - principal (str, optional)
+        - credentials (str, optional)
+        - realm (str, optional)
+        - parameters (dict[str, Any], optional)
     """
 
     def __init__(self, scheme, **kwargs):
