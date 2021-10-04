@@ -112,7 +112,7 @@ def initialise_configurations():
                            stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
             # nightly build of official backwards-compatible version
-            ("4.3.5",     True,     True,     "neo4j", 60),
+            ("4.3.6",     True,     True,     "neo4j", 60),
             # latest version
             ("4.4.0-dev", False,    False,    "bolt",   0),
             ("4.4.0-dev", False,    False,    "neo4j",  0),
