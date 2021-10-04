@@ -128,7 +128,7 @@ func main() {
 	writeKey(path.Join(basePath, "trustedRoot.key"), trustedRootKey)
 	// customRoot + customRoot2
 	// Not trusted by the drivers by default. customRoot.crt should be installed in driver Docker image
-	// in some place. Testkit will only refer to it with it's name (no path). It will be used to test custom CA driver settings.
+	// in some place. Testkit will only refer to it with its name (no path). It will be used to test custom CA driver settings.
 	customRootCert, customRootKey, customRootDer := generateRoot(anHourAgo, tenYearsFromNow, "customRoot")
 	writeKey(path.Join(basePath, "customRoot.key"), customRootKey)
 	customRoot2Cert, customRoot2Key, customRoot2Der := generateRoot(anHourAgo, tenYearsFromNow, "customRoot2")
@@ -142,7 +142,7 @@ func main() {
 	writeCert(path.Join(basePath, "driver", "custom", "customRoot2.crt"), customRoot2Der)
 
 	// trustedRoot_server1
-	// Valid dates with hostname set to something that drivers can connect to from driver // Docker container.
+	// Valid dates with hostname set to something that drivers can connect to from driver Docker container.
 	trustedRoot_server1Key, trustedRoot_server1Der := generateServer(trustedRootCert, trustedRootKey, anHourAgo, tenYearsFromNow, "trustedRoot_thehost", "thehost")
 	writeKey(path.Join(basePath, "server", "trustedRoot_thehost.key"), trustedRoot_server1Key)
 	writeCert(path.Join(basePath, "server", "trustedRoot_thehost.pem"), trustedRoot_server1Der)

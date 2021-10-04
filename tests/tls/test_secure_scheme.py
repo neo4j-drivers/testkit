@@ -74,7 +74,7 @@ class TestSecureScheme(TestkitTestCase):
 
     def test_trusted_ca_wrong_hostname(self):
         """
-        Verifies that driver rejects connect if hostnames doesn't match
+        Verifies that driver rejects connection if host name doesn't match
         """
         self.skip_if_missing_driver_features(*self.feature_requirement)
         # TLS server is setup to serve under the name 'thehost' but driver will
@@ -94,7 +94,7 @@ class TestSecureScheme(TestkitTestCase):
 
     def test_untrusted_ca_correct_hostname(self):
         """
-        Verifies that driver rejects connect if hostnames match but CA isn't
+        Verifies that driver rejects connection if host name doesn't match
         trusted
         """
         self.skip_if_missing_driver_features(*self.feature_requirement)

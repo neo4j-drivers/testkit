@@ -20,7 +20,7 @@ class TestExplicitSslOptions(TestkitTestCase):
     def tearDown(self):
         if self._server:
             # If test raised an exception this will make sure that the stub
-            # server is killed and it's output is dumped for analysis.
+            # server is killed and its output is dumped for analysis.
             self._server.reset()
             self._server = None
         super().tearDown()
