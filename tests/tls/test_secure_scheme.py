@@ -30,6 +30,7 @@ class TestSecureScheme(TestkitTestCase):
     schemes = "neo4j+s", "bolt+s"
     feature_requirement = types.Feature.API_SSL_SCHEMES,
     extra_driver_configs = {},
+    cert_prefix = "trustedRoot_"
 
     def _try_connect(self, scheme, host, driver_config):
         return try_connect(self._backend, self._server, scheme, host,
@@ -37,7 +38,7 @@ class TestSecureScheme(TestkitTestCase):
 
     def _start_server(self, cert_suffix, **kwargs):
         if "Root_" not in cert_suffix:
-            cert = "trustedRoot_" + cert_suffix
+            cert = self.cert_prefix + cert_suffix
         else:
             cert = cert_suffix
         self._server = TlsServer(cert, **kwargs)
@@ -155,13 +156,7 @@ class TestTrustCustomCertsConfig(TestTrustSystemCertsConfig):
         {"encrypted": True, "trustedCertificates": ["customRoot2.crt",
                                                     "customRoot.crt"]},
     )
-
-    def _start_server(self, cert_suffix, **kwargs):
-        if "Root_" not in cert_suffix:
-            cert = "customRoot_" + cert_suffix
-        else:
-            cert = cert_suffix
-        self._server = TlsServer(cert, **kwargs)
+    cert_prefix = "customRoot_"
 
     def test_trusted_ca_correct_hostname(self):
         super().test_trusted_ca_correct_hostname()
