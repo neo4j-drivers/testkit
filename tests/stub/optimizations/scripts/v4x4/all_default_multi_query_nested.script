@@ -1,0 +1,48 @@
+!: BOLT 4.3
+
+C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*"}
+S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
+*: RESET
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "*" {} {}
+S: SUCCESS {"fields": ["1"], "qid": 1}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"has_more": true}
+{?
+    # Eager drivers might pull a record in advance
+    C: PULL {"n": "*"}
+    S: RECORD [1]
+       SUCCESS {"has_more": true}
+?}
+C: RUN "*" {} {}
+S: SUCCESS {"fields": ["2"], "qid": 2}
+{{
+    C: PULL {"n": "*"}
+    S: RECORD [1]
+       SUCCESS {"has_more": true}
+    {{
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+    ----
+        # Drivers that pipeline a PULL will takes this path in the discarding tests
+        C: DISCARD {"n": "*"}
+    }}
+----
+    # Drivers that don't pipeline a PULL will takes this path in the discarding tests
+    C: DISCARD {"n": "*"}
+}}
+S: SUCCESS {}
+{{
+    C: PULL {"n": "*", "qid": 1}
+    S: RECORD [1]
+----
+    # Drivers that pipeline a PULL will takes this path in the discarding tests
+    C: DISCARD {"n": "*", "qid": 1}
+}}
+S: SUCCESS {}
+C: COMMIT
+S: SUCCESS {"type": "w", "bookmark": "bookmark:1"}
+*: RESET
+?: GOODBYE
