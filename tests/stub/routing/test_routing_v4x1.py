@@ -1,10 +1,10 @@
 import json
 
 from nutkit.frontend import Driver
-from .test_routing_v4x3 import RoutingV4x3
+from .test_routing_v4x4 import RoutingV4x4
 
 
-class RoutingV4x1(RoutingV4x3):
+class RoutingV4x1(RoutingV4x4):
     bolt_version = "4.1"
     server_agent = "Neo4j/4.1.0"
 
