@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: BEGIN {}
+C: BEGIN {"imp_user": "that-other-dude", "db": "homedb"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}

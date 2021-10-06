@@ -2,13 +2,10 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: BEGIN {}
-S: SUCCESS {}
-C: RUN "RETURN 1 as n" {} {}
+C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "homedb"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 1000}
-S: SUCCESS {"type": "r"}
-C: COMMIT
-S: SUCCESS {}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
 *: RESET
 ?: GOODBYE

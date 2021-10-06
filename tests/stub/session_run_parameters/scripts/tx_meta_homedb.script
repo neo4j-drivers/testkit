@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: RUN "RETURN 1 as n" {} {"tx_metadata": {"akey": "aval"}}
+C: RUN "RETURN 1 as n" {} {"tx_metadata": {"akey": "aval"}, "db": "homedb"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 1000}
 S: RECORD [1]
