@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: RUN "RETURN 1 as n" {"p": 1} {"bookmarks": ["b0"], "tx_metadata": {"k": "v"}, "mode": "r", "tx_timeout": 11, "imp_user": "that-other-dude"}
+C: RUN "RETURN 1 as n" {} {"imp_user": "that-other-dude"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 1000}
 S: RECORD [1]

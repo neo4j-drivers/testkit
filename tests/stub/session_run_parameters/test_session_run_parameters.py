@@ -1,6 +1,7 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -31,12 +32,19 @@ class TestSessionRunParameters(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def _run(self, access_mode, params=None, bookmarks=None, tx_meta=None,
-             timeout=None):
-        session = self._driver.session(access_mode, bookmarks=bookmarks)
+    def _run(self, session_args=None, session_kwargs=None,
+             run_args=None, run_kwargs=None):
+        if session_args is None:
+            session_args = ()
+        if session_kwargs is None:
+            session_kwargs = {}
+        if run_args is None:
+            run_args = ()
+        if run_kwargs is None:
+            run_kwargs = {}
+        session = self._driver.session(*session_args, **session_kwargs)
         try:
-            result = session.run("RETURN 1 as n", params=params, txMeta=tx_meta,
-                                 timeout=timeout)
+            result = session.run("RETURN 1 as n", *run_args, **run_kwargs)
             result.next()
         finally:
             session.close()
@@ -46,38 +54,56 @@ class TestSessionRunParameters(TestkitTestCase):
 
     def test_access_mode_read(self):
         self._start_server("access_mode_read.script")
-        self._run("r")
+        self._run(session_args=("r",))
         self._driver.close()
         self._server.done()
 
     def test_access_mode_write(self):
         self._start_server("access_mode_write.script")
-        self._run("w")
+        self._run(session_args=("w",))
         self._driver.close()
         self._server.done()
 
     def test_bookmarks(self):
         self._start_server("bookmarks.script")
-        self._run("w", bookmarks=["b1", "b2"])
+        self._run(session_args=("w",),
+                  session_kwargs={"bookmarks": ["b1", "b2"]})
         self._driver.close()
         self._server.done()
 
     def test_tx_meta(self):
         self._start_server("tx_meta.script")
-        self._run("w", tx_meta={"akey": "aval"})
+        self._run(session_args=("w",),
+                  run_kwargs={"txMeta": {"akey": "aval"}})
         self._driver.close()
         self._server.done()
 
     def test_timeout(self):
         self._start_server("timeout.script")
-        self._run("w", timeout=17)
+        self._run(session_args=("w",), run_kwargs={"timeout": 17})
         self._driver.close()
         self._server.done()
 
+    @driver_feature(types.Feature.IMPERSONATION)
+    def test_impersonation(self):
+        self._start_server("imp_user.script")
+        self._run(session_args=("w",),
+                  session_kwargs={"impersonatedUser": "that-other-dude"})
+        self._driver.close()
+        self._server.done()
+
+    @driver_feature(types.Feature.IMPERSONATION)
     def test_combined(self):
         self._start_server("combined.script")
-        self._run("r", params={"p": types.CypherInt(1)}, bookmarks=["b0"],
-                  tx_meta={"k": "v"}, timeout=11)
+        self._run(session_args=("r",),
+                  session_kwargs={
+                      "bookmarks": ["b0"],
+                      "impersonatedUser": "that-other-dude"
+                  },
+                  run_kwargs={
+                      "params": {"p": types.CypherInt(1)},
+                      "txMeta": {"k": "v"}, "timeout": 11
+                  })
         self._driver.close()
         self._server.done()
 
