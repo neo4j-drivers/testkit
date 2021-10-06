@@ -64,6 +64,13 @@ class TestSessionRunParameters(TestkitTestCase):
         self._driver.close()
         self._server.done()
 
+    def test_parameters(self):
+        self._start_server("parameters.script")
+        self._run(session_args=("w",),
+                  run_kwargs={"params": {"p": types.CypherInt(1)}})
+        self._driver.close()
+        self._server.done()
+
     def test_bookmarks(self):
         self._start_server("bookmarks.script")
         self._run(session_args=("w",),
