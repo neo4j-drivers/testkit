@@ -99,13 +99,34 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual([1], sequence)
 
     # Same test as for session.run but for transaction run.
-    def test_should_read_successfully_from_reader_using_tx_run(self):
+    def test_should_read_successfully_from_reader_using_tx_run_adb(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
         self.start_server(self._readServer1, "reader_tx.script")
 
         session = driver.session('r', database=self.adb)
+        tx = session.beginTransaction()
+        result = tx.run("RETURN 1 as n")
+        sequence = self.collectRecords(result)
+        summary = result.consume()
+        tx.commit()
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertEqual(summary.server_info.address,
+                         get_dns_resolved_server_address(self._readServer1))
+        self.assertEqual([1], sequence)
+
+    def test_should_read_successfully_from_reader_using_tx_run_default_db(self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1, "router_default_db.script")
+        self.start_server(self._readServer1, "reader_tx_default_db.script")
+
+        session = driver.session('r')
         tx = session.beginTransaction()
         result = tx.run("RETURN 1 as n")
         sequence = self.collectRecords(result)
@@ -1970,9 +1991,6 @@ class RoutingV4x4(RoutingBase):
         self._readServer1.done()
         self.assertTrue(failed_on_unreachable)
         self.assertEqual([1], sequence)
-
-    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
-        pass
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
