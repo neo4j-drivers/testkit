@@ -303,6 +303,36 @@ class TestSummary(TestkitTestCase):
         )
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_contains_system_updates(self):
+        summary = self._get_summary(
+            "partial_summary_contains_system_updates.script"
+        )
+        self._assert_counters(summary, contains_system_updates=True)
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_contains_updates(self):
+        summary = self._get_summary("partial_summary_contains_updates.script")
+        self._assert_counters(summary, contains_updates=True)
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_not_contains_system_updates(self):
+        summary = self._get_summary(
+            "partial_summary_not_contains_system_updates.script"
+        )
+        self._assert_counters(
+            summary, system_updates=1234, contains_system_updates=False
+        )
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_not_contains_updates(self):
+        summary = self._get_summary(
+            "partial_summary_not_contains_updates.script"
+        )
+        self._assert_counters(
+            summary, constraints_added=1234, contains_updates=False
+        )
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_indexes_added(self):
         summary = self._get_summary("partial_summary_indexes_added.script")
         self._assert_counters(
