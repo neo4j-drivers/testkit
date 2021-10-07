@@ -5,6 +5,6 @@
 
 A: HELLO {"{}": "*"}
 {*
-    C: ROUTE {"{}": "*"} {"[]": "*"} {"db": "adb", "imp_user": "that-other-dude"}
+    C: ROUTE {"{}": "*"} {"[]": "*"} {"db": "adb", "[imp_user]": "that-other-dude"}
     S: SUCCESS { "rt": { "ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9001"], "role":"READ"}, {"addresses": ["#HOST#:9001"], "role":"WRITE"}]}}
 *}
