@@ -21,7 +21,7 @@ class TestTxBeginParameters(TestkitTestCase):
         super().setUp()
         self._router = StubServer(9000)
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
+        self._driver_name = get_driver_name()
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
@@ -41,14 +41,12 @@ class TestTxBeginParameters(TestkitTestCase):
                 router_script = router_script % "_impersonation"
             else:
                 router_script = router_script % ""
-            print("router script:", router_script)
             self._router.start(path=self.script_path(router_script),
                                vars={"#HOST#": self._router.host})
         if routing and not db:
             script += "_homedb.script"
         else:
             script += ".script"
-        print("server script:", script)
         self._server.start(path=self.script_path(script))
         if routing:
             uri = "neo4j://%s" % self._router.address
@@ -177,6 +175,23 @@ class TestTxBeginParameters(TestkitTestCase):
                           session_kwargs={
                               "impersonatedUser": "that-other-dude"
                           })
+
+    @driver_feature(types.Feature.IMPERSONATION)
+    def test_impersonation_fails_on_v4x3(self):
+        for routing in (True, False):
+            with self.subTest("routing" if routing else "direct"):
+                with self.assertRaises(types.DriverError) as exc:
+                    self._run("imp_user_v4x3", routing,
+                              session_args=("w",),
+                              session_kwargs={
+                                  "impersonatedUser": "that-other-dude"
+                              })
+                if self._driver_name in ["python"]:
+                    self.assertEqual(
+                        exc.exception.errorType,
+                        "<class 'neo4j.exceptions.ConfigurationError'>"
+                    )
+                    self.assertIn("that-other-dude", exc.exception.msg)
 
     @driver_feature(types.Feature.IMPERSONATION)
     def test_combined(self):

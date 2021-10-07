@@ -12,7 +12,7 @@ class TestTransport(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
+        self._driver_name = get_driver_name()
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address

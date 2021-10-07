@@ -32,9 +32,8 @@ class RoutingV4x3(RoutingV4x4):
     def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
         super().test_should_read_successfully_from_reader_using_session_run_with_default_db_driver()
 
-    # Same test as for session.run but for transaction run.
-    def test_should_read_successfully_from_reader_using_tx_run(self):
-        super().test_should_read_successfully_from_reader_using_tx_run()
+    def test_should_read_successfully_from_reader_using_tx_run_default_db(self):
+        super().test_should_read_successfully_from_reader_using_tx_run_default_db()
 
     def test_should_send_system_bookmark_with_route(self):
         super().test_should_send_system_bookmark_with_route()
@@ -262,9 +261,6 @@ class RoutingV4x3(RoutingV4x4):
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         super().test_should_read_successfully_from_reachable_db_after_trying_unreachable_db()
-
-    def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
-        super().test_should_pass_system_bookmark_when_getting_rt_for_multi_db()
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         super().test_should_ignore_system_bookmark_when_getting_rt_for_multi_db()

@@ -51,8 +51,6 @@ class RoutingBase(TestkitTestCase):
         self._writeServer1.reset()
         self._writeServer2.reset()
         self._writeServer3.reset()
-        self._routingServer1._dump()
-        self._writeServer1._dump()
         super().tearDown()
 
     @property
