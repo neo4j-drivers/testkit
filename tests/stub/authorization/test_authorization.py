@@ -43,7 +43,7 @@ class AuthorizationBase(TestkitTestCase):
             self.assertEqual(
                 "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
             )
-        elif driver == 'go':
+        elif driver in ['go', 'javascript']:
             self.assertEqual('Neo.ClientError.Security.TokenExpired',
                              error.code)
             self.assertIn(
