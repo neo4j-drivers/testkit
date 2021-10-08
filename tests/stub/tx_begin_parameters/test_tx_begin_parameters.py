@@ -94,7 +94,6 @@ class TestTxBeginParameters(TestkitTestCase):
             self._server.done()
         finally:
             self._server.reset()
-            self._server._dump()
             self._router.reset()
             session.close()
             self._driver.close()
