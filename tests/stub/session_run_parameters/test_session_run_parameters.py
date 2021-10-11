@@ -161,6 +161,11 @@ class TestSessionRunParameters(TestkitTestCase):
                         "<class 'neo4j.exceptions.ConfigurationError'>"
                     )
                     self.assertIn("that-other-dude", exc.exception.msg)
+                if self._driver_name in ["java"]:
+                    self.assertEqual(
+                        exc.exception.errorType,
+                        "org.neo4j.driver.exceptions.ClientException"
+                    )
 
     @driver_feature(types.Feature.IMPERSONATION,
                     types.Feature.BOLT_4_4)

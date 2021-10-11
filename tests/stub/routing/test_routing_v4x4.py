@@ -201,7 +201,7 @@ class RoutingV4x4(RoutingBase):
 
     def _should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(
             self, interrupting_reader_script):
-        # TODO remove this block once all languages wor
+        # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
