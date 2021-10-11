@@ -1,4 +1,4 @@
-!: BOLT 4.3
+!: BOLT 4.4
 
 C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*"}
 S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}

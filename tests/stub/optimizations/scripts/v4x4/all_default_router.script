@@ -1,4 +1,4 @@
-!: BOLT 4.3
+!: BOLT 4.4
 !: ALLOW CONCURRENT
 
 C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "routing": {"{}": "*"}}
