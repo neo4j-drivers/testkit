@@ -1,7 +1,7 @@
 !: BOLT 4.4
 
 C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "routing": {"{}": "*"}}
-S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
+S: SUCCESS {"server": "Neo4j/4.4.0", "connection_id": "example-connection-id:1"}
 *: RESET
 {{
     # transaction
