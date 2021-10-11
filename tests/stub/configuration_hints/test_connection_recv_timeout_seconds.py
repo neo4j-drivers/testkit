@@ -268,6 +268,9 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
             self.assertEqual(
                 "org.neo4j.driver.exceptions.SessionExpiredException",
                 e.errorType)
+        elif get_driver_name() in ["dotnet"]:
+            self.assertEqual("SessionExpiredError",
+                          e.errorType)
         else:
             super()._assert_is_timeout_exception(e)
 
