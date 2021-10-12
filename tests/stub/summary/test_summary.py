@@ -6,6 +6,7 @@ from nutkit import protocol as types
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
+    get_driver_name,
     TestkitTestCase,
 )
 from tests.stub.shared import StubServer
@@ -86,7 +87,10 @@ class TestSummary(TestkitTestCase):
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_query(self):
         def _test():
-            script_name = "empty_summary_type_%s.script" % query_type
+            if query_type is not None:
+                script_name = "empty_summary_type_%s.script" % query_type
+            else:
+                script_name = "empty_summary_no_type.script"
             with self._get_session(script_name) as session:
                 result = session.run("RETURN 1 AS n",
                                      params={"foo": types.CypherInt(123)})
@@ -96,7 +100,26 @@ class TestSummary(TestkitTestCase):
                              {"foo": types.CypherInt(123)})
             self.assertEqual(summary.query_type, query_type)
 
-        for query_type in ("r", "w", "rw", "s"):
+        for query_type in ("r", "w", "rw", "s", None):
+            with self.subTest(query_type):
+                _test()
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_invalid_query_type(self):
+        def _test():
+            script_name = "empty_summary_type_%s.script" % query_type
+            with self._get_session(script_name) as session:
+                with self.assertRaises(types.DriverError) as e:
+                    result = session.run("RETURN 1 AS n",
+                                         params={"foo": types.CypherInt(123)})
+                    result.consume()
+            if get_driver_name() == "python":
+                self.assertEqual(
+                    e.exception.errorType,
+                    "<class 'neo4j._exceptions.BoltProtocolError'>"
+                )
+
+        for query_type in ("wr",):
             with self.subTest(query_type):
                 _test()
 
