@@ -1,0 +1,14 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"[mode]": "w"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {"p": 1} {}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+*: RESET
+?: GOODBYE

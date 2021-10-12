@@ -1,0 +1,13 @@
+!: BOLT #VERSION#
+!: AUTO RESET
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+{{
+    C: ROUTE #ROUTINGCTX# [] {}
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "home-db", "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9100"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]}}
+----
+    C: ROUTE #ROUTINGCTX# [] {"db": "system"}
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "system", "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9100"], "role":"READ"}, {"addresses": ["#HOST#:9020", "#HOST#:9022"], "role":"WRITE"}]}}
+}}
+S: <EXIT>

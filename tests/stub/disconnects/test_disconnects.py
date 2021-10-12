@@ -15,7 +15,7 @@ class TestDisconnects(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
+        self._driver_name = get_driver_name()
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address
@@ -97,7 +97,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driverName in ["javascript"]:
+        if self._driver_name in ["javascript"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
@@ -116,7 +116,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driverName in ["dotnet", "javascript"]:
+        if self._driver_name in ["dotnet", "javascript"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
@@ -131,7 +131,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driverName in ["dotnet", "javascript"]:
+        if self._driver_name in ["dotnet", "javascript"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
@@ -164,7 +164,7 @@ class TestDisconnects(TestkitTestCase):
     def test_disconnect_on_tx_begin(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt BEGIN message.
-        if self._driverName in ["go"]:
+        if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_begin.script"),
                            vars=self.get_vars())
@@ -174,16 +174,16 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after begin"
-        if self._driverName in ["go"]:
+        if self._driver_name in ["go"]:
             expected_step = "after run"
-        elif self._driverName in ["javascript"]:
+        elif self._driver_name in ["javascript"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
     def test_disconnect_on_tx_run(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt RUN message within a transaction.
-        if self._driverName in ["go"]:
+        if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_run.script"),
                            vars=self.get_vars())
@@ -193,14 +193,14 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driverName in ["javascript", "dotnet"]:
+        if self._driver_name in ["javascript", "dotnet"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
     def test_disconnect_on_tx_pull(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt PULL message within a transaction.
-        if self._driverName in ["go"]:
+        if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_pull.script"),
                            vars=self.get_vars())
@@ -216,7 +216,7 @@ class TestDisconnects(TestkitTestCase):
         # Verifies how the driver handles when server disconnects after driver
         # sent bolt RUN message and received a RECORD but no summary within a
         # transaction.
-        if self._driverName in ["go"]:
+        if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_record.script"),
                            vars=self.get_vars())
@@ -286,7 +286,7 @@ class TestDisconnects(TestkitTestCase):
         }
 
     def get_extra_hello_props(self):
-        if self._driverName == "dotnet":
+        if self._driver_name == "dotnet":
             return ', "routing": null'
         else:
             return ""

@@ -1,0 +1,11 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"bookmarks{}": ["b1", "b2"], "db": "homedb"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "w"}
+*: RESET
+?: GOODBYE

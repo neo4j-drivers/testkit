@@ -17,6 +17,12 @@ from tests.stub.shared import StubServer
 class RoutingBase(TestkitTestCase):
     def setUp(self):
         super().setUp()
+        required_bolt_features = {
+            "4.4": (types.Feature.BOLT_4_4,),
+        }
+        self.skip_if_missing_driver_features(
+            *required_bolt_features.get(self.bolt_version, ())
+        )
         self._routingServer1 = StubServer(9000)
         self._routingServer2 = StubServer(9001)
         self._routingServer3 = StubServer(9002)
@@ -45,8 +51,6 @@ class RoutingBase(TestkitTestCase):
         self._writeServer1.reset()
         self._writeServer2.reset()
         self._writeServer3.reset()
-        self._routingServer1._dump()
-        self._writeServer1._dump()
         super().tearDown()
 
     @property
@@ -84,7 +88,7 @@ class RoutingBase(TestkitTestCase):
         classes = (self.__class__, *inspect.getmro(self.__class__))
         tried_locations = []
         for cls in classes:
-            if hasattr(cls, "bolt_version"):
+            if isinstance(getattr(cls, "bolt_version", None), str):
                 version_folder = \
                     "v{}".format(cls.bolt_version.replace(".", "x"))
                 script_path = self.script_path(version_folder, script_fn)

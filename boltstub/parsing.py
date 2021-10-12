@@ -5,6 +5,7 @@ import json
 import math
 from os import path
 import re
+import sys
 from textwrap import wrap
 import threading
 from time import sleep
@@ -1220,6 +1221,10 @@ def parse(script: str, substitutions: Optional[dict] = None) -> Script:
 
 def parse_file(filename):
     with open(filename) as fd:
-        script = parse(fd.read())
+        try:
+            script = parse(fd.read())
+        except Exception:
+            print("Error while parsing %s" % filename, file=sys.stderr)
+            raise
     script.filename = filename
     return script

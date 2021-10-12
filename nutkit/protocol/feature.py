@@ -23,6 +23,10 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
+    # The driver supports Bolt protocol version 4.4
+    BOLT_4_4 = "Feature:Bolt:4.4"
+    # The driver supports impersonation
+    IMPERSONATION = "Feature:Impersonation"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver

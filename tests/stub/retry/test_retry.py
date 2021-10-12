@@ -14,7 +14,7 @@ class TestRetry(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
+        self._driver_name = get_driver_name()
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
@@ -102,7 +102,7 @@ class TestRetry(TestkitTestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driverName in ["java", 'dotnet']:
+        if self._driver_name in ["java", 'dotnet']:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(path=self.script_path("commit_disconnect.script"))

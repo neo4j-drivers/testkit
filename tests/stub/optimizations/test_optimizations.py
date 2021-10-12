@@ -233,14 +233,14 @@ class TestOptimizations(TestkitTestCase):
         def test():
             if routing:
                 self._router.start(
-                    path=self.script_path("v4x3", "all_default_router.script"),
+                    path=self.script_path(version, "all_default_router.script"),
                     vars={"#HOST#": self._router.host}
                 )
                 self._server.start(path=self.script_path(
-                    "v4x3", "all_default_routing.script"
+                    version, "all_default_routing.script"
                 ))
             else:
-                self._server.start(path=self.script_path("v4x3",
+                self._server.start(path=self.script_path(version,
                                                          "all_default.script"))
             auth = types.AuthorizationToken("basic", principal="neo4j",
                                             credentials="pass")
@@ -274,22 +274,23 @@ class TestOptimizations(TestkitTestCase):
             if routing:
                 self._router.done()
 
-        for use_tx in (True, False):
-            for consume in (True, False):
-                for routing in (True, False):
-                    with self.subTest(("tx" if use_tx else "auto_commit")
-                                      + ("_discard" if consume else "_pull")
-                                      + ("_routing"
-                                         if routing else "_no_routing")):
-                        test()
-                    self._server.reset()
-                    self._router.reset()
+        for version in ("v4x3", "v4x4"):
+            for use_tx in (True, False):
+                for consume in (True, False):
+                    for routing in (True, False):
+                        with self.subTest(("tx" if use_tx else "auto_commit")
+                                          + ("_discard" if consume else "_pull")
+                                          + ("_routing"
+                                             if routing else "_no_routing")):
+                            test()
+                        self._server.reset()
+                        self._router.reset()
 
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
     def test_uses_implicit_default_arguments_multi_query(self):
         def test():
             self._server.start(path=self.script_path(
-                "v4x3", "all_default_multi_query.script"
+                version, "all_default_multi_query.script"
             ))
             auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                             credentials="pass")
@@ -315,19 +316,21 @@ class TestOptimizations(TestkitTestCase):
             driver.close()
             self._server.done()
 
-        for consume1 in (True, False):
-            for consume2 in (True, False):
-                with self.subTest(("discard1" if consume1 else "pull1")
-                                  + ("_discard2" if consume2 else "_pull2")):
-                    test()
-                self._server.reset()
-                self._router.reset()
+        for version in ("v4x3", "v4x4"):
+            for consume1 in (True, False):
+                for consume2 in (True, False):
+                    with self.subTest(("discard1" if consume1 else "pull1")
+                                      + ("_discard2" if consume2
+                                         else "_pull2")):
+                        test()
+                    self._server.reset()
+                    self._router.reset()
 
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
     def test_uses_implicit_default_arguments_multi_query_nested(self):
         def test():
             self._server.start(path=self.script_path(
-                "v4x3", "all_default_multi_query_nested.script"
+                version, "all_default_multi_query_nested.script"
             ))
             auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                             credentials="pass")
@@ -353,9 +356,11 @@ class TestOptimizations(TestkitTestCase):
             driver.close()
             self._server.done()
 
-        for consume1 in (True, False):
-            for consume2 in (True, False):
-                with self.subTest(("discard1" if consume1 else "pull1")
-                                  + ("_discard2" if consume2 else "_pull2")):
-                    test()
-                self._server.reset()
+        for version in ("v4x3", "v4x4"):
+            for consume1 in (True, False):
+                for consume2 in (True, False):
+                    with self.subTest(("discard1" if consume1 else "pull1")
+                                      + ("_discard2"
+                                         if consume2 else "_pull2")):
+                        test()
+                    self._server.reset()
