@@ -51,10 +51,15 @@ class TestHomeDb(TestkitTestCase):
 
     @driver_feature(types.Feature.IMPERSONATION, types.Feature.BOLT_4_4)
     def test_session_should_cache_home_db_despite_new_rt(self):
+        i = 0
+
         def work(tx):
-            try:
-                res = tx.run("RETURN 1")
-            except types.DriverError:
+            nonlocal i
+            i += 1
+            if i == 1:
+                with self.assertRaises(types.DriverError) as exc:
+                    res = tx.run("RETURN 1")
+                    return res.next()
                 self._router.done()
                 self._reader1.done()
                 self._router.start(path=self.script_path(
@@ -62,8 +67,10 @@ class TestHomeDb(TestkitTestCase):
                     vars={"#HOST#": self._router.host})
                 self._reader2.start(path=self.script_path(
                     "reader_tx_homedb.script"))
-                raise
-            return res.next()
+                raise exc.exception
+            else:
+                res = tx.run("RETURN 1")
+                return res.next()
 
         driver = Driver(self._backend, self._uri, self._authtoken)
 

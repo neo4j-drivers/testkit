@@ -7,9 +7,14 @@ C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": "
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
 S: SUCCESS {"fields": ["1"]}
-C: PULL {"n": 1000}
-S: RECORD [1]
-   SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+----
+    C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+    S: SUCCESS {"type": "r"}
+}}
 C: COMMIT
 S: SUCCESS {}
 *: RESET
