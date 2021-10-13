@@ -1,0 +1,9 @@
+!: BOLT 4.4
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": "the-imposter", "db": "homedb"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+S: <EXIT>
