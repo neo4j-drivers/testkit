@@ -804,7 +804,7 @@ class _RepeatBlock(Block, abc.ABC):
         return list(res.keys())
 
     def accepted_messages_after_reset(self) -> List[ClientLine]:
-        return self.block_list.accepted_messages_after_resets()
+        return self.block_list.accepted_messages_after_reset()
 
     def assert_no_init(self):
         self.block_list.assert_no_init()
