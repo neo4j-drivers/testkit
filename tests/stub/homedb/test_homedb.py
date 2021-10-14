@@ -40,7 +40,7 @@ class TestHomeDb(TestkitTestCase):
             session1 = driver.session("r", impersonatedUser="the-imposter")
             result = session1.run("RETURN 1")
             result.consume()
-            if not simultaneous_sessions:
+            if not parallel_sessions:
                 session1.close()
 
             session2 = driver.session(
@@ -48,7 +48,7 @@ class TestHomeDb(TestkitTestCase):
             result = session2.run("RETURN 2")
             result.consume()
             session2.close()
-            if simultaneous_sessions:
+            if parallel_sessions:
                 session1.close()
 
             driver.close()
@@ -56,9 +56,9 @@ class TestHomeDb(TestkitTestCase):
             self._router.done()
             self._reader1.done()
 
-        for simultaneous_sessions in (True, False):
-            with self.subTest("simultaneous-sessions" if simultaneous_sessions
-                              else "parallel-sessions"):
+        for parallel_sessions in (True, False):
+            with self.subTest("parallel-sessions" if parallel_sessions
+                              else "sequential-sessions"):
                 _test()
             self._router.reset()
             self._reader1.reset()
@@ -82,7 +82,7 @@ class TestHomeDb(TestkitTestCase):
             result = tx.run("RETURN 1")
             result.consume()
             tx.commit()
-            if not simultaneous_sessions:
+            if not parallel_sessions:
                 session1.close()
 
             session2 = driver.session(
@@ -92,7 +92,7 @@ class TestHomeDb(TestkitTestCase):
             result.consume()
             tx.commit()
             session2.close()
-            if simultaneous_sessions:
+            if parallel_sessions:
                 session1.close()
 
             driver.close()
@@ -100,9 +100,9 @@ class TestHomeDb(TestkitTestCase):
             self._router.done()
             self._reader1.done()
 
-        for simultaneous_sessions in (True, False):
-            with self.subTest("simultaneous-sessions" if simultaneous_sessions
-                              else "parallel-sessions"):
+        for parallel_sessions in (True, False):
+            with self.subTest("parallel-sessions" if parallel_sessions
+                              else "sequential-sessions"):
                 _test()
             self._router.reset()
             self._reader1.reset()
@@ -128,7 +128,7 @@ class TestHomeDb(TestkitTestCase):
             session1 = driver.session("r", impersonatedUser="the-imposter")
             query = "RETURN 1"
             session1.readTransaction(work)
-            if not simultaneous_sessions:
+            if not parallel_sessions:
                 session1.close()
 
             session2 = driver.session(
@@ -136,7 +136,7 @@ class TestHomeDb(TestkitTestCase):
             query = "RETURN 2"
             session2.readTransaction(work)
             session2.close()
-            if simultaneous_sessions:
+            if parallel_sessions:
                 session1.close()
 
             driver.close()
@@ -144,9 +144,9 @@ class TestHomeDb(TestkitTestCase):
             self._router.done()
             self._reader1.done()
 
-        for simultaneous_sessions in (True, False):
-            with self.subTest("simultaneous-sessions" if simultaneous_sessions
-                              else "parallel-sessions"):
+        for parallel_sessions in (True, False):
+            with self.subTest("parallel-sessions" if parallel_sessions
+                              else "sequential-sessions"):
                 _test()
             self._router.reset()
             self._reader1.reset()
