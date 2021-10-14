@@ -3,7 +3,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-{*
+{+
     {{
         C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter", "db": "homedb1"}
         S: SUCCESS {}
@@ -31,5 +31,5 @@ A: HELLO {"{}": "*"}
     C: COMMIT
     S: SUCCESS {}
     *: RESET
-*}
++}
 ?: GOODBYE
