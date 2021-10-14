@@ -164,6 +164,7 @@ class TestHomeDb(TestkitTestCase):
                     return res.next()
                 self._router.done()
                 self._reader1.done()
+                self._reader1._dump()
                 self._router.start(path=self.script_path(
                     "router_explicit_homedb.script"),
                     vars={"#HOST#": self._router.host})
@@ -192,3 +193,4 @@ class TestHomeDb(TestkitTestCase):
 
         self._router.done()
         self._reader2.done()
+        self.assertEqual(i, 2)
