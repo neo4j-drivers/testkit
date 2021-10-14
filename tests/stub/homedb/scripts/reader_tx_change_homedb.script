@@ -1,5 +1,5 @@
 !: BOLT 4.4
-!: ALLOW RESTART
+!: ALLOW CONCURRENT
 
 A: HELLO {"{}": "*"}
 *: RESET
