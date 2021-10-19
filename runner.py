@@ -27,9 +27,9 @@ def start_container(testkit_path, branch_name, network, secondary_network,
         "PYTHONPATH": "/testkit",
     }
     # Copy TEST_ variables that might have been set explicit
-    for varName in os.environ:
-        if varName.startswith("TEST_"):
-            env[varName] = os.environ[varName]
+    for var_name in os.environ:
+        if var_name.startswith("TEST_"):
+            env[var_name] = os.environ[var_name]
     docker.create_or_replace(
         image, "runner",
         command=["python3", "/testkit/driver/bootstrap.py"],
@@ -82,6 +82,22 @@ class Container:
             "python3", "-m", "tests.neo4j.suites", suite],
             env_map=self._env)
 
+    def run_neo4j_tests_env_config(self):
+        for key in ("TEST_NEO4J_HOST",
+                    "TEST_NEO4J_USER",
+                    "TEST_NEO4J_PASS",
+                    "TEST_NEO4J_SCHEME",
+                    "TEST_NEO4J_VERSION",
+                    "TEST_NEO4J_EDITION",
+                    "TEST_NEO4J_CLUSTER"):
+            self._env.update({key: os.environ.get(key)})
+        if self._env.get("TEST_NEO4J_HOST", "localhost"):
+            self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
+        suite = os.environ.get("TEST_NEO4J_VERSION", "4.3")
+        self._container.exec([
+            "python3", "-m", "tests.neo4j.suites", suite],
+            env_map=self._env)
+
     def run_selected_stub_tests(self, testpattern):
         self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
 
@@ -91,7 +107,7 @@ class Container:
                 ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
         self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
 
-    def run_selected_neo4j_tests(self, testpattern, hostname, username,
+    def run_selected_neo4j_tests(self, test_pattern, hostname, username,
                                  password, neo4j_config):
         self._env.update({
             # Hostname of Docker container running db
@@ -104,5 +120,20 @@ class Container:
             "TEST_NEO4J_CLUSTER": neo4j_config.cluster
         })
         self._container.exec([
-            "python3", "-m", "unittest", "-v", testpattern],
+            "python3", "-m", "unittest", "-v", test_pattern],
+            env_map=self._env)
+
+    def run_selected_neo4j_tests_env_config(self, test_pattern):
+        for key in ("TEST_NEO4J_HOST",
+                    "TEST_NEO4J_USER",
+                    "TEST_NEO4J_PASS",
+                    "TEST_NEO4J_SCHEME",
+                    "TEST_NEO4J_VERSION",
+                    "TEST_NEO4J_EDITION",
+                    "TEST_NEO4J_CLUSTER"):
+            self._env.update({key: os.environ.get(key)})
+        if self._env.get("TEST_NEO4J_HOST", "localhost"):
+            self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
+        self._container.exec([
+            "python3", "-m", "unittest", "-v", test_pattern],
             env_map=self._env)
