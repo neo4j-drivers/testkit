@@ -119,7 +119,7 @@ def initialise_configurations():
             # nightly build of backwards-compatible version
             ("4.2.12", True,        True,     "neo4j",  0),
             # nightly build of latest version
-            ("4.3.5",  True,        True,     "neo4j", 60),
+            ("4.3.6",  True,        True,     "neo4j", 60),
         )
     ]
 
