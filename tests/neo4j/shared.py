@@ -3,8 +3,16 @@ Shared utilities for writing tests against Neo4j server
 
 Uses environment variables for configuration:
 
-TEST_NEO4J_HOST    Neo4j server host, no default, required
-TEST_NEO4J_PORT    Neo4j server port, default is 7687
+TEST_NEO4J_SCHEME    Scheme to build the URI when contacting the Neo4j server,
+                     default "bolt"
+TEST_NEO4J_HOST      Neo4j server host, no default, required
+TEST_NEO4J_PORT      Neo4j server port, default is 7687
+TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
+TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
+TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
+TEST_NEO4J_EDITION   Edition ("enterprise" or "community") of the Neo4j server,
+                     default "enterprise"
+TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
 import os
 from warnings import warn
@@ -98,7 +106,7 @@ class ServerInfo:
 
 def get_server_info():
     return ServerInfo(
-        version=os.environ.get(env_neo4j_version, "4.3"),
+        version=os.environ.get(env_neo4j_version, "4.4"),
         edition=os.environ.get(env_neo4j_edition, "enterprise"),
         cluster=(os.environ.get(env_neo4j_cluster, "False").lower()
                  in ("true", "yes", "y", "1"))
