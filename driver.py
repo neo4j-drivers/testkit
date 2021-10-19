@@ -72,6 +72,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
         image, container_name,
         command=["python3", "/testkit/driver/bootstrap.py"],
         mount_map=mount_map,
+        host_map={"host.docker.internal": "host-gateway"},
         port_map={9876: 9876},  # For convenience when debugging
         network=network,
         working_folder="/driver")
