@@ -657,7 +657,7 @@ class RoutingV4x4(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -680,10 +680,12 @@ class RoutingV4x4(RoutingBase):
                 )
             failed = True
         session.close()
-        driver.close()
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -767,7 +769,7 @@ class RoutingV4x4(RoutingBase):
 
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -803,17 +805,19 @@ class RoutingV4x4(RoutingBase):
                 )
             failed = True
         session.close()
-        driver.close()
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
 
     def test_should_fail_when_writing_on_writer_that_returns_forbidden_on_read_only_database(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -846,17 +850,19 @@ class RoutingV4x4(RoutingBase):
                 )
             failed = True
         session.close()
-        driver.close()
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
 
     def test_should_fail_when_writing_on_writer_that_returns_database_unavailable(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -889,10 +895,12 @@ class RoutingV4x4(RoutingBase):
                 )
             failed = True
         session.close()
-        driver.close()
 
         self.assertIn(self._writeServer1.address,
                       driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -901,7 +909,7 @@ class RoutingV4x4(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -944,10 +952,12 @@ class RoutingV4x4(RoutingBase):
                     )
                 failed = True
 
-        driver.close()
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -956,7 +966,7 @@ class RoutingV4x4(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go']:
             self.skipTest("consume not implemented in backend")
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -989,10 +999,12 @@ class RoutingV4x4(RoutingBase):
                 )
             failed = True
         session.close()
-        driver.close()
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -1002,7 +1014,7 @@ class RoutingV4x4(RoutingBase):
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
         # TODO remove this block once all languages work
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -1038,10 +1050,12 @@ class RoutingV4x4(RoutingBase):
                 )
             failed = True
         session.close()
-        driver.close()
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
+        driver.close()
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
