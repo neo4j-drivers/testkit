@@ -51,6 +51,9 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ConnectionReadTimeoutException",
                 e.errorType)
+        elif get_driver_name() in ["dotnet"]:
+            self.assertIn("ServiceUnavailableError",
+                          e.errorType)
 
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ["java"]:
@@ -72,7 +75,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             result = self._session.run("timeout")
             # TODO It will be removed as soon as JS Driver
             # has async iterator api
-            if get_driver_name() in ["javascript"]:
+            if get_driver_name() in ['javascript', 'dotnet']:
                 result.next()
 
         result = self._session.run("in time")
@@ -96,7 +99,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             result = tx.run("timeout")
             # TODO It will be removed as soon as JS Driver
             # has async iterator api
-            if get_driver_name() in ["javascript"]:
+            if get_driver_name() in ['javascript', 'dotnet']:
                 result.next()
         # TODO remove once Go driver does not raise the last seen error upon
         #      tx closure
@@ -127,12 +130,12 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             result = tx.run("timeout")
             # TODO It will be removed as soon as JS Driver
             # has async iterator api
-            if get_driver_name() in ["javascript"]:
+            if get_driver_name() in ['javascript', 'dotnet']:
                 result.next()
 
         with self.assertRaises(types.DriverError) as second_run_error:
             result = tx.run("in time")
-            if get_driver_name() in ["javascript"]:
+            if get_driver_name() in ['javascript', 'dotnet']:
                 result.next()
 
         # TODO remove once Go driver does not raise the last seen error upon
@@ -167,7 +170,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                     result = tx.run("RETURN 1 AS n")
                     # TODO It will be removed as soon as JS Driver
                     # has async iterator api
-                    if get_driver_name() in ["javascript"]:
+                    if get_driver_name() in ['javascript', 'dotnet']:
                         result.next()
 
                 self._assert_is_timeout_exception(exc.exception)
