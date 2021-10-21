@@ -683,7 +683,7 @@ class RoutingV4x4(RoutingBase):
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
- 
+
         driver.close()
 
         self._routingServer1.done()
@@ -808,8 +808,9 @@ class RoutingV4x4(RoutingBase):
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
         driver.close()
-        
+
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertTrue(failed)
@@ -897,6 +898,7 @@ class RoutingV4x4(RoutingBase):
 
         self.assertIn(self._writeServer1.address,
                       driver.getRoutingTable(self.adb).writers)
+
         driver.close()
 
         self._routingServer1.done()
@@ -953,6 +955,7 @@ class RoutingV4x4(RoutingBase):
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
         driver.close()
 
         self._routingServer1.done()
@@ -999,6 +1002,7 @@ class RoutingV4x4(RoutingBase):
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
         driver.close()
 
         self._routingServer1.done()
@@ -1049,6 +1053,7 @@ class RoutingV4x4(RoutingBase):
 
         self.assertNotIn(self._writeServer1.address,
                          driver.getRoutingTable(self.adb).writers)
+
         driver.close()
 
         self._routingServer1.done()
