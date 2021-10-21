@@ -259,6 +259,9 @@ class RoutingV4x3(RoutingV4x4):
     def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(self):
         super().test_should_fail_with_routing_failure_on_db_not_found_discovery_failure()
 
+    def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(self):
+        super().test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure()
+
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         super().test_should_read_successfully_from_reachable_db_after_trying_unreachable_db()
 

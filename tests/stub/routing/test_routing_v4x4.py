@@ -1940,7 +1940,8 @@ class RoutingV4x4(RoutingBase):
         self._readServer1.done()
         self.assertEqual([1], sequence)
 
-    def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(self):
+    def test_should_fail_with_routing_failure_on_db_not_found_discovery_failure(
+            self):
         if not self.should_support_multi_db():
             return
 
@@ -1970,6 +1971,31 @@ class RoutingV4x4(RoutingBase):
 
         self._routingServer1.done()
         self.assertTrue(failed)
+
+    def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(
+            self):
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(
+            self._routingServer1,
+            "router_yielding_invalid_bookmark_failure.script"
+        )
+
+        session = driver.session('r', database=self.adb, bookmarks=["foobar"])
+        with self.assertRaises(types.DriverError) as exc:
+            result = session.run("RETURN 1 as n")
+            result.next()
+        if get_driver_name() in ['java']:
+            self.assertEqual(
+                'org.neo4j.driver.exceptions.FatalDiscoveryException',
+                exc.exception.errorType
+            )
+        self.assertEqual('Neo.ClientError.Transaction.InvalidBookmark',
+                         exc.exception.code)
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         if get_driver_name() in ['go']:
@@ -2179,8 +2205,7 @@ class RoutingV4x4(RoutingBase):
         self._routingServer1.done()
         self._readServer1.done()
 
-    def test_should_fail_when_driver_closed_using_session_run(
-            self):
+    def test_should_fail_when_driver_closed_using_session_run(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
