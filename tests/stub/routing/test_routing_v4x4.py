@@ -1665,23 +1665,21 @@ class RoutingV4x4(RoutingBase):
         )
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        failed = False
-        try:
-            driver.updateRoutingTable()
-        except types.DriverError as exc:
-            failed = True
-            if get_driver_name() in ['python']:
-                self.assertEqual(
-                    exc.errorType,
-                    "<class 'neo4j.exceptions.ServiceUnavailable'>"
-                )
-            elif get_driver_name() in ['javascript']:
-                self.assertEqual(
-                    exc.code,
-                    "ServiceUnavailable"
-                )
 
-        self.assertTrue(failed)
+        with self.assertRaises(types.DriverError) as exc:
+            driver.updateRoutingTable()
+
+        if get_driver_name() in ['python']:
+            self.assertEqual(
+                exc.exception.errorType,
+                "<class 'neo4j.exceptions.ServiceUnavailable'>"
+            )
+        elif get_driver_name() in ['javascript']:
+            self.exception.assertEqual(
+                exc.exception.code,
+                "ServiceUnavailable"
+            )
+
         routing_table = driver.getRoutingTable()
         self.assertEqual(routing_table.routers, [])
         self.assertEqual(routing_table.readers, [])
