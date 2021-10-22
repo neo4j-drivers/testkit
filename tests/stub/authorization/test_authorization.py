@@ -56,6 +56,10 @@ class AuthorizationBase(TestkitTestCase):
             self.assertEqual("Neo.ClientError.Security.TokenExpired",
                              error.code)
             self.assertIn("Token expired", error.msg)
+        elif driver == 'dotnet':
+            self.assertEqual("ClientError", error.errorType)
+            self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
+            self.assertIn("Token expired", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
