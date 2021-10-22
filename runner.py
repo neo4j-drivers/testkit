@@ -91,7 +91,7 @@ class Container:
                     "TEST_NEO4J_EDITION",
                     "TEST_NEO4J_CLUSTER"):
             self._env.update({key: os.environ.get(key)})
-        if self._env.get("TEST_NEO4J_HOST", "localhost"):
+        if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
         suite = os.environ.get("TEST_NEO4J_VERSION", "4.3")
         self._container.exec([
@@ -132,7 +132,7 @@ class Container:
                     "TEST_NEO4J_EDITION",
                     "TEST_NEO4J_CLUSTER"):
             self._env.update({key: os.environ.get(key)})
-        if self._env.get("TEST_NEO4J_HOST", "localhost"):
+        if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
         self._container.exec([
             "python3", "-m", "unittest", "-v", test_pattern],
