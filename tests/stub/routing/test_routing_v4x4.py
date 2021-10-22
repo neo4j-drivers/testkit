@@ -1675,7 +1675,7 @@ class RoutingV4x4(RoutingBase):
                 "<class 'neo4j.exceptions.ServiceUnavailable'>"
             )
         elif get_driver_name() in ['javascript']:
-            self.exception.assertEqual(
+            self.assertEqual(
                 exc.exception.code,
                 "ServiceUnavailable"
             )
