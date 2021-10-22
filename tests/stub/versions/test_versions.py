@@ -142,10 +142,10 @@ class TestProtocolVersions(TestkitTestCase):
                     #               compiles server agent from bolt version
                     #               potentially more differences
                     continue
-                if reject and get_driver_name() in ["javascript", "go", "java"]:
+                if reject and get_driver_name() in ["javascript", "go", "java", "ruby"]:
                     # skip subtest: Does not reject server's agent string
                     continue
-                if agent == "Neo4j/Funky!" and get_driver_name() in ["java"]:
+                if agent == "Neo4j/Funky!" and get_driver_name() in ["java", "ruby"]:
                     # skip subtest: Tries to parse the server agent
                     continue
                 with self.subTest(version + "-" + agent.replace(".", "x")):

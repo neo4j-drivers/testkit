@@ -552,6 +552,10 @@ class NoRoutingV4x1(TestkitTestCase):
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)
             self.assertEqual(expected_msg, e.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual("Neo4j::Driver::Exceptions::TransientException",
+                             e.errorType)
+            self.assertEqual(expected_msg, e.msg)
         self.assertTrue(expected_msg in e.msg)
         self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
                          e.code)
@@ -560,6 +564,10 @@ class NoRoutingV4x1(TestkitTestCase):
             self, e, expected_msg="Unable to commit"):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
+                             e.errorType)
+            self.assertEqual(expected_msg, e.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual("Neo4j::Driver::Exceptions::TransientException",
                              e.errorType)
             self.assertEqual(expected_msg, e.msg)
         self.assertTrue(expected_msg in e.msg)
