@@ -38,7 +38,7 @@ class RoutingV4x4(RoutingBase):
         #       test_should_successfully_get_routing_table_with_context
         #       and all tests (ab)using verifyConnectivity to refresh the RT
         #       should be updated. Tests for verifyConnectivity should be added.
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -1657,7 +1657,7 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual([[1]], sequences)
 
     def test_should_fail_on_routing_table_with_no_reader(self):
-        if get_driver_name() in ['go', 'java', 'javascript', 'dotnet']:
+        if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
         self.start_server(
             self._routingServer1,
@@ -1674,6 +1674,11 @@ class RoutingV4x4(RoutingBase):
                 self.assertEqual(
                     exc.errorType,
                     "<class 'neo4j.exceptions.ServiceUnavailable'>"
+                )
+            elif get_driver_name() in ['javascript']:
+                self.assertEqual(
+                    exc.code,
+                    "ServiceUnavailable"
                 )
 
         self.assertTrue(failed)
