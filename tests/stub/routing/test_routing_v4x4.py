@@ -1987,7 +1987,7 @@ class RoutingV4x4(RoutingBase):
             result.next()
         if get_driver_name() in ['java']:
             self.assertEqual(
-                'org.neo4j.driver.exceptions.FatalDiscoveryException',
+                'org.neo4j.driver.exceptions.ClientException',
                 exc.exception.errorType
             )
         self.assertEqual('Neo.ClientError.Transaction.InvalidBookmark',
