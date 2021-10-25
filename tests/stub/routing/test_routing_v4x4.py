@@ -1972,30 +1972,96 @@ class RoutingV4x4(RoutingBase):
         self._routingServer1.done()
         self.assertTrue(failed)
 
-    def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(
-            self):
+    def _test_fast_fail_discover(self, script):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(
-            self._routingServer1,
-            "router_yielding_invalid_bookmark_failure.script"
-        )
+        self.start_server(self._routingServer1, script)
 
         session = driver.session('r', database=self.adb, bookmarks=["foobar"])
         with self.assertRaises(types.DriverError) as exc:
             result = session.run("RETURN 1 as n")
             result.next()
-        if get_driver_name() in ['java']:
-            self.assertEqual(
-                'org.neo4j.driver.exceptions.ClientException',
-                exc.exception.errorType
-            )
-        self.assertEqual('Neo.ClientError.Transaction.InvalidBookmark',
-                         exc.exception.code)
+
         session.close()
         driver.close()
 
         self._routingServer1.done()
+
+        return exc
+
+    def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(
+            self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_invalid_bookmark_failure.script",
+        )
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ClientException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ClientError'>",
+                exc.exception.errorType
+            )
+        self.assertEqual('Neo.ClientError.Transaction.InvalidBookmark',
+                         exc.exception.code)
+
+    def test_should_fail_with_routing_failure_on_invalid_bookmark_mixture_discovery_failure(
+            self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_invalid_bookmark_mixture_failure.script",
+        )
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ClientException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ClientError'>",
+                exc.exception.errorType
+            )
+        self.assertEqual('Neo.ClientError.Transaction.InvalidBookmarkMixture',
+                         exc.exception.code)
+
+    def test_should_fail_with_routing_failure_on_forbidden_discovery_failure(
+            self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_forbidden_failure.script",
+        )
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.SecurityException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.Forbidden'>",
+                exc.exception.errorType
+            )
+        self.assertEqual(
+            'Neo.ClientError.Security.Forbidden',
+            exc.exception.code)
+
+    def test_should_fail_with_routing_failure_on_any_security_discovery_failure(
+            self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_any_security_failure.script",
+        )
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ClientException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ClientError'>",
+                exc.exception.errorType
+            )
+        self.assertEqual(
+            'Neo.ClientError.Security.MadeUpSecurityError',
+            exc.exception.code)
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         if get_driver_name() in ['go']:
@@ -2054,7 +2120,9 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual([1], sequence)
         self.assertEqual(["foo:6678"], last_bookmarks)
 
-    def test_should_request_rt_from_all_initial_routers_until_successful(self):
+    def _test_should_request_rt_from_all_initial_routers_until_successful(
+            self, failure_script
+    ):
         # TODO add support and remove this block
         if get_driver_name() in ['go']:
             self.skipTest("add resolvers and connection timeout support")
@@ -2106,10 +2174,7 @@ class RoutingV4x4(RoutingBase):
             resolverFn=resolver, domainNameResolverFn=domainNameResolver,
             connectionTimeoutMs=1000
         )
-        self.start_server(
-            self._routingServer1,
-            "router_yielding_unknown_failure.script"
-        )
+        self.start_server(self._routingServer1, failure_script)
         # _routingServer2 is deliberately turned off
         self.start_server(self._routingServer3, "router_adb.script")
         self.start_server(self._readServer1, "reader.script")
@@ -2127,6 +2192,20 @@ class RoutingV4x4(RoutingBase):
         self.assertGreaterEqual(resolver_calls.items(),
                                 {self._routingServer1.address: 1}.items())
         self.assertTrue(all(count == 1 for count in resolver_calls.values()))
+
+    def test_should_request_rt_from_all_initial_routers_until_successful_on_unknown_failure(
+            self
+    ):
+        self._test_should_request_rt_from_all_initial_routers_until_successful(
+            "router_yielding_unknown_failure.script"
+        )
+
+    def test_should_request_rt_from_all_initial_routers_until_successful_on_authorization_expired(
+            self
+    ):
+        self._test_should_request_rt_from_all_initial_routers_until_successful(
+            "router_yielding_authorization_expired_failure.script"
+        )
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
