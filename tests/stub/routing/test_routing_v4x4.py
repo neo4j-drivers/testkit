@@ -2062,7 +2062,7 @@ class RoutingV4x4(RoutingBase):
         )
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                "org.neo4j.driver.exceptions.SecurityException",
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
