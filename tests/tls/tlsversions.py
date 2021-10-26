@@ -42,7 +42,6 @@ class TestTlsVersions(TestkitTestCase):
             self.assertTrue(try_connect(self._backend, self._server,
                                         "neo4j+s", "thehost"))
         else:
-
             self.assertFalse(try_connect(self._backend, self._server,
                                          "neo4j+s", "thehost"))
 
@@ -52,6 +51,5 @@ class TestTlsVersions(TestkitTestCase):
             self.assertTrue(try_connect(self._backend, self._server,
                                         "neo4j+s", "thehost"))
         else:
-
             self.assertFalse(try_connect(self._backend, self._server,
                                          "neo4j+s", "thehost"))
