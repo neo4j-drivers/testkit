@@ -73,7 +73,3 @@ class RoutingV3(RoutingV4x4):
                 self.assertIn("routing", e.msg)
 
         self.assertTrue(failed)
-
-    def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(
-            self):
-        pass

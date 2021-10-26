@@ -1996,6 +1996,7 @@ class RoutingV4x4(RoutingBase):
 
         return exc
 
+    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(
             self):
         exc = self._test_fast_fail_discover(
@@ -2014,6 +2015,7 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual('Neo.ClientError.Transaction.InvalidBookmark',
                          exc.exception.code)
 
+    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_invalid_bookmark_mixture_discovery_failure(
             self):
         exc = self._test_fast_fail_discover(
@@ -2032,6 +2034,7 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual('Neo.ClientError.Transaction.InvalidBookmarkMixture',
                          exc.exception.code)
 
+    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_forbidden_discovery_failure(
             self):
         exc = self._test_fast_fail_discover(
@@ -2051,6 +2054,7 @@ class RoutingV4x4(RoutingBase):
             'Neo.ClientError.Security.Forbidden',
             exc.exception.code)
 
+    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_any_security_discovery_failure(
             self):
         exc = self._test_fast_fail_discover(
@@ -2200,12 +2204,14 @@ class RoutingV4x4(RoutingBase):
                                 {self._routingServer1.address: 1}.items())
         self.assertTrue(all(count == 1 for count in resolver_calls.values()))
 
+    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_request_rt_from_all_initial_routers_until_successful_on_unknown_failure(
             self):
         self._test_should_request_rt_from_all_initial_routers_until_successful(
             "router_yielding_unknown_failure.script"
         )
 
+    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_request_rt_from_all_initial_routers_until_successful_on_authorization_expired(
             self):
         self._test_should_request_rt_from_all_initial_routers_until_successful(
