@@ -1,14 +1,7 @@
-from collections import defaultdict
-
-from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
-    get_dns_resolved_server_address,
-    get_driver_name,
-    get_ip_addresses,
     driver_feature
 )
-from ._routing import RoutingBase
 from .test_routing_v4x4 import RoutingV4x4
 
 
@@ -262,14 +255,26 @@ class RoutingV4x3(RoutingV4x4):
     def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(self):
         super().test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure()
 
+    def test_should_fail_with_routing_failure_on_invalid_bookmark_mixture_discovery_failure(self):
+        super().test_should_fail_with_routing_failure_on_invalid_bookmark_mixture_discovery_failure()
+
+    def test_should_fail_with_routing_failure_on_forbidden_discovery_failure(self):
+        super().test_should_fail_with_routing_failure_on_forbidden_discovery_failure()
+
+    def test_should_fail_with_routing_failure_on_any_security_discovery_failure(self):
+        super().test_should_fail_with_routing_failure_on_any_security_discovery_failure()
+
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
         super().test_should_read_successfully_from_reachable_db_after_trying_unreachable_db()
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         super().test_should_ignore_system_bookmark_when_getting_rt_for_multi_db()
 
-    def test_should_request_rt_from_all_initial_routers_until_successful(self):
-        super().test_should_request_rt_from_all_initial_routers_until_successful()
+    def test_should_request_rt_from_all_initial_routers_until_successful_on_unknown_failure(self):
+        super().test_should_request_rt_from_all_initial_routers_until_successful_on_unknown_failure()
+
+    def test_should_request_rt_from_all_initial_routers_until_successful_on_authorization_expired(self):
+        super().test_should_request_rt_from_all_initial_routers_until_successful_on_authorization_expired()
 
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         super().test_should_successfully_acquire_rt_when_router_ip_changes()

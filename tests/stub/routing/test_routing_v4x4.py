@@ -815,7 +815,8 @@ class RoutingV4x4(RoutingBase):
         self._writeServer1.done()
         self.assertTrue(failed)
 
-    def test_should_fail_when_writing_on_writer_that_returns_forbidden_on_read_only_database(self):
+    def test_should_fail_when_writing_on_writer_that_returns_forbidden_on_read_only_database(
+            self):
         # TODO remove this block once all languages work
         if get_driver_name() in ['go', 'java', 'dotnet']:
             self.skipTest("needs routing table API support")
@@ -1963,6 +1964,12 @@ class RoutingV4x4(RoutingBase):
                     'org.neo4j.driver.exceptions.FatalDiscoveryException',
                     e.errorType
                 )
+            if get_driver_name() in ["python"]:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.ClientError'>",
+                    e.errorType
+                )
+
             self.assertEqual('Neo.ClientError.Database.DatabaseNotFound',
                              e.code)
             failed = True
@@ -2063,7 +2070,8 @@ class RoutingV4x4(RoutingBase):
             'Neo.ClientError.Security.MadeUpSecurityError',
             exc.exception.code)
 
-    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
+    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(
+            self):
         if get_driver_name() in ['go']:
             self.skipTest("requires investigation")
 
@@ -2121,8 +2129,7 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual(["foo:6678"], last_bookmarks)
 
     def _test_should_request_rt_from_all_initial_routers_until_successful(
-            self, failure_script
-    ):
+            self, failure_script):
         # TODO add support and remove this block
         if get_driver_name() in ['go']:
             self.skipTest("add resolvers and connection timeout support")
@@ -2194,15 +2201,13 @@ class RoutingV4x4(RoutingBase):
         self.assertTrue(all(count == 1 for count in resolver_calls.values()))
 
     def test_should_request_rt_from_all_initial_routers_until_successful_on_unknown_failure(
-            self
-    ):
+            self):
         self._test_should_request_rt_from_all_initial_routers_until_successful(
             "router_yielding_unknown_failure.script"
         )
 
     def test_should_request_rt_from_all_initial_routers_until_successful_on_authorization_expired(
-            self
-    ):
+            self):
         self._test_should_request_rt_from_all_initial_routers_until_successful(
             "router_yielding_authorization_expired_failure.script"
         )
