@@ -72,6 +72,10 @@ class Feature(Enum):
     # backends have implemented it.
     TMP_DRIVER_MAX_TX_RETRY_TIME = "Temporary:DriverMaxTxRetryTime"
     # Temporary driver feature that will be removed when all official driver
+    # implemented failing fast and surfacing on certain error codes during
+    # discovery (initial fetching of a RT).
+    TMP_FAST_FAILING_DISCOVERY = "Temporary:FastFailingDiscovery"
+    # Temporary driver feature that will be removed when all official driver
     # backends have implemented all summary response fields.
     TMP_FULL_SUMMARY = "Temporary:FullSummary"
     # Temporary driver feature that will be removed when all official drivers

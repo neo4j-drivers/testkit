@@ -1,0 +1,13 @@
+!: BOLT #VERSION#
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007"#EXTR_HELLO_ROUTING_PROPS#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
+S: FAILURE {"code": "Neo.ClientError.Security.Forbidden", "message": "Thou shalt not pass!"}
+{?
+    C: PULL_ALL
+    S: IGNORED
+?}
+*: RESET
+?: GOODBYE
