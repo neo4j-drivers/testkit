@@ -266,7 +266,7 @@ class Summary:
                         "Remove the backwards compatibility check!" % field
                     )
                 else:
-                    data[field] = None
+                    data[field] = No
         # ----------------------------------------------------------------------
         self.counters = SummaryCounters(**data["counters"])
         self.database = data["database"]

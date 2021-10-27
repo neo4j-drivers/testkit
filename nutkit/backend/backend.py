@@ -34,7 +34,7 @@ def decode_hook(x):
 
 
 # How long to wait before backend responds
-default_timeout = 10
+default_timeout = 1000
 
 
 class Backend:
