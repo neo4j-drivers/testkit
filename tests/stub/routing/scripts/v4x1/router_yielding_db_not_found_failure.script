@@ -7,9 +7,5 @@ C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROU
 S: SUCCESS {"fields": ["ttl", "servers"]}
 C: PULL {"n": -1}
 S: FAILURE {"code": "Neo.ClientError.Database.DatabaseNotFound", "message": "wut!"}
-{?
-    C: RESET
-    S: SUCCESS {}
-    *: RESET
-?}
+*: RESET
 ?: GOODBYE
