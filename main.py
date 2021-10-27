@@ -192,8 +192,8 @@ def parse_command_line(configurations, argv):
         'TEST_NEO4J_PASS      Password to access the Neo4j server, default '
         '"pass"\n'
         'TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"\n'
-        'TEST_NEO4J_EDITION   Edition ("enterprise" or "community") of the '
-        'Neo4j server, default "enterprise"\n'
+        'TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") '
+        'of the Neo4j server, default "enterprise"\n'
         'TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default '
         '"False"\n')
     servers_help = "Optional space separated list selected from: "
