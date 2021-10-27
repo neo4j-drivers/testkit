@@ -200,9 +200,8 @@ class TestTxFuncRun(TestkitTestCase):
             self.skipTest("Backend crashes.")
 
         def create(tx):
-            nonlocal db
             summary = tx.run("MERGE (:Node)").consume()
-            db = summary.database
+            return summary.database
 
         def update1(tx):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
@@ -219,10 +218,9 @@ class TestTxFuncRun(TestkitTestCase):
             raise ApplicationCodeException
 
         exc = None
-        db = None
 
         self._session1 = self._driver.session("w")
-        self._session1.writeTransaction(create)
+        db = self._session1.writeTransaction(create)
         self._session2 = self._driver.session(
             "w", bookmarks=self._session1.lastBookmarks(), database=db
         )
