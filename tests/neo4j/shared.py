@@ -140,7 +140,7 @@ def requires_multi_db_support(func):
     def wrapper(*args, **kwargs):
         test_case = get_valid_test_case(*args, **kwargs)
         if not get_server_info().supports_multi_db:
-            test_case.skip("Server does not support multiple databases.")
+            test_case.skipTest("Server does not support multiple databases.")
         return func(*args, **kwargs)
     return wrapper
 
@@ -169,13 +169,13 @@ def requires_min_bolt_version(feature):
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
             if server_max_version < min_version:
-                test_case.skip("Server does not support minimum required Bolt "
-                               "version: " + min_version)
+                test_case.skipTest("Server does not support minimum required "
+                                   "Bolt version: " + min_version)
             missing = test_case.driver_missing_features(all_viable_versions)
             if len(missing) == len(all_viable_versions):
-                test_case.skip("There is no common version between server and "
-                               "driver that fulfills the minimum required "
-                               "protocol version: " + min_version)
+                test_case.skipTest("There is no common version between server "
+                                   "and driver that fulfills the minimum "
+                                   "required protocol version: " + min_version)
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
