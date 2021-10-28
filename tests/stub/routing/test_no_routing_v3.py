@@ -1,7 +1,11 @@
+from nutkit import protocol as types
+
 from .test_no_routing_v4x1 import NoRoutingV4x1
 
 
 class NoRoutingV3(NoRoutingV4x1):
+
+    required_features = types.Feature.BOLT_3_0,
     bolt_version = "3"
     version_dir = "v3_no_routing"
     server_agent = "Neo4j/3.5.0"

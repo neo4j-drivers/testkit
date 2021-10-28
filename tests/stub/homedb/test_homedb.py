@@ -8,6 +8,9 @@ from tests.stub.shared import StubServer
 
 
 class TestHomeDb(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_4,
+
     def setUp(self):
         super().setUp()
         self._router = StubServer(9000)

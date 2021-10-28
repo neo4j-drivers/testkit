@@ -13,6 +13,9 @@ from tests.stub.shared import (
 
 
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9010)
@@ -129,7 +132,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         if get_driver_name() in ['go']:
             with self.assertRaises(types.DriverError) as exc:
                 tx.close()
-                
+
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ['java']:
             tx.rollback()

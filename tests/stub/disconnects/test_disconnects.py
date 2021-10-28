@@ -12,6 +12,9 @@ customUserAgent = "Modesty"
 
 
 class TestDisconnects(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)

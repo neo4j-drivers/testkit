@@ -8,6 +8,9 @@ from tests.stub.shared import StubServer
 
 
 class TestRetryClustering(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def setUp(self):
         super().setUp()
         self._routingServer = StubServer(9001)

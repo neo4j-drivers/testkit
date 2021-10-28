@@ -1,6 +1,5 @@
 import os
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,

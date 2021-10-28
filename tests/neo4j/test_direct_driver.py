@@ -14,6 +14,7 @@ from .shared import (
     get_neo4j_host_and_port,
     get_neo4j_scheme,
     get_server_info,
+    requires_multi_db_support,
 )
 
 
@@ -130,13 +131,12 @@ class TestDirectDriver(TestkitTestCase):
                              "<class 'neo4j.exceptions.ClientError'>")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    @requires_multi_db_support
     @cluster_unsafe_test
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
         server_info = get_server_info()
         if server_info.max_protocol_version >= "4":
-            if not get_server_info().supports_multi_db:
-                self.skipTest("Needs multi DB support")
             self._session = self._driver.session("w", database="system")
 
             self._session.run("DROP DATABASE `test-database` IF EXISTS")\
@@ -167,6 +167,7 @@ class TestDirectDriver(TestkitTestCase):
                     e.exception.msg
                 )
 
+    @requires_multi_db_support
     @cluster_unsafe_test
     def test_multi_db_various_databases(self):
         def get_names(result_, node=True):
@@ -192,9 +193,6 @@ class TestDirectDriver(TestkitTestCase):
                 self.assertIsInstance(name, types.CypherString)
                 names.add(name.value)
             return names
-
-        if not get_server_info().supports_multi_db:
-            self.skipTest("Needs multi DB support")
 
         self._driver = get_driver(self._backend)
 
