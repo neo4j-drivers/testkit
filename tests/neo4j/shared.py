@@ -171,7 +171,7 @@ def requires_min_bolt_version(feature):
             if server_max_version < min_version:
                 test_case.skipTest("Server does not support minimum required "
                                    "Bolt version: " + min_version)
-            missing = test_case.driver_missing_features(all_viable_versions)
+            missing = test_case.driver_missing_features(*all_viable_versions)
             if len(missing) == len(all_viable_versions):
                 test_case.skipTest("There is no common version between server "
                                    "and driver that fulfills the minimum "
