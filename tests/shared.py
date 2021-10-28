@@ -118,7 +118,17 @@ def get_driver_features(backend):
         response = backend.sendAndReceive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
             raise Exception("Response is not instance of FeatureList")
-        return set(response.features)
+        features = set(response.features)
+        # TODO: remove this once all drivers manage the TLS feature flags
+        #       themselves.
+        if get_driver_name() in ["java", "go"]:
+            features.add(protocol.Feature.TLS_1_1.value)
+        if get_driver_name() in ["java", "go", "dotnet"]:
+            features.add(protocol.Feature.TLS_1_2.value)
+        if get_driver_name() in ["go"]:
+            features.add(protocol.Feature.TLS_1_3.value)
+        print("features", features)
+        return features
     except (OSError, protocol.BaseError) as e:
         warnings.warn("Could not fetch FeatureList: %s" % e)
         return set()

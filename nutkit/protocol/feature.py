@@ -27,6 +27,18 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
+    # The driver supports TLS 1.1 connections.
+    # If this flag is missing, TestKit assumes that attempting to establish such
+    # a connection fails.
+    TLS_1_1 = "Feature:TLS:1.1"
+    # The driver supports TLS 1.2 connections.
+    # If this flag is missing, TestKit assumes that attempting to establish such
+    # a connection fails.
+    TLS_1_2 = "Feature:TLS:1.2"
+    # The driver supports TLS 1.3 connections.
+    # If this flag is missing, TestKit assumes that attempting to establish such
+    # a connection fails.
+    TLS_1_3 = "Feature:TLS:1.3"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver
@@ -71,6 +83,10 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented it.
     TMP_DRIVER_MAX_TX_RETRY_TIME = "Temporary:DriverMaxTxRetryTime"
+    # Temporary driver feature that will be removed when all official driver
+    # implemented failing fast and surfacing on certain error codes during
+    # discovery (initial fetching of a RT).
+    TMP_FAST_FAILING_DISCOVERY = "Temporary:FastFailingDiscovery"
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented all summary response fields.
     TMP_FULL_SUMMARY = "Temporary:FullSummary"

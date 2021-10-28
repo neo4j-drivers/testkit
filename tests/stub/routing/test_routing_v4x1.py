@@ -28,10 +28,6 @@ class RoutingV4x1(RoutingV4x4):
             'RUN "CALL dbms.routing.getRoutingTable('
         )
 
-    # Ignore this on older protocol versions than 4.3
-    def test_should_read_successfully_from_reader_using_session_run_with_default_db_driver(self):
-        pass
-
     def test_should_send_system_bookmark_with_route(self):
         pass
 
