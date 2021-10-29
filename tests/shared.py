@@ -121,9 +121,9 @@ def get_driver_features(backend):
         features = set(response.features)
         # TODO: remove this once all drivers manage the TLS feature flags
         #       themselves.
-        if get_driver_name() in ["java", "javascript", "go"]:
+        if get_driver_name() in ["java", "go"]:
             features.add(protocol.Feature.TLS_1_1.value)
-        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+        if get_driver_name() in ["java", "go", "dotnet"]:
             features.add(protocol.Feature.TLS_1_2.value)
         if get_driver_name() in ["go"]:
             features.add(protocol.Feature.TLS_1_3.value)
