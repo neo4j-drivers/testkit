@@ -200,7 +200,8 @@ class TestTxFuncRun(TestkitTestCase):
             self.skipTest("Backend crashes.")
 
         def create(tx):
-            tx.run("MERGE (:Node)").consume()
+            summary = tx.run("MERGE (:Node)").consume()
+            return summary.database
 
         def update1(tx):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
@@ -219,9 +220,9 @@ class TestTxFuncRun(TestkitTestCase):
         exc = None
 
         self._session1 = self._driver.session("w")
-        self._session1.writeTransaction(create)
+        db = self._session1.writeTransaction(create)
         self._session2 = self._driver.session(
-            "w", bookmarks=self._session1.lastBookmarks()
+            "w", bookmarks=self._session1.lastBookmarks(), database=db
         )
         self._session1.writeTransaction(update1)
         self.assertIsNotNone(exc)

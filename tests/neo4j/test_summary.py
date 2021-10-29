@@ -104,9 +104,8 @@ class TestSummary(TestkitTestCase):
         if isinstance(summary, dict) and get_driver_name() in ["java"]:
             self.skipTest("Java 4.2 backend does not support summary")
 
-        self.assertTrue(summary.server_info.agent.startswith("Neo4j/"))
-        version = summary.server_info.agent[6:].split(".")
-        self.assertEqual(version[:2], get_server_info().version.split("."))
+        version = ".".join(summary.server_info.agent.split(".")[:2])
+        self.assertEqual(version, get_server_info().server_agent)
 
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
