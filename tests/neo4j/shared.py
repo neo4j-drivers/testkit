@@ -10,8 +10,8 @@ TEST_NEO4J_PORT      Neo4j server port, default is 7687
 TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
 TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
 TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
-TEST_NEO4J_EDITION   Edition ("enterprise" or "community") of the Neo4j server,
-                     default "enterprise"
+TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the Neo4j
+                     server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
 import os
@@ -87,6 +87,13 @@ class ServerInfo:
         self.version = version
         self.edition = edition
         self.cluster = cluster
+
+    @property
+    def server_agent(self):
+        if self.edition == "aura" and self.version >= "4":
+            return "Neo4j/4.0-aura"
+        return "Neo4j/" + self.version
+
 
     @property
     def supports_multi_db(self):
