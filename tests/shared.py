@@ -228,7 +228,7 @@ class TestkitTestCase(unittest.TestCase):
         elif isinstance(version, str):
             m = re.match(r"\D*(\d+)(?:\D+(\d+))?", version)
             if not m:
-                raise ValueError("Invalid bolt version specidication")
+                raise ValueError("Invalid bolt version specification")
             version = tuple(map(int, m.groups("0")))
         else:
             version = tuple(version)
