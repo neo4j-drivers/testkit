@@ -797,6 +797,54 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.assertEqual(1, attempt_count)
         self.assertEqual([[1]], sequences)
 
+    @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
+    def test_should_retry_on_auth_expired_on_route_using_tx_function(self):
+        self._should_retry_on_auth_expired_on_route_using_tx_function(
+            self._AUTH_EXPIRED
+        )
+
+    @driver_feature(types.Feature.AUTH_BEARER)
+    def test_should_retry_on_token_expired_on_route_using_tx_function(self):
+        self._should_retry_on_auth_expired_on_route_using_tx_function(
+            self._TOKEN_EXPIRED
+        )
+
+    def _should_retry_on_auth_expired_on_route_using_tx_function(self, error):
+        def my_resolver(_ignored):
+            return (
+                self._routing_server1.address,
+                self._read_server1.address
+            )
+
+        driver = Driver(self._backend, self._uri, self._auth,
+                        userAgent=self._userAgent, resolverFn=my_resolver)
+
+        vars_ = self.get_vars()
+        vars_["#ERROR#"] = error
+        self.start_server(self._routing_server1,
+                          "reader_and_router_yelding_error_on_route.script",
+                          vars_=vars_)
+        self.start_server(self._read_server1, "router_at_9010.script")
+
+        session = driver.session('r', database=self.get_db())
+        attempt_count = 0
+        sequences = []
+
+        def work(tx):
+            nonlocal attempt_count
+            attempt_count += 1
+            result = tx.run("RETURN 1 as n")
+            sequences.append(self.collectRecords(result))
+
+        session.readTransaction(work)
+        session.close()
+        driver.close()
+
+        self._routing_server1.done()
+        self._read_server1.done()
+        self.assertEqual(1, attempt_count)
+        self.assertEqual([[1]], sequences)
+
 
 class TestAuthorizationV4x1(TestAuthorizationV4x3):
     def get_vars(self, host=None):

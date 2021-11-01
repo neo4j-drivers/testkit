@@ -1,0 +1,34 @@
+!: BOLT #VERSION#
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+{{
+   C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {#ROUTINGMODE# "db": "system"}
+      PULL {"n": -1}
+   S: SUCCESS {"fields": ["ttl", "servers"]}
+      FAILURE #ERROR#
+   *: RESET
+   {*
+      C: BEGIN {"mode": "r", "db": "adb"}
+      S: SUCCESS {}
+      C: RUN "RETURN 1 as n" {} {}
+         PULL {"n": 1000}
+      S: FAILURE #ERROR#
+         <EXIT>
+   *}
+   ----
+   {*
+      C: BEGIN {"mode": "r", "db": "adb"}
+      S: SUCCESS {}
+      C: RUN "RETURN 1 as n" {} {}
+         PULL {"n": 1000}
+      S: SUCCESS {"fields": ["n"]}
+         RECORD [1]
+         SUCCESS {"type": "r"}
+      C: COMMIT
+      S: SUCCESS {}
+      *: RESET
+   *}
+}}
+*: RESET
+?: GOODBYE
