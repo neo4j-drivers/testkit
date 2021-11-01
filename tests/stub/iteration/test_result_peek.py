@@ -62,6 +62,8 @@ class TestResultPeek(TestkitTestCase):
             self.assertEqual(record.values, [types.CypherInt(1)])
             record = result.peek()
             self.assertIsInstance(record, types.NullRecord)
+            record = result.next()
+            self.assertIsInstance(record, types.NullRecord)
 
     @driver_feature(types.Feature.API_RESULT_PEEK)
     def test_result_peek_with_2_records(self):
@@ -77,6 +79,8 @@ class TestResultPeek(TestkitTestCase):
                     self.assertIsInstance(record, types.Record)
                     self.assertEqual(record.values, [types.CypherInt(i)])
                 record = result.peek()
+                self.assertIsInstance(record, types.NullRecord)
+                record = result.next()
                 self.assertIsInstance(record, types.NullRecord)
 
         for fetch_size in (1, 2):

@@ -207,17 +207,22 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w", database="system")
         self._session.run("DROP DATABASE testa IF EXISTS").consume()
         self._session.run("DROP DATABASE testb IF EXISTS").consume()
+        bookmarks = self._session.lastBookmarks()
         self._session.close()
-        self._session = self._driver.session("w", database="system")
+        self._session = self._driver.session("w", database="system",
+                                             bookmarks=bookmarks)
         result = self._session.run("SHOW DATABASES")
         self.assertEqual(get_names(result, node=False), {"system", "neo4j"})
+
         result = self._session.run("CREATE DATABASE testa")
         result.consume()
         result = self._session.run("CREATE DATABASE testb")
         result.consume()
+        bookmarks = self._session.lastBookmarks()
         self._session.close()
 
-        self._session = self._driver.session("w", database="testa")
+        self._session = self._driver.session("w", database="testa",
+                                             bookmarks=bookmarks)
         result = self._session.run('CREATE (p:Person {name: "ALICE"})')
         result.consume()
         self._session.close()
