@@ -160,7 +160,7 @@ class TestkitTestCase(unittest.TestCase):
         self.addCleanup(self._backend.close)
         self._driver_features = get_driver_features(self._backend)
 
-        if self.required_features is not None:
+        if self.required_features:
             self.skip_if_missing_driver_features(*self.required_features)
 
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
