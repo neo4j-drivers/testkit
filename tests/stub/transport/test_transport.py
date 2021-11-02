@@ -9,6 +9,9 @@ from tests.stub.shared import StubServer
 
 # Low-level network transport tests
 class TestTransport(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_1,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)

@@ -125,7 +125,8 @@ class TestSessionRunParameters(TestkitTestCase):
                 self._run("timeout", routing,
                           session_args=("w",), run_kwargs={"timeout": 17})
 
-    @driver_feature(types.Feature.BOLT_4_4)
+    @driver_feature(types.Feature.IMPERSONATION,
+                    types.Feature.BOLT_4_4)
     def test_database(self):
         for routing in (True, False):
             with self.subTest("routing" if routing else "direct"):
@@ -145,7 +146,7 @@ class TestSessionRunParameters(TestkitTestCase):
                           })
 
     @driver_feature(types.Feature.IMPERSONATION,
-                    types.Feature.BOLT_4_4)
+                    types.Feature.BOLT_4_3)
     def test_impersonation_fails_on_v4x3(self):
         for routing in (True, False):
             with self.subTest("routing" if routing else "direct"):

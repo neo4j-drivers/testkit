@@ -183,7 +183,7 @@ class TestTxBeginParameters(TestkitTestCase):
                           })
 
     @driver_feature(types.Feature.IMPERSONATION,
-                    types.Feature.BOLT_4_4)
+                    types.Feature.BOLT_4_3)
     def test_impersonation_fails_on_v4x3(self):
         for routing in (True, False):
             with self.subTest("routing" if routing else "direct"):

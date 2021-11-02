@@ -1,10 +1,13 @@
 import json
 
+from nutkit import protocol as types
 from nutkit.frontend import Driver
 from .test_routing_v4x4 import RoutingV4x4
 
 
 class RoutingV4x1(RoutingV4x4):
+
+    required_features = types.Feature.BOLT_4_1,
     bolt_version = "4.1"
     server_agent = "Neo4j/4.1.0"
 

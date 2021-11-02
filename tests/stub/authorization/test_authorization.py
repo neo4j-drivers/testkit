@@ -96,6 +96,9 @@ class AuthorizationBase(TestkitTestCase):
 # TODO: re-write tests, where possible, to use only one server, utilizing
 #       on_send_RetryableNegative and potentially other hooks.
 class TestAuthorizationV4x3(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def setUp(self):
         super().setUp()
         self._routing_server1 = StubServer(9000)
@@ -799,6 +802,9 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
 
 class TestAuthorizationV4x1(TestAuthorizationV4x3):
+
+    required_features = types.Feature.BOLT_4_1,
+
     def get_vars(self, host=None):
         if host is None:
             host = self._routing_server1.host
@@ -825,6 +831,9 @@ class TestAuthorizationV3(TestAuthorizationV4x3):
 
 
 class TestNoRoutingAuthorization(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_0,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9010)
@@ -905,6 +914,9 @@ class TestNoRoutingAuthorization(AuthorizationBase):
 
 
 class TestAuthenticationSchemes(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def get_vars(self):
         return {
             "#VERSION#": "4.3"

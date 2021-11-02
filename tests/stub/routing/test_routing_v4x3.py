@@ -6,6 +6,8 @@ from .test_routing_v4x4 import RoutingV4x4
 
 
 class RoutingV4x3(RoutingV4x4):
+
+    required_features = types.Feature.BOLT_4_3,
     bolt_version = "4.3"
     server_agent = "Neo4j/4.3.0"
     adb = "adb"
