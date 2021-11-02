@@ -817,6 +817,8 @@ class TestAuthorizationV4x1(TestAuthorizationV4x3):
 
 
 class TestAuthorizationV3(TestAuthorizationV4x3):
+    required_features = types.Feature.BOLT_3_0,
+
     def get_vars(self, host=None):
         if host is None:
             host = self._routing_server1.host
