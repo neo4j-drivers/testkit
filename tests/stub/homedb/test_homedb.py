@@ -26,7 +26,7 @@ class TestHomeDb(TestkitTestCase):
         self._router.reset()
         super().tearDown()
 
-    @driver_feature(types.Feature.IMPERSONATION, types.Feature.BOLT_4_4)
+    @driver_feature(types.Feature.IMPERSONATION)
     def test_should_resolve_db_per_session_session_run(self):
         def _test():
             self._router.start(
@@ -66,7 +66,7 @@ class TestHomeDb(TestkitTestCase):
             self._router.reset()
             self._reader1.reset()
 
-    @driver_feature(types.Feature.IMPERSONATION, types.Feature.BOLT_4_4)
+    @driver_feature(types.Feature.IMPERSONATION)
     def test_should_resolve_db_per_session_tx_run(self):
         def _test():
             self._router.start(
@@ -110,7 +110,7 @@ class TestHomeDb(TestkitTestCase):
             self._router.reset()
             self._reader1.reset()
 
-    @driver_feature(types.Feature.IMPERSONATION, types.Feature.BOLT_4_4)
+    @driver_feature(types.Feature.IMPERSONATION)
     def test_should_resolve_db_per_session_tx_func_run(self):
         def _test():
             def work(tx):
@@ -154,7 +154,7 @@ class TestHomeDb(TestkitTestCase):
             self._router.reset()
             self._reader1.reset()
 
-    @driver_feature(types.Feature.IMPERSONATION, types.Feature.BOLT_4_4)
+    @driver_feature(types.Feature.IMPERSONATION)
     def test_session_should_cache_home_db_despite_new_rt(self):
         i = 0
 
