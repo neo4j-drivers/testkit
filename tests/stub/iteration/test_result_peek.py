@@ -11,6 +11,9 @@ from tests.stub.shared import StubServer
 
 
 class TestResultPeek(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_0,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)

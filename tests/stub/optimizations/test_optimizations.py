@@ -23,7 +23,8 @@ class TestOptimizations(TestkitTestCase):
         self._router.reset()
         super().tearDown()
 
-    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING,
+                    types.Feature.BOLT_4_3)
     def test_pull_pipelining(self):
         def test():
             script = "pull_pipeline{}.script".format("_tx" if use_tx else "")
@@ -130,7 +131,8 @@ class TestOptimizations(TestkitTestCase):
             self.assertEqual(self._server.count_requests("RESET"), 0)
             self.assertEqual(self._router.count_requests("RESET"), 0)
 
-    @driver_feature(types.Feature.OPT_CONNECTION_REUSE)
+    @driver_feature(types.Feature.OPT_CONNECTION_REUSE,
+                    types.Feature.BOLT_4_3)
     def test_reuses_connection(self):
         for routing in (False, True):
             for mode in ("read", "write"):
@@ -151,6 +153,8 @@ class TestOptimizations(TestkitTestCase):
     def test_no_reset_on_clean_connection(self):
         mode = "write"
         for version in ("v4x3", "v3"):
+            if not self.driver_supports_bolt(version):
+                continue
             for consume in (True, False):
                 if version == "v3" and consume:
                     # Drivers with types.Feature.OPT_PULL_PIPELINING will issue
@@ -214,6 +218,8 @@ class TestOptimizations(TestkitTestCase):
             self.assertEqual(reset_count, 1)
 
         for version in ("v3", "v4x3"):
+            if not self.driver_supports_bolt(version):
+                continue
             for use_tx in (False, True):
                 for routing in (False, True):
                     for fail_on in ("pull", "run", "begin"):
@@ -275,6 +281,8 @@ class TestOptimizations(TestkitTestCase):
                 self._router.done()
 
         for version in ("v4x3", "v4x4"):
+            if not self.driver_supports_bolt(version):
+                continue
             for use_tx in (True, False):
                 for consume in (True, False):
                     for routing in (True, False):
@@ -357,6 +365,8 @@ class TestOptimizations(TestkitTestCase):
             self._server.done()
 
         for version in ("v4x3", "v4x4"):
+            if not self.driver_supports_bolt(version):
+                continue
             for consume1 in (True, False):
                 for consume2 in (True, False):
                     with self.subTest(("discard1" if consume1 else "pull1")

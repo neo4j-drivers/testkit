@@ -127,6 +127,17 @@ def get_driver_features(backend):
             features.add(protocol.Feature.TLS_1_2.value)
         if get_driver_name() in ["go"]:
             features.add(protocol.Feature.TLS_1_3.value)
+        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+            features.add(
+                f.value for f in (
+                    protocol.Feature.BOLT_3_0,
+                    protocol.Feature.BOLT_4_0,
+                    protocol.Feature.BOLT_4_1,
+                    protocol.Feature.BOLT_4_2,
+                    protocol.Feature.BOLT_4_3,
+                    protocol.Feature.BOLT_4_4,
+                )
+            )
         print("features", features)
         return features
     except (OSError, protocol.BaseError) as e:
@@ -139,12 +150,19 @@ def get_driver_name():
 
 
 class TestkitTestCase(unittest.TestCase):
+
+    required_features = None
+
     def setUp(self):
         super().setUp()
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
         self._backend = new_backend()
         self.addCleanup(self._backend.close)
         self._driver_features = get_driver_features(self._backend)
+
+        if self.required_features:
+            self.skip_if_missing_driver_features(*self.required_features)
+
         response = self._backend.sendAndReceive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
@@ -204,10 +222,39 @@ class TestkitTestCase(unittest.TestCase):
     def driver_supports_features(self, *features):
         return not self.driver_missing_features(*features)
 
+    def _bolt_version_to_feature(self, version):
+        if isinstance(version, protocol.Feature):
+            return self.driver_supports_features(version)
+        elif isinstance(version, str):
+            m = re.match(r"\D*(\d+)(?:\D+(\d+))?", version)
+            if not m:
+                raise ValueError("Invalid bolt version specification")
+            version = tuple(map(int, m.groups("0")))
+        else:
+            version = tuple(version)
+        version = tuple(map(str, version))
+        if len(version) == 1:
+            version = (version[0], "0")
+        try:
+            return getattr(protocol.Feature, "_".join(("BOLT", *version)))
+        except AttributeError:
+            raise ValueError("Unknown bolt feature "
+                             + "_".join(("BOLT", *version)))
+
+    def driver_supports_bolt(self, version):
+        return self.driver_supports_features(
+            self._bolt_version_to_feature(version)
+        )
+
     def skip_if_missing_driver_features(self, *features):
         missing = self.driver_missing_features(*features)
         if missing:
             self.skipTest("Needs support for %s" % ", ".join(missing))
+
+    def skip_if_missing_bolt_support(self, version):
+        self.skip_if_missing_driver_features(
+            self._bolt_version_to_feature(version)
+        )
 
     def script_path(self, *path):
         base_path = os.path.dirname(inspect.getfile(self.__class__))

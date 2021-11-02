@@ -14,10 +14,12 @@ TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the Neo4j
                      server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
+from functools import wraps
 import os
 from warnings import warn
 
 from nutkit.frontend import Driver
+from nutkit import protocol
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
     dns_resolve_single,
@@ -132,3 +134,55 @@ def cluster_unsafe_test(func):
                  "TestkitTestCase methods.")
             return func(*args, **kwargs)
     return wrapper
+
+
+def requires_multi_db_support(func):
+    def get_valid_test_case(*args, **kwargs):
+        if not args or not isinstance(args[0], TestkitTestCase):
+            raise TypeError("Should only decorate TestkitTestCase methods")
+        return args[0]
+
+    @wraps(func)
+    @requires_min_bolt_version(protocol.Feature.BOLT_4_0)
+    def wrapper(*args, **kwargs):
+        test_case = get_valid_test_case(*args, **kwargs)
+        if not get_server_info().supports_multi_db:
+            test_case.skipTest("Server does not support multiple databases.")
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def requires_min_bolt_version(feature):
+    if not isinstance(feature, protocol.Feature):
+        raise TypeError("The arguments must be instances of Feature")
+    if not feature.name.startswith("BOLT_"):
+        raise ValueError("Bolt version feature expected")
+
+    min_version = feature.value.split(":")[-1]
+    server_max_version = get_server_info().max_protocol_version
+    all_viable_versions = [
+        f for f in protocol.Feature
+        if (f.value.startswith("BOLT_")
+            and min_version <= f.value.spit(":")[-1] <= server_max_version)
+    ]
+
+    def get_valid_test_case(*args, **kwargs):
+        if not args or not isinstance(args[0], TestkitTestCase):
+            raise TypeError("Should only decorate TestkitTestCase methods")
+        return args[0]
+
+    def bolt_version_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            test_case = get_valid_test_case(*args, **kwargs)
+            if server_max_version < min_version:
+                test_case.skipTest("Server does not support minimum required "
+                                   "Bolt version: " + min_version)
+            missing = test_case.driver_missing_features(*all_viable_versions)
+            if len(missing) == len(all_viable_versions):
+                test_case.skipTest("There is no common version between server "
+                                   "and driver that fulfills the minimum "
+                                   "required protocol version: " + min_version)
+            return func(*args, **kwargs)
+        return wrapper
+    return bolt_version_decorator

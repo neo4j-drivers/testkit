@@ -363,6 +363,6 @@ class Bolt4x4Protocol(Bolt4x3Protocol):
     protocol_version = (4, 4)
     version_aliases = set()
     # allow the server to negotiate other bolt versions
-    equivalent_versions = {(4, 3)}
+    equivalent_versions = set()
 
     server_agent = "Neo4j/4.4.0"

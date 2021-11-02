@@ -9,6 +9,7 @@ from .shared import (
     get_driver,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    requires_multi_db_support,
 )
 
 
@@ -87,8 +88,14 @@ class TestSummary(TestkitTestCase):
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        max_protocol_version = get_server_info().max_protocol_version
-        if max_protocol_version == "4.2":
+        max_server_protocol_version = get_server_info().max_protocol_version
+        common_protocol_versions = [
+            f.value.split(":")[-1] for f in self._driver_features
+            if (f.name.startswith("BOLT_")
+                and f.value.split(":")[-1] <= max_server_protocol_version)
+        ]
+        common_max_version = max(common_protocol_versions)
+        if common_max_version == "4.2":
             # Both versions are equivalent. Since 4.2 was introduced before
             # having version ranges in the handshake, we allow drivers to
             # negotiate bolt 4.1 with 4.2 to be able to fit support for more
@@ -144,11 +151,9 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_RESULT_KEYS,
                     types.Feature.TMP_FULL_SUMMARY)
+    @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
-        if not get_server_info().supports_multi_db:
-            self.skipTest("Needs multi DB support")
-
         self._session = self._driver.session("w", database="system")
 
         self._session.run("DROP DATABASE test IF EXISTS").consume()

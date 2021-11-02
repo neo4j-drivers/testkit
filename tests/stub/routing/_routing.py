@@ -17,12 +17,6 @@ from tests.stub.shared import StubServer
 class RoutingBase(TestkitTestCase):
     def setUp(self):
         super().setUp()
-        required_bolt_features = {
-            "4.4": (types.Feature.BOLT_4_4,),
-        }
-        self.skip_if_missing_driver_features(
-            *required_bolt_features.get(self.bolt_version, ())
-        )
         self._routingServer1 = StubServer(9000)
         self._routingServer2 = StubServer(9001)
         self._routingServer3 = StubServer(9002)

@@ -12,6 +12,8 @@ from ._routing import RoutingBase
 
 
 class RoutingV4x4(RoutingBase):
+
+    required_features = types.Feature.BOLT_4_4,
     bolt_version = "4.4"
     server_agent = "Neo4j/4.4.0"
     adb = "adb"
