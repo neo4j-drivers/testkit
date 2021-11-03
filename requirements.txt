@@ -2,3 +2,4 @@ ifaddr
 isort
 lark
 nose
+yapf
