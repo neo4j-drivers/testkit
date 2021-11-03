@@ -250,7 +250,9 @@ class TestkitTestCase(unittest.TestCase):
     def skip_if_missing_driver_features(self, *features):
         missing = self.driver_missing_features(*features)
         if missing:
-            self.skipTest("Needs support for %s" % ", ".join(missing))
+            self.skipTest("Needs support for %s" % ", ".join(
+                map(str, missing)
+            ))
 
     def skip_if_missing_bolt_support(self, version):
         self.skip_if_missing_driver_features(
