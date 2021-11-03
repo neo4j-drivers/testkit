@@ -118,26 +118,27 @@ def get_driver_features(backend):
         response = backend.sendAndReceive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
             raise Exception("Response is not instance of FeatureList")
-        features = set(response.features)
+        raw_features = set(response.features)
+        features = set()
+        for raw in raw_features:
+            features.add(protocol.Feature(raw))
         # TODO: remove this once all drivers manage the TLS feature flags
         #       themselves.
         if get_driver_name() in ["java", "go"]:
-            features.add(protocol.Feature.TLS_1_1.value)
+            features.add(protocol.Feature.TLS_1_1)
         if get_driver_name() in ["java", "go", "dotnet"]:
-            features.add(protocol.Feature.TLS_1_2.value)
+            features.add(protocol.Feature.TLS_1_2)
         if get_driver_name() in ["go"]:
-            features.add(protocol.Feature.TLS_1_3.value)
+            features.add(protocol.Feature.TLS_1_3)
         if get_driver_name() in ["javascript", "go", "dotnet"]:
-            features.add(
-                f.value for f in (
-                    protocol.Feature.BOLT_3_0,
-                    protocol.Feature.BOLT_4_0,
-                    protocol.Feature.BOLT_4_1,
-                    protocol.Feature.BOLT_4_2,
-                    protocol.Feature.BOLT_4_3,
-                    protocol.Feature.BOLT_4_4,
-                )
-            )
+            features.add((
+                protocol.Feature.BOLT_3_0,
+                protocol.Feature.BOLT_4_0,
+                protocol.Feature.BOLT_4_1,
+                protocol.Feature.BOLT_4_2,
+                protocol.Feature.BOLT_4_3,
+                protocol.Feature.BOLT_4_4,
+            ))
         print("features", features)
         return features
     except (OSError, protocol.BaseError) as e:
@@ -215,7 +216,7 @@ class TestkitTestCase(unittest.TestCase):
                                                      response))
 
     def driver_missing_features(self, *features):
-        needed = set(map(lambda f: f.value, features))
+        needed = set(features)
         supported = self._driver_features
         return needed - supported
 
@@ -249,7 +250,9 @@ class TestkitTestCase(unittest.TestCase):
     def skip_if_missing_driver_features(self, *features):
         missing = self.driver_missing_features(*features)
         if missing:
-            self.skipTest("Needs support for %s" % ", ".join(missing))
+            self.skipTest("Needs support for %s" % ", ".join(
+                map(str, missing)
+            ))
 
     def skip_if_missing_bolt_support(self, version):
         self.skip_if_missing_driver_features(
