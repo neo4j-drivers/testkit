@@ -121,10 +121,7 @@ def get_driver_features(backend):
         raw_features = set(response.features)
         features = set()
         for raw in raw_features:
-            try:
-                features.add(protocol.Feature(raw))
-            except ValueError:  # ignore features we don't know
-                warnings.warn('Unknown feature "%s"' % raw)
+            features.add(protocol.Feature(raw))
         # TODO: remove this once all drivers manage the TLS feature flags
         #       themselves.
         if get_driver_name() in ["java", "go"]:
