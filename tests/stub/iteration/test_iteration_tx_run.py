@@ -1,8 +1,9 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
-    TestkitTestCase, driver_feature,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
