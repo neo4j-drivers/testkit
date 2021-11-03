@@ -1,6 +1,7 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -8,8 +9,6 @@ from tests.stub.shared import StubServer
 
 
 class TestIterationTxRun(TestkitTestCase):
-
-    required_features = types.Feature.BOLT_4_0,
 
     def setUp(self):
         super().setUp()
@@ -46,23 +45,29 @@ class TestIterationTxRun(TestkitTestCase):
         self.assertEqual(expected_sequence, sequence)
         self.assertEqual(expected_error, got_error)
 
+    @driver_feature(types.Feature.BOLT_4_0)
     def test_batch(self):
         self._iterate(2, "tx_pull_2.script", [1, 2, 3])
 
+    @driver_feature(types.Feature.BOLT_4_0)
     def test_all(self):
         self._iterate(-1, "tx_pull_all.script", [1, 2, 3])
 
+    @driver_feature(types.Feature.BOLT_4_0)
     def test_all_slow_connection(self):
         self._iterate(-1, "tx_pull_all_slow_connection.script", [1, 2, 3])
 
+    @driver_feature(types.Feature.BOLT_3_0)
     def test_batch_v3(self):
         # there is no incremental pulling for BOLTv3
         self._iterate(2, "tx_pull_all.script", [1, 2, 3], protocol_version="v3")
 
+    @driver_feature(types.Feature.BOLT_3_0)
     def test_all_v3(self):
         self._iterate(-1, "tx_pull_all.script", [1, 2, 3],
                       protocol_version="v3")
 
+    @driver_feature(types.Feature.BOLT_4_0)
     def test_nested(self):
         # ex JAVA - java completely pulls the first query before running the second
         if get_driver_name() in ["java"]:
