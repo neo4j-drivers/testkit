@@ -19,7 +19,16 @@
 # limitations under the License.
 
 
-from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, StreamHandler, getLogger
+from logging import (
+    CRITICAL,
+    DEBUG,
+    ERROR,
+    INFO,
+    WARNING,
+    Formatter,
+    StreamHandler,
+    getLogger,
+)
 from sys import stdout
 
 

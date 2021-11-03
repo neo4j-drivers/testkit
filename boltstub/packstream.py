@@ -21,7 +21,8 @@
 
 from codecs import decode
 from io import BytesIO
-from struct import pack as struct_pack, unpack as struct_unpack
+from struct import pack as struct_pack
+from struct import unpack as struct_unpack
 
 from .simple_jolt import types as jolt_types
 

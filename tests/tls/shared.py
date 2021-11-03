@@ -4,7 +4,10 @@ import sys
 import time
 
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken, DriverError
+from nutkit.protocol import (
+    AuthorizationToken,
+    DriverError,
+)
 
 # Retrieve path to the repository containing this script.
 # Use this path as base for locating a whole bunch of other stuff.

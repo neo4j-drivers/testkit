@@ -1,7 +1,10 @@
 import os
 
 from teamcity.download import DockerImage
-from teamcity.testresult import TeamCityTestResult, escape
+from teamcity.testresult import (
+    TeamCityTestResult,
+    escape,
+)
 
 
 def evaluate_env_variable():

@@ -1,19 +1,19 @@
 import abc
-from collections import OrderedDict
-from copy import deepcopy
 import json
 import math
-from os import path
 import re
 import sys
-from textwrap import wrap
 import threading
+import warnings
+from collections import OrderedDict
+from copy import deepcopy
+from os import path
+from textwrap import wrap
 from time import sleep
 from typing import (
     List,
-    Optional
+    Optional,
 )
-import warnings
 
 import lark
 
@@ -25,8 +25,8 @@ from .errors import (
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt.transformers import decode as jolt_decode
 from .simple_jolt import types as jolt_types
+from .simple_jolt.transformers import decode as jolt_decode
 
 
 def load_parser():

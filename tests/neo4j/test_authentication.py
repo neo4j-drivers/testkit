@@ -3,8 +3,8 @@ import os
 import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
-    env_neo4j_user,
     env_neo4j_pass,
+    env_neo4j_user,
     get_driver,
 )
 from tests.shared import TestkitTestCase

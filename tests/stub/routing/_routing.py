@@ -1,12 +1,12 @@
-from abc import abstractmethod
-from collections import defaultdict
 import inspect
 import os
+from abc import abstractmethod
+from collections import defaultdict
 
 import nutkit.protocol as types
 from tests.shared import (
-    get_driver_name,
     TestkitTestCase,
+    get_driver_name,
 )
 from tests.stub.shared import StubServer
 

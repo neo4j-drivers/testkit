@@ -1,26 +1,27 @@
 import contextlib
 import itertools
 import math
-import pytest
 from typing import Iterable
 
-from . import _common
+import pytest
+
 from ..bolt_protocol import TranslatedStructure
 from ..parsing import (
-    ClientLine,
-    AutoLine,
-    ServerLine,
     AlternativeBlock,
+    AutoBlock,
+    AutoLine,
     BlockList,
+    ClientBlock,
+    ClientLine,
     Line,
     OptionalBlock,
     ParallelBlock,
-    ClientBlock,
-    AutoBlock,
-    ServerBlock,
     Repeat0Block,
     Repeat1Block,
+    ServerBlock,
+    ServerLine,
 )
+from . import _common
 
 
 class MockChannel:

@@ -1,5 +1,5 @@
-from .result import Result
 from .. import protocol
+from .result import Result
 
 
 class Transaction:

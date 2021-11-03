@@ -1,15 +1,15 @@
-from itertools import cycle
 import socket
-from struct import unpack as struct_unpack
 import threading
 import traceback
+from itertools import cycle
+from struct import unpack as struct_unpack
 
 import pytest
 
 from .. import BoltStubService
 from ..parsing import (
-    parse,
     ScriptFailure,
+    parse,
 )
 from ..util import hex_repr
 from ._common import (

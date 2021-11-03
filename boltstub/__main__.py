@@ -18,20 +18,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import platform
-import threading
-import time
 import signal
 import sys
-
+import threading
+import time
 from argparse import ArgumentParser
-from logging import getLogger, INFO
+from logging import (
+    INFO,
+    getLogger,
+)
+
 from . import BoltStubService
 from .parsing import (
-    parse_file,
     ScriptFailure,
+    parse_file,
 )
 from .watcher import watch
-
 
 log = getLogger(__name__)
 

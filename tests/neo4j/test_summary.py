@@ -1,8 +1,9 @@
 from nutkit import protocol as types
+
 from ..shared import (
+    TestkitTestCase,
     driver_feature,
     get_driver_name,
-    TestkitTestCase,
 )
 from .shared import (
     cluster_unsafe_test,

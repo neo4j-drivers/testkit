@@ -6,8 +6,8 @@ from tests.neo4j.shared import (
     get_driver,
 )
 from tests.shared import (
-    get_driver_name,
     TestkitTestCase,
+    get_driver_name,
 )
 
 

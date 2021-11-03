@@ -14,18 +14,17 @@ TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the Neo4j
                      server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
-from functools import wraps
 import os
+from functools import wraps
 from warnings import warn
 
-from nutkit.frontend import Driver
 from nutkit import protocol
+from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
-    dns_resolve_single,
     TestkitTestCase,
+    dns_resolve_single,
 )
-
 
 env_neo4j_host = "TEST_NEO4J_HOST"
 env_neo4j_user = "TEST_NEO4J_USER"

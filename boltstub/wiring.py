@@ -26,16 +26,15 @@ as well as classes for modelling IP addresses, based on tuples.
 
 from functools import cached_property
 from socket import (
-    getservbyname,
-    socket,
-    SOL_SOCKET,
-    SO_KEEPALIVE,
-    timeout,
     AF_INET,
     AF_INET6,
+    SO_KEEPALIVE,
+    SOL_SOCKET,
+    getservbyname,
+    socket,
+    timeout,
 )
 from socketserver import BaseRequestHandler
-
 
 BOLT_PORT_NUMBER = 7687
 
@@ -157,7 +156,12 @@ class Wire(object):
     def secure(self, verify=True, hostname=None):
         """ Apply a layer of security onto this connection.
         """
-        from ssl import SSLContext, PROTOCOL_TLS, CERT_NONE, CERT_REQUIRED
+        from ssl import (
+            CERT_NONE,
+            CERT_REQUIRED,
+            PROTOCOL_TLS,
+            SSLContext,
+        )
         context = SSLContext(PROTOCOL_TLS)
         if verify:
             context.verify_mode = CERT_REQUIRED

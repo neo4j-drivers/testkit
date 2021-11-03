@@ -1,5 +1,5 @@
-from .session import Session
 from .. import protocol
+from .session import Session
 
 
 class Driver:

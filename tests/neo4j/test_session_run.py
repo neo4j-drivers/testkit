@@ -5,9 +5,9 @@ from tests.neo4j.shared import (
     get_server_info,
 )
 from tests.shared import (
+    TestkitTestCase,
     driver_feature,
     get_driver_name,
-    TestkitTestCase,
 )
 
 

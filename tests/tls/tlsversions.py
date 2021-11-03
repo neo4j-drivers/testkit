@@ -1,7 +1,7 @@
 import nutkit.protocol as types
 from tests.shared import (
-    get_driver_name,
     TestkitTestCase,
+    get_driver_name,
 )
 from tests.tls.shared import (
     TlsServer,

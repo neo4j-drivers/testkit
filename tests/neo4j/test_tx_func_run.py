@@ -1,12 +1,12 @@
-from nutkit.frontend.session import ApplicationCodeException
 import nutkit.protocol as types
+from nutkit.frontend.session import ApplicationCodeException
 from tests.neo4j.shared import (
     get_driver,
     get_server_info,
 )
 from tests.shared import (
-    get_driver_name,
     TestkitTestCase,
+    get_driver_name,
 )
 
 

@@ -1,24 +1,24 @@
-from collections import defaultdict
 import itertools
-
-import lark
-import pytest
 import re
+from collections import defaultdict
 from typing import (
     Iterator,
     Optional,
     Tuple,
 )
 
+import lark
+import pytest
+
 from .. import (
+    Script,
     errors,
     parsing,
-    Script,
 )
 from ._common import (
     ALL_REQUESTS_PER_VERSION,
     ALL_RESPONSES_PER_VERSION,
-    ALL_SERVER_VERSIONS
+    ALL_SERVER_VERSIONS,
 )
 
 

@@ -3,7 +3,6 @@ import math
 
 import pytest
 
-from .. import _common
 from ...simple_jolt import (
     dumps_full,
     dumps_simple,
@@ -12,16 +11,17 @@ from ...simple_jolt import (
 from ...simple_jolt.errors import JOLTValueError
 from ...simple_jolt.types import (
     JoltDate,
-    JoltTime,
-    JoltLocalTime,
     JoltDateTime,
-    JoltLocalDateTime,
     JoltDuration,
-    JoltPoint,
+    JoltLocalDateTime,
+    JoltLocalTime,
     JoltNode,
-    JoltRelationship,
     JoltPath,
+    JoltPoint,
+    JoltRelationship,
+    JoltTime,
 )
+from .. import _common
 
 
 @pytest.mark.parametrize(("in_", "out_"), (

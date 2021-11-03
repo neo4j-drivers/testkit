@@ -1,8 +1,7 @@
-import pathlib
 import os
+import pathlib
 import re
 import subprocess
-
 
 _running = {}
 _created_tags = set()

@@ -19,25 +19,29 @@
 # limitations under the License.
 
 
+import time
+import traceback
 from copy import deepcopy
 from logging import getLogger
-from socketserver import TCPServer, ThreadingMixIn, BaseRequestHandler
+from socketserver import (
+    BaseRequestHandler,
+    TCPServer,
+    ThreadingMixIn,
+)
 from sys import stdout
 from threading import (
     Lock,
     Thread,
 )
-import time
-import traceback
 
 from .addressing import Address
 from .channel import Channel
 from .errors import ServerExit
 from .packstream import PackStream
 from .parsing import (
-    parse_file,
     Script,
     ScriptFailure,
+    parse_file,
 )
 from .wiring import (
     ReadWakeup,

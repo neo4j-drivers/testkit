@@ -5,15 +5,17 @@ Defines suites of test to run in different setups
 import sys
 import unittest
 
+from tests.neo4j import (
+    test_authentication,
+    test_bookmarks,
+    test_datatypes,
+    test_direct_driver,
+    test_session_run,
+    test_summary,
+    test_tx_func_run,
+    test_tx_run,
+)
 from tests.neo4j.shared import env_neo4j_version
-from tests.neo4j import test_authentication
-from tests.neo4j import test_bookmarks
-from tests.neo4j import test_datatypes
-from tests.neo4j import test_direct_driver
-from tests.neo4j import test_session_run
-from tests.neo4j import test_summary
-from tests.neo4j import test_tx_func_run
-from tests.neo4j import test_tx_run
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,

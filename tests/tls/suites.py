@@ -5,16 +5,15 @@ Define TLS suite
 import sys
 import unittest
 
+import tests.tls.securescheme as securescheme
+import tests.tls.selfsignedscheme as selfsignedscheme
+import tests.tls.tlsversions as tlsversions
+import tests.tls.unsecurescheme as unsecurescheme
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
     get_test_result_class,
 )
-import tests.tls.securescheme as securescheme
-import tests.tls.selfsignedscheme as selfsignedscheme
-import tests.tls.tlsversions as tlsversions
-import tests.tls.unsecurescheme as unsecurescheme
-
 
 loader = unittest.TestLoader()
 

@@ -13,12 +13,12 @@ import os
 import re
 import socket
 import unittest
+import warnings
 
 import ifaddr
 
 from nutkit import protocol
 from nutkit.backend import Backend
-import warnings
 
 
 def get_backend_host_and_port():

@@ -1,5 +1,5 @@
-from nutkit.frontend import Driver
 from nutkit import protocol as types
+from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer

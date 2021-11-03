@@ -1,6 +1,6 @@
+import socket
 import sys
 import time
-import socket
 
 
 def wait_for_port(address, port):

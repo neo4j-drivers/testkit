@@ -19,7 +19,13 @@
 # limitations under the License.
 
 
-from socket import getaddrinfo, getservbyname, SOCK_STREAM, AF_INET, AF_INET6
+from socket import (
+    AF_INET,
+    AF_INET6,
+    SOCK_STREAM,
+    getaddrinfo,
+    getservbyname,
+)
 
 
 class Address(tuple):

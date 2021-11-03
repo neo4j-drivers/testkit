@@ -1,8 +1,7 @@
 # Checks if there are any connections open to the specified remote address+port
-import sys
 import socket
 import subprocess
-
+import sys
 
 if __name__ == "__main__":
     address = sys.argv[1]

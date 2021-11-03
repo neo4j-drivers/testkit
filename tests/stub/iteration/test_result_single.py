@@ -1,10 +1,10 @@
 from contextlib import contextmanager
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
-    driver_feature,
     TestkitTestCase,
+    driver_feature,
     get_driver_name,
 )
 from tests.stub.shared import StubServer

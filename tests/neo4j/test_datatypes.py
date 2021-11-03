@@ -1,12 +1,13 @@
-from math import isnan
 import os
+from math import isnan
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.neo4j.shared import (
-    get_driver
+from nutkit.frontend import Driver
+from tests.neo4j.shared import get_driver
+from tests.shared import (
+    TestkitTestCase,
+    get_driver_name,
 )
-from tests.shared import TestkitTestCase, get_driver_name
 
 
 class TestDataTypes(TestkitTestCase):

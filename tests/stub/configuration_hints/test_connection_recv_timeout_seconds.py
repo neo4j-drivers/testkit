@@ -1,15 +1,13 @@
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
-    driver_feature,
-    get_driver_name,
     TestkitTestCase,
     dns_resolve_single,
-    get_dns_resolved_server_address
+    driver_feature,
+    get_dns_resolved_server_address,
+    get_driver_name,
 )
-from tests.stub.shared import (
-    StubServer,
-)
+from tests.stub.shared import StubServer
 
 
 class TestDirectConnectionRecvTimeout(TestkitTestCase):

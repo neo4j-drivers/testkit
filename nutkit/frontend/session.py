@@ -1,7 +1,7 @@
-from .result import Result
-from .transaction import Transaction
 from .. import protocol
 from ..backend.backend import default_timeout
+from .result import Result
+from .transaction import Transaction
 
 
 class ApplicationCodeException(Exception):

@@ -1,11 +1,9 @@
 import json
-import pytest
 from unittest.mock import patch
 
-from . import _common
-from ..bolt_protocol import (
-    TranslatedStructure,
-)
+import pytest
+
+from ..bolt_protocol import TranslatedStructure
 from ..errors import ServerExit
 from ..parsing import (
     AutoLine,
@@ -13,6 +11,7 @@ from ..parsing import (
     LineError,
     ServerLine,
 )
+from . import _common
 
 
 class TestClientLine:

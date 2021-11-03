@@ -1,7 +1,7 @@
 from teamcity import (
+    TeamCityTestResult,
     escape,
     in_teamcity,
-    TeamCityTestResult,
 )
 
 

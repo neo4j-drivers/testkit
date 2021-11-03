@@ -2,11 +2,14 @@ from .errors import (
     BoltMissingVersion,
     BoltUnknownMessage,
     BoltUnknownVersion,
-    ServerExit
+    ServerExit,
 )
 from .packstream import Structure
 from .simple_jolt import dumps_simple as jolt_dumps
-from .util import recursive_subclasses, hex_repr
+from .util import (
+    hex_repr,
+    recursive_subclasses,
+)
 
 
 def get_bolt_protocol(version):

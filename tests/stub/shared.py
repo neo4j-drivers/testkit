@@ -6,19 +6,18 @@ Uses environment variables for configuration:
 import errno
 import os
 import platform
-from queue import (
-    Empty,
-    Queue,
-)
 import re
 import signal
 import subprocess
 import sys
 import tempfile
+import time
+from queue import (
+    Empty,
+    Queue,
+)
 from textwrap import wrap
 from threading import Thread
-import time
-
 
 if platform.system() == "Windows":
     INTERRUPT = signal.CTRL_BREAK_EVENT

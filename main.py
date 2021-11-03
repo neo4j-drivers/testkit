@@ -30,7 +30,6 @@ from tests.testenv import (
     in_teamcity,
 )
 
-
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]
 

@@ -1,10 +1,11 @@
 from nutkit import protocol as types
 from nutkit.frontend import Driver
+
 from ..shared import (
-    driver_feature,
-    dns_resolve_single,
-    get_driver_name,
     TestkitTestCase,
+    dns_resolve_single,
+    driver_feature,
+    get_driver_name,
 )
 from .shared import (
     cluster_unsafe_test,
