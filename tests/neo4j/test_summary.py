@@ -95,6 +95,8 @@ class TestSummary(TestkitTestCase):
             if (f.name.startswith("BOLT_")
                 and f.value.split(":")[-1] <= max_server_protocol_version)
         ]
+        if not common_protocol_versions:
+            self.skipTest("Driver does not support server version.")
         common_max_version = max(common_protocol_versions)
         if common_max_version == "4.2":
             # Both versions are equivalent. Since 4.2 was introduced before
