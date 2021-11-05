@@ -1,27 +1,27 @@
 import abc
-import json
-import math
-import re
-import sys
-import threading
-import warnings
 from collections import OrderedDict
 from copy import deepcopy
+import json
+import math
 from os import path
+import re
+import sys
 from textwrap import wrap
+import threading
 from time import sleep
 from typing import (
     List,
     Optional,
 )
+import warnings
 
 import lark
 
 from .bolt_protocol import verify_script_messages
 from .errors import (
-    BoltMissingVersion,
-    BoltUnknownMessage,
-    BoltUnknownVersion,
+    BoltMissingVersionError,
+    BoltUnknownMessageError,
+    BoltUnknownVersionError,
     ServerExit,
 )
 from .packstream import Structure
@@ -83,7 +83,8 @@ class Line(str, abc.ABC):
         return obj
 
     def __str__(self):
-        return "({:3}) {}".format(self.line_number, super(Line, self).__str__())
+        return "({:3}) {}".format(self.line_number,
+                                  super(Line, self).__str__())
 
     def __repr__(self):
         return "<{}>{}".format(self.__class__.__name__, self.__str__())
@@ -226,7 +227,7 @@ class BangLine(Line):
         if ctx.restarting and ctx.concurrent:
             warnings.warn(
                 'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
-                '(concurrent scripts are implicitly restarting)'
+                "(concurrent scripts are implicitly restarting)"
             )
 
 
@@ -365,9 +366,9 @@ class ServerLine(Line):
             tag, args = self.command_match.groups()
             args = args.strip()
             if tag == "EXIT":
-                raise ServerExit("server exit as part of the script: {}".format(
-                    self
-                ))
+                raise ServerExit(
+                    "server exit as part of the script: {}".format(self)
+                )
             elif tag == "NOOP":
                 channel.send_raw(b"\x00\x00")
             elif tag == "RAW":
@@ -394,7 +395,7 @@ class Block(abc.ABC):
 
     @abc.abstractmethod
     def assert_no_init(self):
-        """ raise error if init would send messages """
+        """Raise error if `init()` would send messages."""
 
     @abc.abstractmethod
     def done(self) -> bool:
@@ -614,7 +615,8 @@ class AlternativeBlock(Block):
         return self.block_lists[self.selection].can_consume(channel)
 
     def can_consume_after_reset(self, channel) -> bool:
-        return any(b.can_consume_after_reset(channel) for b in self.block_lists)
+        return any(b.can_consume_after_reset(channel)
+                   for b in self.block_lists)
 
     def done(self):
         return (self.selection is not None
@@ -685,7 +687,8 @@ class ParallelBlock(Block):
         return any(b.can_consume(channel) for b in self.block_lists)
 
     def can_consume_after_reset(self, channel) -> bool:
-        return any(b.can_consume_after_reset(channel) for b in self.block_lists)
+        return any(b.can_consume_after_reset(channel)
+                   for b in self.block_lists)
 
     def has_deterministic_end(self) -> bool:
         return all(b.has_deterministic_end() for b in self.block_lists)
@@ -799,8 +802,10 @@ class _RepeatBlock(Block, abc.ABC):
                           for m in self.block_list.accepted_messages())
         if ((self.has_deterministic_end() and self.done())
                 or self.block_list.can_be_skipped()):
-            res.update((m, True)
-                       for m in self.block_list.accepted_messages_after_reset())
+            res.update(
+                (m, True)
+                for m in self.block_list.accepted_messages_after_reset()
+            )
         return list(res.keys())
 
     def accepted_messages_after_reset(self) -> List[ClientLine]:
@@ -1040,13 +1045,13 @@ class Script:
     def _verify_script(self):
         try:
             verify_script_messages(self)
-        except BoltMissingVersion as e:
+        except BoltMissingVersionError as e:
             raise lark.GrammarError(
                 'Missing bolt version bang line (e.g. "!: BOLT 4.3")'
             ) from e
-        except BoltUnknownMessage as e:
+        except BoltUnknownMessageError as e:
             raise LineError(e.line, e.msg) from e
-        except BoltUnknownVersion as e:
+        except BoltUnknownVersionError as e:
             raise LineError(
                 self.context.bang_lines["bolt_version"], *e.args[:1]
             ) from e
@@ -1145,7 +1150,10 @@ class ScriptTransformer(lark.Transformer):
     @lark.v_args(tree=True)
     def client_block(self, tree):
         return ClientBlock(
-            [child for child in tree.children if child.__class__ == ClientLine],
+            [
+                child for child in tree.children
+                if child.__class__ == ClientLine
+            ],
             tree.line
         )
 
@@ -1181,7 +1189,10 @@ class ScriptTransformer(lark.Transformer):
     @lark.v_args(tree=True)
     def server_block(self, tree):
         return ServerBlock(
-            [child for child in tree.children if child.__class__ == ServerLine],
+            [
+                child for child in tree.children
+                if child.__class__ == ServerLine
+            ],
             tree.line
         )
 

@@ -6,8 +6,8 @@ from tests.neo4j.shared import (
     get_driver,
 )
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 
 
@@ -26,10 +26,10 @@ class TestBookmarks(TestkitTestCase):
     @cluster_unsafe_test
     def test_can_obtain_bookmark_after_commit(self):
         self._session = self._driver.session("w")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         tx.run("RETURN 1")
         tx.commit()
-        bookmarks = self._session.lastBookmarks()
+        bookmarks = self._session.last_bookmarks()
         self.assertTrue(bookmarks)
 
     @cluster_unsafe_test
@@ -40,16 +40,16 @@ class TestBookmarks(TestkitTestCase):
         unique_id = uuid4().hex
 
         self._session = self._driver.session("w")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         tx.run("CREATE (a:Thing {uuid:$uuid})",
                params={"uuid": types.CypherString(unique_id)})
         tx.commit()
-        bookmarks = self._session.lastBookmarks()
+        bookmarks = self._session.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
 
         self._session.close()
         self._session = self._driver.session("r")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         result = tx.run("MATCH (a:Thing {uuid:$uuid}) RETURN a",
                         params={"uuid": types.CypherString(unique_id)})
         if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
@@ -66,9 +66,9 @@ class TestBookmarks(TestkitTestCase):
     @cluster_unsafe_test
     def test_no_bookmark_after_rollback(self):
         self._session = self._driver.session("w")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         tx.run("CREATE (a)")
         tx.rollback()
 
-        bookmarks = self._session.lastBookmarks()
+        bookmarks = self._session.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)

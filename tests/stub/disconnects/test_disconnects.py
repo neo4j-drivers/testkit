@@ -1,14 +1,14 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
 # Should match user-agent of disconnect_on_hello.script
 # Indirectly tests implementation of custom user-agent
-customUserAgent = "Modesty"
+CUSTOM_USER_AGENT = "Modesty"
 
 
 class TestDisconnects(TestkitTestCase):
@@ -23,7 +23,7 @@ class TestDisconnects(TestkitTestCase):
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(self._backend, uri, auth,
-                              userAgent=customUserAgent)
+                              user_agent=CUSTOM_USER_AGENT)
         self._session = self._driver.session("w")
         self._last_exc = None
 
@@ -60,7 +60,7 @@ class TestDisconnects(TestkitTestCase):
     # at which the error happened.
     def _run_tx(self):
         try:
-            tx = self._session.beginTransaction()
+            tx = self._session.begin_transaction()
         except types.DriverError as exc:
             self._last_exc = exc
             return "after begin"
@@ -93,7 +93,7 @@ class TestDisconnects(TestkitTestCase):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt HELLO message.
         self._server.start(path=self.script_path("exit_after_hello.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -111,7 +111,7 @@ class TestDisconnects(TestkitTestCase):
             self.skipTest("Crashed backend")
         self._server.start(
             path=self.script_path("exit_after_hello_success.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         step = self._run()
         self._session.close()
@@ -127,7 +127,7 @@ class TestDisconnects(TestkitTestCase):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt run message.
         self._server.start(path=self.script_path("exit_after_run.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -142,7 +142,7 @@ class TestDisconnects(TestkitTestCase):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt PULL message.
         self._server.start(path=self.script_path("exit_after_pull.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -155,7 +155,7 @@ class TestDisconnects(TestkitTestCase):
         # Verifies how the driver handles when server disconnects after driver
         # sent bolt RUN message and received a RECORD but no summary.
         self._server.start(path=self.script_path("exit_after_record.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run()
         self._session.close()
         self._driver.close()
@@ -170,7 +170,7 @@ class TestDisconnects(TestkitTestCase):
         if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_begin.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run_tx()
         self._session.close()
         self._driver.close()
@@ -189,7 +189,7 @@ class TestDisconnects(TestkitTestCase):
         if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_run.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run_tx()
         self._session.close()
         self._driver.close()
@@ -206,7 +206,7 @@ class TestDisconnects(TestkitTestCase):
         if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
         self._server.start(path=self.script_path("exit_after_tx_pull.script"),
-                           vars=self.get_vars())
+                           vars_=self.get_vars())
         step = self._run_tx()
         self._session.close()
         self._driver.close()
@@ -221,8 +221,10 @@ class TestDisconnects(TestkitTestCase):
         # transaction.
         if self._driver_name in ["go"]:
             self.skipTest("Driver fails on session.close")
-        self._server.start(path=self.script_path("exit_after_tx_record.script"),
-                           vars=self.get_vars())
+        self._server.start(
+            path=self.script_path("exit_after_tx_record.script"),
+            vars_=self.get_vars()
+        )
         step = self._run_tx()
         self._session.close()
         self._driver.close()
@@ -234,8 +236,10 @@ class TestDisconnects(TestkitTestCase):
     def test_disconnect_session_on_tx_commit(self):
         # Verifies how the driver handles when server disconnects right after
         # driver sent bolt run message.
-        self._server.start(path=self.script_path("exit_after_tx_commit.script"),
-                           vars=self.get_vars())
+        self._server.start(
+            path=self.script_path("exit_after_tx_commit.script"),
+            vars_=self.get_vars()
+        )
         step = self._run_tx()
         self._session.close()
         self._driver.close()
@@ -243,7 +247,7 @@ class TestDisconnects(TestkitTestCase):
 
         expected_step = "after commit"
         self.assertEqual(step, expected_step)
-        if get_driver_name() in ['python']:
+        if get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
                 self._last_exc.errorType
@@ -253,11 +257,11 @@ class TestDisconnects(TestkitTestCase):
     #        handling sudden loss of connectivity.
     def test_fail_on_reset(self):
         if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            self.skipTest("The failing RESET never gets issued by an optimized "
-                          "driver.")
+            self.skipTest("The failing RESET never gets issued by an "
+                          "optimized driver.")
         self._server.start(
             path=self.script_path("failure_on_reset_after_success.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         step = self._run()
         self._session.close()
@@ -273,7 +277,7 @@ class TestDisconnects(TestkitTestCase):
     def test_client_says_goodbye(self):
         self._server.start(
             path=self.script_path("explicit_goodbye_after_run.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         result = self._session.run("RETURN 1 AS n")
         result.next()

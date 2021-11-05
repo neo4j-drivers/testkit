@@ -7,7 +7,7 @@ import nutkit.protocol as protocol
 
 protocol_classes = dict([
     m for m in inspect.getmembers(protocol, inspect.isclass)])
-debug = os.environ.get('TEST_DEBUG_REQRES', 0)
+debug = os.environ.get("TEST_DEBUG_REQRES", 0)
 
 
 class Encoder(json.JSONEncoder):
@@ -19,14 +19,14 @@ class Encoder(json.JSONEncoder):
 
 
 def decode_hook(x):
-    if 'name' not in x:
+    if "name" not in x:
         return x
 
-    name = x['name']
+    name = x["name"]
     if not isinstance(name, str) or name not in protocol_classes:
         return x
 
-    data = x.get('data', {})
+    data = x.get("data", {})
     if not data:
         data = {}
 
@@ -47,10 +47,13 @@ class Backend:
                 self._socket.close()
             except OSError:
                 pass
-            raise Exception("Driver backend is not running or is not listening on port %d or is just refusing connections" % port)
+            raise Exception(
+                "Driver backend is not running or is not listening on "
+                "port %d or is just refusing connections" % port
+            )
         self._encoder = Encoder()
-        self._reader = self._socket.makefile(mode='r', encoding='utf-8')
-        self._writer = self._socket.makefile(mode='w', encoding='utf-8')
+        self._reader = self._socket.makefile(mode="r", encoding="utf-8")
+        self._writer = self._socket.makefile(mode="w", encoding="utf-8")
 
     def close(self):
         self._reader.close()
@@ -67,7 +70,7 @@ class Backend:
         if debug:
             print("Request: %s" % req_json)
         self._writer.write("#request begin\n")
-        self._writer.write(req_json+"\n")
+        self._writer.write(req_json + "\n")
         self._writer.write("#request end\n")
         self._writer.flush()
 
@@ -113,12 +116,13 @@ class Backend:
                         num_blanks += 1
                         if num_blanks > 50:
                             raise Exception(
-                                    "Detected possible crash in backend")
+                                "Detected possible crash in backend"
+                            )
                     # The backend can send it's own logs outside of response
                     # blocks
                     elif debug:
                         print("[BACKEND]: %s" % line)
 
-    def sendAndReceive(self, req, timeout=default_timeout, hooks=None):
+    def send_and_receive(self, req, timeout=default_timeout, hooks=None):
         self.send(req, hooks=hooks)
         return self.receive(timeout, hooks=hooks)

@@ -1,12 +1,12 @@
+from nutkit.frontend.session import ApplicationCodeError
 import nutkit.protocol as types
-from nutkit.frontend.session import ApplicationCodeException
 from tests.neo4j.shared import (
     get_driver,
     get_server_info,
 )
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 
 
@@ -38,8 +38,8 @@ class TestTxFuncRun(TestkitTestCase):
         def _test():
             self._driver.close()
             self._driver = get_driver(self._backend, userAgent="test")
-            self._session1 = self._driver.session("r", fetchSize=2)
-            self._session1.readTransaction(work)
+            self._session1 = self._driver.session("r", fetch_size=2)
+            self._session1.read_transaction(work)
             self._session1.close()
             self._session1 = None
 
@@ -53,14 +53,14 @@ class TestTxFuncRun(TestkitTestCase):
         # >= 4.0 supports multiple result streams on the connection. From this
         # view it is not possible to see that those streams are actually used.
         # (see stub tests for this verification).
-        if get_driver_name() in ['dotnet']:
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Fails for some reason")
 
         def run(tx, i, n):
             return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x",
                           {"i": types.CypherInt(i), "n": types.CypherInt(n)})
 
-        self._session1 = self._driver.session("r", fetchSize=2)
+        self._session1 = self._driver.session("r", fetch_size=2)
 
         # Todo: stash away the results for each level and test the behaviour
         #       of the driver when using them outside of the transaction.
@@ -71,7 +71,7 @@ class TestTxFuncRun(TestkitTestCase):
             i0 = 0
             n0 = 6
             res0 = run(tx, i0, n0)
-            for r0 in range(i0, n0+1):
+            for r0 in range(i0, n0 + 1):
                 rec = res0.next()
                 self.assertEqual(
                     rec, types.Record(values=[types.CypherInt(r0)]))
@@ -79,7 +79,7 @@ class TestTxFuncRun(TestkitTestCase):
                 i1 = 7
                 n1 = 11
                 res1 = run(tx, i1, n1)
-                for r1 in range(i1, n1+1):
+                for r1 in range(i1, n1 + 1):
                     rec = res1.next()
                     self.assertEqual(
                         rec, types.Record(values=[types.CypherInt(r1)]))
@@ -87,7 +87,7 @@ class TestTxFuncRun(TestkitTestCase):
                     i2 = 999
                     n2 = 1001
                     res2 = run(tx, i2, n2)
-                    for r2 in range(i2, n2+1):
+                    for r2 in range(i2, n2 + 1):
                         rec = res2.next()
                         self.assertEqual(
                             rec, types.Record(values=[types.CypherInt(r2)]))
@@ -97,7 +97,7 @@ class TestTxFuncRun(TestkitTestCase):
             self.assertEqual(res0.next(), types.NullRecord())
             return "done"
 
-        x = self._session1.readTransaction(nested)
+        x = self._session1.read_transaction(nested)
         self.assertEqual(lasts, {0: 6, 1: 11, 2: 1001})
         self.assertEqual(x, "done")
 
@@ -109,8 +109,8 @@ class TestTxFuncRun(TestkitTestCase):
             tx.run("CREATE (n:SessionNode) RETURN n")
 
         self._session1 = self._driver.session("w")
-        self._session1.writeTransaction(run)
-        bookmarks = self._session1.lastBookmarks()
+        self._session1.write_transaction(run)
+        bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
@@ -122,7 +122,7 @@ class TestTxFuncRun(TestkitTestCase):
         # function rolls back transaction.
         def run(tx):
             tx.run("CREATE (n:SessionNode) RETURN n")
-            raise ApplicationCodeException("No thanks")
+            raise ApplicationCodeError("No thanks")
 
         self._session1 = self._driver.session("w")
         expected_exc = types.FrontendError
@@ -132,8 +132,8 @@ class TestTxFuncRun(TestkitTestCase):
         if get_driver_name() in ["dotnet"]:
             expected_exc = types.BackendError
         with self.assertRaises(expected_exc):
-            self._session1.writeTransaction(run)
-        bookmarks = self._session1.lastBookmarks()
+            self._session1.write_transaction(run)
+        bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
@@ -145,7 +145,7 @@ class TestTxFuncRun(TestkitTestCase):
             nonlocal node_id
             result_ = tx.run("CREATE (n:VoidNode) RETURN ID(n)")
             node_id = result_.next().values[0].value
-            raise ApplicationCodeException("No thanks")
+            raise ApplicationCodeError("No thanks")
 
         self._session1 = self._driver.session("w")
         expected_exc = types.FrontendError
@@ -155,12 +155,13 @@ class TestTxFuncRun(TestkitTestCase):
         if get_driver_name() in ["dotnet"]:
             expected_exc = types.BackendError
         with self.assertRaises(expected_exc):
-            self._session1.writeTransaction(run)
+            self._session1.write_transaction(run)
 
         # Try to retrieve the node, it shouldn't be there
         result = self._session1.run(
-                "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
-                params={"nodeid": types.CypherInt(node_id)})
+            "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
+            params={"nodeid": types.CypherInt(node_id)}
+        )
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
 
@@ -187,8 +188,9 @@ class TestTxFuncRun(TestkitTestCase):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("w")
-        res = self._session1.readTransaction(
-            run, timeout=3000, txMeta={k: v.value for k, v in metadata.items()}
+        res = self._session1.read_transaction(
+            run, timeout=3000,
+            tx_meta={k: v.value for k, v in metadata.items()}
         )
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
@@ -207,7 +209,7 @@ class TestTxFuncRun(TestkitTestCase):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
 
             with self.assertRaises(types.FrontendError):
-                self._session2.writeTransaction(update2, timeout=250)
+                self._session2.write_transaction(update2, timeout=250)
 
         def update2(tx):
             nonlocal exc
@@ -215,16 +217,16 @@ class TestTxFuncRun(TestkitTestCase):
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e
             # transaction has failed and we don't want the driver to retry it
-            raise ApplicationCodeException
+            raise ApplicationCodeError
 
         exc = None
 
         self._session1 = self._driver.session("w")
-        db = self._session1.writeTransaction(create)
+        db = self._session1.write_transaction(create)
         self._session2 = self._driver.session(
-            "w", bookmarks=self._session1.lastBookmarks(), database=db
+            "w", bookmarks=self._session1.last_bookmarks(), database=db
         )
-        self._session1.writeTransaction(update1)
+        self._session1.write_transaction(update1)
         self.assertIsNotNone(exc)
         self.assertEqual(exc.exception.code,
                          "Neo.TransientError.Transaction.LockClientStopped")

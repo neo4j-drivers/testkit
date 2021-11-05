@@ -1,5 +1,5 @@
 """
-Shared utilities for writing tests against Neo4j server
+Shared utilities for writing tests against Neo4j server.
 
 Uses environment variables for configuration:
 
@@ -10,20 +10,20 @@ TEST_NEO4J_PORT      Neo4j server port, default is 7687
 TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
 TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
 TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
-TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the Neo4j
-                     server, default "enterprise"
+TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
+                     Neo4j server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
-import os
 from functools import wraps
+import os
 from warnings import warn
 
 from nutkit import protocol
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
-    TestkitTestCase,
     dns_resolve_single,
+    TestkitTestCase,
 )
 
 env_neo4j_host = "TEST_NEO4J_HOST"
@@ -38,10 +38,9 @@ env_neo4j_cluster = "TEST_NEO4J_CLUSTER"
 
 
 def get_authorization():
-    """ Returns default authorization for tests that do not test this aspect
-    """
-    user = os.environ.get(env_neo4j_user, 'neo4j')
-    passw = os.environ.get(env_neo4j_pass, 'pass')
+    """Return default authorization for tests that do not test this aspect."""
+    user = os.environ.get(env_neo4j_user, "neo4j")
+    passw = os.environ.get(env_neo4j_pass, "pass")
     return AuthorizationToken("basic", principal=user, credentials=passw)
 
 
@@ -72,8 +71,7 @@ def get_neo4j_scheme():
 
 
 def get_driver(backend, uri=None, auth=None, **kwargs):
-    """ Returns default driver for tests that do not test this aspect
-    """
+    """Return default driver for tests that do not test this aspect."""
     if uri is None:
         scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_port()
@@ -94,7 +92,6 @@ class ServerInfo:
         if self.edition == "aura" and self.version >= "4":
             return "Neo4j/4.0-aura"
         return "Neo4j/" + self.version
-
 
     @property
     def supports_multi_db(self):

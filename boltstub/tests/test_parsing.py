@@ -1,6 +1,6 @@
+from collections import defaultdict
 import itertools
 import re
-from collections import defaultdict
 from typing import (
     Iterator,
     Optional,
@@ -11,9 +11,9 @@ import lark
 import pytest
 
 from .. import (
-    Script,
     errors,
     parsing,
+    Script,
 )
 from ._common import (
     ALL_REQUESTS_PER_VERSION,
@@ -101,25 +101,25 @@ def assert_server_block_block_list(block_list, lines=None):
 
 def assert_dialogue_blocks_block_list(block_list, lines=None):
     expected_blocks = []
-    for l in lines:
-        if l.startswith("C:"):
+    for line in lines:
+        if line.startswith("C:"):
             if (expected_blocks
                     and expected_blocks[-1][0] == assert_client_block):
-                expected_blocks[-1][1].append(l)
+                expected_blocks[-1][1].append(line)
             else:
-                expected_blocks.append([assert_client_block, [l]])
-        if l.startswith("A:"):
+                expected_blocks.append([assert_client_block, [line]])
+        if line.startswith("A:"):
             if (expected_blocks
                     and expected_blocks[-1][0] == assert_auto_block):
-                expected_blocks[-1][1].append(l)
+                expected_blocks[-1][1].append(line)
             else:
-                expected_blocks.append([assert_auto_block, [l]])
-        if l.startswith("S:"):
+                expected_blocks.append([assert_auto_block, [line]])
+        if line.startswith("S:"):
             if (expected_blocks
                     and expected_blocks[-1][0] == assert_server_block):
-                expected_blocks[-1][1].append(l)
+                expected_blocks[-1][1].append(line)
             else:
-                expected_blocks.append([assert_server_block, [l]])
+                expected_blocks.append([assert_server_block, [line]])
     assert len(block_list.blocks) == len(expected_blocks)
     for i in range(len(expected_blocks)):
         expected_blocks[i][0](block_list.blocks[i], expected_blocks[i][1])
@@ -256,7 +256,8 @@ def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
 
 
 @pytest.mark.parametrize("order", itertools.permutations(range(3), 3))
-@pytest.mark.parametrize("extra_ws", whitespace_generator(7, {0, 6}, {1, 3, 5}))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(7, {0, 6},
+                                                          {1, 3, 5}))
 def test_simple_dialogue(order, extra_ws, unverified_script):
     lines = ["C:%sMSG1", "S:%sMSG2", "A:%sMSG3"]
     script = "%s" + "%s".join(lines[i] for i in order) + "%s"
@@ -603,7 +604,7 @@ def test_expects_bolt_version():
     )
     with pytest.raises(lark.GrammarError) as exc:
         parsing.parse(script)
-    assert isinstance(exc.value.__cause__, errors.BoltMissingVersion)
+    assert isinstance(exc.value.__cause__, errors.BoltMissingVersionError)
 
 
 @pytest.mark.parametrize(("version", "exists"), (
@@ -628,7 +629,7 @@ def test_checks_bolt_version(version, exists):
         with pytest.raises(parsing.LineError) as exc:
             parsing.parse(script)
         assert exc.value.line.line_number == 1
-        assert isinstance(exc.value.__cause__, errors.BoltUnknownVersion)
+        assert isinstance(exc.value.__cause__, errors.BoltUnknownVersionError)
 
 
 client_msg_names = defaultdict(set)
@@ -650,23 +651,23 @@ set_name_dicts()
 
 @pytest.mark.parametrize(("version", "message", "exists"), (
     *(
-          (v, "C: " + n, True)
-          for v in client_msg_names for n in client_msg_names[v]
+        (v, "C: " + n, True)
+        for v in client_msg_names for n in client_msg_names[v]
     ),
     *(
-          (v, "C: " + n, False)
-          for v in server_msg_names
-          for n in server_msg_names[v] - client_msg_names[v]
+        (v, "C: " + n, False)
+        for v in server_msg_names
+        for n in server_msg_names[v] - client_msg_names[v]
     ),
     *((v, "C: FOOBAR", False) for v in ALL_SERVER_VERSIONS),
     *(
-          (v, "S: " + n, True)
-          for v in server_msg_names for n in server_msg_names[v]
+        (v, "S: " + n, True)
+        for v in server_msg_names for n in server_msg_names[v]
     ),
     *(
-          (v, "S: " + n, False)
-          for v in client_msg_names
-          for n in client_msg_names[v] - server_msg_names[v]
+        (v, "S: " + n, False)
+        for v in client_msg_names
+        for n in client_msg_names[v] - server_msg_names[v]
     ),
     *((v, "S: FOOBAR", False) for v in ALL_SERVER_VERSIONS),
 ))
@@ -681,7 +682,7 @@ def test_message_tags_are_verified(version, message, exists):
         with pytest.raises(parsing.LineError) as exc:
             parsing.parse(script)
         assert exc.value.line.line_number == 3
-        assert isinstance(exc.value.__cause__, errors.BoltUnknownMessage)
+        assert isinstance(exc.value.__cause__, errors.BoltUnknownMessageError)
 
 
 @pytest.mark.parametrize("version", ALL_SERVER_VERSIONS)

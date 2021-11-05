@@ -2,4 +2,4 @@ ifaddr
 isort
 lark
 nose
-yapf
+pre-commit

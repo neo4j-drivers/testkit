@@ -4,7 +4,7 @@ from .result import Result
 from .transaction import Transaction
 
 
-class ApplicationCodeException(Exception):
+class ApplicationCodeError(Exception):
     pass
 
 
@@ -16,13 +16,13 @@ class Session:
 
     def close(self, hooks=None):
         req = protocol.SessionClose(self._session.id)
-        res = self._backend.sendAndReceive(req, hooks=hooks)
+        res = self._backend.send_and_receive(req, hooks=hooks)
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session but was: %s" % res)
 
-    def run(self, cypher, params=None, txMeta=None, timeout=None, hooks=None):
+    def run(self, cypher, params=None, tx_meta=None, timeout=None, hooks=None):
         req = protocol.SessionRun(self._session.id, cypher, params,
-                                  txMeta=txMeta, timeout=timeout)
+                                  txMeta=tx_meta, timeout=timeout)
         self._backend.send(req, hooks=hooks)
         while True:
             res = self._backend.receive(hooks=hooks)
@@ -33,7 +33,7 @@ class Session:
                     hooks=hooks
                 )
             elif isinstance(res, protocol.DomainNameResolutionRequired):
-                addresses = self._driver.resolveDomainName(res.name)
+                addresses = self._driver.resolve_domain_name(res.name)
                 self._backend.send(
                     protocol.DomainNameResolutionCompleted(res.id, addresses),
                     hooks=hooks
@@ -41,9 +41,12 @@ class Session:
             elif isinstance(res, protocol.Result):
                 return Result(self._backend, res)
             else:
-                raise Exception("Should be Result or ResolverResolutionRequired but was: %s" % res)
+                raise Exception(
+                    "Should be Result or ResolverResolutionRequired "
+                    "but was: %s" % res
+                )
 
-    def processTransaction(self, req, fn, config=None, hooks=None):
+    def process_transaction(self, req, fn, config=None, hooks=None):
         self._backend.send(req, hooks=hooks)
         x = None
         while True:
@@ -61,17 +64,17 @@ class Session:
                         protocol.RetryablePositive(self._session.id),
                         hooks=hooks
                     )
-                except (ApplicationCodeException, protocol.DriverError) as e:
+                except (ApplicationCodeError, protocol.DriverError) as e:
                     # If this is an error originating from the driver in the
                     # backend, retrieve the id of the error  and send that,
                     # this saves us from having to recreate errors on backend
                     # side, backend just needs to track the returned errors.
-                    errorId = ""
+                    error_id = ""
                     if isinstance(e, protocol.DriverError):
-                        errorId = e.id
+                        error_id = e.id
                     self._backend.send(
                         protocol.RetryableNegative(self._session.id,
-                                                   errorId=errorId),
+                                                   errorId=error_id),
                         hooks=hooks
                     )
             elif isinstance(res, protocol.ResolverResolutionRequired):
@@ -81,7 +84,7 @@ class Session:
                     hooks=hooks
                 )
             elif isinstance(res, protocol.DomainNameResolutionRequired):
-                addresses = self._driver.resolveDomainName(res.name)
+                addresses = self._driver.resolve_domain_name(res.name)
                 self._backend.send(
                     protocol.DomainNameResolutionCompleted(res.id, addresses),
                     hooks=hooks
@@ -89,29 +92,32 @@ class Session:
             elif isinstance(res, protocol.RetryableDone):
                 return x
 
-    def readTransaction(self, fn, txMeta=None, timeout=None, hooks=None):
+    def read_transaction(self, fn, tx_meta=None, timeout=None, hooks=None):
         # Send request to enter transactional read function
-        req = protocol.SessionReadTransaction(self._session.id, txMeta=txMeta,
-                                              timeout=timeout)
-        return self.processTransaction(req, fn, hooks=hooks)
+        req = protocol.SessionReadTransaction(
+            self._session.id, txMeta=tx_meta, timeout=timeout
+        )
+        return self.process_transaction(req, fn, hooks=hooks)
 
-    def writeTransaction(self, fn, txMeta=None, timeout=None, hooks=None):
+    def write_transaction(self, fn, tx_meta=None, timeout=None, hooks=None):
         # Send request to enter transactional read function
-        req = protocol.SessionWriteTransaction(self._session.id, txMeta=txMeta,
-                                               timeout=timeout)
-        return self.processTransaction(req, fn, hooks=hooks)
+        req = protocol.SessionWriteTransaction(
+            self._session.id, txMeta=tx_meta, timeout=timeout
+        )
+        return self.process_transaction(req, fn, hooks=hooks)
 
-    def beginTransaction(self, txMeta=None, timeout=None, hooks=None):
-        req = protocol.SessionBeginTransaction(self._session.id, txMeta=txMeta,
-                                               timeout=timeout)
-        res = self._backend.sendAndReceive(req, hooks=hooks)
+    def begin_transaction(self, tx_meta=None, timeout=None, hooks=None):
+        req = protocol.SessionBeginTransaction(
+            self._session.id, txMeta=tx_meta, timeout=timeout
+        )
+        res = self._backend.send_and_receive(req, hooks=hooks)
         if not isinstance(res, protocol.Transaction):
             raise Exception("Should be Transaction but was: %s" % res)
         return Transaction(self._backend, res.id)
 
-    def lastBookmarks(self, hooks=None):
+    def last_bookmarks(self, hooks=None):
         req = protocol.SessionLastBookmarks(self._session.id)
-        res = self._backend.sendAndReceive(req, hooks=hooks)
+        res = self._backend.send_and_receive(req, hooks=hooks)
         if not isinstance(res, protocol.Bookmarks):
             raise Exception("Should be Bookmarks but was: %s" % res)
         return res.bookmarks

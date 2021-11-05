@@ -1,9 +1,9 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     driver_feature,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -25,8 +25,8 @@ class TestIterationTxRun(TestkitTestCase):
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
         self._server.start(path=self.script_path(protocol_version, script_fn))
-        session = driver.session("w", fetchSize=n)
-        tx = session.beginTransaction()
+        session = driver.session("w", fetch_size=n)
+        tx = session.begin_transaction()
         result = tx.run("CYPHER")
         got_error = False
         sequence = []
@@ -60,7 +60,8 @@ class TestIterationTxRun(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_3_0)
     def test_batch_v3(self):
         # there is no incremental pulling for BOLTv3
-        self._iterate(2, "tx_pull_all.script", [1, 2, 3], protocol_version="v3")
+        self._iterate(2, "tx_pull_all.script", [1, 2, 3],
+                      protocol_version="v3")
 
     @driver_feature(types.Feature.BOLT_3_0)
     def test_all_v3(self):
@@ -69,7 +70,8 @@ class TestIterationTxRun(TestkitTestCase):
 
     @driver_feature(types.Feature.BOLT_4_0)
     def test_nested(self):
-        # ex JAVA - java completely pulls the first query before running the second
+        # ex JAVA - java completely pulls the first query before running the
+        # second
         if get_driver_name() in ["java"]:
             self.skipTest(
                 "completely pulls the first query before running the second"
@@ -80,8 +82,8 @@ class TestIterationTxRun(TestkitTestCase):
                                                  credentials=""))
         self._server.start(path=self.script_path("v4x0",
                                                  "tx_pull_1_nested.script"))
-        session = driver.session("w", fetchSize=1)
-        tx = session.beginTransaction()
+        session = driver.session("w", fetch_size=1)
+        tx = session.begin_transaction()
         res1 = tx.run("CYPHER")
         seq = []
         seqs = []
@@ -104,4 +106,3 @@ class TestIterationTxRun(TestkitTestCase):
         self._server.done()
         self.assertEqual(["1_1", "1_2"], seq)
         self.assertEqual([["2_1", "2_2"], ["3_1"]], seqs)
-

@@ -7,8 +7,8 @@ from tests.neo4j.shared import (
     get_server_info,
 )
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 
 
@@ -31,8 +31,8 @@ class TestTxRun(TestkitTestCase):
         def _test():
             self._driver.close()
             self._driver = get_driver(self._backend, userAgent="test")
-            self._session1 = self._driver.session("r", fetchSize=2)
-            tx = self._session1.beginTransaction()
+            self._session1 = self._driver.session("r", fetch_size=2)
+            tx = self._session1.begin_transaction()
             result = tx.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
             if consume:
                 summary = result.consume()
@@ -58,10 +58,12 @@ class TestTxRun(TestkitTestCase):
     def test_can_commit_transaction(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
-            self.skipTest('Returns CypherNull as foo\'s value instead of "bar"')
+            self.skipTest(
+                'Returns CypherNull as foo\'s value instead of "bar"'
+            )
         self._session1 = self._driver.session("w")
 
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
 
         # Create a node
         result = tx.run("CREATE (a) RETURN id(a)")
@@ -90,7 +92,7 @@ class TestTxRun(TestkitTestCase):
     def test_can_rollback_transaction(self):
         self._session1 = self._driver.session("w")
 
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
 
         # Create a node
         result = tx.run("CREATE (a) RETURN id(a)")
@@ -109,7 +111,7 @@ class TestTxRun(TestkitTestCase):
 
         # Check the property value
         result = self._session1.run("MATCH (a) WHERE id(a) = $n "
-                                   "RETURN a.foo", {"n": node_id})
+                                    "RETURN a.foo", {"n": node_id})
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
 
@@ -118,10 +120,10 @@ class TestTxRun(TestkitTestCase):
         # Verifies that last bookmark is set on the session upon
         # successful commit.
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         tx.run("CREATE (n:SessionNode) RETURN n")
         tx.commit()
-        bookmarks = self._session1.lastBookmarks()
+        bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
@@ -130,10 +132,10 @@ class TestTxRun(TestkitTestCase):
         # Verifies that last bookmark is set on the session upon
         # succesful commit.
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         tx.run("CREATE (n:SessionNode) RETURN n")
         tx.rollback()
-        bookmarks = self._session1.lastBookmarks()
+        bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
     @cluster_unsafe_test
@@ -142,7 +144,7 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["dotnet"]:
             self.skipTest("Raises syntax error on session.close in tearDown.")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         with self.assertRaises(types.responses.DriverError):
             result = tx.run("RETURN")
             # TODO: remove this block once all languages work
@@ -154,15 +156,15 @@ class TestTxRun(TestkitTestCase):
             # complain about the transaction being broken.
             with self.assertRaises(types.DriverError):
                 tx.rollback()
-        bookmarks = self._session1.lastBookmarks()
+        bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
     @cluster_unsafe_test
     def test_should_be_able_to_rollback_a_failure(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Could not rollback transaction')
+            self.skipTest("Could not rollback transaction")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN").next()
         tx.rollback()
@@ -170,7 +172,7 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_commit_a_failure(self):
         self._session1 = self._driver.session("r")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN").next()
         with self.assertRaises(types.responses.DriverError):
@@ -179,10 +181,10 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_rollback_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Does not raise the exception')
+            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
-        tx.run('CREATE (:TXNode1)').consume()
+        tx = self._session1.begin_transaction()
+        tx.run("CREATE (:TXNode1)").consume()
         tx.rollback()
         with self.assertRaises(types.responses.DriverError):
             tx.rollback()
@@ -190,10 +192,10 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_rollback_a_commited_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Does not raise the exception')
+            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
-        tx.run('CREATE (:TXNode1)').consume()
+        tx = self._session1.begin_transaction()
+        tx.run("CREATE (:TXNode1)").consume()
         tx.commit()
         with self.assertRaises(types.responses.DriverError):
             tx.rollback()
@@ -201,10 +203,10 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_commit_a_commited_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Does not raise exception')
+            self.skipTest("Does not raise exception")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
-        tx.run('CREATE (:TXNode1)').consume()
+        tx = self._session1.begin_transaction()
+        tx.run("CREATE (:TXNode1)").consume()
         tx.commit()
         with self.assertRaises(types.responses.DriverError):
             tx.commit()
@@ -212,10 +214,10 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_allow_run_on_a_commited_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Does not raise the exception')
+            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
-        tx.run('CREATE (:TXNode1)').consume()
+        tx = self._session1.begin_transaction()
+        tx.run("CREATE (:TXNode1)").consume()
         tx.commit()
         with self.assertRaises(types.responses.DriverError):
             result = tx.run("RETURN 1")
@@ -226,10 +228,10 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_allow_run_on_a_rollbacked_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Does not raise the exception')
+            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
-        tx.run('CREATE (:TXNode1)').consume()
+        tx = self._session1.begin_transaction()
+        tx.run("CREATE (:TXNode1)").consume()
         tx.rollback()
         with self.assertRaises(types.responses.DriverError):
             result = tx.run("RETURN 1")
@@ -240,10 +242,10 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_not_run_valid_query_in_invalid_tx(self):
         if get_driver_name() in ["go"]:
-            self.skipTest('Neither accepts tx.rollback nor session.close')
+            self.skipTest("Neither accepts tx.rollback nor session.close")
 
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         with self.assertRaises(types.responses.DriverError):
             tx.run("NOT CYPHER").consume()
 
@@ -253,7 +255,7 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_fail_run_in_a_commited_tx(self):
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         tx.commit()
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
@@ -261,7 +263,7 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_fail_run_in_a_rollbacked_tx(self):
         self._session1 = self._driver.session("w")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         tx.rollback()
         with self.assertRaises(types.responses.DriverError):
             tx.run("RETURN 42").next()
@@ -269,11 +271,11 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_should_fail_to_run_query_for_invalid_bookmark(self):
         self._session1 = self._driver.session("w")
-        tx1 = self._session1.beginTransaction()
-        result = tx1.run('CREATE ()')
+        tx1 = self._session1.begin_transaction()
+        result = tx1.run("CREATE ()")
         result.consume()
         tx1.commit()
-        last_bookmarks = self._session1.lastBookmarks()
+        last_bookmarks = self._session1.last_bookmarks()
         assert len(last_bookmarks) == 1
         last_bookmark = last_bookmarks[0]
         invalid_bookmark = last_bookmark[:-1] + "-"
@@ -281,7 +283,7 @@ class TestTxRun(TestkitTestCase):
         self._session1 = self._driver.session("w", [invalid_bookmark])
 
         with self.assertRaises(types.responses.DriverError):
-            tx2 = self._session1.beginTransaction()
+            tx2 = self._session1.begin_transaction()
             tx2.run("CREATE ()").consume()
 
     @cluster_unsafe_test
@@ -290,7 +292,7 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["dotnet"]:
             self.skipTest("Raises syntax error on session.close in tearDown.")
         self._session1 = self._driver.session("r")
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         with self.assertRaises(types.DriverError):
             result = tx.run("NOT CYPHER")
             # TODO: remove this block once all languages work
@@ -306,7 +308,7 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["java"]:
             # requires explicit rollback on a failed transaction
             tx.rollback()
-        tx = self._session1.beginTransaction()
+        tx = self._session1.begin_transaction()
         tx.run("RETURN 1")
         tx.commit()
 
@@ -315,8 +317,8 @@ class TestTxRun(TestkitTestCase):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
-        tx = self._session1.beginTransaction(
-            txMeta={k: v.value for k, v in metadata.items()}, timeout=3000
+        tx = self._session1.begin_transaction(
+            tx_meta={k: v.value for k, v in metadata.items()}, timeout=3000
         )
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
         values = []
@@ -335,15 +337,15 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_tx_timeout(self):
         self._session1 = self._driver.session("w")
-        tx0 = self._session1.beginTransaction()
+        tx0 = self._session1.begin_transaction()
         tx0.run("MERGE (:Node)").consume()
         tx0.commit()
         self._session2 = self._driver.session(
-            "w", bookmarks=self._session1.lastBookmarks()
+            "w", bookmarks=self._session1.last_bookmarks()
         )
-        tx1 = self._session1.beginTransaction()
+        tx1 = self._session1.begin_transaction()
         tx1.run("MATCH (a:Node) SET a.property = 1").consume()
-        tx2 = self._session2.beginTransaction(timeout=250)
+        tx2 = self._session2.begin_transaction(timeout=250)
         with self.assertRaises(types.DriverError) as e:
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
@@ -363,8 +365,8 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_consume_after_commit(self):
-        self._session1 = self._driver.session("w", fetchSize=2)
-        tx = self._session1.beginTransaction()
+        self._session1 = self._driver.session("w", fetch_size=2)
+        tx = self._session1.begin_transaction()
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
         if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
             self.assertEqual(result.keys(), ["x"])
@@ -384,8 +386,8 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_parallel_queries(self):
         def _test():
-            self._session1 = self._driver.session("w", fetchSize=2)
-            tx = self._session1.beginTransaction()
+            self._session1 = self._driver.session("w", fetch_size=2)
+            tx = self._session1.begin_transaction()
             result1 = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
             result2 = tx.run("UNWIND [5,6,7,8] AS x RETURN x")
             if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
@@ -410,8 +412,8 @@ class TestTxRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_interwoven_queries(self):
         def _test():
-            self._session1 = self._driver.session("w", fetchSize=2)
-            tx = self._session1.beginTransaction()
+            self._session1 = self._driver.session("w", fetch_size=2)
+            tx = self._session1.begin_transaction()
             result1 = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
 
             if run_q2_before_q1_fetch:
@@ -465,7 +467,7 @@ class TestTxRun(TestkitTestCase):
             uuid_ = str(uuid.uuid1())
 
             self._session1 = self._driver.session("w")
-            tx = self._session1.beginTransaction()
+            tx = self._session1.begin_transaction()
             tx.run("CREATE (a:Thing {uuid:$uuid})",
                    params={"uuid": types.CypherString(uuid_)})
             # do not consume the result or do anything with it
@@ -474,8 +476,10 @@ class TestTxRun(TestkitTestCase):
             else:
                 tx.rollback()
 
-            res = self._session1.run("MATCH (a:Thing {uuid:$uuid}) RETURN a",
-                                     params={"uuid": types.CypherString(uuid_)})
+            res = self._session1.run(
+                "MATCH (a:Thing {uuid:$uuid}) RETURN a",
+                params={"uuid": types.CypherString(uuid_)}
+            )
             self.assertEqual(len(list(res)), commit)
 
         for commit in (True, False):

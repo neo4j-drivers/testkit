@@ -10,14 +10,14 @@ Environment variables:
   * `TEST_DRIVER_NAME`  
     Set to the name of the driver in lowercase. This is currently used for
     adjusting the set of skipped tests and the expected outcome of some tests.  
-    Currently known drivers are `dotnet`, `go`, `java`, `javascript`, and 
+    Currently known drivers are `dotnet`, `go`, `java`, `javascript`, and
     `python`.
   * `TEST_DRIVER_REPO`  
     Path to driver repository
   * `TEST_BRANCH`  
     Name of testkit branch. When running locally, this defaults to 'local'.
   * `TEST_BUILD_CACHE_ENABLED`  
-    Set to `true` to enable build cache persistence via Docker Volumes for 
+    Set to `true` to enable build cache persistence via Docker Volumes for
     supported build systems. Only Maven is supported at the moment and it stores
     its data in `testkit-m2` volume.
   * `TEST_RUN_ALL_TESTS`  
@@ -40,6 +40,11 @@ python3 main.py
 ```
 
 ## Local development
+
+For how to contribute to TestKit, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+For info on how to run selected tests locally (developing your driver),
+read below.
 
 
 ### Configuration variables
@@ -64,8 +69,8 @@ All of these variables are normally set by the main runner.
 
 ### Running a subset of tests or configurations
 
-When running testkit locally from the command line you can specify which test 
-types you want to run. In addition the Neo4j version and edition against which 
+When running testkit locally from the command line you can specify which test
+types you want to run. In addition the Neo4j version and edition against which
 the tests should be executed can be configured  via the `--configs` parameter:
 
 
@@ -95,7 +100,7 @@ Testkit requires some packages to do this, which can be installed via pip:
 python3 -m pip install -Ur requirements.txt
 ```
 
-The backend can run on the same host that runs the testkit tests or on a remote 
+The backend can run on the same host that runs the testkit tests or on a remote
 machine.
 
 #### Integration tests
@@ -117,11 +122,11 @@ To run integration tests you need to:
 
   * Start the drivers testkit backend.
     testkit tries to connect to the backend on port 9876 on localhost by default.
-    If the backend is running on another host or port the environment variables 
+    If the backend is running on another host or port the environment variables
     `TEST_BACKEND_HOST` and `TEST_BACKEND_PORT` needs to be set in the
     environment where the tests are invoked.
 
-  * Run the integration tests using standard Python unittest syntax. The 
+  * Run the integration tests using standard Python unittest syntax. The
     integration tests are all prefixed with `tests.neo4j.XXX`, where XXX can be a
     single Python file (without the .py), a class in the single Python file or a
     single test.
@@ -147,17 +152,17 @@ don't need a running Neo4j instance (hence stub tests, using a scripted stub).
 Alternatively, it's possible to use the option `--tests RUN_SELECTED_TESTS`
 to build the driver backend and run the tested in the `TEST_SELECTOR`
 environment variable. This will start all dependencies needed (such as neo4j
-or tls servers). It's especially useful during the development of new tests 
+or tls servers). It's especially useful during the development of new tests
 when used in combination with `run_all.py` enabling to run one specific test
 against all known drivers.
 * The command-line param `--run-only-selected <test_selector>` is a shortcut
-  for setting the `TEST_SELECTOR` environment variable and running the 
+  for setting the `TEST_SELECTOR` environment variable and running the
   command with `--tests RUN_SELECTED_TESTS`.
 
 
-## Running all test suites for all known drivers within docker containers 
+## Running all test suites for all known drivers within docker containers
 
-This test runner will clone and run the tests for each known driver repository. 
+This test runner will clone and run the tests for each known driver repository.
 
 Requirements on host:
   * Python >= 3.7
@@ -174,13 +179,13 @@ Environment variables:
 python3 run_all.py
 ```
 
-This test runs the `main.py` overriding the enviroment variables 
-`TEST_DRIVER_NAME` and `TEST_DRIVER_REPO` with correct values for each driver. 
+This test runs the `main.py` overriding the enviroment variables
+`TEST_DRIVER_NAME` and `TEST_DRIVER_REPO` with correct values for each driver.
 The others enviroment variables will be used by `main.py` as usual.
 
 ## Running stress test suite against a running Neo4j instance
 
-This test runner will build the driver and its testkit backend, setup the 
+This test runner will build the driver and its testkit backend, setup the
 environment and invoke the driver native stress test suite.
 
 Environment variables:

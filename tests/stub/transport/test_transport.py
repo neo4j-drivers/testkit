@@ -1,8 +1,8 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -33,7 +33,7 @@ class TestTransport(TestkitTestCase):
         # Bolt 4.1 >
         bolt_version = "4.1"
         self._server.start(path=self.script_path("reader_with_noops.script"),
-                           vars={"#BOLT_VERSION#": bolt_version})
+                           vars_={"#BOLT_VERSION#": bolt_version})
         result = self._session.run("RETURN 1 as n")
         record = result.next()
         null_record = result.next()

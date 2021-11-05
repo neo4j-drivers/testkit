@@ -1,7 +1,7 @@
 import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.tls.shared import (
     TlsServer,
@@ -28,7 +28,8 @@ class TestTlsVersions(TestkitTestCase):
         if self._driver in ["dotnet"]:
             self.skipTest("TLS 1.1 is not supported")
 
-        self._server = TlsServer("trustedRoot_thehost", minTls="1", maxTls="1")
+        self._server = TlsServer("trustedRoot_thehost",
+                                 min_tls="1", max_tls="1")
         if self.driver_supports_features(types.Feature.TLS_1_1):
             self.assertTrue(try_connect(self._backend, self._server,
                                         "neo4j+s", "thehost"))
@@ -37,7 +38,8 @@ class TestTlsVersions(TestkitTestCase):
                                          "neo4j+s", "thehost"))
 
     def test_1_2(self):
-        self._server = TlsServer("trustedRoot_thehost", minTls="2", maxTls="2")
+        self._server = TlsServer("trustedRoot_thehost",
+                                 min_tls="2", max_tls="2")
         if self.driver_supports_features(types.Feature.TLS_1_2):
             self.assertTrue(try_connect(self._backend, self._server,
                                         "neo4j+s", "thehost"))
@@ -46,7 +48,8 @@ class TestTlsVersions(TestkitTestCase):
                                          "neo4j+s", "thehost"))
 
     def test_1_3(self):
-        self._server = TlsServer("trustedRoot_thehost", minTls="3", maxTls="3")
+        self._server = TlsServer("trustedRoot_thehost",
+                                 min_tls="3", max_tls="3")
         if self.driver_supports_features(types.Feature.TLS_1_3):
             self.assertTrue(try_connect(self._backend, self._server,
                                         "neo4j+s", "thehost"))

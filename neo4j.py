@@ -1,13 +1,14 @@
+"""Neo4j instance test configuration (no runtime properties)."""
+
 import collections
 from os.path import join
 
 import docker
 
-""" Neo4j instance test configuration (no runtime properties)
-"""
-Config = collections.namedtuple('Config', [
-    'name', 'image', 'version', 'edition', 'cluster', 'suite',
-    'scheme', 'download', 'stress_test_duration'])
+Config = collections.namedtuple("Config", [
+    "name", "image", "version", "edition", "cluster", "suite",
+    "scheme", "download", "stress_test_duration"
+])
 
 
 username = "neo4j"
@@ -15,8 +16,7 @@ password = "pass"
 
 
 class Standalone:
-    """ Single instance Neo4j server
-    """
+    """Single instance Neo4j server."""
 
     def __init__(self, image, name, artifacts_path, hostname, port, edition):
         self.name = name
@@ -53,8 +53,7 @@ class Standalone:
 
 
 class Cluster:
-    """ Cluster of Neo4j servers
-    """
+    """Cluster of Neo4j servers."""
 
     def __init__(self, image, name, artifacts_path, num_cores=3):
         self.name = name
@@ -82,8 +81,7 @@ class Cluster:
 
 
 class Core:
-    """ Core member of Neo4j cluster
-    """
+    """Core member of Neo4j cluster."""
 
     DISCOVERY_PORT = 5000
     TRANSACTION_PORT = 6000

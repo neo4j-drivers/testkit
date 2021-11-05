@@ -1,8 +1,8 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -38,7 +38,7 @@ class TestRetry(TestkitTestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.readTransaction(once)
+        x = session.read_transaction(once)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 1)
@@ -50,16 +50,18 @@ class TestRetry(TestkitTestCase):
     def _run_with_transient_error(self, script, err):
         # We could probably use AUTO RESET in the script but this makes the
         # diffs more obvious.
-        vars = {
+        vars_ = {
             "#EXTRA_RESET_1#": "",
             "#EXTRA_RESET_2#": "",
             "#ERROR#": err,
         }
         if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            vars["#EXTRA_RESET_1#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
-            vars["#EXTRA_RESET_2#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
+            vars_.update({
+                "#EXTRA_RESET_1#": "{*\n    C: RESET\n    S: SUCCESS {}\n*}",
+                "#EXTRA_RESET_2#": "{*\n    C: RESET\n    S: SUCCESS {}\n*}",
+            })
 
-        self._server.start(path=self.script_path(script), vars=vars)
+        self._server.start(path=self.script_path(script), vars_=vars_)
         num_retries = 0
 
         def twice(tx):
@@ -74,7 +76,7 @@ class TestRetry(TestkitTestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.writeTransaction(twice)
+        x = session.write_transaction(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -102,7 +104,7 @@ class TestRetry(TestkitTestCase):
         # Should NOT retry when connection is lost on unconfirmed commit.
         # The rule could be relaxed on read transactions therefore we test on
         # writeTransaction.  An error should be raised to indicate the failure
-        if self._driver_name in ["java", 'dotnet']:
+        if self._driver_name in ["java", "dotnet"]:
             self.skipTest("Keeps retrying on commit despite connection "
                           "being dropped")
         self._server.start(path=self.script_path("commit_disconnect.script"))
@@ -119,8 +121,8 @@ class TestRetry(TestkitTestCase):
         session = driver.session("w")
 
         with self.assertRaises(types.DriverError) as e:  # Check further...
-            session.writeTransaction(once)
-        if get_driver_name() in ['python']:
+            session.write_transaction(once)
+        if get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
                 e.exception.errorType

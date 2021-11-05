@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 
 # Copyright (c) 2002-2020 "Neo4j,"
 # Neo4j Sweden AB [http://neo4j.com]
@@ -34,7 +33,8 @@ UNPACKED_UINT_16 = {struct_pack(">H", x): x for x in range(0x10000)}
 
 UNPACKED_MARKERS = {b"\xC0": None, b"\xC2": False, b"\xC3": True}
 UNPACKED_MARKERS.update({bytes(bytearray([z])): z for z in range(0x00, 0x80)})
-UNPACKED_MARKERS.update({bytes(bytearray([z + 256])): z for z in range(-0x10, 0x00)})
+UNPACKED_MARKERS.update({bytes(bytearray([z + 256])): z
+                         for z in range(-0x10, 0x00)})
 
 
 INT64_MIN = -(2 ** 63)
@@ -122,9 +122,8 @@ class Structure:
                     or not isinstance(fields[2], list)
                     or not all(isinstance(id_, int)
                                # id exists in nodes or relationships
-                               and id_ in {
-                                   s.fields[0] for s in fields[0] + fields[1]
-                               }
+                               and id_ in {s.fields[0]
+                                           for s in fields[0] + fields[1]}
                                for id_ in fields[2])):
                 raise ValueError(
                     "Invalid Path struct received %r" % self
@@ -256,8 +255,8 @@ class Structure:
         if isinstance(jolt, jolt_types.JoltLocalDateTime):
             return cls(StructTag.local_date_time, *jolt.seconds_nanoseconds)
         if isinstance(jolt, jolt_types.JoltDuration):
-            return cls(StructTag.duration, jolt.months, jolt.days, jolt.seconds,
-                       jolt.nanoseconds)
+            return cls(StructTag.duration, jolt.months, jolt.days,
+                       jolt.seconds, jolt.nanoseconds)
         if isinstance(jolt, jolt_types.JoltPoint):
             if jolt.z is None:  # 2D
                 return cls(StructTag.point_2d, jolt.srid, jolt.x, jolt.y)
@@ -273,7 +272,8 @@ class Structure:
             # Node structs
             nodes = []
             for node in jolt.path[::2]:
-                node = cls(StructTag.node, node.id, node.labels, node.properties)
+                node = cls(StructTag.node, node.id, node.labels,
+                           node.properties)
                 if node not in nodes:
                     nodes.append(node)
             # UnboundRelationship structs
@@ -423,7 +423,8 @@ class Packer:
 
         # Other
         else:
-            raise ValueError("Values of type %s are not supported" % type(value))
+            raise ValueError("Values of type %s are not supported"
+                             % type(value))
 
     def pack_bytes_header(self, size):
         write = self._write
@@ -864,9 +865,7 @@ class UnpackableBuffer:
             return -1
 
     def pop_u16(self):
-        """ Remove the last two bytes of data, returning them as a big-endian
-        16-bit unsigned integer.
-        """
+        """Remove and return last 2 bytes as big-endian 16 bit unsigned int."""
         if self.used >= 2:
             value = 0x100 * self.data[self.used - 2] + self.data[self.used - 1]
             self.used -= 2
@@ -887,9 +886,7 @@ class UnpackableBuffer:
 
 
 class PackStream:
-    """ Chunked message reader/writer for PackStream
-    messaging.
-    """
+    """Chunked message reader/writer for PackStream messaging."""
 
     def __init__(self, wire):
         self.wire = wire
@@ -897,7 +894,7 @@ class PackStream:
         self.next_chunk_size = None
 
     def read_message(self):
-        """ Read a chunked message.
+        """Read a chunked message.
 
         :return:
         """
@@ -918,7 +915,7 @@ class PackStream:
         return unpacker.unpack_message()
 
     def write_message(self, message):
-        """ Write a chunked message.
+        """Write a chunked message.
 
         :param message:
         :return:
@@ -938,14 +935,14 @@ class PackStream:
         self.wire.write(header + data + b"\x00\x00")
 
     def drain(self):
-        """ Flush the writer.
+        """Flush the writer.
 
         :return:
         """
         self.wire.send()
 
     def close(self):
-        """ Close.
+        """Close.
 
         :return:
         """

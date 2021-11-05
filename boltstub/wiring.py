@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 
 # Copyright 2011-2020, Nigel Small
 #
@@ -28,13 +27,9 @@ from functools import cached_property
 from socket import (
     AF_INET,
     AF_INET6,
-    SO_KEEPALIVE,
-    SOL_SOCKET,
     getservbyname,
-    socket,
     timeout,
 )
-from socketserver import BaseRequestHandler
 
 BOLT_PORT_NUMBER = 7687
 
@@ -44,8 +39,7 @@ class ReadWakeup(timeout):
 
 
 class Address(tuple):
-    """ Address of a machine on a network.
-    """
+    """Address of a machine on a network."""
 
     @classmethod
     def parse(cls, s, default_host=None, default_port=None):
@@ -118,8 +112,7 @@ class Address(tuple):
 
 
 class IPv4Address(Address):
-    """ Address subclass, specifically for IPv4 addresses.
-    """
+    """Address subclass, specifically for IPv4 addresses."""
 
     family = AF_INET
 
@@ -128,8 +121,7 @@ class IPv4Address(Address):
 
 
 class IPv6Address(Address):
-    """ Address subclass, specifically for IPv6 addresses.
-    """
+    """Address subclass, specifically for IPv6 addresses."""
 
     family = AF_INET6
 
@@ -138,8 +130,7 @@ class IPv6Address(Address):
 
 
 class Wire(object):
-    """ Buffered socket wrapper for reading and writing bytes.
-    """
+    """Buffered socket wrapper for reading and writing bytes."""
 
     __closed = False
 
@@ -154,8 +145,7 @@ class Wire(object):
         self.__output = bytearray()
 
     def secure(self, verify=True, hostname=None):
-        """ Apply a layer of security onto this connection.
-        """
+        """Apply a layer of security onto this connection."""
         from ssl import (
             CERT_NONE,
             CERT_REQUIRED,
@@ -170,14 +160,16 @@ class Wire(object):
             context.verify_mode = CERT_NONE
         context.load_default_certs()
         try:
-            self.__socket = context.wrap_socket(self.__socket, server_hostname=hostname)
-        except (IOError, OSError):
+            self.__socket = context.wrap_socket(self.__socket,
+                                                server_hostname=hostname)
+        except OSError:
             # TODO: add connection failure/diagnostic callback
-            raise WireError("Unable to establish secure connection with remote peer")
+            raise WireError(
+                "Unable to establish secure connection with remote peer"
+            )
 
     def read(self, n):
-        """ Read bytes from the network.
-        """
+        """Read bytes from the network."""
         while len(self.__input) < n:
             required = n - len(self.__input)
             requested = max(required, 8192)
@@ -185,7 +177,7 @@ class Wire(object):
                 received = self.__socket.recv(requested)
             except timeout:
                 raise ReadWakeup
-            except (IOError, OSError):
+            except OSError:
                 self.__broken = True
                 raise BrokenWireError("Broken")
             else:
@@ -201,13 +193,11 @@ class Wire(object):
         return data
 
     def write(self, b):
-        """ Write bytes to the output buffer.
-        """
+        """Write bytes to the output buffer."""
         self.__output.extend(b)
 
     def send(self):
-        """ Send the contents of the output buffer to the network.
-        """
+        """Send the contents of the output buffer to the network."""
         if self.__closed:
             raise WireError("Closed")
         sent = 0
@@ -216,7 +206,7 @@ class Wire(object):
                 n = self.__socket.send(self.__output)
             except timeout:
                 continue
-            except (IOError, OSError):
+            except OSError:
                 self.__broken = True
                 raise BrokenWireError("Broken")
             else:
@@ -225,12 +215,11 @@ class Wire(object):
         return sent
 
     def close(self):
-        """ Close the connection.
-        """
+        """Close the connection."""
         try:
             # TODO: shutdown
             self.__socket.close()
-        except (IOError, OSError):
+        except OSError:
             self.__broken = True
             raise BrokenWireError("Broken")
         else:
@@ -238,34 +227,34 @@ class Wire(object):
 
     @property
     def closed(self):
-        """ Flag indicating whether this connection has been closed locally.
-        """
+        """Flag indicating whether this connection has been closed locally."""
         return self.__closed
 
     @property
     def broken(self):
-        """ Flag indicating whether this connection has been closed remotely.
-        """
+        """Flag indicating whether this connection has been closed remotely."""
         return self.__broken
 
     @cached_property
     def local_address(self):
-        """ The local :class:`.Address` to which this connection is bound.
+        """Get the local address to which this connection is bound.
+
+        :rtype: Address
         """
         return Address(self.__socket.getsockname())
 
     @cached_property
     def remote_address(self):
-        """ The remote :class:`.Address` to which this connection is bound.
+        """Get the remote address to which this connection is bound.
+
+        :rtype: Address
         """
         return Address(self.__socket.getpeername())
 
 
 class WireError(OSError):
-    """ Raised when a connection error occurs.
-    """
+    """Raised when a connection error occurs."""
 
 
 class BrokenWireError(WireError):
-    """ Raised when a connection is broken by the network or remote peer.
-    """
+    """Raised when a connection is broken by the network or remote peer."""

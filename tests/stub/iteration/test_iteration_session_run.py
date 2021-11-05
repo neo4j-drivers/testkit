@@ -1,9 +1,9 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     driver_feature,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -25,7 +25,7 @@ class TestIterationSessionRun(TestkitTestCase):
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
         self._server.start(path=self.script_path(protocol_version, script_fn))
-        session = driver.session("w", fetchSize=n)
+        session = driver.session("w", fetch_size=n)
         result = session.run("RETURN 1 AS n")
         got_error = False
         sequence = []
@@ -46,7 +46,8 @@ class TestIterationSessionRun(TestkitTestCase):
     # Last fetched batch is a full batch
     @driver_feature(types.Feature.BOLT_4_0)
     def test_full_batch(self):
-        self._run(2, "pull_2_end_full_batch.script", ["1", "2", "3", "4", "5", "6"])
+        self._run(2, "pull_2_end_full_batch.script",
+                  ["1", "2", "3", "4", "5", "6"])
 
     # Last fetched batch is half full (or more important not full)
     @driver_feature(types.Feature.BOLT_4_0)
@@ -80,22 +81,22 @@ class TestIterationSessionRun(TestkitTestCase):
                   protocol_version="v3")
 
     def test_discards_on_session_close(self):
-        def test():
+        def test(version_, script_):
             uri = "bolt://%s" % self._server.address
             driver = Driver(self._backend, uri,
                             types.AuthorizationToken("basic", principal="",
                                                      credentials=""))
             self._server.start(
-                path=self.script_path(version, script),
-                vars={"#MODE#": mode[0]}
+                path=self.script_path(version_, script_),
+                vars_={"#MODE#": mode[0]}
             )
             try:
-                session = driver.session(mode[0], fetchSize=2)
+                session = driver.session(mode[0], fetch_size=2)
                 session.run("RETURN 1 AS n").next()
                 self.assertEqual(self._server.count_requests("DISCARD"), 0)
                 session.close()
                 self._server.done()
-                if (version == "v4x0"
+                if (version_ == "v4x0"
                         and get_driver_name() not in ["java", "javascript"]):
                     # assert only JAVA and JS pulls results eagerly.
                     self.assertEqual(self._server.count_requests("PULL"), 1)
@@ -114,4 +115,4 @@ class TestIterationSessionRun(TestkitTestCase):
                 continue
             for mode in ("write", "read"):
                 with self.subTest(version + "-" + mode):
-                    test()
+                    test(version, script)

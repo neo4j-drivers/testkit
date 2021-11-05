@@ -7,15 +7,16 @@ if __name__ == "__main__":
     address = sys.argv[1]
     port = sys.argv[2]
 
-    portx = format(int(port), '04X')
+    portx = format(int(port), "04X")
     host = socket.gethostbyname(address)
     addressx = format(socket.ntohl(int.from_bytes(socket.inet_aton(host),
-                                                  byteorder='big',
-                                                  signed=False)), '08X')
+                                                  byteorder="big",
+                                                  signed=False)), "08X")
     remote = "%s:%s" % (addressx, portx)
 
     conns = subprocess.check_output(
-            ["cat", "/proc/net/tcp"], universal_newlines=True)
+        ["cat", "/proc/net/tcp"], universal_newlines=True
+    )
     conns = conns.splitlines()[1:]  # Skip header
 
     # COLUMNS (of interest)
@@ -31,10 +32,11 @@ if __name__ == "__main__":
             state = conn[3]
             # TCP_ESTABLISHED (01), TCP_SYN_SENT (02) and
             # TCP_SYN_RECV (03) are not legal
-            if state in ['01', '02', '03']:
+            if state in ["01", "02", "03"]:
                 active.append(conn)
 
     if len(active) > 0:
-        print("ERROR: Connections to %s:%s are still open: %s" % (address, port, active))
+        print("ERROR: Connections to %s:%s are still open: %s"
+              % (address, port, active))
         sys.exit(-1)
     sys.exit(0)

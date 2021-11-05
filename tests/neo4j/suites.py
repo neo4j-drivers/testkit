@@ -1,6 +1,4 @@
-"""
-Defines suites of test to run in different setups
-"""
+"""Defines suites of test to run in different setups."""
 
 import sys
 import unittest
@@ -24,9 +22,9 @@ from tests.testenv import (
 
 loader = unittest.TestLoader()
 
-"""
-Suite for Neo4j 3.5
-"""
+#######################
+# Suite for Neo4j 3.5 #
+#######################
 suite_3x5 = unittest.TestSuite()
 suite_3x5.addTests(loader.loadTestsFromModule(test_authentication))
 suite_3x5.addTests(loader.loadTestsFromModule(test_bookmarks))
@@ -37,30 +35,30 @@ suite_3x5.addTests(loader.loadTestsFromModule(test_summary))
 suite_3x5.addTests(loader.loadTestsFromModule(test_tx_func_run))
 suite_3x5.addTests(loader.loadTestsFromModule(test_tx_run))
 
-"""
-Suite for Neo4j 4.0
-"""
+#######################
+# Suite for Neo4j 4.0 #
+#######################
 suite_4x0 = suite_3x5
 
 
-"""
-Suite for Neo4j 4.1
-"""
+#######################
+# Suite for Neo4j 4.1 #
+#######################
 suite_4x1 = suite_4x0
 
-"""
-Suite for Neo4j 4.2
-"""
+#######################
+# Suite for Neo4j 4.2 #
+#######################
 suite_4x2 = suite_4x1
 
-"""
-Suite for Neo4j 4.3
-"""
+#######################
+# Suite for Neo4j 4.3 #
+#######################
 suite_4x3 = suite_4x2
 
-"""
-Suite for Neo4j 4.4
-"""
+#######################
+# Suite for Neo4j 4.4 #
+#######################
 suite_4x4 = suite_4x3
 
 if __name__ == "__main__":
@@ -91,8 +89,8 @@ if __name__ == "__main__":
 
     suite_name = "Integration tests " + name
     begin_test_suite(suite_name)
-    runner = unittest.TextTestRunner(
-            resultclass=get_test_result_class(), verbosity=100)
+    runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
+                                     verbosity=100)
     result = runner.run(suite)
     end_test_suite(suite_name)
     if result.errors or result.failures:

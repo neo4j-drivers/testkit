@@ -1,7 +1,7 @@
 from .errors import (
-    BoltMissingVersion,
-    BoltUnknownMessage,
-    BoltUnknownVersion,
+    BoltMissingVersionError,
+    BoltUnknownMessageError,
+    BoltUnknownVersionError,
     ServerExit,
 )
 from .packstream import Structure
@@ -14,19 +14,21 @@ from .util import (
 
 def get_bolt_protocol(version):
     if version is None:
-        raise BoltMissingVersion()
+        raise BoltMissingVersionError()
     for sub in recursive_subclasses(BoltProtocol):
         if (version == sub.protocol_version
                 or version in sub.version_aliases):
             return sub
-    raise BoltUnknownVersion("unsupported bolt version {}".format(version))
+    raise BoltUnknownVersionError(
+        "unsupported bolt version {}".format(version)
+    )
 
 
 def verify_script_messages(script):
     protocol = get_bolt_protocol(script.context.bolt_version)
     for line in script.client_lines:
         if line.parsed[0] not in protocol.messages["C"].values():
-            raise BoltUnknownMessage(
+            raise BoltUnknownMessageError(
                 "Unsupported client message {} for BOLT version {}. "
                 "Must be one of {}".format(
                     line.parsed[0], script.context.bolt_version,
@@ -38,7 +40,7 @@ def verify_script_messages(script):
         if line.parsed[0] is None:
             continue  # this server line contains a command, not a message
         if line.parsed[0] not in protocol.messages["S"].values():
-            raise BoltUnknownMessage(
+            raise BoltUnknownMessageError(
                 "Unsupported server message {} for BOLT version {}. "
                 "Must be one of {}".format(
                     line.parsed[0], script.context.bolt_version,

@@ -1,7 +1,7 @@
 from teamcity import (
-    TeamCityTestResult,
     escape,
     in_teamcity,
+    TeamCityTestResult,
 )
 
 
@@ -14,7 +14,7 @@ def begin_test_suite(name):
 
 def end_test_suite(name):
     if in_teamcity:
-        print("##teamcity[testSuiteFinished name='%s']" %  escape(name))
+        print("##teamcity[testSuiteFinished name='%s']" % escape(name))
     else:
         print(">>> End test suite: %s" % name)
 

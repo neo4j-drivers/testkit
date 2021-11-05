@@ -1,9 +1,9 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     driver_feature,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -42,7 +42,7 @@ class TestSessionRunParameters(TestkitTestCase):
             else:
                 router_script = router_script % ""
             self._router.start(path=self.script_path(router_script),
-                               vars={"#HOST#": self._router.host})
+                               vars_={"#HOST#": self._router.host})
         if routing and not db:
             script += "_homedb.script"
         else:

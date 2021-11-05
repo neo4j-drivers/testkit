@@ -1,13 +1,9 @@
+from abc import abstractmethod
 import inspect
 import os
-from abc import abstractmethod
-from collections import defaultdict
 
 import nutkit.protocol as types
-from tests.shared import (
-    TestkitTestCase,
-    get_driver_name,
-)
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
@@ -88,7 +84,7 @@ class RoutingBase(TestkitTestCase):
                 script_path = self.script_path(version_folder, script_fn)
                 tried_locations.append(script_path)
                 if os.path.exists(script_path):
-                    server.start(path=script_path, vars=vars_)
+                    server.start(path=script_path, vars_=vars_)
                     return
         raise FileNotFoundError("{!r} tried {!r}".format(
             script_fn, ", ".join(tried_locations)
@@ -99,11 +95,11 @@ class RoutingBase(TestkitTestCase):
         pass
 
     @staticmethod
-    def collectRecords(result):
+    def collect_records(result):
         sequence = []
         while True:
-            next = result.next()
-            if isinstance(next, types.NullRecord):
+            record = result.next()
+            if isinstance(record, types.NullRecord):
                 break
-            sequence.append(next.values[0].value)
+            sequence.append(record.values[0].value)
         return sequence

@@ -1,9 +1,9 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
-    TestkitTestCase,
     driver_feature,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -42,7 +42,7 @@ class TestTxBeginParameters(TestkitTestCase):
             else:
                 router_script = router_script % ""
             self._router.start(path=self.script_path(router_script),
-                               vars={"#HOST#": self._router.host})
+                               vars_={"#HOST#": self._router.host})
         if routing and not db:
             script += "_homedb.script"
         else:
@@ -82,13 +82,13 @@ class TestTxBeginParameters(TestkitTestCase):
         session = self._driver.session(*session_args, **session_kwargs)
         try:
             if tx_func_access_mode is None:
-                tx = session.beginTransaction(*tx_args, **tx_kwargs)
+                tx = session.begin_transaction(*tx_args, **tx_kwargs)
                 work(tx)
                 tx.commit()
             elif tx_func_access_mode == "w":
-                session.writeTransaction(work, *tx_args, **tx_kwargs)
+                session.write_transaction(work, *tx_args, **tx_kwargs)
             elif tx_func_access_mode == "r":
-                session.readTransaction(work, *tx_args, **tx_kwargs)
+                session.read_transaction(work, *tx_args, **tx_kwargs)
             else:
                 raise ValueError(tx_func_access_mode)
             self._server.done()

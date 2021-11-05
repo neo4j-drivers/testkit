@@ -1,6 +1,4 @@
-"""
-Defines stub suites
-"""
+"""Defines stub suites."""
 
 import os
 import sys
@@ -24,11 +22,11 @@ stub_suite.addTest(loader.discover(
 ))
 
 if __name__ == "__main__":
-    suiteName = "Stub tests"
-    begin_test_suite(suiteName)
+    suite_name = "Stub tests"
+    begin_test_suite(suite_name)
     runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
                                      verbosity=100)
     result = runner.run(stub_suite)
-    end_test_suite(suiteName)
+    end_test_suite(suite_name)
     if result.errors or result.failures:
         sys.exit(-1)

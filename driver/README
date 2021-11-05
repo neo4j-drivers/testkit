@@ -16,7 +16,7 @@ Order of scripts can be assumed the following:
 3. backend.py
 4. stress.py/integration.py in any order and multiple times. The following
    environment variables exists when these scripts execute:
-        TEST_NEO4J_HOST    - Hostname or IP address of running Neo4j 
+        TEST_NEO4J_HOST    - Hostname or IP address of running Neo4j
         TEST_NEO4J_USER    - Username needed to connect running Neo4j
         TEST_NEO4J_PASS    - Password used to connect to running Neo4j
         TEST_NEO4J_SCHEME  - "neo4j", "bolt", "neo4j+ssc", ...

@@ -113,8 +113,9 @@ def start(name):
     return container
 
 
-def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
-        env_map=None, working_folder=None, network=None, aliases=None):
+def run(image, name, command=None, mount_map=None, host_map=None,
+        port_map=None, env_map=None, working_folder=None, network=None,
+        aliases=None):
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
@@ -137,7 +138,7 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
         cmd.extend(["-w", working_folder])
     if aliases is not None:
         for a in aliases:
-            cmd.append("--network-alias="+a)
+            cmd.append("--network-alias=" + a)
     if "TEST_DOCKER_USER" in os.environ:
         cmd.extend(["-u", os.environ["TEST_DOCKER_USER"]])
     cmd.append(image)
@@ -195,7 +196,7 @@ def cleanup():
     if os.environ.get("TEST_DOCKER_RMI", "").lower() \
             in ("true", "y", "yes", "1", "on"):
         for t in _created_tags:
-            print('cleanup (docker rmi %s)' % t)
+            print("cleanup (docker rmi %s)" % t)
             subprocess.run(["docker", "rmi", t])
 
 

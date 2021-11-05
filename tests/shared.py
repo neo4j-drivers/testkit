@@ -1,5 +1,6 @@
 """
-Shared utilities for writing tests
+Shared utilities for writing tests.
+
 Common between integration tests using Neo4j and stub server.
 
 Uses environment variables for configuration:
@@ -22,14 +23,13 @@ from nutkit.backend import Backend
 
 
 def get_backend_host_and_port():
-    host = os.environ.get('TEST_BACKEND_HOST', '127.0.0.1')
-    port = os.environ.get('TEST_BACKEND_PORT', 9876)
+    host = os.environ.get("TEST_BACKEND_HOST", "127.0.0.1")
+    port = os.environ.get("TEST_BACKEND_PORT", 9876)
     return host, port
 
 
 def new_backend():
-    """ Returns connection to backend, caller is responsible for closing
-    """
+    """Return connection to backend, caller is responsible for closing."""
     host, port = get_backend_host_and_port()
     return Backend(host, port)
 
@@ -79,11 +79,11 @@ def driver_feature(*features):
 
     for feature in features:
         if not isinstance(feature, protocol.Feature):
-            raise Exception('The arguments must be instances of Feature')
+            raise Exception("The arguments must be instances of Feature")
 
     def get_valid_test_case(*args, **kwargs):
         if not args or not isinstance(args[0], TestkitTestCase):
-            raise Exception('Should only decorate TestkitTestCase methods')
+            raise Exception("Should only decorate TestkitTestCase methods")
         return args[0]
 
     def driver_feature_decorator(func):
@@ -96,7 +96,8 @@ def driver_feature(*features):
 
 
 class MemoizedSupplier:
-    """ Momoize the function it annotates.
+    """Memoize the function it annotates.
+
     This way the decorated function will always return the
     same value of the first interaction independent of the
     supplied params.
@@ -115,7 +116,7 @@ class MemoizedSupplier:
 @MemoizedSupplier
 def get_driver_features(backend):
     try:
-        response = backend.sendAndReceive(protocol.GetFeatures())
+        response = backend.send_and_receive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
             raise Exception("Response is not instance of FeatureList")
         features = set(response.features)
@@ -146,7 +147,7 @@ def get_driver_features(backend):
 
 
 def get_driver_name():
-    return os.environ['TEST_DRIVER_NAME']
+    return os.environ["TEST_DRIVER_NAME"]
 
 
 class TestkitTestCase(unittest.TestCase):
@@ -163,7 +164,7 @@ class TestkitTestCase(unittest.TestCase):
         if self.required_features:
             self.skip_if_missing_driver_features(*self.required_features)
 
-        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+        response = self._backend.send_and_receive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
 
@@ -205,7 +206,7 @@ class TestkitTestCase(unittest.TestCase):
                 (r"^neo4j\.test_session_run\.", "neo4j.sessionrun."),
             ):
                 id_ = re.sub(exp, sub, id_)
-        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+        response = self._backend.send_and_receive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
 

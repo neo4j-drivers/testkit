@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 # Copyright (c) 2002-2016 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
@@ -22,9 +21,9 @@
 from socket import (
     AF_INET,
     AF_INET6,
-    SOCK_STREAM,
     getaddrinfo,
     getservbyname,
+    SOCK_STREAM,
 )
 
 
@@ -91,13 +90,17 @@ class Address(tuple):
 
 
 class AddressList(list):
-    """ A list of socket addresses, each as a tuple of the format expected by
-    the built-in `socket.connect` method.
+    """List of socket addresses in a format compatible with `socket.connect`.
+
+    Each address is a tuple of the format expected by the built-in
+    `socket.connect` method.
     """
 
     @classmethod
     def parse(cls, s, default_host=None, default_port=None):
-        """ Parse a string containing one or more socket addresses, each
+        """Parse a string as address list.
+
+        The string should be containing one or more socket addresses, each
         separated by whitespace.
         """
         if isinstance(s, str):
@@ -121,7 +124,8 @@ class AddressList(list):
         return "{}({!r})".format(self.__class__.__name__, list(self))
 
     def resolve(self, family=0):
-        """ Resolve all addresses into one or more resolved address tuples.
+        """Resolve all addresses into one or more resolved address tuples.
+
         Each host name will resolve into one or more IP addresses, limited by
         the given address `family` (if any). Each port value (either integer
         or string) will resolve into an integer port value (e.g. 'http' will

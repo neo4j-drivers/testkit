@@ -260,8 +260,8 @@ class JoltLocalDateTime(_JoltParsedType):
                            + r")$")
     # yes:
     # <date_re>T<local_time_re>
-    # where <date_re> is anything that works for JoltDate and <local_time_re> is
-    # anything that works for JoltLocalTime
+    # where <date_re> is anything that works for JoltDate and <local_time_re>
+    # is anything that works for JoltLocalTime
 
     # no:
     # anything else
@@ -295,7 +295,9 @@ class JoltLocalDateTime(_JoltParsedType):
         nanoseconds = nanoseconds % 1000000000
         days, seconds = divmod(seconds, 86400)
         date = JoltDate.new(days=days)
-        time = JoltLocalTime.new(nanoseconds=seconds * 1000000000 + nanoseconds)
+        time = JoltLocalTime.new(
+            nanoseconds=seconds * 1000000000 + nanoseconds
+        )
         return cls("%sT%s" % (date, time))
 
 
@@ -454,8 +456,8 @@ class JoltRelationship(JoltType):
 
     def __repr__(self):
         return "%s<%r, %r, %r, %r, %r>" % (
-            self.__class__.__name__, self.id, self.start_node_id, self.rel_type,
-            self.end_node_id, self.properties
+            self.__class__.__name__, self.id, self.start_node_id,
+            self.rel_type, self.end_node_id, self.properties
         )
 
 
@@ -474,10 +476,11 @@ class JoltPath(JoltType):
 
 class JoltWildcard(JoltType):
     """
-    This is a stub-server specific JOLT type that marks a match-all object
+    This is a stub-server specific JOLT type that marks a match-all object.
 
     e.g. `{"Z": "*"}` represents any integer.
     """
+
     def __init__(self, types):
         self.types = types
 
