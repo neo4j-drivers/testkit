@@ -1,5 +1,4 @@
 ifaddr
-isort
 lark
 nose
 pre-commit

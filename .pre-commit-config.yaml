@@ -27,14 +27,6 @@ repos:
           - flake8-docstrings
           - flake8-quotes
           - pep8-naming
-        args:
-          - "--inline-quotes=double"
-          - "--ignore=A003,E241,W503"
-          - "--extend-ignore=D100,D101,D102,D103,D104,D105,D106,D107"
-          - "--per-file-ignores=nutkit/protocol/requests.py:N803,A002
-                                nutkit/protocol/responses.py:N803,A002
-                                nutkit/protocol/cypher.py:N803,A002
-                                __init__.py:F401,F403"
   - repo: https://github.com/pycqa/isort
     rev: 5.8.0
     hooks:
