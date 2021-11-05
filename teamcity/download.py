@@ -3,10 +3,14 @@ from urllib import request
 
 
 def download_artifact(build_id, build_spec, path):
-    """ Returns http response
+    """
+    Download a neo4j artifact from TeamCity.
+
+    @returns: http response
     """
     root = "https://live.neo4j-build.io"
-    path = "{}/repository/download/{}/{}/{}".format(root, build_id, build_spec, path)
+    path = "{}/repository/download/{}/{}/{}".format(root, build_id, build_spec,
+                                                    path)
     user = getenv("TEAMCITY_USER")
     pasw = getenv("TEAMCITY_PASSWORD")
     password_mgr = request.HTTPPasswordMgrWithDefaultRealm()
@@ -21,5 +25,7 @@ class DockerImage:
         self.name = name
 
     def get(self):
-        return download_artifact("DriversTestkitNeo4jDockers", ".lastSuccessful", "neo4j-docker/" + self.name)
-
+        return download_artifact(
+            "DriversTestkitNeo4jDockers", ".lastSuccessful",
+            "neo4j-docker/" + self.name
+        )

@@ -1,5 +1,4 @@
 from nutkit import protocol as types
-
 from tests.stub.bookmarks.test_bookmarks_v4 import TestBookmarksV4
 
 

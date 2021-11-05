@@ -4,8 +4,7 @@ import docker
 
 
 def _ensure_image(testkit_path, branch_name, artifacts_path):
-    """ Ensures that an up to date Docker image exists.
-    """
+    """Ensure that an up to date Docker image exists."""
     # Construct Docker image name from branch name
     image_name = "runner:%s" % branch_name
     image_path = os.path.join(testkit_path, "runner_image")
@@ -62,9 +61,11 @@ class Container:
     def run_tls_tests(self):
         # Build TLS server
         self._container.exec(
-                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+            ["go", "build", "-v", "."], workdir="/testkit/tlsserver"
+        )
         self._container.exec(
-                ["python3", "-m", "tests.tls.suites"])
+            ["python3", "-m", "tests.tls.suites"]
+        )
 
     def run_neo4j_tests(self, suite, hostname, username, password,
                         neo4j_config):
@@ -104,7 +105,8 @@ class Container:
     def run_selected_tls_tests(self, testpattern):
         # Build TLS server
         self._container.exec(
-                ["go", "build", "-v", "."], workdir="/testkit/tlsserver")
+            ["go", "build", "-v", "."], workdir="/testkit/tlsserver"
+        )
         self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
 
     def run_selected_neo4j_tests(self, test_pattern, hostname, username,

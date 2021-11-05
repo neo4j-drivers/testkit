@@ -30,11 +30,11 @@ class TestRetryClustering(TestkitTestCase):
 
     def test_read(self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ["java"]:
             self.skipTest("needs ROUTE bookmark list support")
         self._routingServer.start(
             path=self.script_path("clustering", "router_no_retry.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         self._readServer.start(path=self.script_path("read.script"))
         num_retries = 0
@@ -48,7 +48,7 @@ class TestRetryClustering(TestkitTestCase):
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session("r")
-        x = session.readTransaction(once)
+        x = session.read_transaction(once)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 1)
@@ -82,7 +82,7 @@ class TestRetryClustering(TestkitTestCase):
                           "being dropped")
         self._routingServer.start(
             path=self.script_path("clustering", "router.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         self._writeServer.start(
             path=self.script_path("commit_disconnect.script")
@@ -99,8 +99,8 @@ class TestRetryClustering(TestkitTestCase):
         session = driver.session("w")
 
         with self.assertRaises(types.DriverError) as e:  # Check further...
-            session.writeTransaction(once)
-        if get_driver_name() in ['python']:
+            session.write_transaction(once)
+        if get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
                 e.exception.errorType
@@ -114,8 +114,8 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
         self._readServer.done()
 
-    def test_retry_ForbiddenOnReadOnlyDatabase(self):
-        if get_driver_name() in ['dotnet']:
+    def test_retry_ForbiddenOnReadOnlyDatabase(self):  # noqa: N802
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Behaves strange")
 
         self._run_with_transient_error(
@@ -123,8 +123,8 @@ class TestRetryClustering(TestkitTestCase):
             "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase"
         )
 
-    def test_retry_NotALeader(self):
-        if get_driver_name() in ['dotnet']:
+    def test_retry_NotALeader(self):  # noqa: N802
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Behaves strange")
 
         self._run_with_transient_error(
@@ -132,33 +132,35 @@ class TestRetryClustering(TestkitTestCase):
             "Neo.ClientError.Cluster.NotALeader"
         )
 
-    def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):
-        if get_driver_name() in ['dotnet']:
+    def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):  # noqa: N802,E501
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Behaves strange")
 
         self._routingServer.start(
             path=self.script_path("clustering",
                                   "router_swap_reader_and_writer.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         # We could probably use AUTO RESET in the script but this makes the
         # diffs more obvious.
-        vars = {
+        vars_ = {
             "#EXTRA_RESET_1#": "",
             "#EXTRA_RESET_2#": "",
             "#ERROR#": "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase",
         }
         if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            vars["#EXTRA_RESET_1#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
-            vars["#EXTRA_RESET_2#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
+            vars_.update({
+                "#EXTRA_RESET_1#": "{*\n    C: RESET\n    S: SUCCESS {}\n*}",
+                "#EXTRA_RESET_2#": "{*\n    C: RESET\n    S: SUCCESS {}\n*}",
+            })
 
         self._writeServer.start(
             path=self.script_path("retry_with_fail_after_pull_server1.script"),
-            vars=vars
+            vars_=vars_
         )
         self._readServer.start(
             path=self.script_path("retry_with_fail_after_pull_server2.script"),
-            vars=vars
+            vars_=vars_
         )
 
         num_retries = 0
@@ -173,7 +175,7 @@ class TestRetryClustering(TestkitTestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
 
         session = driver.session("r")
-        x = session.writeTransaction(twice)
+        x = session.write_transaction(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -187,20 +189,22 @@ class TestRetryClustering(TestkitTestCase):
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(
             path=self.script_path("clustering", "router.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         # We could probably use AUTO RESET in the script but this makes the
         # diffs more obvious.
-        vars = {
+        vars_ = {
             "#EXTRA_RESET_1#": "",
             "#EXTRA_RESET_2#": "",
             "#ERROR#": err,
         }
         if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            vars["#EXTRA_RESET_1#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
-            vars["#EXTRA_RESET_2#"] = "{*\n    C: RESET\n    S: SUCCESS {}\n*}"
+            vars_.update({
+                "#EXTRA_RESET_1#": "{*\n    C: RESET\n    S: SUCCESS {}\n*}",
+                "#EXTRA_RESET_2#": "{*\n    C: RESET\n    S: SUCCESS {}\n*}",
+            })
 
-        self._writeServer.start(path=self.script_path(script), vars=vars)
+        self._writeServer.start(path=self.script_path(script), vars_=vars_)
         num_retries = 0
 
         def twice(tx):
@@ -213,7 +217,7 @@ class TestRetryClustering(TestkitTestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
 
         session = driver.session("r")
-        x = session.writeTransaction(twice)
+        x = session.write_transaction(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)

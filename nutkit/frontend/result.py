@@ -7,34 +7,32 @@ class Result:
         self._result = result
 
     def next(self):
-        """ Moves to next record in result.
-        """
+        """Move to next record in result."""
         req = protocol.ResultNext(self._result.id)
-        return self._backend.sendAndReceive(req)
+        return self._backend.send_and_receive(req)
 
     def single(self):
-        """ Returns one record if there is exactly one. Raises error otherwise.
+        """Return one record if there is exactly one.
+
+        Raises error otherwise.
         """
         req = protocol.ResultSingle(self._result.id)
-        return self._backend.sendAndReceive(req)
+        return self._backend.send_and_receive(req)
 
     def peek(self):
-        """ Returns the next Record or NullRecord without consuming it
-        """
+        """Return the next Record or NullRecord without consuming it."""
         req = protocol.ResultPeek(self._result.id)
-        return self._backend.sendAndReceive(req)
+        return self._backend.send_and_receive(req)
 
     def consume(self):
-        """ Discards all records in result and returns summary.
-        """
+        """Discard all records in result and returns summary."""
         req = protocol.ResultConsume(self._result.id)
-        return self._backend.sendAndReceive(req)
+        return self._backend.send_and_receive(req)
 
     def list(self):
-        """ Retrieves the entire result stream.
-        """
+        """Retrieve the entire result stream."""
         req = protocol.ResultList(self._result.id)
-        return self._backend.sendAndReceive(req)
+        return self._backend.send_and_receive(req)
 
     def keys(self):
         return self._result.keys

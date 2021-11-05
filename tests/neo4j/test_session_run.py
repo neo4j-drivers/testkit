@@ -30,7 +30,7 @@ class TestSessionRun(TestkitTestCase):
         # Verifies that correct number of records are retrieved
         # Retrieve one extra record after last one the make sure driver can
         # handle that.
-        self._session1 = self._driver.session("r", fetchSize=1000)
+        self._session1 = self._driver.session("r", fetch_size=1000)
         result = self._session1.run("UNWIND [1, 2, 3, 4, 5] AS x RETURN x")
         expects = [
             types.Record(values=[types.CypherInt(1)]),
@@ -50,7 +50,8 @@ class TestSessionRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_can_return_node(self):
         self._session1 = self._driver.session("w")
-        result = self._session1.run("CREATE (a:Person {name:'Alice'}) RETURN a")
+        result = self._session1.run("CREATE (a:Person {name:'Alice'}) "
+                                    "RETURN a")
         record = result.next()
         self.assertEqual(len(record.values), 1)
         value = record.values[0]
@@ -61,8 +62,10 @@ class TestSessionRun(TestkitTestCase):
         self.assertIsInstance(value.id, types.CypherInt)
         self.assertEqual(value.labels,
                          types.CypherList([types.CypherString("Person")]))
-        self.assertEqual(value.props,
-                         types.CypherMap({"name": types.CypherString("Alice")}))
+        self.assertEqual(
+            value.props,
+            types.CypherMap({"name": types.CypherString("Alice")})
+        )
         self.assertIsInstance(result.next(), types.NullRecord)
         isinstance(result.next(), types.NullRecord)
 
@@ -104,8 +107,10 @@ class TestSessionRun(TestkitTestCase):
         self.assertIsInstance(nodes[0], types.CypherNode)
         self.assertIsInstance(nodes[0].id, types.CypherInt)
         self.assertEqual(nodes[0].labels, types.CypherList([]))
-        self.assertEqual(nodes[0].props,
-                         types.CypherMap({"name": types.CypherString("Alice")}))
+        self.assertEqual(
+            nodes[0].props,
+            types.CypherMap({"name": types.CypherString("Alice")})
+        )
         self.assertIsInstance(nodes[1], types.CypherNode)
         self.assertIsInstance(nodes[1].id, types.CypherInt)
         self.assertEqual(nodes[1].labels, types.CypherList([]))
@@ -141,7 +146,7 @@ class TestSessionRun(TestkitTestCase):
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
         result = self._session1.run(
-            query, txMeta={k: v.value for k, v in metadata.items()}
+            query, tx_meta={k: v.value for k, v in metadata.items()}
         )
         record = result.next()
         self.assertIsInstance(record, types.Record)
@@ -152,9 +157,9 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         self._session1.run("MERGE (:Node)").consume()
         self._session2 = self._driver.session(
-            "w", bookmarks=self._session1.lastBookmarks()
+            "w", bookmarks=self._session1.last_bookmarks()
         )
-        tx1 = self._session1.beginTransaction()
+        tx1 = self._session1.begin_transaction()
         tx1.run("MATCH (a:Node) SET a.property = 1").consume()
         with self.assertRaises(types.DriverError) as e:
             result = self._session2.run("MATCH (a:Node) SET a.property = 2",
@@ -176,7 +181,7 @@ class TestSessionRun(TestkitTestCase):
         result = self._session1.run(
             "UNWIND ['A', 'B', 'C', 'A B', 'B C', 'A B C', 'A BC', 'AB C'] "
             "AS t WITH t WHERE t =~ $re RETURN t",
-            params={"re": types.CypherString(r'.*\bB\b.*')}
+            params={"re": types.CypherString(r".*\bB\b.*")}
         )
         self.assertEqual(list(map(lambda r: r.values, result)), [
             [types.CypherString("B")],
@@ -207,7 +212,7 @@ class TestSessionRun(TestkitTestCase):
         # larger than fetch size, if driver allows this as a parameter we
         # should set it to a known value.
         n = 1000
-        self._session1 = self._driver.session("r", fetchSize=n)
+        self._session1 = self._driver.session("r", fetch_size=n)
         n = n + 7
         result = self._session1.run(
             "UNWIND RANGE(0, $n) AS x RETURN x",
@@ -220,7 +225,7 @@ class TestSessionRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_partial_iteration(self):
         # Verifies that not consuming all records works
-        self._session1 = self._driver.session("r", fetchSize=2)
+        self._session1 = self._driver.session("r", fetch_size=2)
         result = self._session1.run("UNWIND RANGE(0, 1000) AS x RETURN x")
         for x in range(0, 4):
             exp = types.Record(values=[types.CypherInt(x)])
@@ -230,7 +235,7 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = None
 
         # not consumed all records & starting a new session
-        self._session1 = self._driver.session("r", fetchSize=2)
+        self._session1 = self._driver.session("r", fetch_size=2)
         result = self._session1.run("UNWIND RANGE(2000, 3000) AS x RETURN x")
         for x in range(2000, 2004):
             exp = types.Record(values=[types.CypherInt(x)])
@@ -251,8 +256,8 @@ class TestSessionRun(TestkitTestCase):
     def test_simple_query(self):
         def _test():
             self._driver.close()
-            self._driver = get_driver(self._backend, userAgent="test")
-            self._session1 = self._driver.session("r", fetchSize=2)
+            self._driver = get_driver(self._backend, user_agent="test")
+            self._session1 = self._driver.session("r", fetch_size=2)
             result = self._session1.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
             if consume:
                 summary = result.consume()
@@ -271,7 +276,7 @@ class TestSessionRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_session_reuse(self):
         def _test():
-            self._session1 = self._driver.session("r", fetchSize=2)
+            self._session1 = self._driver.session("r", fetch_size=2)
             result = self._session1.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
             if consume:
                 result.consume()
@@ -290,14 +295,14 @@ class TestSessionRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_iteration_nested(self):
-        if get_driver_name() in ['dotnet']:
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Nested results not working in 4.2 and earlier. "
                           "FIX AND ENABLE in 4.3")
         # Verifies that it is possible to nest results with small fetch sizes.
         # Auto-commit results does not (as of 4.x) support multiple results on
         # the same connection but that isn't visible when testing at
         # this level.
-        self._session1 = self._driver.session("r", fetchSize=2)
+        self._session1 = self._driver.session("r", fetch_size=2)
 
         def run(i, n):
             return self._session1.run(
@@ -306,20 +311,20 @@ class TestSessionRun(TestkitTestCase):
         i0 = 0
         n0 = 6
         res0 = run(i0, n0)
-        for r0 in range(i0, n0+1):
+        for r0 in range(i0, n0 + 1):
             rec = res0.next()
             self.assertEqual(rec, types.Record(values=[types.CypherInt(r0)]))
             i1 = 7
             n1 = 11
             res1 = run(i1, n1)
-            for r1 in range(i1, n1+1):
+            for r1 in range(i1, n1 + 1):
                 rec = res1.next()
                 self.assertEqual(
                     rec, types.Record(values=[types.CypherInt(r1)]))
                 i2 = 999
                 n2 = 1001
                 res2 = run(i2, n2)
-                for r2 in range(i2, n2+1):
+                for r2 in range(i2, n2 + 1):
                     rec = res2.next()
                     self.assertEqual(
                         rec, types.Record(values=[types.CypherInt(r2)]))
@@ -367,7 +372,7 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         result = self._session1.run("CREATE (n:SessionNode) RETURN n")
         result.consume()
-        bookmarks = self._session1.lastBookmarks()
+        bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
@@ -375,7 +380,7 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("w", bookmarks=bookmarks)
         result = self._session1.run("CREATE (n:SessionNode) RETURN n")
         result.consume()
-        new_bookmarks = self._session1.lastBookmarks()
+        new_bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(new_bookmarks), 1)
         self.assertNotIn(new_bookmarks[0], bookmarks)
 
@@ -399,7 +404,7 @@ class TestSessionRun(TestkitTestCase):
     def test_long_string(self):
         string = "A" * 2 ** 20
         query = "RETURN '{}'".format(string)
-        for i in range(6):
+        for _ in range(6):
             session = self._driver.session("r")
             try:
                 records = list(session.run(query))

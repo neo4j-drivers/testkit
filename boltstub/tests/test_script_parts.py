@@ -1,11 +1,10 @@
 import json
-import pytest
 from unittest.mock import patch
 
+import pytest
+
 from . import _common
-from ..bolt_protocol import (
-    TranslatedStructure,
-)
+from ..bolt_protocol import TranslatedStructure
 from ..errors import ServerExit
 from ..parsing import (
     AutoLine,
@@ -116,60 +115,61 @@ class TestClientLine:
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert not line.match(msg)
 
-    @pytest.mark.parametrize(("field_repr", "fields"), (
-        *((rep, fields)
-          for rep, field_matches in (
-              ('{"{}": {"a": "*"}}', (
-                  [{"a": "A"}],
-                  [{"a": 1}],
-              )),
-              ('{"[]": [1, "*"]}', (
-                   [[1, 2]],
-                   [[1, "2"]],
-                   [[1, ["t", "w", "o"]]],
-                   [[1, {"foo": "bar"}]],
-              )),
-              ('{"{}": {"n": {"Z": "*"}}}', (
-                   [{"n": 1}],
-                   [{"n": 2}]
-              )),
-              ('{"n": {"Z": "*"}}', (
-                   [{"n": 1}],
-                   [{"n": 2}]
-              )),
-          )
-          for fields in field_matches),
-    ))
+    @pytest.mark.parametrize(("field_repr", "fields"), (*(
+        (rep, fields)
+        for rep, field_matches in (
+            ('{"{}": {"a": "*"}}', (
+                [{"a": "A"}],
+                [{"a": 1}],
+            )),
+            ('{"[]": [1, "*"]}', (
+                [[1, 2]],
+                [[1, "2"]],
+                [[1, ["t", "w", "o"]]],
+                [[1, {"foo": "bar"}]],
+            )),
+            ('{"{}": {"n": {"Z": "*"}}}', (
+                [{"n": 1}],
+                [{"n": 2}],
+            )),
+            ('{"n": {"Z": "*"}}', (
+                [{"n": 1}],
+                [{"n": 2}],
+            )),
+        )
+        for fields in field_matches
+    ),))
     def test_does_match_nested_jolt_wildcard(self, field_repr, fields):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
         msg = TranslatedStructure("MSG", b"\x00", *fields)
         assert line.match(msg)
 
-    @pytest.mark.parametrize(("field_repr", "fields"), (
-        *((rep, fields)
-          for rep, field_matches in ((
-             '{"{}": {"a": "*"}}', (
-                 [{"b": "A"}],
-                 [{"a": 1, "b": 2}],
-                 [{}],
-                 [1],
-                 ["a"],
-                 [[1, 2, 3]],
-                 [{"a": 1}, 2],
-             )),
-             ('{"[]": [1, "*"]}', (
-                 [[1, 2, 3]],
-                 [[1]],
-                 [{"b": "A"}, 1],
-             )),
-             ('{"{}": {"n": {"Z": "*"}}}', (
-                 [{"n": "1"}],
-                 [{"n": [1]}]
-             ))
-          )
-          for fields in field_matches),
-    ))
+    @pytest.mark.parametrize(("field_repr", "fields"), (*(
+        (rep, fields)
+        for rep, field_matches in (
+            ('{"{}": {"a": "*"}}', (
+                [{"b": "A"}],
+                [{"a": 1, "b": 2}],
+                [{}],
+                [1],
+                ["a"],
+                [[1, 2, 3]],
+                [{"a": 1}, 2],
+            )),
+            ('{"[]": [1, "*"]}', (
+                [[1, 2, 3]],
+                [[1]],
+                [{"b": "A"}, 1],
+
+            )),
+            ('{"{}": {"n": {"Z": "*"}}}', (
+                [{"n": "1"}],
+                [{"n": [1]}]
+            )),
+        )
+        for fields in field_matches
+    ),))
     def test_does_match_nested_jolt_wildcard_wrong_fields(self, field_repr,
                                                           fields):
         content = "MSG " + field_repr

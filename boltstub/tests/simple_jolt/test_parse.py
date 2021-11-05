@@ -1,5 +1,4 @@
 import inspect
-import math
 
 import pytest
 
@@ -12,15 +11,15 @@ from ...simple_jolt import (
 from ...simple_jolt.errors import JOLTValueError
 from ...simple_jolt.types import (
     JoltDate,
-    JoltTime,
-    JoltLocalTime,
     JoltDateTime,
-    JoltLocalDateTime,
     JoltDuration,
-    JoltPoint,
+    JoltLocalDateTime,
+    JoltLocalTime,
     JoltNode,
-    JoltRelationship,
     JoltPath,
+    JoltPoint,
+    JoltRelationship,
+    JoltTime,
 )
 
 
@@ -38,7 +37,10 @@ from ...simple_jolt.types import (
     (-1, '{"Z": "-1"}'),
     (-2147483649, '{"Z": "-2147483649"}'),
     (2147483648, '{"Z": "2147483648"}'),
-    (999999999999999999999999999999, '{"Z": "999999999999999999999999999999"}'),
+    (
+        999999999999999999999999999999,
+        '{"Z": "999999999999999999999999999999"}'
+    ),
 
     # float
     (1.0, '{"R": "1.0"}'),
@@ -149,7 +151,7 @@ from ...simple_jolt.types import (
         '{"()": [3, ["l"], {}]}, '
         '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
         '{"()": [1, ["l"], {}]}'
-        ']}'
+        ']}'  # noqa: Q000
     ),
 ))
 @pytest.mark.parametrize("human_readable", [True, False])
@@ -179,7 +181,10 @@ def test_dumps_full(in_, out_, human_readable):
     (-2147483649, '{"Z": "-2147483649"}'),
     (2147483647, "2147483647"),
     (2147483648, '{"Z": "2147483648"}'),
-    (999999999999999999999999999999, '{"Z": "999999999999999999999999999999"}'),
+    (
+        999999999999999999999999999999,
+        '{"Z": "999999999999999999999999999999"}'
+    ),
 
     # float
     (1.0, '{"R": "1.0"}'),
@@ -210,7 +215,7 @@ def test_dumps_full(in_, out_, human_readable):
 
     # tuple
     (tuple(), "[]"),
-    ((1,), '[1]'),
+    ((1,), "[1]"),
     (("a",), '["a"]'),
     ((1, "a"), '[1, "a"]'),
     ((1, ["a"]), '[1, ["a"]]'),
@@ -294,7 +299,7 @@ def test_dumps_full(in_, out_, human_readable):
         '{"()": [3, ["l"], {}]}, '
         '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
         '{"()": [1, ["l"], {}]}'
-        ']}'
+        ']}'  # noqa: Q000
     ),
 ))
 @pytest.mark.parametrize("human_readable", [True, False])
@@ -339,7 +344,10 @@ def test_dumps_simple(in_, out_, human_readable):
     ('{"Z": "2147483647"}', 2147483647),
     ('{"Z": "2147483648"}', 2147483648),
     ('{"Z": "1.23"}', 1),
-    ('{"Z": "999999999999999999999999999999"}', 999999999999999999999999999999),
+    (
+        '{"Z": "999999999999999999999999999999"}',
+        999999999999999999999999999999
+    ),
 
     # float - full
     ('{"R": "1"}', 1.0),
@@ -395,7 +403,7 @@ def test_dumps_simple(in_, out_, human_readable):
     # dict - simple
     # NOTE: this is not officially supported by the JOLT specs but allows for
     #       better backwards compatibility with existing stubscripts
-    ('{}', {}),
+    ("{}", {}),
     ('{"U": "a", "Z": "1"}', {"U": "a", "Z": "1"}),
     ('{"foo": "bar"}', {"foo": "bar"}),
 
@@ -473,7 +481,7 @@ def test_dumps_simple(in_, out_, human_readable):
         '{"()": [3, ["l"], {}]}, '
         '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
         '{"()": [1, ["l"], {}]}'
-        ']}',
+        ']}',  # noqa: Q000
         JoltPath(
             JoltNode(1, ["l"], {}),
             JoltRelationship(2, 1, "RELATES_TO", 3, {}),
@@ -696,7 +704,8 @@ def test_verifies_relationship(in_, flip):
     '{"()": [3, ["l"], {}]}, '
     '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
     '{"()": [1, ["l"], {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # Link from non-existent node
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
@@ -704,47 +713,52 @@ def test_verifies_relationship(in_, flip):
     '{"()": [3, ["l"], {}]}, '
     '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
     '{"()": [1, ["l"], {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # double link
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
     '{"->": [4, 1, "RELATES_TO", 3, {}]}, '
     '{"()": [3, ["l"], {}]}'
-    ']}',
+    ']}',  # noqa: Q000
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
     '{"->": [4, 1, "RELATES_TO", 3, {}]}, '
     '{"->": [5, 1, "RELATES_TO", 3, {}]}, '
     '{"()": [3, ["l"], {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # double node
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"()": [4, ["l"], {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
     '{"()": [4, ["l"], {}]} '
-    ']}',
+    ']}',  # noqa: Q000
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"()": [4, ["l"], {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
     '{"()": [5, ["l"], {}]}, '
     '{"()": [4, ["l"], {}]} '
-    ']}',
+    ']}',  # noqa: Q000
+
     # only nodes
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"()": [4, ["l"], {}]}, '
     '{"()": [2, ["l"], {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # only relationships
     '{"..": ['
     '{"->": [1, 1, "RELATES_TO", 3, {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
     '{"->": [3, 1, "RELATES_TO", 3, {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # start with relationship
     '{"..": ['
     '{"->": [5, 1, "RELATES_TO", 1, {}]}, '
@@ -753,7 +767,8 @@ def test_verifies_relationship(in_, flip):
     '{"()": [3, ["l"], {}]}, '
     '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
     '{"()": [1, ["l"], {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # ending with relationship
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
@@ -762,7 +777,7 @@ def test_verifies_relationship(in_, flip):
     '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
     '{"()": [1, ["l"], {}]}, '
     '{"->": [5, 1, "RELATES_TO", 1, {}]}'
-    ']}',
+    ']}',  # noqa: Q000
     '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
@@ -771,7 +786,8 @@ def test_verifies_relationship(in_, flip):
     '{"()": [1, ["l"], {}]}, '
     '{"->": [6, 1, "RELATES_TO", 1, {}]}, '
     '{"->": [6, 1, "RELATES_TO", 1, {}]}'
-    ']}',
+    ']}',  # noqa: Q000
+
     # total bogus
     '{"..": {"Z": "1234"}}'
 ))
