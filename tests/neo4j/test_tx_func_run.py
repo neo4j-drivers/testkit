@@ -37,7 +37,7 @@ class TestTxFuncRun(TestkitTestCase):
 
         def _test():
             self._driver.close()
-            self._driver = get_driver(self._backend, userAgent="test")
+            self._driver = get_driver(self._backend, user_agent="test")
             self._session1 = self._driver.session("r", fetch_size=2)
             self._session1.read_transaction(work)
             self._session1.close()

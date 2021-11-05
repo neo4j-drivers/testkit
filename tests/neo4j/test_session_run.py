@@ -256,7 +256,7 @@ class TestSessionRun(TestkitTestCase):
     def test_simple_query(self):
         def _test():
             self._driver.close()
-            self._driver = get_driver(self._backend, userAgent="test")
+            self._driver = get_driver(self._backend, user_agent="test")
             self._session1 = self._driver.session("r", fetch_size=2)
             result = self._session1.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
             if consume:

@@ -53,8 +53,8 @@ class TestDirectDriver(TestkitTestCase):
             )
 
         self._driver = get_driver(self._backend, uri="bolt://*",
-                                  resolverFn=my_resolver,
-                                  connectionTimeoutMs=200)
+                                  resolver_fn=my_resolver,
+                                  connection_timeout_ms=200)
         self._session = self._driver.session("r")
         result = self._session.run("RETURN 1")
         summary = result.consume()

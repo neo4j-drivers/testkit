@@ -159,7 +159,7 @@ class TestRetry(TestkitTestCase):
             session = driver.session(mode[0])
 
             with self.assertRaises(types.DriverError):  # TODO: check further
-                session.__getattribute__(mode + "Transaction")(once)
+                getattr(session, mode + "_transaction")(once)
             # TODO: remove the condition when go sends the error code
             if get_driver_name() not in ["go"]:
                 self.assertEqual(exception.code,

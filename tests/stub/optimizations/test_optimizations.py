@@ -83,7 +83,7 @@ class TestOptimizations(TestkitTestCase):
                 session.close()
                 session = driver.session(mode[0])
             if use_tx:
-                tx = session.beginTransaction()
+                tx = session.begin_transaction()
                 res = tx.run("QUERY %i" % (i + 1))
                 if consume:
                     res.consume()

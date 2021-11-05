@@ -68,7 +68,7 @@ class TestSessionRunParameters(TestkitTestCase):
             run_kwargs = {}
         self._start_servers_and_driver(script, routing,
                                        session_kwargs.get("database"),
-                                       session_kwargs.get("impersonatedUser"))
+                                       session_kwargs.get("impersonated_user"))
         session = self._driver.session(*session_args, **session_kwargs)
         try:
             result = session.run("RETURN 1 as n", *run_args, **run_kwargs)
@@ -116,7 +116,7 @@ class TestSessionRunParameters(TestkitTestCase):
             with self.subTest("routing" if routing else "direct"):
                 self._run("tx_meta", routing,
                           session_args=("w",),
-                          run_kwargs={"txMeta": {"akey": "aval"}})
+                          run_kwargs={"tx_meta": {"akey": "aval"}})
 
     @driver_feature(types.Feature.BOLT_4_4)
     def test_timeout(self):
@@ -142,7 +142,7 @@ class TestSessionRunParameters(TestkitTestCase):
                 self._run("imp_user", routing,
                           session_args=("w",),
                           session_kwargs={
-                              "impersonatedUser": "that-other-dude"
+                              "impersonated_user": "that-other-dude"
                           })
 
     @driver_feature(types.Feature.IMPERSONATION,
@@ -154,7 +154,7 @@ class TestSessionRunParameters(TestkitTestCase):
                     self._run("imp_user_v4x3", routing,
                               session_args=("w",),
                               session_kwargs={
-                                  "impersonatedUser": "that-other-dude"
+                                  "impersonated_user": "that-other-dude"
                               })
                 if self._driver_name in ["python"]:
                     self.assertEqual(
@@ -180,11 +180,11 @@ class TestSessionRunParameters(TestkitTestCase):
                           session_kwargs={
                               "bookmarks": ["b0"],
                               "database": "adb",
-                              "impersonatedUser": "that-other-dude"
+                              "impersonated_user": "that-other-dude"
                           },
                           run_kwargs={
                               "params": {"p": types.CypherInt(1)},
-                              "txMeta": {"k": "v"}, "timeout": 11
+                              "tx_meta": {"k": "v"}, "timeout": 11
                           })
 
     @driver_feature(types.Feature.BOLT_4_4)
