@@ -1,4 +1,5 @@
 from nutkit import protocol as types
+
 from ..shared import (
     driver_feature,
     get_driver_name,
@@ -34,7 +35,7 @@ class TestSummary(TestkitTestCase):
             return summary
         params = {} if params is None else params
         self._session = self._driver.session("w")
-        return self._session.writeTransaction(work)
+        return self._session.write_transaction(work)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_summary_after_consuming_result(self):
@@ -208,12 +209,13 @@ class TestSummary(TestkitTestCase):
 
         self._session = self._driver.session("w", database="test")
         summary = self._session.run("CREATE ()-[:KNOWS]->()").consume()
-        self._assert_counters(summary, nodes_created=2, relationships_created=1,
-                              contains_updates=True)
+        self._assert_counters(summary, nodes_created=2,
+                              relationships_created=1, contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("MATCH ()-[r:KNOWS]->() DELETE r").consume()
+        summary = self._session.run("MATCH ()-[r:KNOWS]->() "
+                                    "DELETE r").consume()
         self._assert_counters(summary,
                               relationships_deleted=1, contains_updates=True)
         self._session.close()
@@ -244,7 +246,8 @@ class TestSummary(TestkitTestCase):
 
         self._session = self._driver.session("w", database="test")
         summary = self._session.run("DROP INDEX ON :ALabel(prop)").consume()
-        self._assert_counters(summary, indexes_removed=1, contains_updates=True)
+        self._assert_counters(summary, indexes_removed=1,
+                              contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")

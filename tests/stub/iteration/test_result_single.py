@@ -4,8 +4,8 @@ from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
@@ -47,8 +47,8 @@ class TestResultSingle(TestkitTestCase):
                         types.AuthorizationToken(scheme="basic", principal="",
                                                  credentials=""))
         self._server.start(path=self.script_path("v4x0", script_fn),
-                           vars=vars_)
-        session = driver.session("w", fetchSize=fetch_size)
+                           vars_=vars_)
+        session = driver.session("w", fetch_size=fetch_size)
         try:
             yield session
             session.close()
@@ -110,7 +110,7 @@ class TestResultSingle(TestkitTestCase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            tx = session.beginTransaction()
+            tx = session.begin_transaction()
             result = tx.run("RETURN 1 AS n")
             with self.assertRaises(types.DriverError) as exc:
                 result.single()
@@ -135,6 +135,6 @@ class TestResultSingle(TestkitTestCase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            record = session.readTransaction(work)
+            record = session.read_transaction(work)
             self.assertIsInstance(record, types.Record)
             self.assertEqual(record.values, [types.CypherInt(1)])

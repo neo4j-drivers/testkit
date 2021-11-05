@@ -1,4 +1,4 @@
-class ServerExit(Exception):
+class ServerExit(Exception):  # noqa: N818
     pass
 
 
@@ -6,15 +6,15 @@ class BoltProtocolError(Exception):
     pass
 
 
-class BoltUnknownVersion(BoltProtocolError):
+class BoltUnknownVersionError(BoltProtocolError):
     pass
 
 
-class BoltMissingVersion(BoltProtocolError):
+class BoltMissingVersionError(BoltProtocolError):
     pass
 
 
-class BoltUnknownMessage(BoltProtocolError):
+class BoltUnknownMessageError(BoltProtocolError):
     def __init__(self, msg, line):
         super().__init__(msg, line)
 

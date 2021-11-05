@@ -1,8 +1,8 @@
 from contextlib import contextmanager
 import json
 
-from nutkit.frontend import Driver
 from nutkit import protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
@@ -13,9 +13,7 @@ from tests.stub.shared import StubServer
 
 
 class TestSummary(TestkitTestCase):
-    """ Verifies that the driver can connect to a server that speaks a specific
-    bolt protocol version.
-    """
+    """Test result summary contents."""
 
     required_features = types.Feature.BOLT_4_4,
 
@@ -33,8 +31,8 @@ class TestSummary(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path(script), vars=vars_)
-        session = driver.session("w", fetchSize=1000)
+        self._server.start(path=self.script_path(script), vars_=vars_)
+        session = driver.session("w", fetch_size=1000)
         try:
             yield session
         finally:
@@ -50,7 +48,8 @@ class TestSummary(TestkitTestCase):
                          properties_set=0,
                          relationships_created=0, relationships_deleted=0,
                          system_updates=0,
-                         contains_updates=False, contains_system_updates=False):
+                         contains_updates=False,
+                         contains_system_updates=False):
         attrs = (
             "constraints_added", "constraints_removed", "indexes_added",
             "indexes_removed", "labels_added", "labels_removed",
@@ -74,12 +73,14 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self.assertEqual(summary.server_info.agent, "Neo4j/4.4.0")
-        expected_version = list(map(str,
-                                    self._server.get_negotiated_bolt_version()))
+        expected_version = list(map(
+            str, self._server.get_negotiated_bolt_version()
+        ))
         while len(expected_version) < 2:
             expected_version.append("0")
         expected_version = ".".join(expected_version)
-        self.assertEqual(summary.server_info.protocol_version, expected_version)
+        self.assertEqual(summary.server_info.protocol_version,
+                         expected_version)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_database(self):

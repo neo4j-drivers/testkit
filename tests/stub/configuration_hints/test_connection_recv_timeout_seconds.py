@@ -1,15 +1,13 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
+    dns_resolve_single,
     driver_feature,
+    get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
-    dns_resolve_single,
-    get_dns_resolved_server_address
 )
-from tests.stub.shared import (
-    StubServer,
-)
+from tests.stub.shared import StubServer
 
 
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
@@ -54,9 +52,9 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                           e.errorType)
 
     def _assert_is_client_exception(self, e):
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ["java"]:
             self.assertEqual(
-                'org.neo4j.driver.exceptions.ClientException',
+                "org.neo4j.driver.exceptions.ClientException",
                 e.errorType)
 
     def _on_failed_retry_assertions(self):
@@ -75,7 +73,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         result = self._session.run("in time")
         # TODO It will be removed as soon as JS Driver
         # has async iterator api
-        if get_driver_name() in ['javascript']:
+        if get_driver_name() in ["javascript"]:
             result.next()
 
         self._server.done()
@@ -88,22 +86,23 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     @driver_feature(types.Feature.CONF_HINT_CON_RECV_TIMEOUT)
     def test_timeout_unmanaged_tx(self):
         self._start_server("1_second_exceeds_tx.script")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("timeout")
             # TODO It will be removed as soon as JS Driver
             # has async iterator api
             if get_driver_name() in ['javascript', 'dotnet']:
                 result.next()
-        # TODO remove once Go driver does not raise the last seen error upon tx closure
-        if get_driver_name() in ['go']:
+        # TODO remove once Go driver does not raise the last seen error upon
+        #      tx closure
+        if get_driver_name() in ["go"]:
             with self.assertRaises(types.DriverError) as exc:
                 tx.close()
         # TODO Remove when explicit rollback requirement is removed
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ["java"]:
             tx.rollback()
 
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         res = tx.run("in time")
         res.next()
         tx.commit()
@@ -118,7 +117,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def test_timeout_unmanaged_tx_should_fail_subsequent_usage_after_timeout(
             self):
         self._start_server("1_second_exceeds_tx.script")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as first_run_error:
             result = tx.run("timeout")
             # TODO It will be removed as soon as JS Driver
@@ -131,13 +130,14 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             if get_driver_name() in ['javascript', 'dotnet']:
                 result.next()
 
-        # TODO remove once Go driver does not raise the last seen error upon tx closure
-        if get_driver_name() in ['go']:
-            with self.assertRaises(types.DriverError) as exc:
+        # TODO remove once Go driver does not raise the last seen error upon
+        #      tx closure
+        if get_driver_name() in ["go"]:
+            with self.assertRaises(types.DriverError):
                 tx.close()
 
         # TODO Remove when explicit rollback requirement is removed
-        if get_driver_name() in ['java']:
+        if get_driver_name() in ["java"]:
             tx.rollback()
 
         self._server.done()
@@ -173,7 +173,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
 
         self._start_server("1_second_exceeds_tx_retry.script")
-        self._session.writeTransaction(work)
+        self._session.write_transaction(work)
         self._server.done()
         self.assertEqual(retries, 2)
         self.assertIsInstance(record, types.Record)
@@ -197,7 +197,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     @driver_feature(types.Feature.CONF_HINT_CON_RECV_TIMEOUT)
     def test_in_time_unmanaged_tx(self):
         self._start_server("2_seconds_in_time_tx.script")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         result = tx.run("RETURN 1 AS n")
         records = []
         while True:
@@ -227,7 +227,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
 
         self._start_server("2_seconds_in_time_tx_retry.script")
-        self._session.writeTransaction(work)
+        self._session.write_transaction(work)
         self._server.done()
         self.assertEqual(retries, 1)
         self.assertIsInstance(record, types.Record)
@@ -241,7 +241,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         TestkitTestCase.setUp(self)
         self._server = StubServer(9010)
         self._router = StubServer(9000)
-        self._router.start(path=self.script_path("router.script"), vars={
+        self._router.start(path=self.script_path("router.script"), vars_={
             "#HOST#": dns_resolve_single(self._router.host)
         })
         auth = types.AuthorizationToken("basic", principal="neo4j",
@@ -275,7 +275,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
             super()._assert_is_timeout_exception(e)
 
     def _on_failed_retry_assertions(self):
-        rt = self._driver.getRoutingTable()
+        rt = self._driver.get_routing_table()
         self.assertEqual(rt.routers, [
             get_dns_resolved_server_address(self._router)
         ])
@@ -298,7 +298,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         if self.driver_supports_features(types.Feature.OPT_CONNECTION_REUSE):
             self.assertLessEqual(self._router.count_responses("<ACCEPT>"), 1)
 
-        rt = self._driver.getRoutingTable()
+        rt = self._driver.get_routing_table()
         self.assertEqual(rt.routers, [
             get_dns_resolved_server_address(self._router)
         ])

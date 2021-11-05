@@ -1,5 +1,5 @@
-from nutkit.frontend import Driver
 from nutkit import protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -33,7 +33,7 @@ class TestSessionRun(TestkitTestCase):
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
-        self._session = self._driver.session("r", fetchSize=2)
+        self._session = self._driver.session("r", fetch_size=2)
         self._session.run("RETURN 1 AS n")
         # closing session while tx is open and result is not consumed at all
         self._session.close()
@@ -47,7 +47,7 @@ class TestSessionRun(TestkitTestCase):
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
-        self._session = self._driver.session("r", fetchSize=2)
+        self._session = self._driver.session("r", fetch_size=2)
         result = self._session.run("RETURN 1 AS n")
         result.next()
         # closing session while tx is open and result is not fully consumed
@@ -62,10 +62,11 @@ class TestSessionRun(TestkitTestCase):
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
-        self._session = self._driver.session("r", fetchSize=2)
+        self._session = self._driver.session("r", fetch_size=2)
         result = self._session.run("RETURN 1 AS n")
         result.consume()
-        # closing session while tx is open and result has been manually consumed
+        # closing session while tx is open and result has been manually
+        # consumed
         self._session.close()
         self._session = None
         self._server.done()
@@ -74,7 +75,7 @@ class TestSessionRun(TestkitTestCase):
         self._server.start(
             path=self.script_path("session_consume_result.script")
         )
-        self._session = self._driver.session("r", fetchSize=2)
+        self._session = self._driver.session("r", fetch_size=2)
         result = self._session.run("RETURN 1 AS n")
         list(result)  # pull all results
         # closing session while tx is open

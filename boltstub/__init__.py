@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 # Copyright (c) 2002-2020 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
@@ -21,7 +20,11 @@
 
 from copy import deepcopy
 from logging import getLogger
-from socketserver import TCPServer, ThreadingMixIn, BaseRequestHandler
+from socketserver import (
+    BaseRequestHandler,
+    TCPServer,
+    ThreadingMixIn,
+)
 from sys import stdout
 from threading import (
     Lock,
@@ -232,7 +235,7 @@ class BoltActor:
                     # briefly that `try_skip_to_end` hangs unnecessarily long
                     time.sleep(0.000001)
                     continue
-        except (ConnectionError, OSError) as e:
+        except OSError as e:
             # It's likely the client has gone away, so we can
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.

@@ -42,7 +42,7 @@ class TestTxBeginParameters(TestkitTestCase):
             else:
                 router_script = router_script % ""
             self._router.start(path=self.script_path(router_script),
-                               vars={"#HOST#": self._router.host})
+                               vars_={"#HOST#": self._router.host})
         if routing and not db:
             script += "_homedb.script"
         else:
@@ -78,17 +78,17 @@ class TestTxBeginParameters(TestkitTestCase):
             run_kwargs = {}
         self._start_servers_and_driver(script, routing,
                                        session_kwargs.get("database"),
-                                       session_kwargs.get("impersonatedUser"))
+                                       session_kwargs.get("impersonated_user"))
         session = self._driver.session(*session_args, **session_kwargs)
         try:
             if tx_func_access_mode is None:
-                tx = session.beginTransaction(*tx_args, **tx_kwargs)
+                tx = session.begin_transaction(*tx_args, **tx_kwargs)
                 work(tx)
                 tx.commit()
             elif tx_func_access_mode == "w":
-                session.writeTransaction(work, *tx_args, **tx_kwargs)
+                session.write_transaction(work, *tx_args, **tx_kwargs)
             elif tx_func_access_mode == "r":
-                session.readTransaction(work, *tx_args, **tx_kwargs)
+                session.read_transaction(work, *tx_args, **tx_kwargs)
             else:
                 raise ValueError(tx_func_access_mode)
             self._server.done()
@@ -154,7 +154,7 @@ class TestTxBeginParameters(TestkitTestCase):
             with self.subTest("routing" if routing else "direct"):
                 self._run("tx_meta", routing,
                           session_args=("w",),
-                          tx_kwargs={"txMeta": {"akey": "aval"}})
+                          tx_kwargs={"tx_meta": {"akey": "aval"}})
 
     @driver_feature(types.Feature.BOLT_4_4)
     def test_timeout(self):
@@ -179,7 +179,7 @@ class TestTxBeginParameters(TestkitTestCase):
                 self._run("imp_user", routing,
                           session_args=("w",),
                           session_kwargs={
-                              "impersonatedUser": "that-other-dude"
+                              "impersonated_user": "that-other-dude"
                           })
 
     @driver_feature(types.Feature.IMPERSONATION,
@@ -191,7 +191,7 @@ class TestTxBeginParameters(TestkitTestCase):
                     self._run("imp_user_v4x3", routing,
                               session_args=("w",),
                               session_kwargs={
-                                  "impersonatedUser": "that-other-dude"
+                                  "impersonated_user": "that-other-dude"
                               })
                 if self._driver_name in ["python"]:
                     self.assertEqual(
@@ -218,6 +218,6 @@ class TestTxBeginParameters(TestkitTestCase):
                           session_kwargs={
                               "bookmarks": ["b0"],
                               "database": "adb",
-                              "impersonatedUser": "that-other-dude"
+                              "impersonated_user": "that-other-dude"
                           },
-                          tx_kwargs={"txMeta": {"k": "v"}, "timeout": 11})
+                          tx_kwargs={"tx_meta": {"k": "v"}, "timeout": 11})
