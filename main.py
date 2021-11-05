@@ -145,7 +145,6 @@ def set_test_flags(requested_list, external_tests, selected_test_list):
         for item in test_flags:
             test_flags[item] = item in requested_list
 
-
     print("Tests that will be run:")
     for item in test_flags:
         if test_flags[item]:
