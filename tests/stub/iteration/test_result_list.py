@@ -9,15 +9,6 @@ class TestResultSingle(IterationTestBase):
     required_features = (types.Feature.BOLT_4_0,
                          types.Feature.API_RESULT_LIST)
 
-    def _assert_not_exactly_one_record_error(self, error):
-        self.assertIsInstance(error, types.DriverError)
-        driver = get_driver_name()
-        if driver in ["python"]:
-            self.assertEqual("<class 'ToBeDecided'>",
-                             error.errorType)
-        else:
-            self.fail("no error mapping is defined for %s driver" % driver)
-
     def _assert_connection_error(self, error):
         self.assertIsInstance(error, types.DriverError)
         driver = get_driver_name()
