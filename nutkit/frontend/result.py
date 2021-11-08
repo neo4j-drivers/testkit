@@ -32,7 +32,9 @@ class Result:
     def list(self):
         """Retrieve the entire result stream."""
         req = protocol.ResultList(self._result.id)
-        return self._backend.send_and_receive(req)
+        res = self._backend.send_and_receive(req)
+        assert isinstance(res, protocol.RecordList)
+        return res.records
 
     def keys(self):
         return self._result.keys

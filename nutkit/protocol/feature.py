@@ -4,6 +4,9 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a method for the result to return all records as a list
+    # or array. This method should exhaust the result.
+    API_RESULT_LIST = "Feature:API:Result.List"
     # The driver offers a method for the result to peek at the next record in
     # the result stream without advancing it (i.e. without consuming any
     # records)
@@ -71,6 +74,13 @@ class Feature(Enum):
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.
     OPT_PULL_PIPELINING = "Optimization:PullPipelining"
+    # This feature requires `API_RESULT_LIST`.
+    # The driver pulls all records (`PULL -1`) when Result.list() is called.
+    # (As opposed to iterating over the Result with the configured fetch size.)
+    # Note: If your driver supports this, make sure to document well that this
+    #       method ignores the configures fetch size. Your users will
+    #       appreciate it <3.
+    OPT_RESULT_LIST_FETCH_ALL = "Optimization:ResultListFetchAll"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
@@ -105,9 +115,6 @@ class Feature(Enum):
     # the Result object without further waiting or communication with the
     # server.
     TMP_RESULT_KEYS = "Temporary:ResultKeys"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented it.
-    TMP_RESULT_LIST = "Temporary:ResultList"
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the TransactionClose request
     TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"
