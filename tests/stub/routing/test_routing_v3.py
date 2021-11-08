@@ -1,10 +1,13 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+
 from ...shared import get_driver_name
 from .test_routing_v4x4 import RoutingV4x4
 
 
 class RoutingV3(RoutingV4x4):
+
+    required_features = types.Feature.BOLT_3_0,
     bolt_version = "3"
     server_agent = "Neo4j/3.5.0"
 
@@ -23,11 +26,13 @@ class RoutingV3(RoutingV4x4):
             "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#": ""
         }
 
-        if get_driver_name() in ['java']:
-            v["#EXTR_HELLO_ROUTING_PROPS#"] = \
-                ', "routing": ' + v['#ROUTINGCTX#']
-            v["#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#"] = \
-                ', "routing": {"address": "' + host + ':9000"}'
+        if get_driver_name() in ["java"]:
+            v.update({
+                "#EXTR_HELLO_ROUTING_PROPS#":
+                    ', "routing": ' + v["#ROUTINGCTX#"],
+                "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#":
+                    ', "routing": {"address": "' + host + ':9000"}',
+            })
 
         return v
 
@@ -41,7 +46,8 @@ class RoutingV3(RoutingV4x4):
     def should_support_multi_db(self):
         return False
 
-    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(self):
+    def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(  # noqa: N802,E501
+            self):
         pass
 
     def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):
@@ -65,7 +71,7 @@ class RoutingV3(RoutingV4x4):
             session.run("RETURN 1 AS x").consume()
         except types.DriverError as e:
             failed = True
-            if get_driver_name() in ['python']:
+            if get_driver_name() in ["python"]:
                 self.assertEqual(
                     e.errorType,
                     "<class 'neo4j.exceptions.ServiceUnavailable'>"

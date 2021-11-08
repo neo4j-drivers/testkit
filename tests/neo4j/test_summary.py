@@ -1,4 +1,5 @@
 from nutkit import protocol as types
+
 from ..shared import (
     driver_feature,
     get_driver_name,
@@ -9,6 +10,7 @@ from .shared import (
     get_driver,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    requires_multi_db_support,
 )
 
 
@@ -33,7 +35,7 @@ class TestSummary(TestkitTestCase):
             return summary
         params = {} if params is None else params
         self._session = self._driver.session("w")
-        return self._session.writeTransaction(work)
+        return self._session.write_transaction(work)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_summary_after_consuming_result(self):
@@ -87,8 +89,16 @@ class TestSummary(TestkitTestCase):
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        max_protocol_version = get_server_info().max_protocol_version
-        if max_protocol_version == "4.2":
+        max_server_protocol_version = get_server_info().max_protocol_version
+        common_protocol_versions = [
+            f.value.split(":")[-1] for f in self._driver_features
+            if (f.name.startswith("BOLT_")
+                and f.value.split(":")[-1] <= max_server_protocol_version)
+        ]
+        if not common_protocol_versions:
+            self.skipTest("Driver does not support server version.")
+        common_max_version = max(common_protocol_versions)
+        if common_max_version == "4.2":
             # Both versions are equivalent. Since 4.2 was introduced before
             # having version ranges in the handshake, we allow drivers to
             # negotiate bolt 4.1 with 4.2 to be able to fit support for more
@@ -104,9 +114,8 @@ class TestSummary(TestkitTestCase):
         if isinstance(summary, dict) and get_driver_name() in ["java"]:
             self.skipTest("Java 4.2 backend does not support summary")
 
-        self.assertTrue(summary.server_info.agent.startswith("Neo4j/"))
-        version = summary.server_info.agent[6:].split(".")
-        self.assertEqual(version[:2], get_server_info().version.split("."))
+        version = ".".join(summary.server_info.agent.split(".")[:2])
+        self.assertEqual(version, get_server_info().server_agent)
 
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
@@ -145,11 +154,9 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.TMP_RESULT_KEYS,
                     types.Feature.TMP_FULL_SUMMARY)
+    @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
-        if not get_server_info().supports_multi_db:
-            self.skipTest("Needs multi DB support")
-
         self._session = self._driver.session("w", database="system")
 
         self._session.run("DROP DATABASE test IF EXISTS").consume()
@@ -202,12 +209,13 @@ class TestSummary(TestkitTestCase):
 
         self._session = self._driver.session("w", database="test")
         summary = self._session.run("CREATE ()-[:KNOWS]->()").consume()
-        self._assert_counters(summary, nodes_created=2, relationships_created=1,
-                              contains_updates=True)
+        self._assert_counters(summary, nodes_created=2,
+                              relationships_created=1, contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("MATCH ()-[r:KNOWS]->() DELETE r").consume()
+        summary = self._session.run("MATCH ()-[r:KNOWS]->() "
+                                    "DELETE r").consume()
         self._assert_counters(summary,
                               relationships_deleted=1, contains_updates=True)
         self._session.close()
@@ -238,7 +246,8 @@ class TestSummary(TestkitTestCase):
 
         self._session = self._driver.session("w", database="test")
         summary = self._session.run("DROP INDEX ON :ALabel(prop)").consume()
-        self._assert_counters(summary, indexes_removed=1, contains_updates=True)
+        self._assert_counters(summary, indexes_removed=1,
+                              contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")

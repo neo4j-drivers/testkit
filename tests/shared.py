@@ -1,5 +1,6 @@
 """
-Shared utilities for writing tests
+Shared utilities for writing tests.
+
 Common between integration tests using Neo4j and stub server.
 
 Uses environment variables for configuration:
@@ -13,23 +14,22 @@ import os
 import re
 import socket
 import unittest
+import warnings
 
 import ifaddr
 
 from nutkit import protocol
 from nutkit.backend import Backend
-import warnings
 
 
 def get_backend_host_and_port():
-    host = os.environ.get('TEST_BACKEND_HOST', '127.0.0.1')
-    port = os.environ.get('TEST_BACKEND_PORT', 9876)
+    host = os.environ.get("TEST_BACKEND_HOST", "127.0.0.1")
+    port = os.environ.get("TEST_BACKEND_PORT", 9876)
     return host, port
 
 
 def new_backend():
-    """ Returns connection to backend, caller is responsible for closing
-    """
+    """Return connection to backend, caller is responsible for closing."""
     host, port = get_backend_host_and_port()
     return Backend(host, port)
 
@@ -79,11 +79,11 @@ def driver_feature(*features):
 
     for feature in features:
         if not isinstance(feature, protocol.Feature):
-            raise Exception('The arguments must be instances of Feature')
+            raise Exception("The arguments must be instances of Feature")
 
     def get_valid_test_case(*args, **kwargs):
         if not args or not isinstance(args[0], TestkitTestCase):
-            raise Exception('Should only decorate TestkitTestCase methods')
+            raise Exception("Should only decorate TestkitTestCase methods")
         return args[0]
 
     def driver_feature_decorator(func):
@@ -96,7 +96,8 @@ def driver_feature(*features):
 
 
 class MemoizedSupplier:
-    """ Momoize the function it annotates.
+    """Memoize the function it annotates.
+
     This way the decorated function will always return the
     same value of the first interaction independent of the
     supplied params.
@@ -115,27 +116,56 @@ class MemoizedSupplier:
 @MemoizedSupplier
 def get_driver_features(backend):
     try:
-        response = backend.sendAndReceive(protocol.GetFeatures())
+        response = backend.send_and_receive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
             raise Exception("Response is not instance of FeatureList")
-        return set(response.features)
+        raw_features = set(response.features)
+        features = set()
+        for raw in raw_features:
+            features.add(protocol.Feature(raw))
+        # TODO: remove this once all drivers manage the TLS feature flags
+        #       themselves.
+        if get_driver_name() in ["java", "go"]:
+            features.add(protocol.Feature.TLS_1_1)
+        if get_driver_name() in ["java", "go", "dotnet"]:
+            features.add(protocol.Feature.TLS_1_2)
+        if get_driver_name() in ["go"]:
+            features.add(protocol.Feature.TLS_1_3)
+        if get_driver_name() in ["javascript", "go", "dotnet"]:
+            features.add((
+                protocol.Feature.BOLT_3_0,
+                protocol.Feature.BOLT_4_0,
+                protocol.Feature.BOLT_4_1,
+                protocol.Feature.BOLT_4_2,
+                protocol.Feature.BOLT_4_3,
+                protocol.Feature.BOLT_4_4,
+            ))
+        print("features", features)
+        return features
     except (OSError, protocol.BaseError) as e:
         warnings.warn("Could not fetch FeatureList: %s" % e)
         return set()
 
 
 def get_driver_name():
-    return os.environ['TEST_DRIVER_NAME']
+    return os.environ["TEST_DRIVER_NAME"]
 
 
 class TestkitTestCase(unittest.TestCase):
+
+    required_features = None
+
     def setUp(self):
         super().setUp()
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
         self._backend = new_backend()
         self.addCleanup(self._backend.close)
         self._driver_features = get_driver_features(self._backend)
-        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+
+        if self.required_features:
+            self.skip_if_missing_driver_features(*self.required_features)
+
+        response = self._backend.send_and_receive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
 
@@ -177,7 +207,7 @@ class TestkitTestCase(unittest.TestCase):
                 (r"^neo4j\.test_session_run\.", "neo4j.sessionrun."),
             ):
                 id_ = re.sub(exp, sub, id_)
-        response = self._backend.sendAndReceive(protocol.StartTest(id_))
+        response = self._backend.send_and_receive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
 
@@ -187,17 +217,48 @@ class TestkitTestCase(unittest.TestCase):
                                                      response))
 
     def driver_missing_features(self, *features):
-        needed = set(map(lambda f: f.value, features))
+        needed = set(features)
         supported = self._driver_features
         return needed - supported
 
     def driver_supports_features(self, *features):
         return not self.driver_missing_features(*features)
 
+    def _bolt_version_to_feature(self, version):
+        if isinstance(version, protocol.Feature):
+            return self.driver_supports_features(version)
+        elif isinstance(version, str):
+            m = re.match(r"\D*(\d+)(?:\D+(\d+))?", version)
+            if not m:
+                raise ValueError("Invalid bolt version specification")
+            version = tuple(map(int, m.groups("0")))
+        else:
+            version = tuple(version)
+        version = tuple(map(str, version))
+        if len(version) == 1:
+            version = (version[0], "0")
+        try:
+            return getattr(protocol.Feature, "_".join(("BOLT", *version)))
+        except AttributeError:
+            raise ValueError("Unknown bolt feature "
+                             + "_".join(("BOLT", *version)))
+
+    def driver_supports_bolt(self, version):
+        return self.driver_supports_features(
+            self._bolt_version_to_feature(version)
+        )
+
     def skip_if_missing_driver_features(self, *features):
         missing = self.driver_missing_features(*features)
         if missing:
-            self.skipTest("Needs support for %s" % ", ".join(missing))
+            self.skipTest("Needs support for %s" % ", ".join(
+                map(str, missing)
+            ))
+
+    def skip_if_missing_bolt_support(self, version):
+        self.skip_if_missing_driver_features(
+            self._bolt_version_to_feature(version)
+        )
 
     def script_path(self, *path):
         base_path = os.path.dirname(inspect.getfile(self.__class__))

@@ -1,7 +1,6 @@
 """
 Responses are sent from the backend to the frontend testing framework.
 
-
 All responses are sent from backend as:
     {
         name: <class name>
@@ -22,13 +21,16 @@ For example response to NewDriver request should be sent from backend as:
 
 
 class RunTest:
-    """ Response to StartTest indicating that the test can be started"""
-    pass
+    """Response to StartTest indicating that the test can be started."""
 
 
 class FeatureList:
-    """ Response to GetFeatures indication the features supported
-    by the driver"""
+    """
+    Response to GetFeatures.
+
+    An indication of the features supported by the driver.
+    """
+
     def __init__(self, features=None):
         if features is None:
             features = []
@@ -36,15 +38,14 @@ class FeatureList:
 
 
 class SkipTest:
-    """ Response to StartTest indicating that the test should be skipped"""
+    """Response to StartTest indicating that the test should be skipped."""
 
     def __init__(self, reason):
         self.reason = reason
 
 
 class Driver:
-    """ Represents a driver instance on the backend
-    """
+    """Represents a driver instance on the backend."""
 
     def __init__(self, id):
         # Id of Driver instance on backend
@@ -52,7 +53,9 @@ class Driver:
 
 
 class ResolverResolutionRequired:
-    """ Represents a need for new address resolution.
+    """
+    Represents a need for new address resolution.
+
     This means that the backend is expecting the frontend
     to call the resolver function and submit a new request
     with the results of it.
@@ -65,7 +68,9 @@ class ResolverResolutionRequired:
 
 
 class DomainNameResolutionRequired:
-    """ Represents a need for new domain name resolution.
+    """
+    Represents a need for new domain name resolution.
+
     This means that the backend is expecting the frontend
     to call the domain name resolver function and submit a new request
     with the results of it.
@@ -78,8 +83,11 @@ class DomainNameResolutionRequired:
 
 
 class MultiDBSupport:
-    """ Specifies whether the server or cluster the driver connects to supports multi-databases.
-    It is sent in response to the CheckMultiDBSupport request.
+    """
+    Whether the driver is connection to a sever with supports multi-db-support.
+
+    Specifies whether the server or cluster the driver connects to supports
+    multi-databases. It is sent in response to the CheckMultiDBSupport request.
     """
 
     def __init__(self, id, available):
@@ -88,8 +96,7 @@ class MultiDBSupport:
 
 
 class Session:
-    """ Represents a session instance on the backend
-    """
+    """Represents a session instance on the backend."""
 
     def __init__(self, id):
         # Id of Session instance on backend
@@ -97,8 +104,7 @@ class Session:
 
 
 class Transaction:
-    """ Represents a session instance on the backend
-    """
+    """Represents a session instance on the backend."""
 
     def __init__(self, id):
         # Id of Transaction instance on backend
@@ -106,8 +112,7 @@ class Transaction:
 
 
 class Result:
-    """ Represents a result instance on the backend
-    """
+    """Represents a result instance on the backend."""
 
     def __init__(self, id, keys=None):
         # Id of Result instance on backend
@@ -117,26 +122,28 @@ class Result:
 
 
 class Record:
-    """ A record is not represented on the backend after it has been retrieved,
+    """
+    A record received from a query `Result`.
+
+    A record is not represented on the backend after it has been retrieved,
     the full instance is sent from the backend to the frontend. The backend
     should not keep it in memory.
+
+    values is a list of field values where each value is a CypherX
+    instance Backend sends Record with values =
+        [CypherNull(), CypherInt(value=1)] as
+        {
+            name: "Record",
+            data: {
+                values: [
+                    { name: "CypherNull", data: {}},
+                    { name: "CypherInt", data: { value: 1 }},
+                ]
+            }
+        }
     """
 
     def __init__(self, values=None):
-        """ values is a list of field values where each value is a CypherX
-        instance Backend sends Record with values =
-            [CypherNull(), CypherInt(value=1)] as
-            {
-                name: "Record",
-                data: {
-                    values: [
-                        { name: "CypherNull", data: {}},
-                        { name: "CypherInt", data: { value: 1 }},
-                    ]
-                }
-            }
-
-        """
         self.values = values
 
     def __eq__(self, other):
@@ -156,8 +163,7 @@ class Record:
 
 
 class NullRecord:
-    """ Represents end of records when iterating through records with Next.
-    """
+    """Represents end of records when iterating through records with Next."""
 
     def __init__(self):
         pass
@@ -173,26 +179,26 @@ class NullRecord:
 
 
 class RecordList:
-    """ Represents list of records returned from ResultList request."""
+    """Represents list of records returned from ResultList request."""
 
     def __init__(self, records=None):
         record_list = []
         if records is not None:
             for record in records:
-                record_list.append(Record(values=record['values']))
+                record_list.append(Record(values=record["values"]))
 
         self.records = record_list
 
 
 class Summary:
-    """ Represents summary returned from a ResultConsume request.
-    """
+    """Represents summary returned from a ResultConsume request."""
 
     def __init__(self, **data):
         # TODO: remove block when all drivers support the address field
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         class AnyAddress:
-            """Fake address that will match anything"""
+            """Fake address that will match anything."""
+
             def __eq__(self, _):
                 return True
 
@@ -206,9 +212,9 @@ class Summary:
                 )
             else:
                 data["serverInfo"]["address"] = AnyAddress()
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         # TODO: remove block when all drivers support the fields
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         from tests.shared import get_driver_name
         if get_driver_name() in ["javascript"]:
             # already sends counters but the wrong format and not all fields
@@ -267,7 +273,7 @@ class Summary:
                     )
                 else:
                     data[field] = None
-        # ----------------------------------------------------------------------
+        # ---------------------------------------------------------------------
         self.counters = SummaryCounters(**data["counters"])
         self.database = data["database"]
         self.notifications = data["notifications"]
@@ -281,7 +287,7 @@ class Summary:
 
 
 class ServerInfo:
-    """ Represents server info that is included in the Summary response. """
+    """Represents server info that is included in the Summary response."""
 
     def __init__(self, address, agent, protocolVersion):
         self.address = address
@@ -290,8 +296,7 @@ class ServerInfo:
 
 
 class SummaryCounters:
-    """ Represents the counters info that is included in the Summary response.
-    """
+    """Represents the counters info included in the Summary response."""
 
     def __init__(self, constraintsAdded, constraintsRemoved,
                  containsSystemUpdates, containsUpdates, indexesAdded,
@@ -315,8 +320,7 @@ class SummaryCounters:
 
 
 class SummaryQuery:
-    """ Represents the query info that is included in the Summary response.
-    """
+    """Represents the query info that is included in the Summary response."""
 
     def __init__(self, text, parameters):
         self.text = text
@@ -324,17 +328,19 @@ class SummaryQuery:
 
 
 class Bookmarks:
-    """ Represents an array of bookmarks.
-    """
+    """Represents an array of bookmarks."""
 
     def __init__(self, bookmarks):
         self.bookmarks = bookmarks
 
 
 class RetryableTry:
-    """ Represents a retryable transaction on the backend. The backend has
-    created a transaction and will enter retryable function on the backend,
-    all further requests will be applied through that retryable function.
+    """
+    Represents a retryable transaction on the backend.
+
+    The backend has created a transaction and will enter retryable function on
+    the backend, all further requests will be applied through that retryable
+    function.
     """
 
     def __init__(self, id):
@@ -343,7 +349,10 @@ class RetryableTry:
 
 
 class RetryableDone:
-    """ Sent from backend when a retryable transaction has been successfully
+    """
+    Transaction successfully committed.
+
+    Sent from backend when a retryable transaction has been successfully
     committed.
     """
 
@@ -353,7 +362,8 @@ class RetryableDone:
 
 class RoutingTable:
     def __init__(self, database, ttl, routers, readers, writers):
-        """ Sent from the backend in response to GetRoutingTable.
+        """
+        Sent from the backend in response to GetRoutingTable.
 
         routers, readers, and writers are all supposed to be lists of addresses
         as strings.
@@ -366,17 +376,17 @@ class RoutingTable:
 
 
 class BaseError(Exception):
-    """ Base class for all types of errors, should not be sent from backend
+    """
+    Base class for all types of errors, should not be sent from backend.
 
     All classes inheriting from this will be thrown as exceptions upon
     retrieval from backend.
     """
-    pass
 
 
 class DriverError(BaseError):
-    """ Base class for all kind of driver errors that is NOT a backend
-    specific error
+    """
+    Base class for all driver errors that are NOT a backend specific error.
 
     The backend should keep it's error representation in memory and send the
     id of that error in the response. By doing this there is no need to
@@ -403,7 +413,8 @@ class DriverError(BaseError):
 
 
 class FrontendError(BaseError):
-    """ Represents an error originating from client code.
+    """
+    Error originating from client code.
 
     As in cases where the driver invokes client code and that code
     returns/raises an error.
@@ -421,7 +432,10 @@ ClientError = FrontendError
 
 
 class BackendError(BaseError):
-    """ Sent by backend when there is an internal error in the backend, not
+    """
+    Internal backend error.
+
+    Sent by backend when there is an internal error in the backend, not
     the driver.
 
     The backend can choose to send this to simplify debugging of implementation

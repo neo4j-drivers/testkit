@@ -1,13 +1,9 @@
 from abc import abstractmethod
-from collections import defaultdict
 import inspect
 import os
 
 import nutkit.protocol as types
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
@@ -17,12 +13,6 @@ from tests.stub.shared import StubServer
 class RoutingBase(TestkitTestCase):
     def setUp(self):
         super().setUp()
-        required_bolt_features = {
-            "4.4": (types.Feature.BOLT_4_4,),
-        }
-        self.skip_if_missing_driver_features(
-            *required_bolt_features.get(self.bolt_version, ())
-        )
         self._routingServer1 = StubServer(9000)
         self._routingServer2 = StubServer(9001)
         self._routingServer3 = StubServer(9002)
@@ -94,7 +84,7 @@ class RoutingBase(TestkitTestCase):
                 script_path = self.script_path(version_folder, script_fn)
                 tried_locations.append(script_path)
                 if os.path.exists(script_path):
-                    server.start(path=script_path, vars=vars_)
+                    server.start(path=script_path, vars_=vars_)
                     return
         raise FileNotFoundError("{!r} tried {!r}".format(
             script_fn, ", ".join(tried_locations)
@@ -105,11 +95,11 @@ class RoutingBase(TestkitTestCase):
         pass
 
     @staticmethod
-    def collectRecords(result):
+    def collect_records(result):
         sequence = []
         while True:
-            next = result.next()
-            if isinstance(next, types.NullRecord):
+            record = result.next()
+            if isinstance(record, types.NullRecord):
                 break
-            sequence.append(next.values[0].value)
+            sequence.append(record.values[0].value)
         return sequence

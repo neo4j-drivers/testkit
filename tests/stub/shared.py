@@ -1,4 +1,4 @@
-""" Shared utilities for writing stub tests
+"""Shared utilities for writing stub tests.
 
 Uses environment variables for configuration:
 """
@@ -19,7 +19,6 @@ from textwrap import wrap
 from threading import Thread
 import time
 
-
 if platform.system() == "Windows":
     INTERRUPT = signal.CTRL_BREAK_EVENT
     INTERRUPT_EXIT_CODE = 3221225786  # oh Windows, you absolute beauty
@@ -34,11 +33,11 @@ class StubServerError(Exception):
     pass
 
 
-class StubServerUncleanExit(StubServerError):
+class StubServerUncleanExitError(StubServerError):
     pass
 
 
-class StubServerScriptNotFinished(StubServerError):
+class StubScriptNotFinishedError(StubServerError):
     pass
 
 
@@ -61,7 +60,7 @@ class StubServer:
         self._pipes_closed = False
         self._script_path = None
 
-    def start(self, path=None, script=None, vars=None):
+    def start(self, path=None, script=None, vars_=None):
         if self._process:
             raise Exception("Stub server in use")
 
@@ -75,13 +74,13 @@ class StubServer:
             raise ValueError("Specify either path or script.")
 
         script_fn = "temp.script"
-        if vars:
+        if vars_:
             if path:
                 script_fn = os.path.basename(path)
                 with open(path, "r") as f:
                     script = f.read()
-            for v in vars:
-                script = script.replace(v, str(vars[v]))
+            for v in vars_:
+                script = script.replace(v, str(vars_[v]))
         if script:
             tempdir = tempfile.gettempdir()
             path = os.path.join(tempdir, script_fn)
@@ -98,7 +97,7 @@ class StubServer:
             ],
             **POPEN_EXTRA_KWARGS,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True,
-            encoding='utf-8'
+            encoding="utf-8"
         )
 
         Thread(target=_poll_pipe,
@@ -124,7 +123,9 @@ class StubServer:
             if self._process.poll():
                 self._dump()
                 self._clean_up()
-                raise StubServerUncleanExit("Stub server crashed on start-up")
+                raise StubServerUncleanExitError(
+                    "Stub server crashed on start-up"
+                )
         finally:
             self._rm_tmp_script()
 
@@ -209,7 +210,7 @@ class StubServer:
         return self._poll(timeout)
 
     def done(self):
-        """Shut down the server, if running
+        """Shut down the server, if running.
 
         If the server was never started, this method does nothing.
 
@@ -235,17 +236,17 @@ class StubServer:
             if self._poll(.1) or self._interrupt():
                 pass
             elif self._interrupt():
-                raise StubServerScriptNotFinished(
+                raise StubScriptNotFinishedError(
                     "Stub server didn't finish the script."
                 )
             elif not self._interrupt():
                 self._process.kill()
                 self._process.wait()
-                raise StubServerUncleanExit("Stub server hanged.")
+                raise StubServerUncleanExitError("Stub server hanged.")
             if self._process.returncode not in (0, INTERRUPT_EXIT_CODE):
                 if self._process.returncode == 3:
-                    raise StubServerScriptNotFinished("Script never started.")
-                raise StubServerUncleanExit(
+                    raise StubScriptNotFinishedError("Script never started.")
+                raise StubServerUncleanExitError(
                     "Stub server exited unclean ({})".format(
                         self._process.returncode
                     )
@@ -264,7 +265,8 @@ class StubServer:
         sending a SIGKILL.
 
         If the server exited unexpectedly (e.g., script mismatch), dump the
-        output."""
+        output.
+        """
         if self._process:
             # briefly try to get a shutdown that will dump script mismatches
             self._interrupt(.3)
@@ -380,5 +382,5 @@ class StubServer:
 
 
 scripts_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "scripts"
+    os.path.dirname(os.path.abspath(__file__)), "scripts"
 )

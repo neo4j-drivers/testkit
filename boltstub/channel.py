@@ -24,9 +24,11 @@ class Channel:
         request = self.wire.read(4)
         self._log("C: <MAGIC> %s", hex_repr(request))
         if request != b"\x60\x60\xb0\x17":
-            raise ServerExit("Expected the magic header {}, received {}".format(
-                "6060B017", hex_repr(request)
-            ))
+            raise ServerExit(
+                "Expected the magic header {}, received {}".format(
+                    "6060B017", hex_repr(request)
+                )
+            )
 
     def version_handshake(self):
         request = self.wire.read(16)
@@ -34,8 +36,8 @@ class Channel:
         if self.handshake_data is not None:
             response = self.handshake_data
         else:
-            # Check that the server protocol version is among the ones supported
-            # by the driver.
+            # Check that the server protocol version is among the ones
+            # supported by the driver.
             supported_version = self.bolt_protocol.protocol_version
             requested_versions = set(
                 self.bolt_protocol.decode_versions(request)

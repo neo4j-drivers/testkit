@@ -4,13 +4,16 @@ from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
-    TestkitTestCase,
     get_driver_name,
+    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
 
 class TestResultPeek(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_0,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
@@ -35,8 +38,8 @@ class TestResultPeek(TestkitTestCase):
                         types.AuthorizationToken(scheme="basic", principal="",
                                                  credentials=""))
         self._server.start(path=self.script_path("v4x0", script_fn),
-                           vars=vars_)
-        session = driver.session("w", fetchSize=fetch_size)
+                           vars_=vars_)
+        session = driver.session("w", fetch_size=fetch_size)
         try:
             yield session
             session.close()
@@ -62,6 +65,8 @@ class TestResultPeek(TestkitTestCase):
             self.assertEqual(record.values, [types.CypherInt(1)])
             record = result.peek()
             self.assertIsInstance(record, types.NullRecord)
+            record = result.next()
+            self.assertIsInstance(record, types.NullRecord)
 
     @driver_feature(types.Feature.API_RESULT_PEEK)
     def test_result_peek_with_2_records(self):
@@ -77,6 +82,8 @@ class TestResultPeek(TestkitTestCase):
                     self.assertIsInstance(record, types.Record)
                     self.assertEqual(record.values, [types.CypherInt(i)])
                 record = result.peek()
+                self.assertIsInstance(record, types.NullRecord)
+                record = result.next()
                 self.assertIsInstance(record, types.NullRecord)
 
         for fetch_size in (1, 2):
@@ -108,7 +115,7 @@ class TestResultPeek(TestkitTestCase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            tx = session.beginTransaction()
+            tx = session.begin_transaction()
             result = tx.run("RETURN 1 AS n")
             with self.assertRaises(types.DriverError) as exc:
                 result.peek()
@@ -133,6 +140,6 @@ class TestResultPeek(TestkitTestCase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            record = session.readTransaction(work)
+            record = session.read_transaction(work)
             self.assertIsInstance(record, types.Record)
             self.assertEqual(record.values, [types.CypherInt(1)])
