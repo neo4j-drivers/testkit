@@ -131,7 +131,7 @@ def get_driver_features(backend):
             features.add(protocol.Feature.TLS_1_2)
         if get_driver_name() in ["go"]:
             features.add(protocol.Feature.TLS_1_3)
-        if get_driver_name() in ["javascript", "go", "dotnet"]:
+        if get_driver_name() in ["dotnet"]:
             features.add((
                 protocol.Feature.BOLT_3_0,
                 protocol.Feature.BOLT_4_0,
