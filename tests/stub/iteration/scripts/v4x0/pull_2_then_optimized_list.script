@@ -5,32 +5,30 @@ A: HELLO {"{}": "*"}
 
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["n"]}
+
+# Pipelining driver: pipelined PULL
+# Non-pipelining driver: result.next
+C: PULL {"n": 2}
+S: RECORD [1]
+   RECORD [2]
+   SUCCESS {"has_more": true}
 {{
-    # No PULL pipelining
-    # Calling result.next
+    # Pipelining driver
+    # result.next
     C: PULL {"n": 2}
-    S: RECORD [1]
-       RECORD [2]
+    S: RECORD [3]
+       RECORD [4]
        SUCCESS {"has_more": true}
-    # Calling result.list
+    # result.list
+    C: PULL {"n": -1}
+    S: RECORD [5]
+----
+    # Non-pipelining driver
+    # result.list
     C: PULL {"n": -1}
     S: RECORD [3]
        RECORD [4]
        RECORD [5]
-----
-    # Pipelining PULL
-    C: PULL {"n": 2}
-    S: RECORD [1]
-       RECORD [2]
-       SUCCESS {"has_more": true}
-    # Calling result.next
-    C: PULL {"n": 2}
-    S: RECORD [3]
-       RECORD [4]
-       SUCCESS {"has_more": true}
-    # Calling result.list
-    C: PULL {"n": -1}
-    S: RECORD [5]
 }}
 S: SUCCESS {"type": "w"}
 
