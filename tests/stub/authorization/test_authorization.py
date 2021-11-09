@@ -835,7 +835,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1 = driver.session("r", fetch_size=1)
         session2 = driver.session("r")
 
-        self.collect_records(session1.run("RETURN 3 as n"))
+        list(session1.run("RETURN 3 as n"))
 
         with self.assertRaises(types.DriverError) as exc:
             session2.run("RETURN 1 as n").next()
