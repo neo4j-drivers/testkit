@@ -82,6 +82,16 @@ class AuthorizationBase(TestkitTestCase):
             script_fn, ", ".join(tried_locations)
         ))
 
+    @staticmethod
+    def collect_records(result):
+        sequence = []
+        while True:
+            next_ = result.next()
+            if isinstance(next_, types.NullRecord):
+                break
+            sequence.append(next_.values[0].value)
+        return sequence
+
     def get_vars(self):
         raise NotImplementedError
 
@@ -129,16 +139,6 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     def get_db(self):
         return "adb"
-
-    @staticmethod
-    def collect_records(result):
-        sequence = []
-        while True:
-            next_ = result.next()
-            if isinstance(next_, types.NullRecord):
-                break
-            sequence.append(next_.values[0].value)
-        return sequence
 
     def switch_unused_servers(self, servers, new_script_path):
         contact_count = []
@@ -320,7 +320,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
-        tx.run("RETURN 1 as n")
+        tx.run("RETURN 5 as n")
         with self.assertRaises(types.DriverError) as exc:
             tx.commit()
         error_assertion(exc.exception)
@@ -833,7 +833,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1 = driver.session("r", fetch_size=1)
         session2 = driver.session("r")
 
-        session1.run("RETURN 3 as n").consume()
+        self.collect_records(session1.run("RETURN 3 as n"))
 
         with self.assertRaises(types.DriverError) as exc:
             session2.run("RETURN 1 as n").next()

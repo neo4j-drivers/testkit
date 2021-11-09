@@ -6,10 +6,10 @@ A: HELLO {"{}": "*"}
 {+
     {{
         C: RUN "RETURN 1 as n" {} {"mode": "r"}
-           PULL {"n": 1000}
         S: SUCCESS {"fields": ["n"]}
-           FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
-        S: <EXIT>
+        C: PULL {"n": 1000}
+        S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+           <EXIT>
     ----
         C: RUN "RETURN 2 as n" {} {"mode": "r"}
         S: SUCCESS {"fields": ["n"]}
@@ -22,9 +22,9 @@ A: HELLO {"{}": "*"}
         S: SUCCESS {}
     ----
         C: RUN "RETURN 3 as n" {} {"mode": "r"}
-           PULL {"n": "*"}
         S: SUCCESS {"fields": ["n"]}
-           RECORD [1]
+        C: PULL {"n": "*"}
+        S: RECORD [1]
            SUCCESS {"type": "r"}
     }}
     *: RESET
