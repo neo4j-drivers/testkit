@@ -76,7 +76,6 @@ class TestProtocolVersions(TestkitTestCase):
             try:
                 result = session.run("RETURN 1 AS n")
                 if server_agent or check_version or check_server_address:
-                    result.next()
                     summary = result.consume()
                     if check_version:
                         expected_protocol_version = \
