@@ -312,7 +312,16 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent="007")
 
         session = driver.session("w", database=self.adb, fetch_size=2)
-        res = session.run("RETURN 5 as n")
+        if self.driver_supports_features(
+            types.Feature.OPT_RESULT_LIST_FETCH_ALL
+        ):
+            # This script branch expects res.list to fetch all outstanding
+            # records in one go.
+            res = session.run("RETURN 5 as n")
+        else:
+            # This script branch expects res.list to fetch all outstanding
+            # records while respecting the configure fetch size.
+            res = session.run("RETURN 1 as n")
         records = res.list()
 
         session.close()
