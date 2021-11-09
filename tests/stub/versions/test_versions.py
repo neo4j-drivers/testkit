@@ -162,6 +162,8 @@ class TestProtocolVersions(TestkitTestCase):
                 if agent == "Neo4j/Funky!" and get_driver_name() in ["java"]:
                     # skip subtest: Tries to parse the server agent
                     continue
+                if not self.driver_supports_bolt(version):
+                    continue
                 with self.subTest(version + "-" + agent.replace(".", "x")):
                     self._run(version, server_agent=agent,
                               rejected_agent=reject)
