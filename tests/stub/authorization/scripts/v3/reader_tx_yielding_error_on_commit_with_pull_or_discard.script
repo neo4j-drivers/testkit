@@ -3,11 +3,16 @@
 A: HELLO {"{}": "*"}
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
-C: RUN "RETURN 1 as n" {} {}
+C: RUN "RETURN 5 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
-C: PULL_ALL
-S: RECORD [1]
-   SUCCESS {"type": "r"}
+{{
+    C: PULL_ALL
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+----
+    C: DISCARD_ALL
+    S: SUCCESS {}
+}}
 C: COMMIT
 S: FAILURE #ERROR#
    <EXIT>

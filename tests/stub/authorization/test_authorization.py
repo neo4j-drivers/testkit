@@ -314,13 +314,14 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_commit.script",
-                          vars_=vars_)
+        self.start_server(
+            self._read_server1,
+            "reader_tx_yielding_error_on_commit_with_pull_or_discard.script",
+            vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
-        tx.run("RETURN 5 as n")
+        tx.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             tx.commit()
         error_assertion(exc.exception)
@@ -349,9 +350,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_rollback.script",
-                          vars_=vars_)
+        self.start_server(
+            self._read_server1,
+            "reader_tx_yielding_error_on_rollback_with_pull_or_discard.script",
+            vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
