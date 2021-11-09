@@ -1,26 +1,15 @@
-from contextlib import contextmanager
-
-from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
     get_driver_name,
-    TestkitTestCase,
 )
-from tests.stub.shared import StubServer
+
+from ._common import IterationTestBase
 
 
-class TestResultSingle(TestkitTestCase):
+class TestResultSingle(IterationTestBase):
 
     required_features = types.Feature.BOLT_4_0,
-
-    def setUp(self):
-        super().setUp()
-        self._server = StubServer(9001)
-
-    def tearDown(self):
-        self._server.reset()
-        super().tearDown()
 
     def _assert_not_exactly_one_record_error(self, error):
         self.assertIsInstance(error, types.DriverError)
@@ -39,21 +28,6 @@ class TestResultSingle(TestkitTestCase):
                              error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-
-    @contextmanager
-    def _session(self, script_fn, fetch_size=2, vars_=None):
-        uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="",
-                                                 credentials=""))
-        self._server.start(path=self.script_path("v4x0", script_fn),
-                           vars_=vars_)
-        session = driver.session("w", fetch_size=fetch_size)
-        try:
-            yield session
-            session.close()
-        finally:
-            self._server.reset()
 
     @driver_feature(types.Feature.API_RESULT_SINGLE)
     def test_result_single_with_0_records(self):
