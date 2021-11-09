@@ -76,6 +76,7 @@ class TestProtocolVersions(TestkitTestCase):
             try:
                 result = session.run("RETURN 1 AS n")
                 if server_agent or check_version or check_server_address:
+                    result.next()
                     summary = result.consume()
                     if check_version:
                         expected_protocol_version = \
@@ -161,6 +162,8 @@ class TestProtocolVersions(TestkitTestCase):
                     continue
                 if agent == "Neo4j/Funky!" and get_driver_name() in ["java"]:
                     # skip subtest: Tries to parse the server agent
+                    continue
+                if not self.driver_supports_bolt(version):
                     continue
                 with self.subTest(version + "-" + agent.replace(".", "x")):
                     self._run(version, server_agent=agent,

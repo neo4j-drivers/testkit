@@ -3,13 +3,9 @@
 C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 *: RESET
-{?
-    C: RUN "RETURN 1 AS n" {} {}
-    S: SUCCESS {"fields": ["n.name"]}
-    {?
-        C: PULL_ALL
-        S: SUCCESS {"type": "w"}
-    ?}
-    *: RESET
-?}
+C: RUN "RETURN 1 AS n" {} {}
+S: SUCCESS {"fields": ["n.name"]}
+C: PULL_ALL
+S: SUCCESS {"type": "w"}
+*: RESET
 ?: GOODBYE
