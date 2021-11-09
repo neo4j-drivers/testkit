@@ -39,15 +39,7 @@ export TEST_DRIVER_REPO=/home/clones/neo4j/neo4j-go-driver
 python3 main.py
 ```
 
-## Local development
-
-For how to contribute to TestKit, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-For info on how to run selected tests locally (developing your driver),
-read below.
-
-
-### Configuration variables
+## Configuration variables
 
 Environment variables used to control how tests are executed:
   * `TEST_NEO4J_HOST`  
@@ -67,10 +59,10 @@ Environment variables used to control how tests are executed:
     Defaults to 9876, normally not needed.
 All of these variables are normally set by the main runner.
 
-### Running a subset of tests or configurations
+## Running a subset of tests or configurations
 
 When running testkit locally from the command line you can specify which test
-types you want to run. In addition the Neo4j version and edition against which
+types you want to run. In addition, the Neo4j version and edition against which
 the tests should be executed can be configured  via the `--configs` parameter:
 
 
@@ -86,13 +78,32 @@ python3 main.py --help
 
 The `--tests` parameter refers to a prefined set subset of all available tests.
 
+
+## Local development
+
+For how to contribute to TestKit, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+For info on how to run selected tests locally (developing your driver),
+read below.
+
+There are additional environment variables that are useful for locally developing
+TestKit or for debugging local backends:
+  * `TEST_DEBUG_REQRES`
+    Print all messages sent between TestKit and the backend.
+  * `TEST_DEBUG_NO_BACKEND_TIMEOUT`
+    Set to `1` to disable TestKit timing out if the backend takes longer than
+    the usually enforced timeout. This is very handy if you want to step through
+    the backend or driver with a debugger without TestKit canceling the tests
+    due to a timed out connection.
+
+
 ### Running tests against a specific backend
 
 When developing a driver or providing a testkit backend for that specific driver
 it is useful to be able to run testkit against a locally running backend. That
 backend will be most likely started from your IDE and making use of a non-packaged
 version of your driver, thus avoiding the step of fully building both the specific
-driver and its backend. Therefore such a setup does not require Docker containers.
+driver and its backend. Therefore, such a setup does not require Docker containers.
 
 Testkit requires some packages to do this, which can be installed via pip:
 
