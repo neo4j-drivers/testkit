@@ -4,7 +4,7 @@ from tests.shared import get_driver_name
 from ._common import IterationTestBase
 
 
-class TestResultSingle(IterationTestBase):
+class TestResultList(IterationTestBase):
 
     required_features = (types.Feature.BOLT_4_0,
                          types.Feature.API_RESULT_LIST)
