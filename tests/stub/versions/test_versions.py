@@ -107,6 +107,10 @@ class TestProtocolVersions(TestkitTestCase):
                 if rejected_agent:
                     self.fail("Driver should have rejected the server agent")
             self._server.done()
+            if not rejected_agent:
+                self.assertEqual(self._server.count_requests("RUN"), 1)
+            else:
+                self.assertEqual(self._server.count_requests("RUN"), 0)
 
     @driver_feature(types.Feature.BOLT_3_0)
     def test_supports_bolt_3x0(self):
