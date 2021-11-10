@@ -134,16 +134,6 @@ class TestAuthorizationV4x3(AuthorizationBase):
     def get_db(self):
         return "adb"
 
-    @staticmethod
-    def collect_records(result):
-        sequence = []
-        while True:
-            next_ = result.next()
-            if isinstance(next_, types.NullRecord):
-                break
-            sequence.append(next_.values[0].value)
-        return sequence
-
     def switch_unused_servers(self, servers, new_script_path):
         contact_count = []
         for server in servers:
@@ -318,9 +308,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_commit.script",
-                          vars_=vars_)
+        self.start_server(
+            self._read_server1,
+            "reader_tx_yielding_error_on_commit_with_pull_or_discard.script",
+            vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
@@ -353,9 +344,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_rollback.script",
-                          vars_=vars_)
+        self.start_server(
+            self._read_server1,
+            "reader_tx_yielding_error_on_rollback_with_pull_or_discard.script",
+            vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
@@ -406,7 +398,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         session.read_transaction(work)
         session.close()
@@ -418,7 +410,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         # TODO: Some drivers check the result of BEGIN before calling the
         #       transaction function, others don't
         self.assertIn(attempt_count, {1, 2})
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_begin_using_tx_function(self):
@@ -445,7 +437,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work)
@@ -486,7 +478,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         session.read_transaction(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
@@ -500,7 +492,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._read_server1.done()
         self._read_server2.done()
         self.assertEqual(2, attempt_count)
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_run_using_tx_function(self):
@@ -526,7 +518,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work, hooks={
@@ -577,7 +569,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         session.read_transaction(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
@@ -591,7 +583,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._read_server1.done()
         self._read_server2.done()
         self.assertEqual(2, attempt_count)
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_pull_using_tx_function(self):
@@ -615,7 +607,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work, hooks={
@@ -666,7 +658,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         session.read_transaction(work, hooks={
             "on_send_RetryablePositive": lambda _: self.switch_unused_servers(
@@ -680,7 +672,8 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._read_server1.done()
         self._read_server2.done()
         self.assertEqual(2, attempt_count)
-        self.assertEqual([[1], [1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])],
+                          [types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_commit_using_tx_function(self):
@@ -704,7 +697,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collect_records(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work, hooks={
@@ -731,7 +724,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             self.fail("Not exactly 1 read attempt. Reader 1: %i + Reader 2: %i"
                       % (reader1_connections, reader2_connections))
         self.assertEqual(1, attempt_count)
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
 
 class TestAuthorizationV4x1(TestAuthorizationV4x3):
@@ -837,7 +830,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1 = driver.session("r", fetch_size=1)
         session2 = driver.session("r")
 
-        session1.run("RETURN 3 as n").consume()
+        list(session1.run("RETURN 3 as n"))
 
         with self.assertRaises(types.DriverError) as exc:
             session2.run("RETURN 1 as n").next()

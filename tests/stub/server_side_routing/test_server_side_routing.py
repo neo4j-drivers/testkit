@@ -12,6 +12,8 @@ class TestServerSideRouting(TestkitTestCase):
 
     required_features = types.Feature.BOLT_4_1,
 
+    required_features = types.Feature.BOLT_4_1,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)

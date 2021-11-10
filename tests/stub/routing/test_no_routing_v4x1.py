@@ -297,7 +297,7 @@ class NoRoutingV4x1(TestkitTestCase):
                           types.Record(values=[types.CypherInt(9)])], records)
         self._server.done()
 
-    @driver_feature(types.Feature.TMP_RESULT_LIST)
+    @driver_feature(types.Feature.API_RESULT_LIST)
     def test_should_pull_custom_size_and_then_all_using_session_configuration(
             self):
         uri = "bolt://%s" % self._server.address
@@ -312,18 +312,23 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent="007")
 
         session = driver.session("w", database=self.adb, fetch_size=2)
-        res = session.run("RETURN 5 as n")
-        record_list = res.list()
+        if self.driver_supports_features(
+            types.Feature.OPT_RESULT_LIST_FETCH_ALL
+        ):
+            # This script branch expects res.list to fetch all outstanding
+            # records in one go.
+            res = session.run("RETURN 5 as n")
+        else:
+            # This script branch expects res.list to fetch all outstanding
+            # records while respecting the configure fetch size.
+            res = session.run("RETURN 1 as n")
+        records = res.list()
 
         session.close()
         driver.close()
 
-        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
-                          types.Record(values=[types.CypherInt(3)]),
-                          types.Record(values=[types.CypherInt(5)]),
-                          types.Record(values=[types.CypherInt(7)]),
-                          types.Record(values=[types.CypherInt(9)])],
-                         record_list.records)
+        self.assertEqual(records, [types.Record(values=[types.CypherInt(i)])
+                                   for i in (1, 3, 5, 7, 9)])
         self._server.done()
 
     @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
