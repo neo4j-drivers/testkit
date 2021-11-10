@@ -68,7 +68,8 @@ class NoRoutingV4x1(TestkitTestCase):
         # Driver is configured to talk to "routing" stub server
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir, "reader.script"),
+            path=self.script_path(self.version_dir,
+                                  "reader_write_mode.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -77,7 +78,7 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent="007")
 
         session = driver.session("w", database=self.adb)
-        res = session.run("RETURN 5 as n")
+        res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
         session.close()
@@ -97,7 +98,8 @@ class NoRoutingV4x1(TestkitTestCase):
             "#ROUTING#": ""
         })
         self._server.start(
-            path=self.script_path(self.version_dir, "reader.script"),
+            path=self.script_path(self.version_dir,
+                                  "reader_write_mode.script"),
             vars_=no_routing_context_vars
         )
         driver = Driver(self._backend, uri,
@@ -106,7 +108,7 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent="007")
 
         session = driver.session("w", database=self.adb)
-        res = session.run("RETURN 5 as n")
+        res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
         session.close()
@@ -124,7 +126,8 @@ class NoRoutingV4x1(TestkitTestCase):
             "#USER_AGENT#": custom_agent
         })
         self._server.start(
-            path=self.script_path(self.version_dir, "reader.script"),
+            path=self.script_path(self.version_dir,
+                                  "reader_write_mode.script"),
             vars_=custom_agent_context_vars
         )
         driver = Driver(self._backend, uri,
@@ -133,7 +136,7 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent=custom_agent)
 
         session = driver.session("w", database=self.adb)
-        res = session.run("RETURN 5 as n")
+        res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
         session.close()
@@ -152,7 +155,7 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
+                "writer_yielding_db_unavailable_error_on_rollback.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -183,7 +186,7 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
+                "writer_yielding_db_unavailable_error_on_rollback.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -218,7 +221,7 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
+                "writer_yielding_db_unavailable_error_on_rollback.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -301,9 +304,15 @@ class NoRoutingV4x1(TestkitTestCase):
     def test_should_pull_custom_size_and_then_all_using_session_configuration(
             self):
         uri = "bolt://%s" % self._server.address
+        script = (
+            "writer_with_custom_fetch_size_pull_all.script"
+            if self.driver_supports_features(
+                types.Feature.OPT_RESULT_LIST_FETCH_ALL
+            )
+            else "writer_with_custom_fetch_size.script"
+        )
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_with_custom_fetch_size.script"),
+            path=self.script_path(self.version_dir, script),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -312,16 +321,7 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent="007")
 
         session = driver.session("w", database=self.adb, fetch_size=2)
-        if self.driver_supports_features(
-            types.Feature.OPT_RESULT_LIST_FETCH_ALL
-        ):
-            # This script branch expects res.list to fetch all outstanding
-            # records in one go.
-            res = session.run("RETURN 5 as n")
-        else:
-            # This script branch expects res.list to fetch all outstanding
-            # records while respecting the configure fetch size.
-            res = session.run("RETURN 1 as n")
+        res = session.run("RETURN 1 as n")
         records = res.list()
 
         session.close()
@@ -362,7 +362,7 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
+                "writer_yielding_db_unavailable_error_on_commit.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -372,7 +372,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         session = driver.session("w", database=self.adb)
         tx = session.begin_transaction()
-        res = tx.run("RETURN 5 as n")
+        res = tx.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
 
@@ -412,8 +412,9 @@ class NoRoutingV4x1(TestkitTestCase):
             self):
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_yielding_multiple_records.script"),
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_multiple_records_with_noops.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -422,7 +423,7 @@ class NoRoutingV4x1(TestkitTestCase):
                         user_agent="007")
 
         session = driver.session("w", database=self.adb)
-        res = session.run("RETURN 5 as n")
+        res = session.run("RETURN 1 as n")
         records = list(res)
 
         session.close()
@@ -438,7 +439,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
+                "writer_yielding_db_unavailable_error_"
+                "then_shut_down_on_commit.script"),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -448,7 +450,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
         session = driver.session("w", database=self.adb)
         tx = session.begin_transaction()
-        res = tx.run("RETURN 7 as n")
+        res = tx.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
 
