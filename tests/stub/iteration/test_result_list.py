@@ -4,7 +4,7 @@ from tests.shared import get_driver_name
 from ._common import IterationTestBase
 
 
-class TestResultSingle(IterationTestBase):
+class TestResultList(IterationTestBase):
 
     required_features = (types.Feature.BOLT_4_0,
                          types.Feature.API_RESULT_LIST)
@@ -19,6 +19,11 @@ class TestResultSingle(IterationTestBase):
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ServiceUnavailableException",
                 error.errorType
+            )
+        elif driver in ["javascript"]:
+            self.assertEqual(
+                "ServiceUnavailable",
+                error.code
             )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
@@ -121,81 +126,83 @@ class TestResultSingle(IterationTestBase):
         )
 
     def test_session_run_result_list_pulls_all_records_at_once(self):
-        def test_(next_first_):
-            script = self._result_list_script(next_first=next_first_)
+        self._test_session_run_result_list_pulls_all_records_at_once(next_first=False)  # noqa: E501
 
-            with self._session(script, fetch_size=2) as session:
-                result = session.run("RETURN 1 AS n")
-                i_start = 1
-                if next_first_:
-                    record = result.next()
-                    self.assertEqual(
-                        record,
-                        types.Record(values=[types.CypherInt(i_start)])
-                    )
-                    i_start += 1
-                records = result.list()
-                self.assertEqual(records, [
-                    types.Record(values=[types.CypherInt(i)])
-                    for i in range(i_start, 6)
-                ])
+    def test_session_run_result_list_pulls_all_records_at_once_next_before_list(self):  # noqa: E501
+        self._test_session_run_result_list_pulls_all_records_at_once(next_first=True)  # noqa: E501
 
-        for next_first in (True, False):
-            with self.subTest("next_before_list" if next_first else "list"):
-                test_(next_first)
+    def _test_session_run_result_list_pulls_all_records_at_once(self, next_first):  # noqa: E501
+        script = self._result_list_script(next_first=next_first)
+
+        with self._session(script, fetch_size=2) as session:
+            result = session.run("RETURN 1 AS n")
+            i_start = 1
+            if next_first:
+                record = result.next()
+                self.assertEqual(
+                    record,
+                    types.Record(values=[types.CypherInt(i_start)])
+                )
+                i_start += 1
+            records = result.list()
+            self.assertEqual(records, [
+                types.Record(values=[types.CypherInt(i)])
+                for i in range(i_start, 6)
+            ])
 
     def test_tx_run_result_list_pulls_all_records_at_once(self):
-        def test_(next_first_):
-            script = self._result_list_script(transaction=True,
-                                              next_first=next_first_)
+        self._test_tx_run_result_list_pulls_all_records_at_once(next_first=False)  # noqa: E501
 
-            with self._session(script, fetch_size=2) as session:
-                tx = session.begin_transaction()
-                result = tx.run("RETURN 1 AS n")
-                i_start = 1
-                if next_first_:
-                    record = result.next()
-                    self.assertEqual(
-                        record,
-                        types.Record(values=[types.CypherInt(i_start)])
-                    )
-                    i_start += 1
-                records = result.list()
-                self.assertEqual(records, [
-                    types.Record(values=[types.CypherInt(i)])
-                    for i in range(i_start, 6)
-                ])
-                tx.commit()
+    def test_tx_run_result_list_pulls_all_records_at_once_next_before_list(self):  # noqa: E501
+        self._test_tx_run_result_list_pulls_all_records_at_once(next_first=True)  # noqa: E501
 
-        for next_first in (True, False):
-            with self.subTest("next_before_list" if next_first else "list"):
-                test_(next_first)
+    def _test_tx_run_result_list_pulls_all_records_at_once(self, next_first):
+        script = self._result_list_script(transaction=True,
+                                          next_first=next_first)
+
+        with self._session(script, fetch_size=2) as session:
+            tx = session.begin_transaction()
+            result = tx.run("RETURN 1 AS n")
+            i_start = 1
+            if next_first:
+                record = result.next()
+                self.assertEqual(
+                    record,
+                    types.Record(values=[types.CypherInt(i_start)])
+                )
+                i_start += 1
+            records = result.list()
+            self.assertEqual(records, [
+                types.Record(values=[types.CypherInt(i)])
+                for i in range(i_start, 6)
+            ])
+            tx.commit()
 
     def test_tx_func_result_list_pulls_all_records_at_once(self):
+        self._test_tx_func_result_list_pulls_all_records_at_once(next_first=False)  # noqa: E501
 
-        def test_(next_first_):
-            def work(tx):
-                result = tx.run("RETURN 1 AS n")
-                i_start = 1
-                if next_first_:
-                    record = result.next()
-                    self.assertEqual(
-                        record,
-                        types.Record(values=[types.CypherInt(i_start)])
-                    )
-                    i_start += 1
-                records = result.list()
-                self.assertEqual(records, [
-                    types.Record(values=[types.CypherInt(i)])
-                    for i in range(i_start, 6)
-                ])
+    def test_tx_func_result_list_pulls_all_records_at_once_next_before_list(self):  # noqa: E501
+        self._test_tx_func_result_list_pulls_all_records_at_once(next_first=True)  # noqa: E501
 
-            script = self._result_list_script(transaction=True,
-                                              next_first=next_first_)
+    def _test_tx_func_result_list_pulls_all_records_at_once(self, next_first):
+        def work(tx):
+            result = tx.run("RETURN 1 AS n")
+            i_start = 1
+            if next_first:
+                record = result.next()
+                self.assertEqual(
+                    record,
+                    types.Record(values=[types.CypherInt(i_start)])
+                )
+                i_start += 1
+            records = result.list()
+            self.assertEqual(records, [
+                types.Record(values=[types.CypherInt(i)])
+                for i in range(i_start, 6)
+            ])
 
-            with self._session(script, fetch_size=2) as session:
-                session.read_transaction(work)
+        script = self._result_list_script(transaction=True,
+                                          next_first=next_first)
 
-        for next_first in (True, False):
-            with self.subTest("next_before_list" if next_first else "list"):
-                test_(next_first)
+        with self._session(script, fetch_size=2) as session:
+            session.read_transaction(work)
