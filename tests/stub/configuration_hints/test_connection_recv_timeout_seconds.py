@@ -11,7 +11,6 @@ from tests.stub.shared import StubServer
 
 
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
-
     required_features = types.Feature.BOLT_4_3,
 
     def setUp(self):
@@ -48,7 +47,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         elif get_driver_name() in ["go"]:
             self.assertIn("i/o timeout", e.msg)
         elif get_driver_name() in ["dotnet"]:
-            self.assertIn("ServiceUnavailableError",
+            self.assertIn("ConnectionReadTimeoutError",
                           e.errorType)
 
     def _assert_is_client_exception(self, e):
@@ -115,7 +114,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
     @driver_feature(types.Feature.CONF_HINT_CON_RECV_TIMEOUT)
     def test_timeout_unmanaged_tx_should_fail_subsequent_usage_after_timeout(
-            self):
+        self):
         self._start_server("1_second_exceeds_tx.script")
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as first_run_error:
@@ -265,11 +264,16 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
 
     def _assert_is_timeout_exception(self, e):
         if get_driver_name() in ["python"]:
-            self.assertEqual("<class 'neo4j.exceptions.SessionExpired'>",
-                             e.errorType)
+            self.assertEqual(
+                "<class 'neo4j.exceptions.SessionExpired'>",
+                e.errorType)
         elif get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.SessionExpiredException",
+                e.errorType)
+        elif get_driver_name() in ["dotnet"]:
+            self.assertIn(
+                "ConnectionReadTimeoutError",
                 e.errorType)
         else:
             super()._assert_is_timeout_exception(e)
