@@ -125,9 +125,9 @@ def get_driver_features(backend):
             features.add(protocol.Feature(raw))
         # TODO: remove this once all drivers manage the TLS feature flags
         #       themselves.
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "ruby"]:
             features.add(protocol.Feature.TLS_1_1)
-        if get_driver_name() in ["java", "dotnet"]:
+        if get_driver_name() in ["java", "dotnet", "ruby"]:
             features.add(protocol.Feature.TLS_1_2)
         if get_driver_name() in ["dotnet"]:
             features.add((

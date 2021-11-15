@@ -206,6 +206,11 @@ class TestTxBeginParameters(TestkitTestCase):
                     )
                 elif self._driver_name in ["go"]:
                     self.assertIn("impersonation", exc.exception.msg)
+                elif self._driver_name in ["ruby"]:
+                    self.assertEqual(
+                        exc.exception.errorType,
+                        "Neo4j::Driver::Exceptions::ClientException"
+                    )
 
     @driver_feature(types.Feature.IMPERSONATION,
                     types.Feature.BOLT_4_4)

@@ -33,7 +33,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["dotnet"]:
             self.assertEqual("AuthorizationExpired", error.errorType)
         elif driver in ['ruby']:
-            self.assertEqual("Neo4j::Driver::Exceptions::AuthorizationExpiredException", error.errorType)
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
+                error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

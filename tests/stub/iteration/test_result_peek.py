@@ -18,8 +18,9 @@ class TestResultPeek(IterationTestBase):
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              error.errorType)
         elif driver in ["ruby"]:
-            self.assertEqual("Neo4j::Driver::Exceptions::ServiceUnavailableException",
-                             error.errorType)
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ServiceUnavailableException",
+                error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

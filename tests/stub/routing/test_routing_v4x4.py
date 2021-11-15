@@ -233,6 +233,10 @@ class RoutingV4x4(RoutingBase):
                     self.assertEqual(
                         "org.neo4j.driver.exceptions.SessionExpiredException",
                         e.errorType)
+                elif get_driver_name() in ["ruby"]:
+                    self.assertEqual(
+                        "Neo4j::Driver::Exceptions::SessionExpiredException",
+                        e.errorType)
                 failed = True
         driver.close()
 
@@ -278,6 +282,11 @@ class RoutingV4x4(RoutingBase):
             if get_driver_name() in ["java"]:
                 self.assertEqual(
                     "org.neo4j.driver.exceptions.SessionExpiredException",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
                     e.errorType
                 )
             failed = True
@@ -329,6 +338,11 @@ class RoutingV4x4(RoutingBase):
                 "org.neo4j.driver.exceptions.SessionExpiredException",
                 exc.exception.errorType
             )
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::SessionExpiredException",
+                exc.exception.errorType
+            )
         self._routingServer1.done()
         self._readServer1.done()
         self._readServer2.done()
@@ -377,6 +391,11 @@ class RoutingV4x4(RoutingBase):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.SessionExpiredException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::SessionExpiredException",
                 exc.exception.errorType
             )
         self._routingServer1.done()
@@ -635,6 +654,11 @@ class RoutingV4x4(RoutingBase):
                         "<class 'neo4j.exceptions.SessionExpired'>",
                         e.errorType
                     )
+                elif get_driver_name() in ["ruby"]:
+                    self.assertEqual(
+                        "Neo4j::Driver::Exceptions::SessionExpiredException",
+                        e.errorType
+                    )
                 failed = True
         driver.close()
 
@@ -745,6 +769,11 @@ class RoutingV4x4(RoutingBase):
                     "<class 'neo4j.exceptions.ServiceUnavailable'>",
                     e.errorType
                 )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::ServiceUnavailableException",
+                    e.errorType
+                )
             failed = True
         driver.close()
 
@@ -769,6 +798,11 @@ class RoutingV4x4(RoutingBase):
             if get_driver_name() in ["java"]:
                 self.assertEqual(
                     "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::ServiceUnavailableException",
                     e.errorType
                 )
             failed = True
@@ -813,6 +847,11 @@ class RoutingV4x4(RoutingBase):
                 self.assertEqual(
                     "Neo.ClientError.Cluster.NotALeader",
                     e.code
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
+                    e.errorType
                 )
             failed = True
         session.close()
@@ -964,6 +1003,11 @@ class RoutingV4x4(RoutingBase):
                         "<class 'neo4j.exceptions.NotALeader'>",
                         e.errorType
                     )
+                elif get_driver_name() in ["ruby"]:
+                    self.assertEqual(
+                        "Neo4j::Driver::Exceptions::SessionExpiredException",
+                        e.errorType
+                    )
                 failed = True
 
         self.assertNotIn(self._writeServer1.address,
@@ -1009,6 +1053,11 @@ class RoutingV4x4(RoutingBase):
             elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.NotALeader'>",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
                     e.errorType
                 )
             failed = True
@@ -1061,6 +1110,11 @@ class RoutingV4x4(RoutingBase):
             elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.NotALeader'>",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
                     e.errorType
                 )
             failed = True
@@ -1625,6 +1679,11 @@ class RoutingV4x4(RoutingBase):
                     "org.neo4j.driver.exceptions.SessionExpiredException",
                     e.errorType
                 )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
+                    e.errorType
+                )
             failed = True
         session.close()
         driver.close()
@@ -1988,9 +2047,14 @@ class RoutingV4x4(RoutingBase):
                     "org.neo4j.driver.exceptions.FatalDiscoveryException",
                     e.errorType
                 )
-            if get_driver_name() in ["python"]:
+            elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.ClientError'>",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::FatalDiscoveryException",
                     e.errorType
                 )
 
@@ -2036,6 +2100,11 @@ class RoutingV4x4(RoutingBase):
                 "<class 'neo4j.exceptions.ClientError'>",
                 exc.exception.errorType
             )
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ClientException",
+                exc.exception.errorType
+            )
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmark",
                          exc.exception.code)
 
@@ -2055,6 +2124,12 @@ class RoutingV4x4(RoutingBase):
                 "<class 'neo4j.exceptions.ClientError'>",
                 exc.exception.errorType
             )
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ClientException",
+                exc.exception.errorType
+            )
+
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmarkMixture",
                          exc.exception.code)
 
@@ -2072,6 +2147,11 @@ class RoutingV4x4(RoutingBase):
         elif get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.Forbidden'>",
+                exc.exception.errorType
+            )
+        if get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::SecurityException",
                 exc.exception.errorType
             )
         self.assertEqual(
@@ -2092,6 +2172,11 @@ class RoutingV4x4(RoutingBase):
         elif get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.ClientError'>",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::SecurityException",
                 exc.exception.errorType
             )
         self.assertEqual(
@@ -2120,6 +2205,11 @@ class RoutingV4x4(RoutingBase):
             if get_driver_name() in ["java"]:
                 self.assertEqual(
                     "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::ServiceUnavailableException",
                     e.errorType
                 )
             failed_on_unreachable = True
@@ -2343,6 +2433,11 @@ class RoutingV4x4(RoutingBase):
             if get_driver_name() in ["java"]:
                 self.assertEqual(
                     "java.lang.IllegalStateException",
+                    e.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::IllegalStateException",
                     e.errorType
                 )
             failed_on_run = True
