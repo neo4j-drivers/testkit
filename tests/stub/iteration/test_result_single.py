@@ -1,23 +1,15 @@
-from contextlib import contextmanager
-
-from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
-    TestkitTestCase,
     get_driver_name,
 )
-from tests.stub.shared import StubServer
+
+from ._common import IterationTestBase
 
 
-class TestResultSingle(TestkitTestCase):
-    def setUp(self):
-        super().setUp()
-        self._server = StubServer(9001)
+class TestResultSingle(IterationTestBase):
 
-    def tearDown(self):
-        self._server.reset()
-        super().tearDown()
+    required_features = types.Feature.BOLT_4_0,
 
     def _assert_not_exactly_one_record_error(self, error):
         self.assertIsInstance(error, types.DriverError)
@@ -42,21 +34,6 @@ class TestResultSingle(TestkitTestCase):
                              error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-
-    @contextmanager
-    def _session(self, script_fn, fetch_size=2, vars_=None):
-        uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri,
-                        types.AuthorizationToken(scheme="basic", principal="",
-                                                 credentials=""))
-        self._server.start(path=self.script_path("v4x0", script_fn),
-                           vars=vars_)
-        session = driver.session("w", fetchSize=fetch_size)
-        try:
-            yield session
-            session.close()
-        finally:
-            self._server.reset()
 
     @driver_feature(types.Feature.API_RESULT_SINGLE)
     def test_result_single_with_0_records(self):
@@ -113,7 +90,7 @@ class TestResultSingle(TestkitTestCase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            tx = session.beginTransaction()
+            tx = session.begin_transaction()
             result = tx.run("RETURN 1 AS n")
             with self.assertRaises(types.DriverError) as exc:
                 result.single()
@@ -138,6 +115,6 @@ class TestResultSingle(TestkitTestCase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            record = session.readTransaction(work)
+            record = session.read_transaction(work)
             self.assertIsInstance(record, types.Record)
             self.assertEqual(record.values, [types.CypherInt(1)])

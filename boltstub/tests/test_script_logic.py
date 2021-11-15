@@ -1,25 +1,25 @@
 import contextlib
 import itertools
-import math
-import pytest
 from typing import Iterable
+
+import pytest
 
 from . import _common
 from ..bolt_protocol import TranslatedStructure
 from ..parsing import (
-    ClientLine,
-    AutoLine,
-    ServerLine,
     AlternativeBlock,
+    AutoBlock,
+    AutoLine,
     BlockList,
+    ClientBlock,
+    ClientLine,
     Line,
     OptionalBlock,
     ParallelBlock,
-    ClientBlock,
-    AutoBlock,
-    ServerBlock,
     Repeat0Block,
     Repeat1Block,
+    ServerBlock,
+    ServerLine,
 )
 
 
@@ -255,8 +255,10 @@ class TestAlternativeBlock:
         assert block_read.done()
 
     @pytest.mark.parametrize("messages", (("1", "2"), ("1",), ("3",)))
-    def test_non_det_ending_alternative(self, block_with_non_det_end, messages):
-        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+    def test_non_det_ending_alternative(self, block_with_non_det_end,
+                                        messages):
+        channel = channel_factory(["MSG%s" % m for m in messages]
+                                  + ["NOMATCH"])
         for i in range(len(messages)):
             assert block_with_non_det_end.try_consume(channel)
             assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
@@ -269,7 +271,8 @@ class TestAlternativeBlock:
 
     @pytest.mark.parametrize("messages", (("1",), ("2",), ()))
     def test_non_det_alternative(self, block_with_non_det_block, messages):
-        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+        channel = channel_factory(["MSG%s" % m for m in messages]
+                                  + ["NOMATCH"])
         for i in range(len(messages)):
             assert block_with_non_det_block.try_consume(channel)
             assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
@@ -612,7 +615,8 @@ class TestParallelBlock:
         msg2 = ["MSG21", "MSG22"]
         channel = channel_factory(messages)
         for i in range(4):
-            accepted = msg1[idxs[0]:(idxs[0] + 1)] + msg2[idxs[1]:(idxs[1] + 1)]
+            accepted = (msg1[idxs[0]:(idxs[0] + 1)]
+                        + msg2[idxs[1]:(idxs[1] + 1)])
             _assert_accepted_messages(block_read, accepted)
             _assert_accepted_messages_after_reset(block_read,
                                                   [msg1[0], msg2[0]])
@@ -658,8 +662,10 @@ class TestParallelBlock:
     @pytest.mark.parametrize("messages", (
         ("1", "2", "3"), ("1", "3"),
     ))
-    def test_non_det_ending_alternative(self, block_with_non_det_end, messages):
-        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+    def test_non_det_ending_alternative(self, block_with_non_det_end,
+                                        messages):
+        channel = channel_factory(["MSG%s" % m for m in messages]
+                                  + ["NOMATCH"])
         for i in range(len(messages)):
             assert block_with_non_det_end.try_consume(channel)
             assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
@@ -674,7 +680,8 @@ class TestParallelBlock:
         ("1", "2"), ("2",),
     ))
     def test_non_det_alternative(self, block_with_non_det_block, messages):
-        channel = channel_factory(["MSG%s" % m for m in messages] + ["NOMATCH"])
+        channel = channel_factory(["MSG%s" % m for m in messages]
+                                  + ["NOMATCH"])
         for i in range(len(messages)):
             assert block_with_non_det_block.try_consume(channel)
             assert channel.msg_buffer_names()[-1] == "SMSG%s" % messages[i]
@@ -921,7 +928,8 @@ class _TestRepeatBlock:
     def channel_all_optional(self):
         return channel_factory(["MSG1", "MSG2", "NOMATCH"])
 
-    def _accepted_messages(self, channel: MockChannel, expected_idx, skippable):
+    def _accepted_messages(self, channel: MockChannel, expected_idx,
+                           skippable):
         messages = [m.name for m in channel.messages if m.name != "NOMATCH"]
         assert messages
         expected_idx = expected_idx % len(messages)
@@ -948,7 +956,8 @@ class _TestRepeatBlock:
             raise ValueError("Test code is not written for this.")
         for run in range(2):
             _assert_accepted_messages(
-                block, self._accepted_messages(channel, expected_idx, skippable)
+                block,
+                self._accepted_messages(channel, expected_idx, skippable)
             )
             _assert_accepted_messages_after_reset(
                 block, self._accepted_messages(channel, 0, skippable)
@@ -980,7 +989,8 @@ class _TestRepeatBlock:
                 expected_idx += 1
             assert block.can_be_skipped()
             _assert_accepted_messages(
-                block, self._accepted_messages(channel, expected_idx, skippable)
+                block,
+                self._accepted_messages(channel, expected_idx, skippable)
             )
             _assert_accepted_messages_after_reset(
                 block, self._accepted_messages(channel, 0, skippable)
@@ -990,10 +1000,10 @@ class _TestRepeatBlock:
 
     def _test_loop_run_with_skip(self, block, channel, skip_idx):
         assert len(channel.messages) >= 1
-        for run in range(2):
+        for _run in range(2):
             with channel.assert_consume():
                 assert block.try_consume(channel)
-            for step in range(1, skip_idx):
+            for _step in range(1, skip_idx):
                 with channel.assert_consume():
                     assert block.try_consume(channel)
             assert block.can_be_skipped()
@@ -1030,7 +1040,8 @@ class _TestRepeatBlock:
         self._test_loop_run_with_skip(block_all_optional, channel_all_optional,
                                       skip_idx)
 
-    def test_cant_skip_too_soon(self, block_optional_end, channel_optional_end):
+    def test_cant_skip_too_soon(self, block_optional_end,
+                                channel_optional_end):
         if self.must_run_once:
             assert not block_optional_end.can_be_skipped()
         else:

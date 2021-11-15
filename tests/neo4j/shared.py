@@ -1,5 +1,5 @@
 """
-Shared utilities for writing tests against Neo4j server
+Shared utilities for writing tests against Neo4j server.
 
 Uses environment variables for configuration:
 
@@ -10,20 +10,21 @@ TEST_NEO4J_PORT      Neo4j server port, default is 7687
 TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
 TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
 TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
-TEST_NEO4J_EDITION   Edition ("enterprise" or "community") of the Neo4j server,
-                     default "enterprise"
+TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
+                     Neo4j server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
+from functools import wraps
 import os
 from warnings import warn
 
+from nutkit import protocol
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
     dns_resolve_single,
     TestkitTestCase,
 )
-
 
 env_neo4j_host = "TEST_NEO4J_HOST"
 env_neo4j_user = "TEST_NEO4J_USER"
@@ -37,10 +38,9 @@ env_neo4j_cluster = "TEST_NEO4J_CLUSTER"
 
 
 def get_authorization():
-    """ Returns default authorization for tests that do not test this aspect
-    """
-    user = os.environ.get(env_neo4j_user, 'neo4j')
-    passw = os.environ.get(env_neo4j_pass, 'pass')
+    """Return default authorization for tests that do not test this aspect."""
+    user = os.environ.get(env_neo4j_user, "neo4j")
+    passw = os.environ.get(env_neo4j_pass, "pass")
     return AuthorizationToken("basic", principal=user, credentials=passw)
 
 
@@ -71,8 +71,7 @@ def get_neo4j_scheme():
 
 
 def get_driver(backend, uri=None, auth=None, **kwargs):
-    """ Returns default driver for tests that do not test this aspect
-    """
+    """Return default driver for tests that do not test this aspect."""
     if uri is None:
         scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_port()
@@ -87,6 +86,12 @@ class ServerInfo:
         self.version = version
         self.edition = edition
         self.cluster = cluster
+
+    @property
+    def server_agent(self):
+        if self.edition == "aura" and self.version >= "4":
+            return "Neo4j/4.0-aura"
+        return "Neo4j/" + self.version
 
     @property
     def supports_multi_db(self):
@@ -125,3 +130,55 @@ def cluster_unsafe_test(func):
                  "TestkitTestCase methods.")
             return func(*args, **kwargs)
     return wrapper
+
+
+def requires_multi_db_support(func):
+    def get_valid_test_case(*args, **kwargs):
+        if not args or not isinstance(args[0], TestkitTestCase):
+            raise TypeError("Should only decorate TestkitTestCase methods")
+        return args[0]
+
+    @wraps(func)
+    @requires_min_bolt_version(protocol.Feature.BOLT_4_0)
+    def wrapper(*args, **kwargs):
+        test_case = get_valid_test_case(*args, **kwargs)
+        if not get_server_info().supports_multi_db:
+            test_case.skipTest("Server does not support multiple databases.")
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def requires_min_bolt_version(feature):
+    if not isinstance(feature, protocol.Feature):
+        raise TypeError("The arguments must be instances of Feature")
+    if not feature.name.startswith("BOLT_"):
+        raise ValueError("Bolt version feature expected")
+
+    min_version = feature.value.split(":")[-1]
+    server_max_version = get_server_info().max_protocol_version
+    all_viable_versions = [
+        f for f in protocol.Feature
+        if (f.value.startswith("BOLT_")
+            and min_version <= f.value.spit(":")[-1] <= server_max_version)
+    ]
+
+    def get_valid_test_case(*args, **kwargs):
+        if not args or not isinstance(args[0], TestkitTestCase):
+            raise TypeError("Should only decorate TestkitTestCase methods")
+        return args[0]
+
+    def bolt_version_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            test_case = get_valid_test_case(*args, **kwargs)
+            if server_max_version < min_version:
+                test_case.skipTest("Server does not support minimum required "
+                                   "Bolt version: " + min_version)
+            missing = test_case.driver_missing_features(*all_viable_versions)
+            if len(missing) == len(all_viable_versions):
+                test_case.skipTest("There is no common version between server "
+                                   "and driver that fulfills the minimum "
+                                   "required protocol version: " + min_version)
+            return func(*args, **kwargs)
+        return wrapper
+    return bolt_version_decorator

@@ -1,18 +1,19 @@
-"""
-Enumerate all the capabilities in the drivers
-"""
+"""Enumerate all the capabilities in the drivers."""
 from enum import Enum
 
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a method for the result to return all records as a list
+    # or array. This method should exhaust the result.
+    API_RESULT_LIST = "Feature:API:Result.List"
     # The driver offers a method for the result to peek at the next record in
     # the result stream without advancing it (i.e. without consuming any
     # records)
     API_RESULT_PEEK = "Feature:API:Result.Peek"
     # The driver offers a method for the result to retrieve exactly one record.
-    # This methods asserts that exactly one record in left in the result stream,
-    # else it will raise an exception.
+    # This methods asserts that exactly one record in left in the result
+    # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
@@ -23,21 +24,31 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
+    # The driver supports Bolt protocol version 3
+    BOLT_3_0 = "Feature:Bolt:3.0"
+    # The driver supports Bolt protocol version 4.0
+    BOLT_4_0 = "Feature:Bolt:4.0"
+    # The driver supports Bolt protocol version 4.1
+    BOLT_4_1 = "Feature:Bolt:4.1"
+    # The driver supports Bolt protocol version 4.2
+    BOLT_4_2 = "Feature:Bolt:4.2"
+    # The driver supports Bolt protocol version 4.3
+    BOLT_4_3 = "Feature:Bolt:4.3"
     # The driver supports Bolt protocol version 4.4
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.
-    # If this flag is missing, TestKit assumes that attempting to establish such
-    # a connection fails.
+    # If this flag is missing, TestKit assumes that attempting to establish
+    # such a connection fails.
     TLS_1_1 = "Feature:TLS:1.1"
     # The driver supports TLS 1.2 connections.
-    # If this flag is missing, TestKit assumes that attempting to establish such
-    # a connection fails.
+    # If this flag is missing, TestKit assumes that attempting to establish
+    # such a connection fails.
     TLS_1_2 = "Feature:TLS:1.2"
     # The driver supports TLS 1.3 connections.
-    # If this flag is missing, TestKit assumes that attempting to establish such
-    # a connection fails.
+    # If this flag is missing, TestKit assumes that attempting to establish
+    # such a connection fails.
     TLS_1_3 = "Feature:TLS:1.3"
 
     # === OPTIMIZATIONS ===
@@ -45,7 +56,7 @@ class Feature(Enum):
     # shouldn't reuse any open connections for anything other than finishing
     # a started job. All other connections should be re-established before
     # running the next job with them.
-    OPT_AUTHORIZATION_EXPIRED_TREATMENT = 'AuthorizationExpiredTreatment'
+    OPT_AUTHORIZATION_EXPIRED_TREATMENT = "AuthorizationExpiredTreatment"
     # The driver caches connections (e.g., in a pool) and doesn't start a new
     # one (with hand-shake, HELLO, etc.) for each query.
     OPT_CONNECTION_REUSE = "Optimization:ConnectionReuse"
@@ -63,6 +74,13 @@ class Feature(Enum):
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.
     OPT_PULL_PIPELINING = "Optimization:PullPipelining"
+    # This feature requires `API_RESULT_LIST`.
+    # The driver pulls all records (`PULL -1`) when Result.list() is called.
+    # (As opposed to iterating over the Result with the configured fetch size.)
+    # Note: If your driver supports this, make sure to document well that this
+    #       method ignores the configures fetch size. Your users will
+    #       appreciate it <3.
+    OPT_RESULT_LIST_FETCH_ALL = "Optimization:ResultListFetchAll"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
@@ -77,8 +95,8 @@ class Feature(Enum):
     # backends have implemented path and relationship types
     TMP_CYPHER_PATH_AND_RELATIONSHIP = "Temporary:CypherPathAndRelationship"
     # TODO Update this once the decision has been made.
-    # Temporary driver feature. There is a pending decision on whether it should
-    # be supported in all drivers or be removed from all of them.
+    # Temporary driver feature. There is a pending decision on whether it
+    # should be supported in all drivers or be removed from all of them.
     TMP_DRIVER_FETCH_SIZE = "Temporary:DriverFetchSize"
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented it.
@@ -92,13 +110,11 @@ class Feature(Enum):
     TMP_FULL_SUMMARY = "Temporary:FullSummary"
     # Temporary driver feature that will be removed when all official drivers
     # have been unified in their behaviour of when they return a Result object.
-    # We aim for drivers to not providing a Result until the server replied with
-    # SUCCESS so that the result keys are already known and attached to the
-    # Result object without further waiting or communication with the server.
+    # We aim for drivers to not providing a Result until the server replied
+    # with SUCCESS so that the result keys are already known and attached to
+    # the Result object without further waiting or communication with the
+    # server.
     TMP_RESULT_KEYS = "Temporary:ResultKeys"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented it.
-    TMP_RESULT_LIST = "Temporary:ResultList"
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the TransactionClose request
     TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"

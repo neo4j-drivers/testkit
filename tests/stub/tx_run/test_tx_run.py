@@ -1,5 +1,5 @@
-from nutkit.frontend import Driver
 from nutkit import protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -9,6 +9,9 @@ from tests.stub.shared import StubServer
 
 
 class TestTxRun(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_4,
+
     def setUp(self):
         super().setUp()
         self._router = StubServer(9000)
@@ -47,8 +50,8 @@ class TestTxRun(TestkitTestCase):
         self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
-        self._session = self._driver.session("r", fetchSize=2)
-        tx = self._session.beginTransaction()
+        self._session = self._driver.session("r", fetch_size=2)
+        tx = self._session.begin_transaction()
         tx.run("RETURN 1 AS n")
         # closing session while tx is open and result is not consumed at all
         self._session.close()
@@ -63,8 +66,8 @@ class TestTxRun(TestkitTestCase):
             path=self.script_path("tx_discard_then_rollback.script")
         )
         self._create_direct_driver()
-        self._session = self._driver.session("r", fetchSize=2)
-        tx = self._session.beginTransaction()
+        self._session = self._driver.session("r", fetch_size=2)
+        tx = self._session.begin_transaction()
         result = tx.run("RETURN 1 AS n")
         result.next()
         # closing session while tx is open and result is not fully consumed
@@ -80,11 +83,12 @@ class TestTxRun(TestkitTestCase):
             path=self.script_path("tx_discard_then_rollback.script")
         )
         self._create_direct_driver()
-        self._session = self._driver.session("r", fetchSize=2)
-        tx = self._session.beginTransaction()
+        self._session = self._driver.session("r", fetch_size=2)
+        tx = self._session.begin_transaction()
         result = tx.run("RETURN 1 AS n")
         result.consume()
-        # closing session while tx is open and result has been manually consumed
+        # closing session while tx is open and result has been manually
+        # consumed
         self._session.close()
         self._session = None
         self._server1.done()
@@ -97,8 +101,8 @@ class TestTxRun(TestkitTestCase):
         self._server1.start(
             path=self.script_path("tx_pull_then_rollback.script")
         )
-        self._session = self._driver.session("r", fetchSize=2)
-        tx = self._session.beginTransaction()
+        self._session = self._driver.session("r", fetch_size=2)
+        tx = self._session.begin_transaction()
         result = tx.run("RETURN 1 AS n")
         list(result)  # pull all results
         # closing session while tx is open
@@ -111,7 +115,7 @@ class TestTxRun(TestkitTestCase):
             self._create_routing_driver()
             self._router.start(
                 path=self.script_path("router_switch_server.script"),
-                vars={"#HOST#": self._server1.host}
+                vars_={"#HOST#": self._server1.host}
             )
             self._server2.start(path=self.script_path("tx_commit.script"))
         else:
@@ -128,7 +132,7 @@ class TestTxRun(TestkitTestCase):
         self._session = self._driver.session("w")
         exc = None
         try:
-            self._session.writeTransaction(work)
+            self._session.write_transaction(work)
         except types.DriverError as e:
             exc = e
 
@@ -155,8 +159,9 @@ class TestTxRun(TestkitTestCase):
 
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
     def test_eager_begin_on_tx_func_run_with_error_on_begin(self):
-        exc, tx_func_count = self._eager_tx_func_run("tx_error_on_begin.script",
-                                                     routing=False)
+        exc, tx_func_count = self._eager_tx_func_run(
+            "tx_error_on_begin.script", routing=False
+        )
         # Driver should raise error on non-transient error after BEGIN, and
         # never call the tx func.
         self.assertEqual("Neo.ClientError.MadeUp.Code", exc.code)
@@ -169,7 +174,7 @@ class TestTxRun(TestkitTestCase):
 
         self._session = self._driver.session("w")
         with self.assertRaises(types.DriverError) as exc:
-            self._session.beginTransaction()
+            self._session.begin_transaction()
 
         self._session.close()
         self._session = None
@@ -197,7 +202,7 @@ class TestTxRun(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("r")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             tx.run("RETURN 1 AS n")
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
@@ -224,7 +229,8 @@ class TestTxRun(TestkitTestCase):
 
             with self.assertRaises(types.DriverError) as exc_:
                 tx.run("RETURN 1 AS n")
-            self.assertEqual(exc_.exception.code, "Neo.ClientError.MadeUp.Code")
+            self.assertEqual(exc_.exception.code,
+                             "Neo.ClientError.MadeUp.Code")
             raise exc_.exception
 
         if get_driver_name() in ["javascript_", "dotnet_"]:
@@ -235,7 +241,7 @@ class TestTxRun(TestkitTestCase):
         self._create_direct_driver()
         self._session = self._driver.session("r")
         with self.assertRaises(types.DriverError) as exc:
-            self._session.readTransaction(work)
+            self._session.read_transaction(work)
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
 
     def _test_failed_tx_run(self, rollback):
@@ -244,7 +250,7 @@ class TestTxRun(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("r")
-        tx = self._session.beginTransaction()
+        tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             tx.run("RETURN 1 AS n").consume()
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")

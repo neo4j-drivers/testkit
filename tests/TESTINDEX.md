@@ -78,5 +78,3 @@ TODO: bookmark chaining
   are used. Checks enable/disable routing in hello message.
   routing, reader, writer, router
   stub/routing.py
-
-

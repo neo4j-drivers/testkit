@@ -1,23 +1,26 @@
-"""
-Runs the stress test suite for a given driver against a running database
-instance.
+"""Run the stress test suite for a given driver.
+
+It's assumed there there is a running database instance.
 
 Builds the driver in the drivers Docker container and invokes the driver
 native stress test suite.
 """
+
 import atexit
 import os
+import sys
 import urllib.parse
 
 import docker
 import driver
 import neo4j
-import settings
+import settings as settings_module
 
 
 def run(settings):
     artifacts_path = os.path.abspath(
-            os.path.join(".", "artifacts"))
+        os.path.join(".", "artifacts")
+    )
     print("Putting artifacts in %s" % artifacts_path)
     atexit.register(docker.cleanup)
 
@@ -34,8 +37,8 @@ def run(settings):
     # Use same naming here as we use in communication with the
     # driver glue in Docker container (a bit weird to read them,
     # package them and then read again by another part...)
-    user = os.environ.get('TEST_NEO4J_USER', "neo4j")
-    password = os.environ.get('TEST_NEO4J_PASS')
+    user = os.environ.get("TEST_NEO4J_USER", "neo4j")
+    password = os.environ.get("TEST_NEO4J_PASS")
     uri = os.environ.get("TEST_NEO4J_URI")
     if uri:
         # Split in parts...
@@ -60,7 +63,7 @@ def run(settings):
         cluster=os.environ.get("TEST_NEO4J_IS_CLUSTER", True),
         suite="",
         scheme=scheme,
-        stress_test_duration=10*60,
+        stress_test_duration=10 * 60,
         download=None)
     print("Running stress test suite..")
     driver_container.run_stress_tests(host, port,
@@ -68,12 +71,16 @@ def run(settings):
                                       neo4j_config)
 
 
-if __name__ == "__main__":
+def main():
     this_path = os.path.dirname(os.path.abspath(__file__))
     try:
-        settings = settings.build(this_path)
-    except settings.InvalidArgs as e:
-        print('')
+        settings = settings_module.build(this_path)
+    except settings_module.ArgumentError as e:
+        print("")
         print(e)
-        os.sys.exit(-1)
+        sys.exit(-1)
     run(settings)
+
+
+if __name__ == "__main__":
+    main()

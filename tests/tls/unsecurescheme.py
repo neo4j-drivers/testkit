@@ -7,15 +7,18 @@ from tests.tls.shared import (
     try_connect,
 )
 
-
 schemes = ["neo4j", "bolt"]
 
 
 class TestUnsecureScheme(TestkitTestCase):
-    """ Tests URL scheme neo4j/bolt where TLS is not used. The fact that driver can not connect
-    to a TLS server with this configuration is less interesting than the error handling when
-    this happens, the driver backend should "survive" (without special hacks in it).
+    """Test URL scheme neo4j/bolt where TLS is not used.
+
+    The fact that driver can not connect to a TLS server with this
+    configuration is less interesting than the error handling when this
+    happens, the driver backend should "survive" (without special hacks in
+    it).
     """
+
     def setUp(self):
         super().setUp()
         self._server = None
@@ -33,5 +36,5 @@ class TestUnsecureScheme(TestkitTestCase):
         for scheme in schemes:
             with self.subTest(scheme):
                 self._server = TlsServer("trustedRoot_thehost")
-                self.assertFalse(try_connect(self._backend, self._server, scheme, "thehost"))
-
+                self.assertFalse(try_connect(self._backend, self._server,
+                                             scheme, "thehost"))

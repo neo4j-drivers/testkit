@@ -4,7 +4,6 @@ import sys
 import tempfile
 import traceback
 
-
 drivers = [
     {
         "name": "go",
@@ -109,24 +108,27 @@ drivers = [
 ]
 
 
-def patched_process_run(*popenargs, input=None, capture_output=False,
-                        timeout=None, check=False, **kwargs):
+def patched_process_run(*popenargs,
+                        input=None,  # noqa: A002
+                        capture_output=False, timeout=None, check=False,
+                        **kwargs):
     """
     Copy of subprocess.run with increased process._sigint_wait_secs.
 
     This gives testkit enough time to clean the docker "mess" it made.
     """
     if input is not None:
-        if kwargs.get('stdin') is not None:
-            raise ValueError('stdin and input arguments may not both be used.')
-        kwargs['stdin'] = subprocess.PIPE
+        if kwargs.get("stdin") is not None:
+            raise ValueError("stdin and input arguments may not both be used.")
+        kwargs["stdin"] = subprocess.PIPE
 
     if capture_output:
-        if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
-            raise ValueError('stdout and stderr arguments may not be used '
-                             'with capture_output.')
-        kwargs['stdout'] = subprocess.PIPE
-        kwargs['stderr'] = subprocess.PIPE
+        if (kwargs.get("stdout") is not None
+                or kwargs.get("stderr") is not None):
+            raise ValueError("stdout and stderr arguments may not be used "
+                             "with capture_output.")
+        kwargs["stdout"] = subprocess.PIPE
+        kwargs["stderr"] = subprocess.PIPE
 
     with subprocess.Popen(*popenargs, **kwargs) as process:
         process._sigint_wait_secs = 10
@@ -146,7 +148,8 @@ def patched_process_run(*popenargs, input=None, capture_output=False,
                 # far into the TimeoutExpired exception.
                 process.wait()
             raise
-        except:  # Including KeyboardInterrupt, communicate handled that.
+        except BaseException:
+            # Including KeyboardInterrupt, communicate handled that.
             process.kill()
             # We don't call process.wait() as .__exit__ does that for us.
             raise
@@ -159,7 +162,7 @@ def patched_process_run(*popenargs, input=None, capture_output=False,
 
 def setup_environment():
     temp_path = tempfile.gettempdir()
-    driver_repo_path = os.path.join(temp_path, 'driver')
+    driver_repo_path = os.path.join(temp_path, "driver")
 
     # cleanup environment
     os.makedirs(temp_path, exist_ok=True)
@@ -172,7 +175,7 @@ def setup_environment():
 
 def rmdir(dir_):
     try:
-        subprocess.run(['rm', '-fr', dir_])
+        subprocess.run(["rm", "-fr", dir_])
     except FileNotFoundError:
         pass
 
@@ -187,9 +190,9 @@ def clone_repo(driver, branch, path):
 
 
 def update_environment(driver, repo_path):
-    os.environ['TEST_DRIVER_REPO'] = os.path.abspath(repo_path)
-    os.environ['TEST_DRIVER_NAME'] = driver.get('name')
-    os.environ['ARTIFACTS_DIR'] = os.path.join(".", "artifacts",
+    os.environ["TEST_DRIVER_REPO"] = os.path.abspath(repo_path)
+    os.environ["TEST_DRIVER_NAME"] = driver.get("name")
+    os.environ["ARTIFACTS_DIR"] = os.path.join(".", "artifacts",
                                                driver.get("name"))
     os.environ.update(driver.get("extra-env", {}))
 
@@ -209,23 +212,23 @@ def run():
 
 
 def print_art(driver, branch, scale):
-    print('')
+    print("")
     print(
-        'Testing %s (%s) branch %s' % (driver["name"], driver["repo"], branch)
+        "Testing %s (%s) branch %s" % (driver["name"], driver["repo"], branch)
     )
-    print('')
+    print("")
 
     art = driver.get("art", False)
     if not art:
         return
 
-    print('')
-    for l in art:
-        for s in range(scale):
-            for c in l:
-                print(c*scale, end='')
-            print('')
-    print('')
+    print("")
+    for line in art:
+        for _ in range(scale):
+            for char in line:
+                print(char * scale, end="")
+            print("")
+    print("")
     sys.stdout.flush()
 
 

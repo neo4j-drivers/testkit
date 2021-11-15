@@ -1,4 +1,5 @@
-"""
+"""Encoding of cypher types in the TestKit protocol.
+
 Represents types that is part of the bolt/cypher protocol that needs to be sent
 as parameters to queries (from frontend to backend) and data retrieved as a
 result from running a query (from backend to frontend). The values in record
@@ -17,8 +18,7 @@ import math
 
 
 class CypherNull:
-    """ Represents null/nil as sent/received to/from the database
-    """
+    """Represents null/nil as sent/received to/from the database."""
 
     def __init__(self, value=None):
         self.value = None
@@ -95,6 +95,7 @@ class CypherFloat:
     This type is meant for capturing what values are sent over the wire rather
     than true float arithmetics.
     """
+
     def __init__(self, value):
         self.value = value
         if isinstance(value, float):

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 # Copyright (c) 2002-2016 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
@@ -19,7 +18,16 @@
 # limitations under the License.
 
 
-from logging import CRITICAL, DEBUG, ERROR, INFO, WARNING, Formatter, StreamHandler, getLogger
+from logging import (
+    CRITICAL,
+    DEBUG,
+    ERROR,
+    Formatter,
+    getLogger,
+    INFO,
+    StreamHandler,
+    WARNING,
+)
 from sys import stdout
 
 
@@ -107,8 +115,7 @@ class ColourFormatter(Formatter):
 
 
 class Watcher(object):
-    """ Log watcher for monitoring driver and protocol activity.
-    """
+    """Log watcher for monitoring driver and protocol activity."""
 
     handlers = {}
 
@@ -135,7 +142,7 @@ class Watcher(object):
 
 
 def watch(logger_name, level=INFO, out=stdout):
-    """ Quick wrapper for using the Watcher.
+    """Quick wrapper for using the Watcher.
 
     :param logger_name: name of logger to watch
     :param level: minimum log level to show (default INFO)

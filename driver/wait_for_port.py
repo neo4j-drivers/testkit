@@ -1,6 +1,6 @@
+import socket
 import sys
 import time
-import socket
 
 
 def wait_for_port(address, port):
@@ -13,7 +13,8 @@ def wait_for_port(address, port):
         except OSError or ConnectionRefusedError:
             time.sleep(0.1)
             if time.perf_counter() - start > timeout:
-                print("ERROR: Timeout while waiting for port %s on %s" % (port, address))
+                print("ERROR: Timeout while waiting for port %s on %s"
+                      % (port, address))
                 return False
 
 

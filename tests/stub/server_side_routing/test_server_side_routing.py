@@ -8,9 +8,9 @@ from tests.stub.shared import StubServer
 
 
 class TestServerSideRouting(TestkitTestCase):
-    """ Verifies that the driver behaves as expected when
-    in Server Side Routing scenarios
-    """
+    """Test driver-behavior in Server Side Routing scenarios."""
+
+    required_features = types.Feature.BOLT_4_1,
 
     def setUp(self):
         super().setUp()
@@ -25,7 +25,7 @@ class TestServerSideRouting(TestkitTestCase):
 
     def _start_server(self):
         path = self.script_path("direct_connection_without_routing_ssr.script")
-        self._server.start(path=path, vars={"#VERSION#": "4.1"})
+        self._server.start(path=path, vars_={"#VERSION#": "4.1"})
 
     # When a direct driver is created without params, it should not send
     # any information about the routing context in the HELLO message
@@ -35,7 +35,7 @@ class TestServerSideRouting(TestkitTestCase):
         self._start_server()
 
         driver = Driver(self._backend, uri, self._auth, self._userAgent)
-        session = driver.session("w", fetchSize=1000)
+        session = driver.session("w", fetch_size=1000)
         result = session.run("RETURN 1 AS n")
         # Otherwise the script will not fail when the protocol is not present
         # (on backends where run is lazily evaluated)
@@ -55,7 +55,7 @@ class TestServerSideRouting(TestkitTestCase):
             driver = Driver(self._backend, uri, self._auth, self._userAgent)
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
-                self.assertEqual('java.lang.IllegalArgumentException',
+                self.assertEqual("java.lang.IllegalArgumentException",
                                  e.errorType)
         except types.BackendError:
             if get_driver_name() in ["javascript"]:
@@ -64,8 +64,8 @@ class TestServerSideRouting(TestkitTestCase):
 
         else:
             # Python driver
-            session = driver.session("w", fetchSize=1000)
-            result = session.run("RETURN 1 AS n")
+            session = driver.session("w", fetch_size=1000)
+            session.run("RETURN 1 AS n")
             # Otherwise the script will not fail when the protocol is not
             # present (on backends where run is lazily evaluated)
             session.close()

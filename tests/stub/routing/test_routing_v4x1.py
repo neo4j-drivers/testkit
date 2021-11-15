@@ -1,10 +1,14 @@
 import json
 
+from nutkit import protocol as types
 from nutkit.frontend import Driver
+
 from .test_routing_v4x4 import RoutingV4x4
 
 
 class RoutingV4x1(RoutingV4x4):
+
+    required_features = types.Feature.BOLT_4_1,
     bolt_version = "4.1"
     server_agent = "Neo4j/4.1.0"
 
@@ -48,11 +52,11 @@ class RoutingV4x1(RoutingV4x4):
         )
         self.start_server(self._readServer1, "reader_with_bookmarks.script")
 
-        session = driver.session('r', database=self.adb,
+        session = driver.session("r", database=self.adb,
                                  bookmarks=bookmarks)
         result = session.run("RETURN 1 as n")
-        sequence = self.collectRecords(result)
-        last_bookmarks = session.lastBookmarks()
+        sequence = self.collect_records(result)
+        last_bookmarks = session.last_bookmarks()
         session.close()
         driver.close()
 

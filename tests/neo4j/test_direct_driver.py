@@ -1,8 +1,9 @@
 from nutkit import protocol as types
 from nutkit.frontend import Driver
+
 from ..shared import (
-    driver_feature,
     dns_resolve_single,
+    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -14,6 +15,7 @@ from .shared import (
     get_neo4j_host_and_port,
     get_neo4j_scheme,
     get_server_info,
+    requires_multi_db_support,
 )
 
 
@@ -51,8 +53,8 @@ class TestDirectDriver(TestkitTestCase):
             )
 
         self._driver = get_driver(self._backend, uri="bolt://*",
-                                  resolverFn=my_resolver,
-                                  connectionTimeoutMs=200)
+                                  resolver_fn=my_resolver,
+                                  connection_timeout_ms=200)
         self._session = self._driver.session("r")
         result = self._session.run("RETURN 1")
         summary = result.consume()
@@ -62,14 +64,14 @@ class TestDirectDriver(TestkitTestCase):
 
     def test_fail_nicely_when_using_http_port(self):
         # TODO add support and remove this block
-        if get_driver_name() in ['go']:
+        if get_driver_name() in ["go"]:
             self.skipTest("verifyConnectivity not implemented in backend")
         scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_http_port()
         uri = "%s://%s:%d" % (scheme, host, port)
         self._driver = get_driver(self._backend, uri=uri)
         with self.assertRaises(types.DriverError) as e:
-            self._driver.verifyConnectivity()
+            self._driver.verify_connectivity()
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
@@ -95,8 +97,8 @@ class TestDirectDriver(TestkitTestCase):
 
         self._driver = get_driver(self._backend)
         self._session = self._driver.session("w")
-        summary = self._session.readTransaction(work)
-        result = self._driver.supportsMultiDB()
+        summary = self._session.read_transaction(work)
+        result = self._driver.supports_multi_db()
         server_version = tuple(map(int, get_server_info().version.split(".")))
 
         if server_version in ((4, 0), (4, 1), (4, 2), (4, 3), (4, 4)):
@@ -130,13 +132,12 @@ class TestDirectDriver(TestkitTestCase):
                              "<class 'neo4j.exceptions.ClientError'>")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    @requires_multi_db_support
     @cluster_unsafe_test
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
         server_info = get_server_info()
         if server_info.max_protocol_version >= "4":
-            if not get_server_info().supports_multi_db:
-                self.skipTest("Needs multi DB support")
             self._session = self._driver.session("w", database="system")
 
             self._session.run("DROP DATABASE `test-database` IF EXISTS")\
@@ -167,6 +168,7 @@ class TestDirectDriver(TestkitTestCase):
                     e.exception.msg
                 )
 
+    @requires_multi_db_support
     @cluster_unsafe_test
     def test_multi_db_various_databases(self):
         def get_names(result_, node=True):
@@ -193,9 +195,6 @@ class TestDirectDriver(TestkitTestCase):
                 names.add(name.value)
             return names
 
-        if not get_server_info().supports_multi_db:
-            self.skipTest("Needs multi DB support")
-
         self._driver = get_driver(self._backend)
 
         self._session = self._driver.session("w")
@@ -207,17 +206,22 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w", database="system")
         self._session.run("DROP DATABASE testa IF EXISTS").consume()
         self._session.run("DROP DATABASE testb IF EXISTS").consume()
+        bookmarks = self._session.last_bookmarks()
         self._session.close()
-        self._session = self._driver.session("w", database="system")
+        self._session = self._driver.session("w", database="system",
+                                             bookmarks=bookmarks)
         result = self._session.run("SHOW DATABASES")
         self.assertEqual(get_names(result, node=False), {"system", "neo4j"})
+
         result = self._session.run("CREATE DATABASE testa")
         result.consume()
         result = self._session.run("CREATE DATABASE testb")
         result.consume()
+        bookmarks = self._session.last_bookmarks()
         self._session.close()
 
-        self._session = self._driver.session("w", database="testa")
+        self._session = self._driver.session("w", database="testa",
+                                             bookmarks=bookmarks)
         result = self._session.run('CREATE (p:Person {name: "ALICE"})')
         result.consume()
         self._session.close()
