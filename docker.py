@@ -54,7 +54,7 @@ class Container:
                     err_fd.flush()
 
     def exec_detached(self, command, workdir=None, env_map=None,
-        log_path=None):
+                      log_path=None):
         cmd = ["docker", "exec"]
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
