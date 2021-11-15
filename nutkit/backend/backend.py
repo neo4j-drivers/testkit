@@ -5,15 +5,20 @@ import socket
 
 import nutkit.protocol as protocol
 
-protocol_classes = dict([
+PROTOCOL_CLASSES = dict([
     m for m in inspect.getmembers(protocol, inspect.isclass)])
-debug = os.environ.get("TEST_DEBUG_REQRES", 0)
+DEBUG_MESSAGES = os.environ.get("TEST_DEBUG_REQRES", "0").lower() in (
+    "1", "y", "yes", "true", "t", "on"
+)
+DEBUG_TIMEOUT = os.environ.get("TEST_DEBUG_NO_BACKEND_TIMEOUT", "0") in (
+    "1", "y", "yes", "true", "t", "on"
+)
 
 
 class Encoder(json.JSONEncoder):
     def default(self, o):
         name = type(o).__name__
-        if name in protocol_classes:
+        if name in PROTOCOL_CLASSES:
             return {"name": name, "data": o.__dict__}
         return json.JSONEncoder.default(self, o)
 
@@ -23,18 +28,18 @@ def decode_hook(x):
         return x
 
     name = x["name"]
-    if not isinstance(name, str) or name not in protocol_classes:
+    if not isinstance(name, str) or name not in PROTOCOL_CLASSES:
         return x
 
     data = x.get("data", {})
     if not data:
         data = {}
 
-    return protocol_classes[name](**data)
+    return PROTOCOL_CLASSES[name](**data)
 
 
 # How long to wait before backend responds
-default_timeout = 10
+DEFAULT_TIMEOUT = None if DEBUG_TIMEOUT else 10
 
 
 class Backend:
@@ -67,14 +72,14 @@ class Backend:
             if callable(hook):
                 hook(req)
         req_json = self._encoder.encode(req)
-        if debug:
+        if DEBUG_MESSAGES:
             print("Request: %s" % req_json)
         self._writer.write("#request begin\n")
         self._writer.write(req_json + "\n")
         self._writer.write("#request end\n")
         self._writer.flush()
 
-    def receive(self, timeout=default_timeout, hooks=None):
+    def receive(self, timeout=DEFAULT_TIMEOUT, hooks=None):
         self._socket.settimeout(timeout)
         response = ""
         in_response = False
@@ -86,7 +91,7 @@ class Backend:
                     raise Exception("already in response")
                 in_response = True
             elif line == "#response end":
-                if debug:
+                if DEBUG_MESSAGES:
                     try:
                         print("Response: %s" % response)
                     except UnicodeEncodeError:
@@ -120,9 +125,9 @@ class Backend:
                             )
                     # The backend can send it's own logs outside of response
                     # blocks
-                    elif debug:
+                    elif DEBUG_MESSAGES:
                         print("[BACKEND]: %s" % line)
 
-    def send_and_receive(self, req, timeout=default_timeout, hooks=None):
+    def send_and_receive(self, req, timeout=DEFAULT_TIMEOUT, hooks=None):
         self.send(req, hooks=hooks)
         return self.receive(timeout, hooks=hooks)
