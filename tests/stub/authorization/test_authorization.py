@@ -32,7 +32,7 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             self.assertEqual("AuthorizationExpired", error.errorType)
-        elif driver in ['ruby']:
+        elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
                 error.errorType)
@@ -60,11 +60,11 @@ class AuthorizationBase(TestkitTestCase):
             self.assertEqual("Neo.ClientError.Security.TokenExpired",
                              error.code)
             self.assertIn("Token expired", error.msg)
-        elif driver == 'ruby':
+        elif driver == "ruby":
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::TokenExpiredException",
                 error.errorType)
-            self.assertEqual('Neo.ClientError.Security.TokenExpired',
+            self.assertEqual("Neo.ClientError.Security.TokenExpired",
                              error.code)
             self.assertIn("Token expired", error.msg)
         else:
