@@ -151,7 +151,7 @@ class Container:
             "python3", self._glue_path + "integration.py"],
             env_map=env)
 
-    def start_backend(self):
+    def start_backend(self, artifacts_path):
         env = self._default_env()
         # Note that this is done detached which means that we don't know for
         # sure if the test backend actually started and we will not see
@@ -161,7 +161,7 @@ class Container:
         # works simply by commenting detach and see that the backend starts.
         self._container.exec_detached(
             ["python3", self._glue_path + "backend.py"],
-            env_map=env
+            env_map=env, log_path=artifacts_path
         )
         # Wait until backend started
         # Use driver container to check for backend availability

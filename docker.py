@@ -53,13 +53,21 @@ class Container:
                     err_fd.write("\n")
                     err_fd.flush()
 
-    def exec_detached(self, command, workdir=None, env_map=None):
-        cmd = ["docker", "exec", "--detach"]
+    def exec_detached(self, command, workdir=None, env_map=None,
+        log_path=None):
+        cmd = ["docker", "exec"]
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
         cmd.extend(command)
         print(cmd)
-        subprocess.run(cmd, check=True)
+        if not log_path:
+            subprocess.Popen(cmd)
+        else:
+            out_path = os.path.join(log_path, "out.log")
+            err_path = os.path.join(log_path, "err.log")
+            out = open(out_path, "a")
+            err = open(err_path, "a")
+            subprocess.Popen(cmd, stdout=out, stderr=err)
 
     def rm(self):
         cmd = ["docker", "rm", "-f", "-v", self.name]

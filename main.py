@@ -284,6 +284,7 @@ def main(settings, configurations):
     driver_run_artifacts_path = os.path.join(artifacts_path, "driver_run")
     driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
     runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
+    backend_artifacts_path = os.path.join(artifacts_path, "backend")
     docker_artifacts_path = os.path.join(artifacts_path, "docker")
     # wipe artifacts path
     try:
@@ -295,6 +296,7 @@ def main(settings, configurations):
     os.makedirs(driver_run_artifacts_path)
     os.makedirs(driver_build_artifacts_path)
     os.makedirs(runner_build_artifacts_path)
+    os.makedirs(backend_artifacts_path)
     os.makedirs(docker_artifacts_path)
     print("Putting artifacts in %s" % artifacts_path)
 
@@ -330,7 +332,7 @@ def main(settings, configurations):
         end_test_suite("Unit tests")
 
     print("Start test backend in driver container")
-    driver_container.start_backend()
+    driver_container.start_backend(backend_artifacts_path)
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
