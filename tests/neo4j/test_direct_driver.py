@@ -78,6 +78,9 @@ class TestDirectDriver(TestkitTestCase):
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
 
     def test_should_fail_on_incorrect_password(self):
+        def return_1(tx):
+            tx.run("RETURN 1").consume()
+
         uri = "%s://%s:%d" % (get_neo4j_scheme(), *get_neo4j_host_and_port())
         auth = get_authorization()
         auth.credentials = auth.credentials + "-but-wrong!"
@@ -85,7 +88,7 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w")
 
         with self.assertRaises(types.DriverError) as e:
-            self._session.run("RETURN 1").consume()
+            self._session.read_transaction(return_1)
 
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
