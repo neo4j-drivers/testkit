@@ -69,7 +69,8 @@ class TestDirectDriver(TestkitTestCase):
         scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_http_port()
         uri = "%s://%s:%d" % (scheme, host, port)
-        self._driver = get_driver(self._backend, uri=uri)
+        self._driver = get_driver(self._backend, uri=uri,
+                                  connection_timeout_ms=500)
         with self.assertRaises(types.DriverError) as e:
             self._driver.verify_connectivity()
         if get_driver_name() in ["python"]:
