@@ -147,6 +147,15 @@ class TestTxFuncRun(TestkitTestCase):
             node_id = result_.next().values[0].value
             raise ApplicationCodeError("No thanks")
 
+        def assertion_query(tx):
+            # Try to retrieve the node, it shouldn't be there
+            result = tx.run(
+                "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
+                params={"nodeid": types.CypherInt(node_id)}
+            )
+            record = result.next()
+            self.assertIsInstance(record, types.NullRecord)
+
         self._session1 = self._driver.session("w")
         expected_exc = types.FrontendError
         # TODO: remove this block once all languages work
@@ -157,13 +166,7 @@ class TestTxFuncRun(TestkitTestCase):
         with self.assertRaises(expected_exc):
             self._session1.write_transaction(run)
 
-        # Try to retrieve the node, it shouldn't be there
-        result = self._session1.run(
-            "MATCH (n:VoidNode) WHERE id(n) = $nodeid RETURN n",
-            params={"nodeid": types.CypherInt(node_id)}
-        )
-        record = result.next()
-        self.assertIsInstance(record, types.NullRecord)
+        self._session1.read_transaction(assertion_query)
 
     def test_tx_func_configuration(self):
         # TODO: remove this block once all languages work

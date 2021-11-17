@@ -5,9 +5,13 @@ from tests.neo4j.shared import (
     cluster_unsafe_test,
     env_neo4j_pass,
     env_neo4j_user,
+    get_authorization,
     get_driver,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
+)
 
 
 class TestAuthenticationBasic(TestkitTestCase):
@@ -27,21 +31,44 @@ class TestAuthenticationBasic(TestkitTestCase):
         self._driver = get_driver(self._backend, auth=token)
         self._session = self._driver.session("r")
 
-    @cluster_unsafe_test
-    def verify_connectivity(self, auth_token):
+    def verify_connectivity(self, auth_token, use_tx=False):
+        def dummy_query(tx_or_session):
+            return tx_or_session.run("RETURN 2 as Number").next()
+
         self.create_driver_and_session(auth_token)
-        result = self._session.run("RETURN 2 as Number")
+        if use_tx:
+            result = self._session.read_transaction(dummy_query)
+        else:
+            result = self._session.run("RETURN 2 as Number")
         self.assertEqual(
-            result.next(), types.Record(values=[types.CypherInt(2)]))
+            result.next(), types.Record(values=[types.CypherInt(2)])
+        )
 
     @cluster_unsafe_test
     def test_error_on_incorrect_credentials(self):
-        auth_token = types.AuthorizationToken("basic",
-                                              principal="fake",
-                                              credentials="fake")
+        auth = get_authorization()
+        auth.credentials = auth.credentials + "-but-wrong!"
         # TODO: Expand this to check errorType is AuthenticationError
-        with self.assertRaises(types.DriverError):
-            self.verify_connectivity(auth_token)
+        with self.assertRaises(types.DriverError) as e:
+            self.verify_connectivity(auth)
+        self.assertEqual(e.exception.code,
+                         "Neo.ClientError.Security.Unauthorized")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(e.exception.errorType,
+                             "<class 'neo4j.exceptions.AuthError'>")
+
+    @cluster_unsafe_test
+    def test_error_on_incorrect_credentials_tx(self):
+        auth = get_authorization()
+        auth.credentials = auth.credentials + "-but-wrong!"
+        # TODO: Expand this to check errorType is AuthenticationError
+        with self.assertRaises(types.DriverError) as e:
+            self.verify_connectivity(auth, use_tx=True)
+        self.assertEqual(e.exception.code,
+                         "Neo.ClientError.Security.Unauthorized")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(e.exception.errorType,
+                             "<class 'neo4j.exceptions.AuthError'>")
 
     # Tests both basic with realm specified and also custom auth token. All
     @cluster_unsafe_test
