@@ -281,10 +281,9 @@ def main(settings, configurations):
     artifacts_path = os.path.abspath(
         os.environ.get("ARTIFACTS_DIR", os.path.join(".", "artifacts"))
     )
-    driver_run_artifacts_path = os.path.join(artifacts_path, "driver_run")
     driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
     runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
-    backend_artifacts_path = os.path.join(artifacts_path, "backend")
+    backend_artifacts_path = os.path.join(artifacts_path, "driver_backend")
     docker_artifacts_path = os.path.join(artifacts_path, "docker")
     # wipe artifacts path
     try:
@@ -293,7 +292,6 @@ def main(settings, configurations):
         if e.errno != errno.ENOENT:
             raise
     os.makedirs(artifacts_path)
-    os.makedirs(driver_run_artifacts_path)
     os.makedirs(driver_build_artifacts_path)
     os.makedirs(runner_build_artifacts_path)
     os.makedirs(backend_artifacts_path)
@@ -318,8 +316,7 @@ def main(settings, configurations):
 
     driver_container = driver.start_container(
         this_path, testkit_branch, driver_name, driver_repo,
-        driver_run_artifacts_path, docker_artifacts_path,
-        networks[0], networks[1]
+        docker_artifacts_path, networks[0], networks[1]
     )
 
     print("Build driver and test backend in driver container")
