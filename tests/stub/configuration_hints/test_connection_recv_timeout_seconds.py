@@ -47,11 +47,19 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 e.errorType)
         elif get_driver_name() in ["go"]:
             self.assertIn("i/o timeout", e.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ConnectionReadTimeoutException",
+                e.errorType)
 
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
+                e.errorType)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ClientException",
                 e.errorType)
 
     def _on_failed_retry_assertions(self):
@@ -96,7 +104,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             with self.assertRaises(types.DriverError) as exc:
                 tx.close()
         # TODO Remove when explicit rollback requirement is removed
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "ruby"]:
             tx.rollback()
 
         tx = self._session.begin_transaction()
@@ -134,7 +142,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 tx.close()
 
         # TODO Remove when explicit rollback requirement is removed
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "ruby"]:
             tx.rollback()
 
         self._server.done()
@@ -267,6 +275,10 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         elif get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.SessionExpiredException",
+                e.errorType)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::SessionExpiredException",
                 e.errorType)
         else:
             super()._assert_is_timeout_exception(e)
