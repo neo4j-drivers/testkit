@@ -2,6 +2,7 @@ import os
 import pathlib
 import re
 import subprocess
+from threading import Thread
 
 _running = {}
 _created_tags = set()
@@ -28,7 +29,8 @@ class Container:
             for k in env_map:
                 cmd.extend(["-e", "%s=%s" % (k, env_map[k])])
 
-    def exec(self, command, workdir=None, env_map=None, log_path=None):
+    def _exec(self, command, workdir=None, env_map=None, log_path=None,
+              check=True):
         cmd = ["docker", "exec"]
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
@@ -46,20 +48,30 @@ class Container:
                     err_fd.write(str(cmd) + "\n")
                     err_fd.flush()
                     print(cmd)
-                    subprocess.run(cmd, check=True,
+                    subprocess.run(cmd, check=check,
                                    stdout=out_fd, stderr=err_fd)
                     out_fd.write("\n")
                     out_fd.flush()
                     err_fd.write("\n")
                     err_fd.flush()
 
-    def exec_detached(self, command, workdir=None, env_map=None):
-        cmd = ["docker", "exec", "--detach"]
-        self._add(cmd, workdir, env_map)
-        cmd.append(self.name)
-        cmd.extend(command)
-        print(cmd)
-        subprocess.run(cmd, check=True)
+    def exec(self, command, workdir=None, env_map=None, log_path=None):
+        self._exec(command, workdir=workdir, env_map=env_map,
+                   log_path=log_path, check=True)
+
+    def exec_detached(self, command, workdir=None, env_map=None,
+                      log_path=None):
+        Thread(
+            target=self._exec,
+            args=(command,),
+            kwargs={
+                "workdir": workdir,
+                "env_map": env_map,
+                "log_path": log_path,
+                "check": False,
+            },
+            daemon=True
+        ).start()
 
     def rm(self):
         cmd = ["docker", "rm", "-f", "-v", self.name]
