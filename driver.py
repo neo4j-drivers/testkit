@@ -48,8 +48,7 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
 
 
 def start_container(testkit_path, branch_name, driver_name, driver_path,
-                    artifacts_path_run, artifacts_path_build, network,
-                    secondary_network):
+                    artifacts_path_build, network, secondary_network):
     # Path where scripts are that adapts driver to testkit.
     # Both absolute path and path relative to driver container.
     host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
@@ -60,8 +59,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
     # Configure volume map for the driver container
     mount_map = {
         testkit_path: "/testkit",
-        driver_path: "/driver",
-        artifacts_path_run: "/artifacts"
+        driver_path: "/driver"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
         if driver_name == "java":
@@ -151,7 +149,7 @@ class Container:
             "python3", self._glue_path + "integration.py"],
             env_map=env)
 
-    def start_backend(self):
+    def start_backend(self, artifacts_path):
         env = self._default_env()
         # Note that this is done detached which means that we don't know for
         # sure if the test backend actually started and we will not see
@@ -161,7 +159,7 @@ class Container:
         # works simply by commenting detach and see that the backend starts.
         self._container.exec_detached(
             ["python3", self._glue_path + "backend.py"],
-            env_map=env
+            env_map=env, log_path=artifacts_path
         )
         # Wait until backend started
         # Use driver container to check for backend availability
