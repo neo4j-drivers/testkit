@@ -20,6 +20,7 @@
 
 from copy import deepcopy
 from logging import getLogger
+from socket import socket
 from socketserver import (
     BaseRequestHandler,
     TCPServer,
@@ -32,7 +33,8 @@ from threading import (
 )
 import time
 import traceback
-
+import base64
+import hashlib
 from .addressing import Address
 from .channel import Channel
 from .errors import ServerExit
@@ -48,6 +50,8 @@ from .wiring import (
 )
 
 log = getLogger(__name__)
+
+MAGIC_WS_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 
 class BoltStubServer(TCPServer):
@@ -72,6 +76,71 @@ class BoltStubServer(TCPServer):
 
 class ThreadedBoltStubServer(ThreadingMixIn, BoltStubServer):
     pass
+
+
+class WebSocket (socket):
+
+    def __init__(self, _socket):
+        self._socket = _socket
+
+    def getsockname(self):
+        return self._socket.getsockname()
+
+    def getpeername(self):
+        return self._socket.getpeername()
+
+    def close(self) -> None:
+        return self._socket.close()
+
+    def settimeout(self, __value: float) -> None:
+        pass
+
+    def recv(self, __bufsize) -> bytes:
+        frame = self._socket.recv(__bufsize)
+        if len(frame) == 0:
+            return None
+
+        opcode_and_fin = frame[0]
+
+        payload_len = frame[1] - 128
+
+        mask = frame[2:6]
+        encrypted_payload = frame[6: 6 + payload_len]
+
+        payload = bytearray([encrypted_payload[i] ^ mask[i % 4]
+                             for i in range(payload_len)])
+
+        return payload
+
+    def send(self, payload) -> int:
+        frame = [129]
+
+        frame += [len(payload)]
+        frame_to_send = bytearray(frame) + bytearray(payload)
+
+        self._socket.sendall(frame_to_send)
+        return len(payload)
+
+
+class WebSocketRequesetHandler(BaseRequestHandler):
+    def handle(self) -> None:
+        encoding = "utf-8"
+        data = self.request.recv(1024).strip().decode(encoding)
+        headers = data.strip().split("\r\n")
+        if 'Upgrade: websocket' in headers:
+            for h in headers:
+                if "Sec-WebSocket-Key" in h:
+                    key = h.split(" ")[1]
+            key = key + MAGIC_WS_STRING
+            
+            resp_key = base64.standard_b64encode(
+                hashlib.sha1(key.encode(encoding)).digest()).decode(encoding)
+            
+            self.request.sendall(("HTTP/1.1 101 Switching Protocols\r\n"
+                                  + "Upgrade: websocket\r\n"
+                                  + "Connection: Upgrade\r\n"
+                                  + "Sec-WebSocket-Accept: %s\r\n\r\n" % (resp_key)).encode(encoding))
+            self.request = WebSocket(self.request)
 
 
 class BoltStubService:
@@ -100,7 +169,7 @@ class BoltStubService:
         self.actors_lock = Lock()
         service = self
 
-        class BoltStubRequestHandler(BaseRequestHandler):
+        class BoltStubRequestHandler(WebSocketRequesetHandler):
             wire = None
             client_address = None
             server_address = None
@@ -114,7 +183,11 @@ class BoltStubService:
                          self.server_address.port_number,
                          self.client_address, self.server_address)
 
-            def handle(self):
+            def handle(self) -> None:
+                super().handle()
+                print('I am here')
+                self.wire = Wire(self.request, read_wake_up=True)
+
                 with service.actors_lock:
                     actor = BoltActor(deepcopy(script), self.wire)
                     service.actors.append(actor)
