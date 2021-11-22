@@ -272,6 +272,11 @@ def main(settings, configurations):
             else:
                 raise
 
+    def _exit():
+        if failed:
+            return "One or more test suites failed."
+        return 0
+
     this_path = settings.testkit_path
     driver_name = settings.driver_name
     testkit_branch = settings.branch
@@ -374,7 +379,7 @@ def main(settings, configurations):
             or (is_neo4j_test_selected_to_run()
                 and not test_flags["EXTERNAL_TESTKIT_TESTS"])):
         # no need to download any snapshots or start any servers
-        return
+        return _exit()
 
     """
     Neo4j server test matrix
@@ -475,8 +480,7 @@ def main(settings, configurations):
 
         server.stop()
 
-    if failed:
-        sys.exit("One or more test suites failed.")
+    return _exit()
 
 
 if __name__ == "__main__":
@@ -498,4 +502,4 @@ if __name__ == "__main__":
         print(e)
         sys.exit(-1)
 
-    main(settings, configurations)
+    sys.exit(main(settings, configurations))
