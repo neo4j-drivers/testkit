@@ -15,6 +15,15 @@ class Feature(Enum):
     # This methods asserts that exactly one record in left in the result
     # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
+    # The driver implements explicit configuration options for SSL.
+    #  - enable / disable SSL
+    #  - verify signature against system store / custom cert / not at all
+    API_SSL_CONFIG = "Feature:API:SSLConfig"
+    # The driver understands bolt+s, bolt+ssc, neo4j+s, and neo4j+ssc schemes
+    # and will configure its ssl options automatically.
+    # ...+s: enforce SSL + verify  server's signature with system's trust store
+    # ...+ssc: enforce SSL but do not verify the server's signature at all
+    API_SSL_SCHEMES = "Feature:API:SSLSchemes"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"

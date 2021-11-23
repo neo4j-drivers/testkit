@@ -48,7 +48,8 @@ class NewDriver:
     def __init__(
         self, uri, authToken, userAgent=None, resolverRegistered=False,
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
-        fetchSize=None, maxTxRetryTimeMs=None
+        fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
+        trustedCertificates=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -70,6 +71,19 @@ class NewDriver:
         assert hasattr(Feature, "TMP_DRIVER_MAX_TX_RETRY_TIME")
         if maxTxRetryTimeMs is not None:
             self.maxTxRetryTimeMs = maxTxRetryTimeMs
+        # (bool) whether to enable or disable encryption
+        # field missing in message: use driver default (should be False)
+        if encrypted is not None:
+            self.encrypted = encrypted
+        # None: trust system CAs
+        # [] (empty list): trust any certificate
+        # ["path", ...] (list of strings): custom CA certificates to trust
+        # field missing in message: use driver default (should be system CAs)
+        if trustedCertificates is not None:
+            if trustedCertificates == "None":
+                self.trustedCertificates = None
+            else:
+                self.trustedCertificates = trustedCertificates
 
 
 class AuthorizationToken:
