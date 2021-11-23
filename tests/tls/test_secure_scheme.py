@@ -121,7 +121,7 @@ class TestTrustSystemCertsConfig(TestSecureScheme):
     schemes = "neo4j", "bolt"
     feature_requirement = types.Feature.API_SSL_CONFIG,
     extra_driver_configs = (
-        {"encrypted": True, "trustedCertificates": None},
+        {"encrypted": True, "trusted_certificates": None},
         {"encrypted": True},
     )
 
@@ -143,9 +143,9 @@ class TestTrustSystemCertsConfig(TestSecureScheme):
 
 class TestTrustCustomCertsConfig(TestTrustSystemCertsConfig):
     extra_driver_configs = (
-        {"encrypted": True, "trustedCertificates": ["customRoot.crt"]},
-        {"encrypted": True, "trustedCertificates": ["customRoot2.crt",
-                                                    "customRoot.crt"]},
+        {"encrypted": True, "trusted_certificates": ["customRoot.crt"]},
+        {"encrypted": True,
+         "trusted_certificates": ["customRoot2.crt", "customRoot.crt"]},
     )
     cert_prefix = "customRoot_"
 

@@ -132,7 +132,7 @@ class TestSelfSignedScheme(TestkitTestCase):
 class TestTrustAllCertsConfig(TestSelfSignedScheme):
     schemes = "neo4j", "bolt"
     feature_requirement = types.Feature.API_SSL_CONFIG,
-    extra_driver_configs = {"encrypted": True, "trustedCertificates": []},
+    extra_driver_configs = {"encrypted": True, "trusted_certificates": []},
 
     def test_trusted_ca_correct_hostname(self):
         super().test_trusted_ca_correct_hostname()
