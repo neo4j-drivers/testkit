@@ -32,9 +32,8 @@ class TestTlsVersions(TestkitTestCase):
             return try_connect(self._backend, self._server, "neo4j", "thehost",
                                )
         self.skipTest("Needs support for either of %s" % ", ".join(
-            map(lambda f: f.value, (
-               types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG
-            ))
+            map(lambda f: f.value,
+                (types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG))
         ))
 
     def test_1_1(self):

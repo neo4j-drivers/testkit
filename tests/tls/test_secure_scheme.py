@@ -10,11 +10,10 @@ from tests.tls.shared import (
 
 
 class TestSecureScheme(TestkitTestCase):
-    """
-    Tests URL scheme neo4j+s/bolt+s where server is assumed to present a server
-    certificate signed by a certificate authority recognized by the driver.
-    """
-    
+    # Tests URL scheme neo4j+s/bolt+s where server is assumed to present a
+    # server certificate signed by a certificate authority recognized by the
+    # driver.
+
     def setUp(self):
         super().setUp()
         self._server = None
@@ -45,10 +44,8 @@ class TestSecureScheme(TestkitTestCase):
         self._server = TlsServer(cert, **kwargs)
 
     def test_trusted_ca_correct_hostname(self):
-        """
-        Happy path, the server has a valid server certificate signed by a
-        trusted certificate authority.
-        """
+        # Happy path, the server has a valid server certificate signed by a
+        # trusted certificate authority.
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -60,10 +57,8 @@ class TestSecureScheme(TestkitTestCase):
                 self._server.reset()
 
     def test_trusted_ca_expired_server_correct_hostname(self):
-        """
-        The certificate authority is ok, hostname is ok but the server
-        certificate has expired. Should not connect on expired certificate.
-        """
+        # The certificate authority is ok, hostname is ok but the server
+        # certificate has expired. Should not connect on expired certificate.
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -75,9 +70,7 @@ class TestSecureScheme(TestkitTestCase):
                 self._server.reset()
 
     def test_trusted_ca_wrong_hostname(self):
-        """
-        Verifies that driver rejects connection if host name doesn't match
-        """
+        # Verifies that driver rejects connection if host name doesn't match
         self.skip_if_missing_driver_features(*self.feature_requirement)
         # TLS server is setup to serve under the name 'thehost' but driver will
         # connect to this server using 'thehostbutwrong'. Note that the docker
@@ -96,10 +89,8 @@ class TestSecureScheme(TestkitTestCase):
                 self._server.reset()
 
     def test_untrusted_ca_correct_hostname(self):
-        """
-        Verifies that driver rejects connection if host name doesn't match
-        trusted
-        """
+        # Verifies that driver rejects connection if host name doesn't match
+        # trusted
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -111,10 +102,8 @@ class TestSecureScheme(TestkitTestCase):
                 self._server.reset()
 
     def test_unencrypted(self):
-        """
-        Verifies that driver doesn't connect when it has been configured for
-        TLS connections but the server doesn't speak TLS
-        """
+        # Verifies that driver doesn't connect when it has been configured for
+        # TLS connections but the server doesn't speak TLS
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:

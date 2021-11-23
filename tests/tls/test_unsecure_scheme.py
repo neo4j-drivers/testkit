@@ -1,4 +1,4 @@
-from nutkit import protocol as types
+import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -9,17 +9,14 @@ from tests.tls.shared import (
     try_connect,
 )
 
-
 schemes = ["neo4j", "bolt"]
 
 
 class TestUnsecureScheme(TestkitTestCase):
-    """
-    Tests URL scheme neo4j/bolt where TLS is not used. The fact that driver can
-    not connect to a TLS server with this configuration is less interesting
-    than the error handling when this happens, the driver backend should
-    "survive" (without special hacks in it).
-    """
+    # Tests URL scheme neo4j/bolt where TLS is not used. The fact that driver
+    # can not connect to a TLS server with this configuration is less
+    # interesting than the error handling when this happens, the driver backend
+    # should "survive" (without special hacks in it).
 
     def setUp(self):
         super().setUp()

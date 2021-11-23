@@ -10,12 +10,9 @@ from tests.tls.shared import (
 
 
 class TestSelfSignedScheme(TestkitTestCase):
-    """
-    Tests URL scheme neo4j+ssc/bolt+ssc where server is assumed to present a
-    signed server certificate but not necessarily signed by an authority
-    recognized by the driver.
-    """
-
+    # Tests URL scheme neo4j+ssc/bolt+ssc where server is assumed to present a
+    # signed server certificate but not necessarily signed by an authority
+    # recognized by the driver.
     def setUp(self):
         super().setUp()
         self._server = None
@@ -38,10 +35,8 @@ class TestSelfSignedScheme(TestkitTestCase):
                            **driver_config)
 
     def test_trusted_ca_correct_hostname(self):
-        """
-        A server certificate signed by a trusted CA should be accepted even
-        when configured for self signed.
-        """
+        # A server certificate signed by a trusted CA should be accepted even
+        # when configured for self signed.
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -54,11 +49,9 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server.reset()
 
     def test_trusted_ca_expired_server_correct_hostname(self):
-        """
-        A server certificate signed by a trusted CA but the certificate has
-        expired. Go driver happily connects when InsecureSkipVerify is enabled,
-        same for all drivers ?
-        """
+        # A server certificate signed by a trusted CA but the certificate has
+        # expired. Go driver happily connects when InsecureSkipVerify is
+        # enabled, same for all drivers ?
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -71,10 +64,8 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server.reset()
 
     def test_trusted_ca_wrong_hostname(self):
-        """
-        A server certificate signed by a trusted CA but with wrong hostname
-        will still be accepted.
-        """
+        # A server certificate signed by a trusted CA but with wrong hostname
+        # will still be accepted.
         # TLS server is setup to serve under the name 'thehost' but driver will
         # connect to this server using 'thehostbutwrong'. Note that the docker
         # container must map this hostname to same IP as 'thehost', if this
@@ -94,7 +85,7 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server.reset()
 
     def test_untrusted_ca_correct_hostname(self):
-        """ Should connect """
+        # Should connect
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -107,7 +98,7 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server.reset()
 
     def test_untrusted_ca_wrong_hostname(self):
-        """ Should connect """
+        # Should connect
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
@@ -121,10 +112,8 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server.reset()
 
     def test_unencrypted(self):
-        """
-        Verifies that driver doesn't connect when it has been configured for
-        TLS connections but the server doesn't speak TLS
-        """
+        # Verifies that driver doesn't connect when it has been configured for
+        # TLS connections but the server doesn't speak TLS
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:

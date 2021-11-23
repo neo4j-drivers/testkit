@@ -1,12 +1,11 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
 from tests.tls.shared import TlsServer
-
 
 schemes = ("bolt", "neo4j")
 
@@ -25,7 +24,8 @@ class TestExplicitSslOptions(TestkitTestCase):
             self._server = None
         super().tearDown()
 
-    @driver_feature(types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG)
+    @driver_feature(types.Feature.API_SSL_SCHEMES,
+                    types.Feature.API_SSL_CONFIG)
     def test_explicit_config_and_scheme_config(self):
         def _test():
             url = "%s://%s:%d" % (scheme, "thehost", 6666)
@@ -33,7 +33,7 @@ class TestExplicitSslOptions(TestkitTestCase):
                                             credentials="pass")
             with self.assertRaises(types.DriverError) as exc:
                 Driver(self._backend, url, auth, encrypted=encrypted,
-                       trustedCertificates=certs)
+                       trusted_certificates=certs)
             if get_driver_name() in ["javascript"]:
                 self.assertIs("encryption", exc.exception.msg.lower())
                 self.assertIs("trust", exc.exception.msg.lower())
@@ -46,4 +46,3 @@ class TestExplicitSslOptions(TestkitTestCase):
                 for certs in ("None", [], ["customRoot.crt"]):
                     with self.subTest("%s-%s-%s" % (scheme, encrypted, certs)):
                         _test()
-
