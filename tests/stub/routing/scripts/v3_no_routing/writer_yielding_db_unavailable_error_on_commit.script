@@ -1,0 +1,18 @@
+!: BOLT #VERSION#
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {"fields": ["n"]}
+C: PULL_ALL
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to commit"}
++: RESET
+
+?: GOODBYE

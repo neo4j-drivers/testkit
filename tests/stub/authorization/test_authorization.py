@@ -19,19 +19,23 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
-        if driver in ['java']:
+        if driver in ["java"]:
             self.assertEqual(
-                'org.neo4j.driver.exceptions.AuthorizationExpiredException',
+                "org.neo4j.driver.exceptions.AuthorizationExpiredException",
                 error.errorType)
-        elif driver in ['python']:
+        elif driver in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.TransientError'>", error.errorType
             )
-        elif driver in ['javascript']:
+        elif driver in ["javascript"]:
             # only test for code
             pass
-        elif driver in ['dotnet']:
+        elif driver in ["dotnet"]:
             self.assertEqual("AuthorizationExpired", error.errorType)
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
+                error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -39,21 +43,28 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.TokenExpired",
                          error.code)
-        if driver in ['python']:
+        if driver in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
             )
-        elif driver == 'go':
-            self.assertEqual('Neo.ClientError.Security.TokenExpired',
+        elif driver in ["go", "javascript"]:
+            self.assertEqual("Neo.ClientError.Security.TokenExpired",
                              error.code)
             self.assertIn(
                 "Token expired", error.msg
             )
-        elif driver == 'java':
+        elif driver == "java":
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TokenExpiredException",
                 error.errorType)
-            self.assertEqual('Neo.ClientError.Security.TokenExpired',
+            self.assertEqual("Neo.ClientError.Security.TokenExpired",
+                             error.code)
+            self.assertIn("Token expired", error.msg)
+        elif driver == "ruby":
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::TokenExpiredException",
+                error.errorType)
+            self.assertEqual("Neo.ClientError.Security.TokenExpired",
                              error.code)
             self.assertIn("Token expired", error.msg)
         else:
@@ -76,7 +87,7 @@ class AuthorizationBase(TestkitTestCase):
                     script_path = self.script_path(version_folder, script_fn)
                     tried_locations.append(script_path)
                     if os.path.exists(script_path):
-                        server.start(path=script_path, vars=vars_)
+                        server.start(path=script_path, vars_=vars_)
                         return
         raise FileNotFoundError("{!r} tried {!r}".format(
             script_fn, ", ".join(tried_locations)
@@ -85,8 +96,10 @@ class AuthorizationBase(TestkitTestCase):
     def get_vars(self):
         raise NotImplementedError
 
-    _AUTH_EXPIRED = ('{"code": "Neo.ClientError.Security.AuthorizationExpired",'
-                     ' "message": "Authorization expired"}')
+    _AUTH_EXPIRED = (
+        '{"code": "Neo.ClientError.Security.AuthorizationExpired",'
+        ' "message": "Authorization expired"}'
+    )
     _TOKEN_EXPIRED = ('{"code": "Neo.ClientError.Security.TokenExpired", '
                       '"message": "Token expired"}')
 
@@ -96,6 +109,9 @@ class AuthorizationBase(TestkitTestCase):
 # TODO: re-write tests, where possible, to use only one server, utilizing
 #       on_send_RetryableNegative and potentially other hooks.
 class TestAuthorizationV4x3(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def setUp(self):
         super().setUp()
         self._routing_server1 = StubServer(9000)
@@ -125,16 +141,6 @@ class TestAuthorizationV4x3(AuthorizationBase):
     def get_db(self):
         return "adb"
 
-    @staticmethod
-    def collectRecords(result):
-        sequence = []
-        while True:
-            next_ = result.next()
-            if isinstance(next_, types.NullRecord):
-                break
-            sequence.append(next_.values[0].value)
-        return sequence
-
     def switch_unused_servers(self, servers, new_script_path):
         contact_count = []
         for server in servers:
@@ -148,14 +154,14 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     def _fail_on_pull_using_session_run(self, error, error_assertion):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
         self.start_server(self._read_server1,
                           "reader_yielding_error_on_pull.script", vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         result = session.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             result.next()
@@ -180,7 +186,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     def _fail_on_begin_using_tx_run(self, error, error_assertion):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
@@ -188,14 +194,14 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_tx_yielding_error_on_begin.script",
                           vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         with self.assertRaises(types.DriverError) as exc:
-            tx = session.beginTransaction()
+            tx = session.begin_transaction()
             # TODO: remove block when all drivers behave the same way
             if get_driver_name() in ["javascript", "go"]:
                 tx.run("cypher").next()
         error_assertion(exc.exception)
-        if get_driver_name() in ['go']:
+        if get_driver_name() in ["go"]:
             with self.assertRaises(types.DriverError):
                 # session will throw upon closure if there is a pending tx
                 # tx will throw the last seen error upon closure
@@ -223,15 +229,17 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     def _fail_on_run_using_tx_run(self, error, error_assertion):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
+        self.start_server(
+            self._read_server1, "reader_tx_yielding_error_on_run.script",
+            vars_=vars_
+        )
 
-        session = driver.session('r', database=self.get_db())
-        tx = session.beginTransaction()
+        session = driver.session("r", database=self.get_db())
+        tx = session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 as n")
             # TODO remove consume() once all drivers report the error on run
@@ -239,7 +247,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                 result.consume()
 
         error_assertion(exc.exception)
-        if get_driver_name() in ['go']:
+        if get_driver_name() in ["go"]:
             # session will throw upon closure if there is a pending tx
             # tx will throw the last seen error upon closure
             with self.assertRaises(types.DriverError):
@@ -264,7 +272,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     def _fail_on_pull_using_tx_run(self, error, error_assertion):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
@@ -272,13 +280,13 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_tx_yielding_error_on_pull.script",
                           vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
-        tx = session.beginTransaction()
+        session = driver.session("r", database=self.get_db())
+        tx = session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 as n")
             result.next()
         error_assertion(exc.exception)
-        if get_driver_name() in ['go']:
+        if get_driver_name() in ["go"]:
             # session will throw upon closure if there is a pending tx
             # tx will throw the last seen error upon closure
             with self.assertRaises(types.DriverError):
@@ -303,16 +311,17 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     def _fail_on_commit_using_tx_run(self, error, error_assertion):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_commit.script",
-                          vars_=vars_)
+        self.start_server(
+            self._read_server1,
+            "reader_tx_yielding_error_on_commit_with_pull_or_discard.script",
+            vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
-        tx = session.beginTransaction()
+        session = driver.session("r", database=self.get_db())
+        tx = session.begin_transaction()
         tx.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             tx.commit()
@@ -338,16 +347,17 @@ class TestAuthorizationV4x3(AuthorizationBase):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def _fail_on_rollback_using_tx_run(self, error, error_assertion):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = error
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_rollback.script",
-                          vars_=vars_)
+        self.start_server(
+            self._read_server1,
+            "reader_tx_yielding_error_on_rollback_with_pull_or_discard.script",
+            vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
-        tx = session.beginTransaction()
+        session = driver.session("r", database=self.get_db())
+        tx = session.begin_transaction()
         tx.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             tx.rollback()
@@ -373,12 +383,13 @@ class TestAuthorizationV4x3(AuthorizationBase):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_begin_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         # FIXME: test assumes that the driver contacts read_server1 first
-        # Note: swapping scripts with hooks is not possible because some drivers
-        # (e.g., Java) don't call the transaction function if they can't run
-        # a successful BEGIN first.
+
+        # Note: swapping scripts with hooks is not possible because some
+        # drivers (e.g., Java) don't call the transaction function if they
+        # can't run a successful BEGIN first.
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._AUTH_EXPIRED
         self.start_server(self._read_server1,
@@ -386,7 +397,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           vars_=vars_)
         self.start_server(self._read_server2, "reader_tx.script")
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -394,9 +405,9 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
-        session.readTransaction(work)
+        session.read_transaction(work)
         session.close()
         driver.close()
 
@@ -406,17 +417,18 @@ class TestAuthorizationV4x3(AuthorizationBase):
         # TODO: Some drivers check the result of BEGIN before calling the
         #       transaction function, others don't
         self.assertIn(attempt_count, {1, 2})
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_begin_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         # FIXME: test assumes that the driver contacts read_server1 first
-        # Note: swapping scripts with hooks is not possible because some drivers
-        # (e.g., Java) don't call the transaction function if they can't run
-        # a successful BEGIN first.
+
+        # Note: swapping scripts with hooks is not possible because some
+        # drivers (e.g., Java) don't call the transaction function if they
+        # can't run a successful BEGIN first.
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._TOKEN_EXPIRED
         self.start_server(self._read_server1,
@@ -424,7 +436,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           vars_=vars_)
         self.start_server(self._read_server2, "reader_tx.script")
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -432,10 +444,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.readTransaction(work)
+            session.read_transaction(work)
         self.assert_is_token_error(exc.exception)
         session.close()
         driver.close()
@@ -452,16 +464,20 @@ class TestAuthorizationV4x3(AuthorizationBase):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_run_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._AUTH_EXPIRED
         self.start_server(self._routing_server1, "router.script")
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
-        self.start_server(self._read_server2,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
+        self.start_server(
+            self._read_server1, "reader_tx_yielding_error_on_run.script",
+            vars_=vars_
+        )
+        self.start_server(
+            self._read_server2, "reader_tx_yielding_error_on_run.script",
+            vars_=vars_
+        )
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -469,9 +485,9 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
-        session.readTransaction(work, hooks={
+        session.read_transaction(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), "reader_tx.script"
             )
@@ -483,21 +499,25 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._read_server1.done()
         self._read_server2.done()
         self.assertEqual(2, attempt_count)
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_run_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._TOKEN_EXPIRED
         self.start_server(self._routing_server1, "router.script")
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
-        self.start_server(self._read_server2,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
+        self.start_server(
+            self._read_server1, "reader_tx_yielding_error_on_run.script",
+            vars_=vars_
+        )
+        self.start_server(
+            self._read_server2, "reader_tx_yielding_error_on_run.script",
+            vars_=vars_
+        )
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -505,95 +525,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.readTransaction(work, hooks={
-                "on_send_RetryableNegative": lambda _:
-                    self.switch_unused_servers(
-                        (self._read_server1, self._read_server2),
-                        "reader_tx.script"
-                    )
-            })
-        self.assert_is_token_error(exc.exception)
-        session.close()
-        driver.close()
-
-        self._routing_server1.done()
-        reader1_connections = self._read_server1.count_responses("<ACCEPT>")
-        reader2_connections = self._read_server2.count_responses("<ACCEPT>")
-        if reader1_connections == 1:
-            self._read_server1.done()
-            self._read_server2.reset()
-        elif reader2_connections == 1:
-            self._read_server2.done()
-            self._read_server1.reset()
-        if reader1_connections + reader2_connections != 1:
-            self.fail("Not exactly 1 read attempt. Reader 1: %i + Reader 2: %i"
-                      % (reader1_connections, reader2_connections))
-        self.assertEqual(0, attempt_count)
-        self.assertEqual([], sequences)
-
-    @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_retry_on_auth_expired_on_run_using_tx_function(self):
-        driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
-        vars_ = self.get_vars()
-        vars_["#ERROR#"] = self._AUTH_EXPIRED
-        self.start_server(self._routing_server1, "router.script")
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
-        self.start_server(self._read_server2,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
-
-        session = driver.session('r', database=self.get_db())
-        attempt_count = 0
-        sequences = []
-
-        def work(tx):
-            nonlocal attempt_count
-            attempt_count += 1
-            result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
-
-        session.readTransaction(work, hooks={
-            "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
-                (self._read_server1, self._read_server2), "reader_tx.script"
-            )
-        })
-        session.close()
-        driver.close()
-
-        self._routing_server1.done()
-        self._read_server1.done()
-        self._read_server2.done()
-        self.assertEqual(2, attempt_count)
-        self.assertEqual([[1]], sequences)
-
-    @driver_feature(types.Feature.AUTH_BEARER)
-    def test_should_fail_on_token_expired_on_run_using_tx_function(self):
-        driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
-        vars_ = self.get_vars()
-        vars_["#ERROR#"] = self._TOKEN_EXPIRED
-        self.start_server(self._routing_server1, "router.script")
-        self.start_server(self._read_server1,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
-        self.start_server(self._read_server2,
-                          "reader_tx_yielding_error_on_run.script", vars_=vars_)
-
-        session = driver.session('r', database=self.get_db())
-        attempt_count = 0
-        sequences = []
-
-        def work(tx):
-            nonlocal attempt_count
-            attempt_count += 1
-            result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
-
-        with self.assertRaises(types.DriverError) as exc:
-            session.readTransaction(work, hooks={
+            session.read_transaction(work, hooks={
                 "on_send_RetryableNegative": lambda _:
                     self.switch_unused_servers(
                         (self._read_server1, self._read_server2),
@@ -622,7 +557,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_pull_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._AUTH_EXPIRED
@@ -633,7 +568,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_tx_yielding_error_on_pull.script",
                           vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -641,9 +576,9 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
-        session.readTransaction(work, hooks={
+        session.read_transaction(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), "reader_tx.script"
             )
@@ -655,12 +590,12 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._read_server1.done()
         self._read_server2.done()
         self.assertEqual(2, attempt_count)
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_pull_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._TOKEN_EXPIRED
@@ -671,7 +606,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_tx_yielding_error_on_pull.script",
                           vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -679,10 +614,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.readTransaction(work, hooks={
+            session.read_transaction(work, hooks={
                 "on_send_RetryableNegative": lambda _:
                     self.switch_unused_servers(
                         (self._read_server1, self._read_server2),
@@ -711,7 +646,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_retry_on_auth_expired_on_commit_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._AUTH_EXPIRED
@@ -722,7 +657,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_tx_yielding_error_on_commit.script",
                           vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -730,9 +665,9 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
-        session.readTransaction(work, hooks={
+        session.read_transaction(work, hooks={
             "on_send_RetryablePositive": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), "reader_tx.script"
             )
@@ -744,12 +679,13 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._read_server1.done()
         self._read_server2.done()
         self.assertEqual(2, attempt_count)
-        self.assertEqual([[1], [1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])],
+                          [types.Record([types.CypherInt(1)])]], sequences)
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_should_fail_on_token_expired_on_commit_using_tx_function(self):
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
         self.start_server(self._routing_server1, "router.script")
         vars_ = self.get_vars()
         vars_["#ERROR#"] = self._TOKEN_EXPIRED
@@ -760,7 +696,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_tx_yielding_error_on_commit.script",
                           vars_=vars_)
 
-        session = driver.session('r', database=self.get_db())
+        session = driver.session("r", database=self.get_db())
         attempt_count = 0
         sequences = []
 
@@ -768,10 +704,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
             nonlocal attempt_count
             attempt_count += 1
             result = tx.run("RETURN 1 as n")
-            sequences.append(self.collectRecords(result))
+            sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.readTransaction(work, hooks={
+            session.read_transaction(work, hooks={
                 "on_send_RetryableNegative": lambda _:
                     self.switch_unused_servers(
                         (self._read_server1, self._read_server2),
@@ -795,10 +731,13 @@ class TestAuthorizationV4x3(AuthorizationBase):
             self.fail("Not exactly 1 read attempt. Reader 1: %i + Reader 2: %i"
                       % (reader1_connections, reader2_connections))
         self.assertEqual(1, attempt_count)
-        self.assertEqual([[1]], sequences)
+        self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
 
 class TestAuthorizationV4x1(TestAuthorizationV4x3):
+
+    required_features = types.Feature.BOLT_4_1,
+
     def get_vars(self, host=None):
         if host is None:
             host = self._routing_server1.host
@@ -811,6 +750,8 @@ class TestAuthorizationV4x1(TestAuthorizationV4x3):
 
 
 class TestAuthorizationV3(TestAuthorizationV4x3):
+    required_features = types.Feature.BOLT_3_0,
+
     def get_vars(self, host=None):
         if host is None:
             host = self._routing_server1.host
@@ -825,6 +766,9 @@ class TestAuthorizationV3(TestAuthorizationV4x3):
 
 
 class TestNoRoutingAuthorization(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_0,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9010)
@@ -844,21 +788,21 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         }
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_drop_connection_after_AuthorizationExpired(self):
+    def test_should_drop_connection_after_AuthorizationExpired(self):  # noqa: N802,E501
         self.start_server(
             self._server,
             "reader_return_1_failure_return_2_and_3_succeed.script"
         )
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
 
-        session1 = driver.session('r', fetchSize=1)
-        session2 = driver.session('r')
+        session1 = driver.session("r", fetch_size=1)
+        session2 = driver.session("r")
 
-        session1.run('RETURN 2 as n').next()
+        session1.run("RETURN 2 as n").next()
 
         with self.assertRaises(types.DriverError) as exc:
-            session2.run('RETURN 1 as n').next()
+            session2.run("RETURN 1 as n").next()
         self.assert_is_authorization_error(exc.exception)
 
         session2.close()
@@ -868,8 +812,8 @@ class TestNoRoutingAuthorization(AuthorizationBase):
 
         # fetching another connection and run a query to force
         # drivers which lazy close the connection do it
-        session3 = driver.session('r')
-        session3.run('RETURN 3 as n').next()
+        session3 = driver.session("r")
+        session3.run("RETURN 3 as n").next()
         session3.close()
 
         hangup_count = self._server.count_responses("<HANGUP>")
@@ -880,31 +824,35 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         driver.close()
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(self):
+    def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(  # noqa: N802,E501
+            self):
         self.start_server(
             self._server,
             "reader_return_1_failure_return_2_and_3_succeed.script"
         )
 
         driver = Driver(self._backend, self._uri, self._auth,
-                        userAgent=self._userAgent)
+                        user_agent=self._userAgent)
 
-        session1 = driver.session('r', fetchSize=1)
-        session2 = driver.session('r')
+        session1 = driver.session("r", fetch_size=1)
+        session2 = driver.session("r")
 
-        session1.run('RETURN 3 as n').consume()
+        list(session1.run("RETURN 3 as n"))
 
         with self.assertRaises(types.DriverError) as exc:
-            session2.run('RETURN 1 as n').next()
+            session2.run("RETURN 1 as n").next()
         self.assert_is_authorization_error(exc.exception)
 
         session2.close()
 
-        session1.run('RETURN 2 as n').next()
+        session1.run("RETURN 2 as n").next()
         session1.close()
 
 
 class TestAuthenticationSchemes(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_3,
+
     def get_vars(self):
         return {
             "#VERSION#": "4.3"
@@ -934,8 +882,9 @@ class TestAuthenticationSchemes(AuthorizationBase):
             self.start_server(self._server, script_fn)
 
             if realm:
-                auth = types.AuthorizationToken("basic", principal="neo4j",
-                                                credentials="pass", realm=realm)
+                auth = types.AuthorizationToken(
+                    "basic", principal="neo4j", credentials="pass", realm=realm
+                )
             else:
                 auth = types.AuthorizationToken("basic", principal="neo4j",
                                                 credentials="pass")

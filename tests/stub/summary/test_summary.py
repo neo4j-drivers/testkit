@@ -1,20 +1,21 @@
 from contextlib import contextmanager
 import json
 
-from nutkit.frontend import Driver
 from nutkit import protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
+    get_driver_name,
     TestkitTestCase,
 )
 from tests.stub.shared import StubServer
 
 
 class TestSummary(TestkitTestCase):
-    """ Verifies that the driver can connect to a server that speaks a specific
-    bolt protocol version.
-    """
+    """Test result summary contents."""
+
+    required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
         super().setUp()
@@ -30,8 +31,8 @@ class TestSummary(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path(script), vars=vars_)
-        session = driver.session("w", fetchSize=1000)
+        self._server.start(path=self.script_path(script), vars_=vars_)
+        session = driver.session("w", fetch_size=1000)
         try:
             yield session
         finally:
@@ -47,7 +48,8 @@ class TestSummary(TestkitTestCase):
                          properties_set=0,
                          relationships_created=0, relationships_deleted=0,
                          system_updates=0,
-                         contains_updates=False, contains_system_updates=False):
+                         contains_updates=False,
+                         contains_system_updates=False):
         attrs = (
             "constraints_added", "constraints_removed", "indexes_added",
             "indexes_removed", "labels_added", "labels_removed",
@@ -71,12 +73,14 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
         self.assertEqual(summary.server_info.agent, "Neo4j/4.4.0")
-        expected_version = list(map(str,
-                                    self._server.get_negotiated_bolt_version()))
+        expected_version = list(map(
+            str, self._server.get_negotiated_bolt_version()
+        ))
         while len(expected_version) < 2:
             expected_version.append("0")
         expected_version = ".".join(expected_version)
-        self.assertEqual(summary.server_info.protocol_version, expected_version)
+        self.assertEqual(summary.server_info.protocol_version,
+                         expected_version)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_database(self):
@@ -86,7 +90,10 @@ class TestSummary(TestkitTestCase):
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_query(self):
         def _test():
-            script_name = "empty_summary_type_%s.script" % query_type
+            if query_type is not None:
+                script_name = "empty_summary_type_%s.script" % query_type
+            else:
+                script_name = "empty_summary_no_type.script"
             with self._get_session(script_name) as session:
                 result = session.run("RETURN 1 AS n",
                                      params={"foo": types.CypherInt(123)})
@@ -96,7 +103,26 @@ class TestSummary(TestkitTestCase):
                              {"foo": types.CypherInt(123)})
             self.assertEqual(summary.query_type, query_type)
 
-        for query_type in ("r", "w", "rw", "s"):
+        for query_type in ("r", "w", "rw", "s", None):
+            with self.subTest(query_type):
+                _test()
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_invalid_query_type(self):
+        def _test():
+            script_name = "empty_summary_type_%s.script" % query_type
+            with self._get_session(script_name) as session:
+                with self.assertRaises(types.DriverError) as e:
+                    result = session.run("RETURN 1 AS n",
+                                         params={"foo": types.CypherInt(123)})
+                    result.consume()
+            if get_driver_name() == "python":
+                self.assertEqual(
+                    e.exception.errorType,
+                    "<class 'neo4j._exceptions.BoltProtocolError'>"
+                )
+
+        for query_type in ("wr",):
             with self.subTest(query_type):
                 _test()
 
@@ -300,6 +326,36 @@ class TestSummary(TestkitTestCase):
             "partial_summary_constraints_removed.script")
         self._assert_counters(
             summary, constraints_removed=1234, contains_updates=True
+        )
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_contains_system_updates(self):
+        summary = self._get_summary(
+            "partial_summary_contains_system_updates.script"
+        )
+        self._assert_counters(summary, contains_system_updates=True)
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_contains_updates(self):
+        summary = self._get_summary("partial_summary_contains_updates.script")
+        self._assert_counters(summary, contains_updates=True)
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_not_contains_system_updates(self):
+        summary = self._get_summary(
+            "partial_summary_not_contains_system_updates.script"
+        )
+        self._assert_counters(
+            summary, system_updates=1234, contains_system_updates=False
+        )
+
+    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
+    def test_partial_summary_not_contains_updates(self):
+        summary = self._get_summary(
+            "partial_summary_not_contains_updates.script"
+        )
+        self._assert_counters(
+            summary, constraints_added=1234, contains_updates=False
         )
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)

@@ -5,28 +5,28 @@ import docker
 import neo4j
 
 
-def _get_glue(thisPath, driverName, driverRepo):
-    """ Locates where driver has it's docker image and Python "glue" scripts
-    needed to build and run tests for the driver.
+def _get_glue(this_path, driver_name, driver_repo):
+    """Locate where driver has it's docker image and Python "glue" scripts.
+
+    The "glue" is  needed to build and run tests for the driver.
     Returns a tuple consisting of the absolute path on this machine along with
     the path as it will be mounted in the driver container (need trailing
     slash).
     """
-    in_driver_repo = os.path.join(driverRepo, "testkit")
+    in_driver_repo = os.path.join(driver_repo, "testkit")
     if os.path.isdir(in_driver_repo):
         return (in_driver_repo, "/driver/testkit/")
 
-    in_this_repo = os.path.join(thisPath, "driver", driverName)
+    in_this_repo = os.path.join(this_path, "driver", driver_name)
     if os.path.isdir(in_this_repo):
-        return (in_this_repo, "/testkit/driver/%s/" % driverName)
+        return (in_this_repo, "/testkit/driver/%s/" % driver_name)
 
-    raise Exception("No glue found for %s" % driverName)
+    raise Exception("No glue found for %s" % driver_name)
 
 
 def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
                   artifacts_path):
-    """ Ensures that an up to date Docker image exists for the driver.
-    """
+    """Ensure that an up to date Docker image exists for the driver."""
     # Construct Docker image name from driver name (i.e drivers-go) and
     # branch name (i.e 4.2, go-1.14-image)
     image_name = "drivers-%s:%s" % (driver_name, branch_name)
@@ -46,14 +46,14 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
     shutil.copytree(custom_cas_source_path, custom_cas_path)
 
     # This will use the driver folder as build context.
-    docker.build_and_tag(image_name, docker_image_path, log_path=artifacts_path)
+    docker.build_and_tag(image_name, docker_image_path,
+                         log_path=artifacts_path)
 
     return image_name
 
 
 def start_container(testkit_path, branch_name, driver_name, driver_path,
-                    artifacts_path_run, artifacts_path_build, network,
-                    secondary_network):
+                    artifacts_path_build, network, secondary_network):
     # Path where scripts are that adapts driver to testkit.
     # Both absolute path and path relative to driver container.
     host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
@@ -64,8 +64,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
     # Configure volume map for the driver container
     mount_map = {
         testkit_path: "/testkit",
-        driver_path: "/driver",
-        artifacts_path_run: "/artifacts"
+        driver_path: "/driver"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
         if driver_name == "java":
@@ -77,6 +76,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
         image, container_name,
         command=["python3", "/testkit/driver/bootstrap.py"],
         mount_map=mount_map,
+        host_map={"host.docker.internal": "host-gateway"},
         port_map={9876: 9876},  # For convenience when debugging
         network=network,
         working_folder="/driver")
@@ -86,8 +86,7 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
 
 
 class Container:
-    """ Represents the driver running in a Docker container.
-    """
+    """Represents the driver running in a Docker container."""
 
     def __init__(self, container, glue_path):
         self._container = container
@@ -137,8 +136,9 @@ class Container:
 
     def run_unit_tests(self):
         self._container.exec(
-                ["python3", self._glue_path + "unittests.py"],
-                env_map=self._default_env())
+            ["python3", self._glue_path + "unittests.py"],
+            env_map=self._default_env()
+        )
 
     def run_stress_tests(self, hostname, port, username, password,
                          config: neo4j.Config) -> None:
@@ -154,7 +154,7 @@ class Container:
             "python3", self._glue_path + "integration.py"],
             env_map=env)
 
-    def start_backend(self):
+    def start_backend(self, artifacts_path):
         env = self._default_env()
         # Note that this is done detached which means that we don't know for
         # sure if the test backend actually started and we will not see
@@ -163,8 +163,9 @@ class Container:
         # issues like 'detected possible backend crash', make sure that this
         # works simply by commenting detach and see that the backend starts.
         self._container.exec_detached(
-                ["python3", self._glue_path + "backend.py"],
-                env_map=env)
+            ["python3", self._glue_path + "backend.py"],
+            env_map=env, log_path=artifacts_path
+        )
         # Wait until backend started
         # Use driver container to check for backend availability
         self._container.exec([

@@ -41,9 +41,25 @@ class TestTlsVersions(TestkitTestCase):
         if self._driver in ["dotnet"]:
             self.skipTest("TLS 1.1 is not supported")
 
-        self._server = TlsServer("trustedRoot_thehost", minTls="1", maxTls="1")
-        self.assertTrue(self._try_connect())
+        self._server = TlsServer("trustedRoot_thehost",
+                                 min_tls="1", max_tls="1")
+        if self.driver_supports_features(types.Feature.TLS_1_1):
+            self.assertTrue(self._try_connect())
+        else:
+            self.assertFalse(self._try_connect())
 
     def test_1_2(self):
-        self._server = TlsServer("trustedRoot_thehost", minTls="2", maxTls="2")
-        self.assertTrue(self._try_connect())
+        self._server = TlsServer("trustedRoot_thehost",
+                                 min_tls="2", max_tls="2")
+        if self.driver_supports_features(types.Feature.TLS_1_2):
+            self.assertTrue(self._try_connect())
+        else:
+            self.assertFalse(self._try_connect())
+
+    def test_1_3(self):
+        self._server = TlsServer("trustedRoot_thehost",
+                                 min_tls="3", max_tls="3")
+        if self.driver_supports_features(types.Feature.TLS_1_3):
+            self.assertTrue(self._try_connect())
+        else:
+            self.assertFalse(self._try_connect())

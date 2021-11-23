@@ -1,8 +1,9 @@
 from contextlib import contextmanager
 
-from nutkit.frontend import Driver
 from nutkit import protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
+    driver_feature,
     get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
@@ -11,7 +12,10 @@ from tests.stub.shared import StubServer
 
 
 class TestProtocolVersions(TestkitTestCase):
-    """ Verifies that the driver can connect to a server that speaks a specific
+    """
+    Test bolt versions.
+
+    Verifies that the driver can connect to a server that speaks a specific
     bolt protocol version.
     """
 
@@ -29,8 +33,8 @@ class TestProtocolVersions(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=script_path, vars=vars_)
-        session = driver.session("w", fetchSize=1000)
+        self._server.start(path=script_path, vars_=vars_)
+        session = driver.session("w", fetch_size=1000)
         try:
             yield session
         finally:
@@ -40,22 +44,23 @@ class TestProtocolVersions(TestkitTestCase):
 
     def _run(self, version, server_agent=None, check_version=False,
              rejected_agent=False, check_server_address=False):
-        """
-            :param version: e.g. "4x3" or "3"
-            :type version: string
-            :param server_agent: Set a specific server agent and check that the
-                                 summary list the correct one.
-            :type server_agent: str, optional
-            :param check_version: Check if the summary contains the correct bolt
-                                  version
-            :type check_version: bool
-            :param rejected_agent:
-                True: Expect the driver to fail by rejecting the server agent
-                False: Expect the driver not to fail
-            :type rejected_agent: bool
-            :param check_server_address: Check if the summary contains the right
-                                         server-address
-            :type check_server_address: bool
+        """Run the common part of the tests.
+
+        :param version: e.g. "4x3" or "3"
+        :type version: string
+        :param server_agent: Set a specific server agent and check that the
+                             summary list the correct one.
+        :type server_agent: str, optional
+        :param check_version: Check if the summary contains the correct bolt
+                              version
+        :type check_version: bool
+        :param rejected_agent:
+            True: Expect the driver to fail by rejecting the server agent
+            False: Expect the driver not to fail
+        :type rejected_agent: bool
+        :param check_server_address: Check if the summary contains the right
+                                     server-address
+        :type check_server_address: bool
         """
         expected_server_version = version.replace("x", ".")
         if "." not in expected_server_version:
@@ -102,27 +107,39 @@ class TestProtocolVersions(TestkitTestCase):
                 if rejected_agent:
                     self.fail("Driver should have rejected the server agent")
             self._server.done()
+            if not rejected_agent:
+                self.assertEqual(self._server.count_requests("RUN"), 1)
+            else:
+                self.assertEqual(self._server.count_requests("RUN"), 0)
 
-    def test_supports_bolt_4x0(self):
-        self._run("4x0")
-
-    def test_supports_bolt_4x1(self):
-        self._run("4x1")
-
-    def test_supports_bolt_4x2(self):
-        self._run("4x2")
-
-    def test_supports_bolt_4x3(self):
-        self._run("4x3")
-
-    def test_supports_bolt4x4(self):
-        self._run("4x4")
-
+    @driver_feature(types.Feature.BOLT_3_0)
     def test_supports_bolt_3x0(self):
         self._run("3")
 
+    @driver_feature(types.Feature.BOLT_4_0)
+    def test_supports_bolt_4x0(self):
+        self._run("4x0")
+
+    @driver_feature(types.Feature.BOLT_4_1)
+    def test_supports_bolt_4x1(self):
+        self._run("4x1")
+
+    @driver_feature(types.Feature.BOLT_4_2)
+    def test_supports_bolt_4x2(self):
+        self._run("4x2")
+
+    @driver_feature(types.Feature.BOLT_4_3)
+    def test_supports_bolt_4x3(self):
+        self._run("4x3")
+
+    @driver_feature(types.Feature.BOLT_4_4)
+    def test_supports_bolt4x4(self):
+        self._run("4x4")
+
     def test_server_version(self):
         for version in ("4x4", "4x3", "4x2", "4x1", "4x0", "3"):
+            if not self.driver_supports_bolt(version):
+                continue
             with self.subTest(version):
                 self._run(version, check_version=True)
 
@@ -142,11 +159,15 @@ class TestProtocolVersions(TestkitTestCase):
                     #               compiles server agent from bolt version
                     #               potentially more differences
                     continue
-                if reject and get_driver_name() in ["javascript", "go", "java"]:
+                if reject and get_driver_name() in ["javascript", "go",
+                                                    "java", "ruby"]:
                     # skip subtest: Does not reject server's agent string
                     continue
-                if agent == "Neo4j/Funky!" and get_driver_name() in ["java"]:
+                if agent == "Neo4j/Funky!" and get_driver_name() in ["java",
+                                                                     "ruby"]:
                     # skip subtest: Tries to parse the server agent
+                    continue
+                if not self.driver_supports_bolt(version):
                     continue
                 with self.subTest(version + "-" + agent.replace(".", "x")):
                     self._run(version, server_agent=agent,
@@ -157,6 +178,8 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in ("4x3", "4x2", "4x1", "4x0", "3"):
+            if not self.driver_supports_bolt(version):
+                continue
             with self.subTest(version):
                 self._run(version, check_server_address=True)
 
@@ -172,47 +195,63 @@ class TestProtocolVersions(TestkitTestCase):
             summary = result.consume()
             self.assertEqual(summary.server_info.address,
                              get_dns_resolved_server_address(self._server))
-        # result should cache summary and still be valid after the session's and
-        # the driver's life-time
+        # result should cache summary and still be valid after the session's
+        # and the driver's life-time
         summary = result.consume()
         self.assertEqual(summary.server_info.address,
                          get_dns_resolved_server_address(self._server))
 
+    @driver_feature(types.Feature.BOLT_3_0)
     def test_should_reject_server_using_verify_connectivity_bolt_3x0(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="3")
 
+    @driver_feature(types.Feature.BOLT_4_0)
     def test_should_reject_server_using_verify_connectivity_bolt_4x0(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(version="4.0")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="4.0"
+        )
 
+    @driver_feature(types.Feature.BOLT_4_1)
     def test_should_reject_server_using_verify_connectivity_bolt_4x1(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(version="4.1")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="4.1"
+        )
 
+    @driver_feature(types.Feature.BOLT_4_2)
     def test_should_reject_server_using_verify_connectivity_bolt_4x2(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(version="4.2")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="4.2"
+        )
 
+    @driver_feature(types.Feature.BOLT_4_3)
     def test_should_reject_server_using_verify_connectivity_bolt_4x3(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(version="4.3")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="4.3"
+        )
 
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_should_reject_server_using_verify_connectivity_bolt_4x4(self):
         # TODO remove this block once fixed
         if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(version="4.4")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="4.4"
+        )
 
     def _test_should_reject_server_using_verify_connectivity(self, version):
         uri = "bolt://%s" % self._server.address
@@ -224,10 +263,10 @@ class TestProtocolVersions(TestkitTestCase):
             "#VERSION#": version,
             "#SERVER_AGENT#": "AgentSmith/0.0.1"
         }
-        self._server.start(path=script_path, vars=variables)
+        self._server.start(path=script_path, vars_=variables)
 
         with self.assertRaises(types.DriverError) as e:
-            driver.verifyConnectivity()
+            driver.verify_connectivity()
 
         self._assert_is_untrusted_server_exception(e.exception)
         self._server.done()
@@ -237,4 +276,8 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.UntrustedServerException",
+                e.errorType)
+        if get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::UntrustedServerException",
                 e.errorType)

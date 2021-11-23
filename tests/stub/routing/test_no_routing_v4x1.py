@@ -1,15 +1,17 @@
-import nutkit.protocol as types
 from nutkit.frontend import Driver
+import nutkit.protocol as types
 from tests.shared import (
+    driver_feature,
     get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
-    driver_feature,
 )
 from tests.stub.shared import StubServer
 
 
 class NoRoutingV4x1(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_1,
     bolt_version = "4.1"
     version_dir = "v4x1_no_routing"
     server_agent = "Neo4j/4.1.0"
@@ -27,12 +29,12 @@ class NoRoutingV4x1(TestkitTestCase):
         # TODO: "#ROUTING#": "" is the correct way to go
         #       (minimal data transmission)
         routing = ""
-        if get_driver_name() in ['dotnet']:
+        if get_driver_name() in ["dotnet"]:
             routing = ', "routing": null'
         return {
             "#VERSION#": self.bolt_version,
             "#SERVER_AGENT#": self.server_agent,
-            "#USER_AGENT#": '007',
+            "#USER_AGENT#": "007",
             "#ROUTING#": routing
         }
 
@@ -44,14 +46,14 @@ class NoRoutingV4x1(TestkitTestCase):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir, "reader.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('r', database=self.adb)
+        session = driver.session("r", database=self.adb)
         res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
@@ -66,16 +68,17 @@ class NoRoutingV4x1(TestkitTestCase):
         # Driver is configured to talk to "routing" stub server
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir, "reader.script"),
-            vars=self.get_vars()
+            path=self.script_path(self.version_dir,
+                                  "reader_write_mode.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        res = session.run("RETURN 5 as n")
+        session = driver.session("w", database=self.adb)
+        res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
         session.close()
@@ -87,24 +90,25 @@ class NoRoutingV4x1(TestkitTestCase):
 
     def test_should_exclude_routing_context(self):
         # TODO remove this block once implemented
-        if get_driver_name() in ['dotnet']:
-            self.skipTest('does not exclude routing context')
+        if get_driver_name() in ["dotnet"]:
+            self.skipTest("does not exclude routing context")
         uri = "bolt://%s" % self._server.address
         no_routing_context_vars = self.get_vars()
         no_routing_context_vars.update({
             "#ROUTING#": ""
         })
         self._server.start(
-            path=self.script_path(self.version_dir, "reader.script"),
-            vars=no_routing_context_vars
+            path=self.script_path(self.version_dir,
+                                  "reader_write_mode.script"),
+            vars_=no_routing_context_vars
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        res = session.run("RETURN 5 as n")
+        session = driver.session("w", database=self.adb)
+        res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
         session.close()
@@ -122,16 +126,17 @@ class NoRoutingV4x1(TestkitTestCase):
             "#USER_AGENT#": custom_agent
         })
         self._server.start(
-            path=self.script_path(self.version_dir, "reader.script"),
-            vars=custom_agent_context_vars
+            path=self.script_path(self.version_dir,
+                                  "reader_write_mode.script"),
+            vars_=custom_agent_context_vars
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent=custom_agent)
+                        user_agent=custom_agent)
 
-        session = driver.session('w', database=self.adb)
-        res = session.run("RETURN 5 as n")
+        session = driver.session("w", database=self.adb)
+        res = session.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
         session.close()
@@ -150,16 +155,16 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
-            vars=self.get_vars()
+                "writer_yielding_db_unavailable_error_on_rollback.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        tx = session.beginTransaction()
+        session = driver.session("w", database=self.adb)
+        tx = session.begin_transaction()
         res = tx.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
@@ -181,16 +186,16 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
-            vars=self.get_vars()
+                "writer_yielding_db_unavailable_error_on_rollback.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        tx = session.beginTransaction()
+        session = driver.session("w", database=self.adb)
+        tx = session.begin_transaction()
         res = tx.run("RETURN 1 as n")
         summary = res.consume()
 
@@ -216,16 +221,16 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
-            vars=self.get_vars()
+                "writer_yielding_db_unavailable_error_on_rollback.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        tx = session.beginTransaction()
+        session = driver.session("w", database=self.adb)
+        tx = session.begin_transaction()
         res = tx.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
@@ -247,14 +252,14 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(self.version_dir,
                                   "writer_with_custom_fetch_size.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007", fetchSize=2)
+                        user_agent="007", fetch_size=2)
 
-        session = driver.session('w', database=self.adb)
+        session = driver.session("w", database=self.adb)
         res = session.run("RETURN 1 as n")
         records = list(res)
 
@@ -274,14 +279,14 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(self.version_dir,
                                   "writer_with_custom_fetch_size.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb, fetchSize=2)
+        session = driver.session("w", database=self.adb, fetch_size=2)
         res = session.run("RETURN 1 as n")
         records = list(res)
 
@@ -295,50 +300,52 @@ class NoRoutingV4x1(TestkitTestCase):
                           types.Record(values=[types.CypherInt(9)])], records)
         self._server.done()
 
-    @driver_feature(types.Feature.TMP_RESULT_LIST)
+    @driver_feature(types.Feature.API_RESULT_LIST)
     def test_should_pull_custom_size_and_then_all_using_session_configuration(
             self):
         uri = "bolt://%s" % self._server.address
+        script = (
+            "writer_with_custom_fetch_size_pull_all.script"
+            if self.driver_supports_features(
+                types.Feature.OPT_RESULT_LIST_FETCH_ALL
+            )
+            else "writer_with_custom_fetch_size.script"
+        )
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_with_custom_fetch_size.script"),
-            vars=self.get_vars()
+            path=self.script_path(self.version_dir, script),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb, fetchSize=2)
-        res = session.run("RETURN 5 as n")
-        record_list = res.list()
+        session = driver.session("w", database=self.adb, fetch_size=2)
+        res = session.run("RETURN 1 as n")
+        records = res.list()
 
         session.close()
         driver.close()
 
-        self.assertEqual([types.Record(values=[types.CypherInt(1)]),
-                          types.Record(values=[types.CypherInt(3)]),
-                          types.Record(values=[types.CypherInt(5)]),
-                          types.Record(values=[types.CypherInt(7)]),
-                          types.Record(values=[types.CypherInt(9)])],
-                         record_list.records)
+        self.assertEqual(records, [types.Record(values=[types.CypherInt(i)])
+                                   for i in (1, 3, 5, 7, 9)])
         self._server.done()
 
     @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
-    def test_should_pull_all_when_fetch_is_minus_one_using_driver_configuration(
+    def test_should_pull_all_when_fetch_is_minus_one_using_driver_configuration(  # noqa: E501
             self):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
                                   "writer_yielding_multiple_records.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007", fetchSize=-1)
+                        user_agent="007", fetch_size=-1)
 
-        session = driver.session('w', database=self.adb)
+        session = driver.session("w", database=self.adb)
         res = session.run("RETURN 1 as n")
         records = list(res)
 
@@ -355,17 +362,17 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
-            vars=self.get_vars()
+                "writer_yielding_db_unavailable_error_on_commit.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        tx = session.beginTransaction()
-        res = tx.run("RETURN 5 as n")
+        session = driver.session("w", database=self.adb)
+        tx = session.begin_transaction()
+        res = tx.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
 
@@ -387,14 +394,14 @@ class NoRoutingV4x1(TestkitTestCase):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir, "optional_hello.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        supports_multi_db = driver.supportsMultiDB()
+        supports_multi_db = driver.supports_multi_db()
 
         driver.close()
 
@@ -405,17 +412,18 @@ class NoRoutingV4x1(TestkitTestCase):
             self):
         uri = "bolt://%s" % self._server.address
         self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "writer_yielding_multiple_records.script"),
-            vars=self.get_vars()
+            path=self.script_path(
+                self.version_dir,
+                "writer_yielding_multiple_records_with_noops.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        res = session.run("RETURN 5 as n")
+        session = driver.session("w", database=self.adb)
+        res = session.run("RETURN 1 as n")
         records = list(res)
 
         session.close()
@@ -431,17 +439,18 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_error_on_tx_completion.script"),
-            vars=self.get_vars()
+                "writer_yielding_db_unavailable_error_"
+                "then_shut_down_on_commit.script"),
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb)
-        tx = session.beginTransaction()
-        res = tx.run("RETURN 7 as n")
+        session = driver.session("w", database=self.adb)
+        tx = session.begin_transaction()
+        res = tx.run("RETURN 1 as n")
         list(res)
         summary = res.consume()
 
@@ -466,16 +475,16 @@ class NoRoutingV4x1(TestkitTestCase):
             path=self.script_path(
                 self.version_dir,
                 "writer_with_bookmark_yielding_error_on_run.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('w', database=self.adb,
+        session = driver.session("w", database=self.adb,
                                  bookmarks=["neo4j:bookmark:v1:tx0"])
-        tx = session.beginTransaction()
+        tx = session.begin_transaction()
 
         with self.assertRaises(types.DriverError) as exc:
             res = tx.run("RETURN 1 as n")
@@ -495,14 +504,14 @@ class NoRoutingV4x1(TestkitTestCase):
             path=self.script_path(
                 self.version_dir,
                 "reader_yielding_multiple_records.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('r', database=self.adb)
+        session = driver.session("r", database=self.adb)
         res = session.run("RETURN 1 as n")
         records = list(res)
 
@@ -521,14 +530,14 @@ class NoRoutingV4x1(TestkitTestCase):
             path=self.script_path(
                 self.version_dir,
                 "reader_tx_yielding_multiple_records.script"),
-            vars=self.get_vars()
+            vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="p",
                                                  credentials="c"),
-                        userAgent="007")
+                        user_agent="007")
 
-        session = driver.session('r', database=self.adb)
+        session = driver.session("r", database=self.adb)
         records = None
 
         def work(tx):
@@ -536,7 +545,7 @@ class NoRoutingV4x1(TestkitTestCase):
             result = tx.run("RETURN 1 as n")
             records = list(result)
 
-        session.readTransaction(work)
+        session.read_transaction(work)
 
         session.close()
         driver.close()
@@ -552,6 +561,10 @@ class NoRoutingV4x1(TestkitTestCase):
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)
             self.assertEqual(expected_msg, e.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual("Neo4j::Driver::Exceptions::TransientException",
+                             e.errorType)
+            self.assertEqual(expected_msg, e.msg)
         self.assertTrue(expected_msg in e.msg)
         self.assertEqual("Neo.TransientError.General.DatabaseUnavailable",
                          e.code)
@@ -560,6 +573,10 @@ class NoRoutingV4x1(TestkitTestCase):
             self, e, expected_msg="Unable to commit"):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
+                             e.errorType)
+            self.assertEqual(expected_msg, e.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual("Neo4j::Driver::Exceptions::TransientException",
                              e.errorType)
             self.assertEqual(expected_msg, e.msg)
         self.assertTrue(expected_msg in e.msg)

@@ -1,0 +1,10 @@
+!: BOLT 4.4
+!: AUTO RESET
+!: AUTO GOODBYE
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+{*
+    C: ROUTE {"{}": "*"} {"[]": "*"} {}
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "homedb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9001"], "role":"READ"}, {"addresses": ["#HOST#:9001"], "role":"WRITE"}]}}
+*}

@@ -5,20 +5,20 @@ import sys
 
 from .errors import (
     JOLTValueError,
-    NoSimpleRepresentation,
     NoFullRepresentation,
+    NoSimpleRepresentation,
 )
 from .types import (
     JoltDate,
-    JoltTime,
-    JoltLocalTime,
     JoltDateTime,
-    JoltLocalDateTime,
     JoltDuration,
-    JoltPoint,
+    JoltLocalDateTime,
+    JoltLocalTime,
     JoltNode,
-    JoltRelationship,
     JoltPath,
+    JoltPoint,
+    JoltRelationship,
+    JoltTime,
     JoltWildcard,
 )
 
@@ -228,7 +228,7 @@ class JoltBytesTransformer(JoltTypeTransformer):
                 or (isinstance(value, list)
                     and all(isinstance(b, int) and 0 <= b <= 255
                             for b in value))):
-            raise JOLTValueError('Expected str or list of integers (0-255) '
+            raise JOLTValueError("Expected str or list of integers (0-255) "
                                  'after sigil "#"')
         if isinstance(value, str):
             if not re.match(r"^([a-fA-F0-9]{2}\s*)*$", value):
@@ -476,12 +476,12 @@ class JoltReverseRelationTransformer(JoltTypeTransformer):
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
         # this class is a pure decoder. encoding always happens with "->" sigil
-        raise NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
         # this class is a pure decoder. encoding always happens with "->" sigil
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class JoltPathTransformer(JoltTypeTransformer):
@@ -510,17 +510,23 @@ class JoltPathTransformer(JoltTypeTransformer):
                     raise JOLTValueError("Element %i in path was expected to "
                                          "be a Relationship" % (i - 1))
                 if prev_rel.end_node_id != node.id:
-                    raise JOLTValueError("Relationship %i did not point to the "
-                                         "following Node in the path" % (i - 1))
+                    raise JOLTValueError(
+                        "Relationship %i did not point to the following Node "
+                        "in the path" % (i - 1)
+                    )
 
             if i < len(path) - 1:
                 next_rel = path[i + 1]
                 if not isinstance(next_rel, JoltRelationship):
-                    raise JOLTValueError("Element %i in path was expected to "
-                                         "be a Relationship" % (i + 1))
+                    raise JOLTValueError(
+                        "Element %i in path was expected to be a Relationship"
+                        % (i + 1)
+                    )
                 if next_rel.start_node_id != node.id:
-                    raise JOLTValueError("Relationship %i did not point to the "
-                                         "previous Node in the path" % (i + 1))
+                    raise JOLTValueError(
+                        "Relationship %i did not point to the previous Node "
+                        "in the path" % (i + 1)
+                    )
         return JoltPath(*path)
 
     @staticmethod

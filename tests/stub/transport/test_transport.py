@@ -9,10 +9,13 @@ from tests.stub.shared import StubServer
 
 # Low-level network transport tests
 class TestTransport(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_4_1,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
-        self._driverName = get_driver_name()
+        self._driver_name = get_driver_name()
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address
@@ -30,7 +33,7 @@ class TestTransport(TestkitTestCase):
         # Bolt 4.1 >
         bolt_version = "4.1"
         self._server.start(path=self.script_path("reader_with_noops.script"),
-                           vars={"#BOLT_VERSION#": bolt_version})
+                           vars_={"#BOLT_VERSION#": bolt_version})
         result = self._session.run("RETURN 1 as n")
         record = result.next()
         null_record = result.next()

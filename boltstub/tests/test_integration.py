@@ -1,4 +1,3 @@
-from itertools import cycle
 import socket
 from struct import unpack as struct_unpack
 import threading
@@ -45,7 +44,7 @@ class Connection:
         while len(buffer) < byte_count:
             try:
                 chunk = self._socket.recv(byte_count - len(buffer))
-            except (ConnectionResetError, ) as e:
+            except ConnectionResetError as e:
                 raise BrokenSocket() from e
             if chunk == b"":
                 raise BrokenSocket()
@@ -208,7 +207,7 @@ def test_handshake_auto(client_version, server_version, negotiated_version,
 
     script = parse("""
     !: BOLT {}
-    
+
     C: RUN
     """.format(".".join(map(str, server_version))))
 
@@ -233,8 +232,9 @@ def test_handshake_auto(client_version, server_version, negotiated_version,
 @pytest.mark.parametrize("custom_handshake", [b"\x00\x00\xFF\x00", b"foobar"])
 @pytest.mark.parametrize("client_version", [b"\x00\x00\x00\x01", b"crap"])
 @pytest.mark.parametrize("server_version", ALL_SERVER_VERSIONS)
-def test_custom_handshake_auto(custom_handshake, client_version, server_version,
-                               server_factory, connection_factory):
+def test_custom_handshake_auto(custom_handshake, client_version,
+                               server_version, server_factory,
+                               connection_factory):
     client_version = client_version + b"\x00" * (16 - len(client_version))
 
     script = parse("""
@@ -385,12 +385,12 @@ def test_manual_replies(server_version, request_tag, request_name,
     ("server_version", "response_tag", "response_name"),
     (next(r for r in ALL_RESPONSES_PER_VERSION if r[0] == v)
      for v in ALL_SERVER_VERSIONS)
- )
+)
 def test_initial_response(server_version, response_tag, response_name,
                           server_factory):
     script = parse("""
     !: BOLT {}
-    
+
     S: {}
     """.format(".".join(map(str, server_version)), response_name))
 
@@ -408,7 +408,8 @@ def test_initial_response(server_version, response_tag, response_name,
 
 @pytest.mark.parametrize("restarting", (False, True))
 @pytest.mark.parametrize("concurrent", (False, True))
-def test_restarting(server_factory, restarting, concurrent, connection_factory):
+def test_restarting(server_factory, restarting, concurrent,
+                    connection_factory):
     script = """
     !: BOLT 4.3
     {}{}

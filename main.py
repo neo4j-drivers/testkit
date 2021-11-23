@@ -30,7 +30,6 @@ from tests.testenv import (
     in_teamcity,
 )
 
-
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]
 
@@ -40,6 +39,7 @@ test_flags = {
     "INTEGRATION_TESTS": True,
     "STUB_TESTS": True,
     "RUN_SELECTED_TESTS": False,
+    "EXTERNAL_TESTKIT_TESTS": False,
     "STRESS_TESTS": True,
     "TLS_TESTS": True
 }
@@ -54,7 +54,9 @@ def initialise_configurations():
                                "-cluster" if cluster else "", scheme)
         return neo4j.Config(
             name=name,
-            image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
+            image=(
+                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
+            ),
             version=version,
             edition=edition,
             cluster=cluster,
@@ -75,7 +77,9 @@ def initialise_configurations():
         version_without_drop = ".".join(version.split(".")[:2])
         return neo4j.Config(
             name=name,
-            image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
+            image=(
+                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
+            ),
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
@@ -112,7 +116,7 @@ def initialise_configurations():
                            stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
             # nightly build of official backwards-compatible version
-            ("4.3.6",     True,     True,     "neo4j", 60),
+            ("4.3.7",     True,     True,     "neo4j", 60),
             # latest version
             ("4.4.0-dev", False,    False,    "bolt",   0),
             ("4.4.0-dev", False,    False,    "neo4j",  0),
@@ -122,14 +126,20 @@ def initialise_configurations():
         )
     ]
 
-    configurations = list(filter(lambda conf: conf is not None, configurations))
+    configurations = list(filter(lambda conf: conf is not None,
+                                 configurations))
     return configurations
 
 
-def set_test_flags(requested_list, selected_test_list):
+def set_test_flags(requested_list, external_tests, selected_test_list):
+    if selected_test_list and selected_test_list[0] or external_tests:
+        requested_list = []
+
     if selected_test_list and selected_test_list[0]:
-        requested_list = ['RUN_SELECTED_TESTS']
-        os.environ['TEST_SELECTOR'] = selected_test_list[0]
+        requested_list.append("RUN_SELECTED_TESTS")
+        os.environ["TEST_SELECTOR"] = selected_test_list[0]
+    if external_tests:
+        requested_list.append("EXTERNAL_TESTKIT_TESTS")
 
     if requested_list:
         for item in test_flags:
@@ -156,28 +166,62 @@ def construct_configuration_list(configurations, requested_list):
 
 
 def parse_command_line(configurations, argv):
+    class SmartFormatter(argparse.HelpFormatter):
+        def _split_lines(self, text, width):
+            if text.startswith("R|"):  # preserve line breaks
+                lines = text[2:].splitlines()
+                import textwrap
+                return [wrapped
+                        for line in lines
+                        for wrapped in textwrap.wrap(line, width)]
+            return super()._split_lines(text, width)
+
     # create parser
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=SmartFormatter)
 
     keys = ",  ".join(test_flags.keys())
     tests_help = "Optional space separated list selected from: %s" % keys
+    external_help = (
+        "R|"
+        "Flag to *only* run integration tests with an externally started "
+        "database. This flag is not compatible with any other flag.\n\n"
+        "Supported environment variables:\n"
+        "TEST_NEO4J_SCHEME    Scheme to build the URI when contacting the "
+        'Neo4j server, default "bolt"\n'
+        "TEST_NEO4J_HOST      Neo4j server host, no default, required\n"
+        "TEST_NEO4J_PORT      Neo4j server port, default is 7687\n"
+        "TEST_NEO4J_USER      User to access the Neo4j server, default "
+        '"neo4j"\n'
+        "TEST_NEO4J_PASS      Password to access the Neo4j server, default "
+        '"pass"\n'
+        'TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"\n'
+        'TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") '
+        'of the Neo4j server, default "enterprise"\n'
+        "TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "
+        '"False"\n')
     servers_help = "Optional space separated list selected from: "
     for config in configurations:
         servers_help += config.name + ", "
 
-    run_only_help = "Runs only the selected tests (see https://docs.python.org/3/library/unittest.html#command-line-interface)"
+    run_only_help = (
+        "Runs only the selected tests "
+        "(see https://docs.python.org/3/library/unittest.html#command-line-interface)"  # noqa: 501
+    )
 
     # add arguments
     parser.add_argument(
-        "--tests", nargs='*', required=False, help=tests_help)
+        "--tests", nargs="*", required=False, help=tests_help)
     parser.add_argument(
-        "--configs", nargs='*', required=False, help=servers_help)
+        "--configs", nargs="*", required=False, help=servers_help)
+    parser.add_argument(
+        "--external-integration", action="store_true", help=external_help)
     parser.add_argument(
         "--run-only-selected", nargs=1, required=False, help=run_only_help)
 
     # parse the arguments
     args = parser.parse_args()
-    set_test_flags(args.tests, args.run_only_selected)
+    set_test_flags(args.tests, args.external_integration,
+                   args.run_only_selected)
     configs = construct_configuration_list(configurations, args.configs)
     print("Accepted configurations:")
     for item in configs:
@@ -196,24 +240,18 @@ def cleanup(*_, **__):
 
 
 def is_stub_test_selected_to_run():
-    return (
-        test_flags["RUN_SELECTED_TESTS"] and
-        get_selected_tests().startswith("tests.stub")
-    )
+    return (test_flags["RUN_SELECTED_TESTS"]
+            and get_selected_tests().startswith("tests.stub"))
 
 
 def is_neo4j_test_selected_to_run():
-    return (
-        test_flags["RUN_SELECTED_TESTS"] and
-        get_selected_tests().startswith("tests.neo4j")
-    )
+    return (test_flags["RUN_SELECTED_TESTS"]
+            and get_selected_tests().startswith("tests.neo4j"))
 
 
 def is_tls_test_selected_to_run():
-    return (
-        test_flags["RUN_SELECTED_TESTS"] and
-        get_selected_tests().startswith("tests.tls")
-    )
+    return (test_flags["RUN_SELECTED_TESTS"]
+            and get_selected_tests().startswith("tests.tls"))
 
 
 def get_selected_tests():
@@ -234,6 +272,11 @@ def main(settings, configurations):
             else:
                 raise
 
+    def _exit():
+        if failed:
+            return "One or more test suites failed."
+        return 0
+
     this_path = settings.testkit_path
     driver_name = settings.driver_name
     testkit_branch = settings.branch
@@ -243,9 +286,9 @@ def main(settings, configurations):
     artifacts_path = os.path.abspath(
         os.environ.get("ARTIFACTS_DIR", os.path.join(".", "artifacts"))
     )
-    driver_run_artifacts_path = os.path.join(artifacts_path, "driver_run")
     driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
     runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
+    backend_artifacts_path = os.path.join(artifacts_path, "driver_backend")
     docker_artifacts_path = os.path.join(artifacts_path, "docker")
     # wipe artifacts path
     try:
@@ -254,9 +297,9 @@ def main(settings, configurations):
         if e.errno != errno.ENOENT:
             raise
     os.makedirs(artifacts_path)
-    os.makedirs(driver_run_artifacts_path)
     os.makedirs(driver_build_artifacts_path)
     os.makedirs(runner_build_artifacts_path)
+    os.makedirs(backend_artifacts_path)
     os.makedirs(docker_artifacts_path)
     print("Putting artifacts in %s" % artifacts_path)
 
@@ -278,8 +321,7 @@ def main(settings, configurations):
 
     driver_container = driver.start_container(
         this_path, testkit_branch, driver_name, driver_repo,
-        driver_run_artifacts_path, docker_artifacts_path,
-        networks[0], networks[1]
+        docker_artifacts_path, networks[0], networks[1]
     )
 
     print("Build driver and test backend in driver container")
@@ -287,12 +329,12 @@ def main(settings, configurations):
     print("Finished building driver and test backend")
 
     if test_flags["UNIT_TESTS"]:
-        begin_test_suite('Unit tests')
+        begin_test_suite("Unit tests")
         run_fail_wrapper(driver_container.run_unit_tests)
-        end_test_suite('Unit tests')
+        end_test_suite("Unit tests")
 
     print("Start test backend in driver container")
-    driver_container.start_backend()
+    driver_container.start_backend(backend_artifacts_path)
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
@@ -322,12 +364,22 @@ def main(settings, configurations):
             get_selected_tests()
         )
 
+    if test_flags["EXTERNAL_TESTKIT_TESTS"]:
+        if is_neo4j_test_selected_to_run():
+            run_fail_wrapper(
+                runner_container.run_selected_neo4j_tests_env_config,
+                get_selected_tests()
+            )
+        else:
+            run_fail_wrapper(runner_container.run_neo4j_tests_env_config)
+
     if not (test_flags["TESTKIT_TESTS"]
             or test_flags["STRESS_TESTS"]
             or test_flags["INTEGRATION_TESTS"]
-            or is_neo4j_test_selected_to_run()):
+            or (is_neo4j_test_selected_to_run()
+                and not test_flags["EXTERNAL_TESTKIT_TESTS"])):
         # no need to download any snapshots or start any servers
-        return
+        return _exit()
 
     """
     Neo4j server test matrix
@@ -353,12 +405,12 @@ def main(settings, configurations):
                                    server_name,
                                    neo4j_artifacts_path)
         else:
-            print("\n    Starting neo4j standalone server (%s)\n" % server_name)
-            server = neo4j.Standalone(neo4j_config.image,
-                                      server_name,
-                                      neo4j_artifacts_path,
-                                      "neo4jserver", 7687,
-                                      neo4j_config.edition)
+            print("\n    Starting neo4j standalone server (%s)\n"
+                  % server_name)
+            server = neo4j.Standalone(
+                neo4j_config.image, server_name, neo4j_artifacts_path,
+                "neo4jserver", 7687, neo4j_config.edition
+            )
         server.start(networks[0])
         addresses = server.addresses()
         hostname, port = addresses[0]
@@ -405,7 +457,8 @@ def main(settings, configurations):
                 print("Building and running integration tests...")
                 run_fail_wrapper(
                     driver_container.run_integration_tests,
-                    hostname, port, neo4j.username, neo4j.password, neo4j_config
+                    hostname, port, neo4j.username, neo4j.password,
+                    neo4j_config
                 )
             else:
                 print("Skipping integration tests for %s" % server_name)
@@ -427,8 +480,7 @@ def main(settings, configurations):
 
         server.stop()
 
-    if failed:
-        sys.exit("One or more test suites failed.")
+    return _exit()
 
 
 if __name__ == "__main__":
@@ -441,13 +493,13 @@ if __name__ == "__main__":
     # Add this path to python sys path to be able to invoke modules
     # from this repo
     this_path = os.path.dirname(os.path.abspath(__file__))
-    os.environ['PYTHONPATH'] = this_path
+    os.environ["PYTHONPATH"] = this_path
 
     try:
         settings = settings.build(this_path)
-    except settings.InvalidArgs as e:
-        print('')
+    except settings.ArgumentError as e:
+        print("")
         print(e)
         sys.exit(-1)
 
-    main(settings, configurations)
+    sys.exit(main(settings, configurations))

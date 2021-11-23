@@ -5,12 +5,13 @@ import json
 import math
 from os import path
 import re
+import sys
 from textwrap import wrap
 import threading
 from time import sleep
 from typing import (
     List,
-    Optional
+    Optional,
 )
 import warnings
 
@@ -18,14 +19,14 @@ import lark
 
 from .bolt_protocol import verify_script_messages
 from .errors import (
-    BoltMissingVersion,
-    BoltUnknownMessage,
-    BoltUnknownVersion,
+    BoltMissingVersionError,
+    BoltUnknownMessageError,
+    BoltUnknownVersionError,
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt.transformers import decode as jolt_decode
 from .simple_jolt import types as jolt_types
+from .simple_jolt.transformers import decode as jolt_decode
 
 
 def load_parser():
@@ -82,7 +83,8 @@ class Line(str, abc.ABC):
         return obj
 
     def __str__(self):
-        return "({:3}) {}".format(self.line_number, super(Line, self).__str__())
+        return "({:3}) {}".format(self.line_number,
+                                  super(Line, self).__str__())
 
     def __repr__(self):
         return "<{}>{}".format(self.__class__.__name__, self.__str__())
@@ -225,7 +227,7 @@ class BangLine(Line):
         if ctx.restarting and ctx.concurrent:
             warnings.warn(
                 'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
-                '(concurrent scripts are implicitly restarting)'
+                "(concurrent scripts are implicitly restarting)"
             )
 
 
@@ -364,9 +366,9 @@ class ServerLine(Line):
             tag, args = self.command_match.groups()
             args = args.strip()
             if tag == "EXIT":
-                raise ServerExit("server exit as part of the script: {}".format(
-                    self
-                ))
+                raise ServerExit(
+                    "server exit as part of the script: {}".format(self)
+                )
             elif tag == "NOOP":
                 channel.send_raw(b"\x00\x00")
             elif tag == "RAW":
@@ -393,7 +395,7 @@ class Block(abc.ABC):
 
     @abc.abstractmethod
     def assert_no_init(self):
-        """ raise error if init would send messages """
+        """Raise error if `init()` would send messages."""
 
     @abc.abstractmethod
     def done(self) -> bool:
@@ -613,7 +615,8 @@ class AlternativeBlock(Block):
         return self.block_lists[self.selection].can_consume(channel)
 
     def can_consume_after_reset(self, channel) -> bool:
-        return any(b.can_consume_after_reset(channel) for b in self.block_lists)
+        return any(b.can_consume_after_reset(channel)
+                   for b in self.block_lists)
 
     def done(self):
         return (self.selection is not None
@@ -684,7 +687,8 @@ class ParallelBlock(Block):
         return any(b.can_consume(channel) for b in self.block_lists)
 
     def can_consume_after_reset(self, channel) -> bool:
-        return any(b.can_consume_after_reset(channel) for b in self.block_lists)
+        return any(b.can_consume_after_reset(channel)
+                   for b in self.block_lists)
 
     def has_deterministic_end(self) -> bool:
         return all(b.has_deterministic_end() for b in self.block_lists)
@@ -798,12 +802,14 @@ class _RepeatBlock(Block, abc.ABC):
                           for m in self.block_list.accepted_messages())
         if ((self.has_deterministic_end() and self.done())
                 or self.block_list.can_be_skipped()):
-            res.update((m, True)
-                       for m in self.block_list.accepted_messages_after_reset())
+            res.update(
+                (m, True)
+                for m in self.block_list.accepted_messages_after_reset()
+            )
         return list(res.keys())
 
     def accepted_messages_after_reset(self) -> List[ClientLine]:
-        return self.block_list.accepted_messages_after_resets()
+        return self.block_list.accepted_messages_after_reset()
 
     def assert_no_init(self):
         self.block_list.assert_no_init()
@@ -1039,13 +1045,13 @@ class Script:
     def _verify_script(self):
         try:
             verify_script_messages(self)
-        except BoltMissingVersion as e:
+        except BoltMissingVersionError as e:
             raise lark.GrammarError(
                 'Missing bolt version bang line (e.g. "!: BOLT 4.3")'
             ) from e
-        except BoltUnknownMessage as e:
+        except BoltUnknownMessageError as e:
             raise LineError(e.line, e.msg) from e
-        except BoltUnknownVersion as e:
+        except BoltUnknownVersionError as e:
             raise LineError(
                 self.context.bang_lines["bolt_version"], *e.args[:1]
             ) from e
@@ -1092,31 +1098,30 @@ class Script:
 
 
 class ScriptTransformer(lark.Transformer):
-    @lark.v_args(tree=True)
-    def bang_line(self, tree):
-        return BangLine(tree.line, "".join(tree.children),
-                        tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def bang_line(self, meta, children):
+        return BangLine(meta.line, "".join(children),
+                        children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def client_line(self, tree):
-        return ClientLine(tree.line, "".join(tree.children),
-                          tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def client_line(self, meta, children):
+        return ClientLine(meta.line, "".join(children),
+                          children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def auto_line(self, tree):
-        return AutoLine(tree.line, "".join(tree.children),
-                        tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def auto_line(self, meta, children):
+        return AutoLine(meta.line, "".join(children),
+                        children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def server_line(self, tree):
-        return ServerLine(tree.line, "".join(tree.children),
-                          tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def server_line(self, meta, children):
+        return ServerLine(meta.line, "".join(children),
+                          children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def start(self, tree):
+    def start(self, children):
         bang_lines = []
         block_list = None
-        for child in tree.children:
+        for child in children:
             if isinstance(child, BangLine):
                 bang_lines.append(child)
             elif isinstance(child, BlockList):
@@ -1124,10 +1129,10 @@ class ScriptTransformer(lark.Transformer):
                 break
         return Script(bang_lines, block_list)
 
-    @lark.v_args(tree=True)
-    def block_list(self, tree):
+    @lark.v_args(meta=True)
+    def block_list(self, meta, children):
         blocks = []
-        for child in tree.children:
+        for child in children:
             if isinstance(child, lark.Token):
                 continue
             if (blocks
@@ -1139,76 +1144,82 @@ class ScriptTransformer(lark.Transformer):
             else:
                 blocks.append(child)
 
-        return BlockList(blocks, tree.line)
+        return BlockList(blocks, meta.line)
 
-    @lark.v_args(tree=True)
-    def client_block(self, tree):
+    @lark.v_args(meta=True)
+    def client_block(self, meta, children):
         return ClientBlock(
-            [child for child in tree.children if child.__class__ == ClientLine],
-            tree.line
+            [
+                child for child in children
+                if child.__class__ == ClientLine
+            ],
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def auto_block(self, tree):
-        assert len(tree.children) == 1
-        assert tree.children[0].__class__ == AutoLine
-        return AutoBlock(tree.children[0], tree.line)
+    @lark.v_args(meta=True)
+    def auto_block(self, meta, children):
+        assert len(children) == 1
+        assert children[0].__class__ == AutoLine
+        return AutoBlock(children[0], meta.line)
 
-    def _wrapped_auto_block(self, wrapper, tree):
-        assert len(tree.children) == 1
-        assert tree.children[0].__class__ == AutoLine
+    def _wrapped_auto_block(self, wrapper, meta, children):
+        assert len(children) == 1
+        assert children[0].__class__ == AutoLine
         return wrapper(
             BlockList(
-                [AutoBlock(tree.children[0], tree.line)],
-                tree.line
+                [AutoBlock(children[0], meta.line)],
+                meta.line
             ),
-            tree.line
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def auto_optional_block(self, tree):
-        return self._wrapped_auto_block(OptionalBlock, tree)
+    @lark.v_args(meta=True)
+    def auto_optional_block(self, meta, children):
+        return self._wrapped_auto_block(OptionalBlock, meta, children)
 
-    @lark.v_args(tree=True)
-    def auto_loop0_block(self, tree):
-        return self._wrapped_auto_block(Repeat0Block, tree)
+    @lark.v_args(meta=True)
+    def auto_loop0_block(self, meta, children):
+        return self._wrapped_auto_block(Repeat0Block, meta, children)
 
-    @lark.v_args(tree=True)
-    def auto_loop1_block(self, tree):
-        return self._wrapped_auto_block(Repeat1Block, tree)
+    @lark.v_args(meta=True)
+    def auto_loop1_block(self, meta, children):
+        return self._wrapped_auto_block(Repeat1Block, meta, children)
 
-    @lark.v_args(tree=True)
-    def server_block(self, tree):
+    @lark.v_args(meta=True)
+    def server_block(self, meta, children):
         return ServerBlock(
-            [child for child in tree.children if child.__class__ == ServerLine],
-            tree.line
+            [
+                child for child in children
+                if child.__class__ == ServerLine
+            ],
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def alternative_block(self, tree):
+    @lark.v_args(meta=True)
+    def alternative_block(self, meta, children):
         return AlternativeBlock(
-            [c for c in tree.children if not isinstance(c, lark.Token)],
-            tree.line
+            [c for c in children if not isinstance(c, lark.Token)],
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def optional_block(self, tree):
-        return OptionalBlock(tree.children[2], tree.line)
+    @lark.v_args(meta=True)
+    def optional_block(self, meta, children):
+        return OptionalBlock(children[2], meta.line)
 
-    @lark.v_args(tree=True)
-    def parallel_block(self, tree):
+    @lark.v_args(meta=True)
+    def parallel_block(self, meta, children):
         return ParallelBlock(
-            [c for c in tree.children if not isinstance(c, lark.Token)],
-            tree.line
+            [c for c in children if not isinstance(c, lark.Token)],
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def repeat_0_block(self, tree):
-        return Repeat0Block(tree.children[2], tree.line)
+    @lark.v_args(meta=True)
+    def repeat_0_block(self, meta, children):
+        return Repeat0Block(children[2], meta.line)
 
-    @lark.v_args(tree=True)
-    def repeat_1_block(self, tree):
-        return Repeat1Block(tree.children[2], tree.line)
+    @lark.v_args(meta=True)
+    def repeat_1_block(self, meta, children):
+        return Repeat1Block(children[2], meta.line)
 
 
 def parse(script: str, substitutions: Optional[dict] = None) -> Script:
@@ -1220,6 +1231,10 @@ def parse(script: str, substitutions: Optional[dict] = None) -> Script:
 
 def parse_file(filename):
     with open(filename) as fd:
-        script = parse(fd.read())
+        try:
+            script = parse(fd.read())
+        except Exception:
+            print("Error while parsing %s" % filename, file=sys.stderr)
+            raise
     script.filename = filename
     return script

@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# coding: utf-8
 
 # Copyright (c) 2002-2016 "Neo Technology,"
 # Network Engine for Objects in Lund AB [http://neotechnology.com]
@@ -17,21 +16,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from argparse import ArgumentParser
+from logging import (
+    getLogger,
+    INFO,
+)
 import platform
-import threading
-import time
 import signal
 import sys
+import threading
+import time
 
-from argparse import ArgumentParser
-from logging import getLogger, INFO
 from . import BoltStubService
 from .parsing import (
     parse_file,
     ScriptFailure,
 )
 from .watcher import watch
-
 
 log = getLogger(__name__)
 
@@ -67,17 +68,17 @@ def main():
     Run a Bolt stub server.
 
     The stub server process listens for an incoming client connection and will
-    attempt to play through a pre-scripted exchange with that client. Any deviation
-    from that script will result in a non-zero exit code. This utility is primarily
-    useful for Bolt client integration testing.
+    attempt to play through a pre-scripted exchange with that client. Any
+    deviation from that script will result in a non-zero exit code. This
+    utility is primarily useful for Bolt client integration testing.
     """)
         parser.add_argument(
             "-l", "--listen-addr",
-            help="The base address on which to listen for incoming connections "
-                 "in INTERFACE:PORT format, where INTERFACE may be omitted "
-                 "for 'localhost'. Each script (which doesn't specify an "
-                 "explicit port number) will use subsequent ports. If "
-                 "completely omitted, this defaults to "
+            help="The base address on which to listen for incoming "
+                 "connections in INTERFACE:PORT format, where INTERFACE may "
+                 "be omitted for 'localhost'. Each script (which doesn't "
+                 "specify an explicit port number) will use subsequent ports. "
+                 "If completely omitted, this defaults to "
                  "':17687'. The BOLT_LISTEN_ADDR environment variable may "
                  "be used as an alternative to this option. Scripts may also "
                  "specify their own explicit port numbers."
@@ -112,7 +113,7 @@ def main():
         if service.exceptions:
             for error in service.exceptions:
                 extra = ""
-                if hasattr(error, 'script') and error.script.filename:
+                if hasattr(error, "script") and error.script.filename:
                     extra += " in {!r}".format(error.script.filename)
                 if isinstance(error, ScriptFailure):
                     print("Script mismatch{}:\n{}\n".format(extra, error))

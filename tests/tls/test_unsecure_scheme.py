@@ -16,10 +16,11 @@ schemes = ["neo4j", "bolt"]
 class TestUnsecureScheme(TestkitTestCase):
     """
     Tests URL scheme neo4j/bolt where TLS is not used. The fact that driver can
-    not connect to a TLS server with this configuration is less interesting than
-    the error handling when this happens, the driver backend should "survive"
-    (without special hacks in it).
+    not connect to a TLS server with this configuration is less interesting
+    than the error handling when this happens, the driver backend should
+    "survive" (without special hacks in it).
     """
+
     def setUp(self):
         super().setUp()
         self._server = None

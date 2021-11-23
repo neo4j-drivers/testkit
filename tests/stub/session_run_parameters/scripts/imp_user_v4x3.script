@@ -1,0 +1,14 @@
+!: BOLT 4.3
+
+A: HELLO {"{}": "*"}
+*: RESET
+# Impersonation is not a feature that bolt 4.3 supports. However, this server
+# understands it anyway. This way, we can check that the driver raises the
+# problem even before contacting the server.
+C: RUN "RETURN 1 as n" {} {"imp_user": "that-other-dude"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "w"}
+*: RESET
+?: GOODBYE

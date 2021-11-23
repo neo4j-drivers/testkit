@@ -1,0 +1,12 @@
+!: BOLT #VERSION#
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "#USER_AGENT#" #ROUTING#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"[mode]": "w", "db": "adb"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

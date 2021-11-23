@@ -1,13 +1,9 @@
 from abc import abstractmethod
-from collections import defaultdict
 import inspect
 import os
 
 import nutkit.protocol as types
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
@@ -45,8 +41,6 @@ class RoutingBase(TestkitTestCase):
         self._writeServer1.reset()
         self._writeServer2.reset()
         self._writeServer3.reset()
-        self._routingServer1._dump()
-        self._writeServer1._dump()
         super().tearDown()
 
     @property
@@ -84,13 +78,13 @@ class RoutingBase(TestkitTestCase):
         classes = (self.__class__, *inspect.getmro(self.__class__))
         tried_locations = []
         for cls in classes:
-            if hasattr(cls, "bolt_version"):
+            if isinstance(getattr(cls, "bolt_version", None), str):
                 version_folder = \
                     "v{}".format(cls.bolt_version.replace(".", "x"))
                 script_path = self.script_path(version_folder, script_fn)
                 tried_locations.append(script_path)
                 if os.path.exists(script_path):
-                    server.start(path=script_path, vars=vars_)
+                    server.start(path=script_path, vars_=vars_)
                     return
         raise FileNotFoundError("{!r} tried {!r}".format(
             script_fn, ", ".join(tried_locations)
@@ -101,11 +95,11 @@ class RoutingBase(TestkitTestCase):
         pass
 
     @staticmethod
-    def collectRecords(result):
+    def collect_records(result):
         sequence = []
         while True:
-            next = result.next()
-            if isinstance(next, types.NullRecord):
+            record = result.next()
+            if isinstance(record, types.NullRecord):
                 break
-            sequence.append(next.values[0].value)
+            sequence.append(record.values[0].value)
         return sequence

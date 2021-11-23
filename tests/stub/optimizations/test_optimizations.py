@@ -2,7 +2,6 @@ import re
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-
 from tests.shared import (
     driver_feature,
     TestkitTestCase,
@@ -23,12 +22,13 @@ class TestOptimizations(TestkitTestCase):
         self._router.reset()
         super().tearDown()
 
-    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING,
+                    types.Feature.BOLT_4_3)
     def test_pull_pipelining(self):
         def test():
             script = "pull_pipeline{}.script".format("_tx" if use_tx else "")
             self._server.start(path=self.script_path("v4x3", script),
-                               vars={"#TYPE#": mode[0]})
+                               vars_={"#TYPE#": mode[0]})
             auth = types.AuthorizationToken("basic", principal="neo4j",
                                             credentials="pass")
             driver = Driver(self._backend, "bolt://%s" % self._server.address,
@@ -36,7 +36,7 @@ class TestOptimizations(TestkitTestCase):
 
             session = driver.session(mode[0])
             if use_tx:
-                tx = session.beginTransaction()
+                tx = session.begin_transaction()
                 res = tx.run("CYPHER")
                 result = list(map(lambda r: r.value, res.next().values))
                 tx.commit()
@@ -62,10 +62,10 @@ class TestOptimizations(TestkitTestCase):
         script = "run_twice{}{}.script".format("_tx" if use_tx else "",
                                                "_discard" if consume else "")
         self._server.start(path=self.script_path(version, script),
-                           vars={"#TYPE#": mode[0]})
+                           vars_={"#TYPE#": mode[0]})
         if routing:
             self._router.start(path=self.script_path("v4x3", "router.script"),
-                               vars={"#HOST#": self._router.host})
+                               vars_={"#HOST#": self._router.host})
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         if routing:
@@ -83,7 +83,7 @@ class TestOptimizations(TestkitTestCase):
                 session.close()
                 session = driver.session(mode[0])
             if use_tx:
-                tx = session.beginTransaction()
+                tx = session.begin_transaction()
                 res = tx.run("QUERY %i" % (i + 1))
                 if consume:
                     res.consume()
@@ -130,27 +130,32 @@ class TestOptimizations(TestkitTestCase):
             self.assertEqual(self._server.count_requests("RESET"), 0)
             self.assertEqual(self._router.count_requests("RESET"), 0)
 
-    @driver_feature(types.Feature.OPT_CONNECTION_REUSE)
+    @driver_feature(types.Feature.OPT_CONNECTION_REUSE,
+                    types.Feature.BOLT_4_3)
     def test_reuses_connection(self):
         for routing in (False, True):
             for mode in ("read", "write"):
                 for use_tx in (None, "commit", "rollback"):
                     for new_session in (True, False):
-                        with self.subTest(mode
-                                          + (("_tx_" + use_tx) if use_tx
-                                             else "")
-                                          + ("_one_shot_session" if new_session
-                                             else "_reuse_session")
-                                          + ("_routing" if routing
-                                             else "_direct")):
-                            self.double_read(mode, new_session, use_tx, routing,
-                                             check_single_connection=True)
+                        with self.subTest(
+                            mode
+                            + (("_tx_" + use_tx) if use_tx else "")
+                            + ("_one_shot_session"
+                               if new_session else "_reuse_session")
+                            + ("_routing" if routing else "_direct")
+                        ):
+                            self.double_read(
+                                mode, new_session, use_tx, routing,
+                                check_single_connection=True
+                            )
                         self._server.reset()
 
     @driver_feature(types.Feature.OPT_MINIMAL_RESETS)
     def test_no_reset_on_clean_connection(self):
         mode = "write"
         for version in ("v4x3", "v3"):
+            if not self.driver_supports_bolt(version):
+                continue
             for consume in (True, False):
                 if version == "v3" and consume:
                     # Drivers with types.Feature.OPT_PULL_PIPELINING will issue
@@ -182,7 +187,7 @@ class TestOptimizations(TestkitTestCase):
             if routing:
                 self._router.start(
                     path=self.script_path("v4x3", "router.script"),
-                    vars={"#HOST#": self._router.host}
+                    vars_={"#HOST#": self._router.host}
                 )
             self._server.start(path=script_path)
             auth = types.AuthorizationToken("basic", principal="neo4j",
@@ -196,7 +201,7 @@ class TestOptimizations(TestkitTestCase):
             session = driver.session("w")
             if use_tx:
                 with self.assertRaises(types.DriverError):
-                    tx = session.beginTransaction()
+                    tx = session.begin_transaction()
                     res = tx.run("CYPHER")
                     res.next()
             else:
@@ -214,16 +219,19 @@ class TestOptimizations(TestkitTestCase):
             self.assertEqual(reset_count, 1)
 
         for version in ("v3", "v4x3"):
+            if not self.driver_supports_bolt(version):
+                continue
             for use_tx in (False, True):
                 for routing in (False, True):
                     for fail_on in ("pull", "run", "begin"):
                         if fail_on == "begin" and not use_tx:
                             continue
-                        with self.subTest(version
-                                          + ("_tx" if use_tx else "_autocommit")
-                                          + "_{}".format(fail_on)
-                                          + ("_routing"
-                                             if routing else "_no_routing")):
+                        with self.subTest(
+                            version
+                            + ("_tx" if use_tx else "_autocommit")
+                            + "_{}".format(fail_on)
+                            + ("_routing" if routing else "_no_routing")
+                        ):
                             test()
                         self._server.reset()
                         self._router.reset()
@@ -233,14 +241,15 @@ class TestOptimizations(TestkitTestCase):
         def test():
             if routing:
                 self._router.start(
-                    path=self.script_path("v4x3", "all_default_router.script"),
-                    vars={"#HOST#": self._router.host}
+                    path=self.script_path(version,
+                                          "all_default_router.script"),
+                    vars_={"#HOST#": self._router.host}
                 )
                 self._server.start(path=self.script_path(
-                    "v4x3", "all_default_routing.script"
+                    version, "all_default_routing.script"
                 ))
             else:
-                self._server.start(path=self.script_path("v4x3",
+                self._server.start(path=self.script_path(version,
                                                          "all_default.script"))
             auth = types.AuthorizationToken("basic", principal="neo4j",
                                             credentials="pass")
@@ -252,7 +261,7 @@ class TestOptimizations(TestkitTestCase):
                                 "bolt://%s" % self._server.address, auth)
             session = driver.session("w")  # write is default
             if use_tx:
-                tx = session.beginTransaction()
+                tx = session.begin_transaction()
                 res = tx.run("CYPHER")
                 if consume:
                     res.consume()
@@ -274,29 +283,33 @@ class TestOptimizations(TestkitTestCase):
             if routing:
                 self._router.done()
 
-        for use_tx in (True, False):
-            for consume in (True, False):
-                for routing in (True, False):
-                    with self.subTest(("tx" if use_tx else "auto_commit")
-                                      + ("_discard" if consume else "_pull")
-                                      + ("_routing"
-                                         if routing else "_no_routing")):
-                        test()
-                    self._server.reset()
-                    self._router.reset()
+        for version in ("v4x3", "v4x4"):
+            if not self.driver_supports_bolt(version):
+                continue
+            for use_tx in (True, False):
+                for consume in (True, False):
+                    for routing in (True, False):
+                        with self.subTest(
+                            ("tx" if use_tx else "auto_commit")
+                            + ("_discard" if consume else "_pull")
+                            + ("_routing" if routing else "_no_routing")
+                        ):
+                            test()
+                        self._server.reset()
+                        self._router.reset()
 
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
     def test_uses_implicit_default_arguments_multi_query(self):
         def test():
             self._server.start(path=self.script_path(
-                "v4x3", "all_default_multi_query.script"
+                version, "all_default_multi_query.script"
             ))
             auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                             credentials="pass")
             driver = Driver(self._backend, "bolt://%s" % self._server.address,
                             auth)
             session = driver.session("w")  # write is default
-            tx = session.beginTransaction()
+            tx = session.begin_transaction()
             res = tx.run("CYPHER")
             if consume1:
                 res.consume()
@@ -315,26 +328,30 @@ class TestOptimizations(TestkitTestCase):
             driver.close()
             self._server.done()
 
-        for consume1 in (True, False):
-            for consume2 in (True, False):
-                with self.subTest(("discard1" if consume1 else "pull1")
-                                  + ("_discard2" if consume2 else "_pull2")):
-                    test()
-                self._server.reset()
-                self._router.reset()
+        for version in ("v4x3", "v4x4"):
+            for consume1 in (True, False):
+                for consume2 in (True, False):
+                    with self.subTest(
+                        version
+                        + ("_discard1" if consume1 else "_pull1")
+                        + ("_discard2" if consume2 else "_pull2")
+                    ):
+                        test()
+                    self._server.reset()
+                    self._router.reset()
 
     @driver_feature(types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
     def test_uses_implicit_default_arguments_multi_query_nested(self):
         def test():
             self._server.start(path=self.script_path(
-                "v4x3", "all_default_multi_query_nested.script"
+                version, "all_default_multi_query_nested.script"
             ))
             auth = types.AuthorizationToken(scheme="basic", principal="neo4j",
                                             credentials="pass")
             driver = Driver(self._backend, "bolt://%s" % self._server.address,
                             auth)
             session = driver.session("w")  # write is default
-            tx = session.beginTransaction()
+            tx = session.begin_transaction()
             res1 = tx.run("CYPHER")
             res1.next()
             res2 = tx.run("CYPHER")
@@ -353,9 +370,13 @@ class TestOptimizations(TestkitTestCase):
             driver.close()
             self._server.done()
 
-        for consume1 in (True, False):
-            for consume2 in (True, False):
-                with self.subTest(("discard1" if consume1 else "pull1")
-                                  + ("_discard2" if consume2 else "_pull2")):
-                    test()
-                self._server.reset()
+        for version in ("v4x3", "v4x4"):
+            if not self.driver_supports_bolt(version):
+                continue
+            for consume1 in (True, False):
+                for consume2 in (True, False):
+                    with self.subTest(("discard1" if consume1 else "pull1")
+                                      + ("_discard2"
+                                         if consume2 else "_pull2")):
+                        test()
+                    self._server.reset()

@@ -4,40 +4,42 @@ import sys
 import time
 
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken, DriverError
+from nutkit.protocol import (
+    AuthorizationToken,
+    DriverError,
+)
 
 # Retrieve path to the repository containing this script.
 # Use this path as base for locating a whole bunch of other stuff.
-thisPath = os.path.dirname(os.path.abspath(__file__))
+THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class TlsServer:
-    def __init__(self, server_cert, minTls="0", maxTls="2", disableTls=False):
-        """
-        Name of server certificate, corresponds to a .pem and .key file.
-        """
-        server_path = os.path.join(thisPath, "..", "..", "tlsserver",
+    def __init__(self, server_cert, min_tls="0", max_tls="2",
+                 disable_tls=False):
+        # Name of server certificate, corresponds to a .pem and .key file.
+        server_path = os.path.join(THIS_PATH, "..", "..", "tlsserver",
                                    "tlsserver")
-        cert_path = os.path.join(thisPath, "certs", "server",
+        cert_path = os.path.join(THIS_PATH, "certs", "server",
                                  "%s.pem" % server_cert)
-        key_path = os.path.join(thisPath, "certs", "server",
+        key_path = os.path.join(THIS_PATH, "certs", "server",
                                 "%s.key" % server_cert)
         params = [
             server_path,
             "-bind", "0.0.0.0:6666",
             "-cert", cert_path,
             "-key", key_path,
-            "-minTls", minTls,
-            "-maxTls", maxTls
+            "-minTls", min_tls,
+            "-maxTls", max_tls
         ]
-        if disableTls:
+        if disable_tls:
             params.append("--disableTls")
         self._process = subprocess.Popen(
             params,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
-            encoding='utf-8'
+            encoding="utf-8"
         )
         # Wait until something is written to know it started
         line = self._process.stdout.readline()
@@ -48,10 +50,7 @@ class TlsServer:
         self._process.stderr.close()
 
     def connected(self):
-        """
-        Checks that the server has stopped and its exit code to determine if
-        driver connected or not.
-        """
+        """Check if the server stopped w/o error and if a driver connected."""
         polls = 100
         while polls:
             self._process.poll()
@@ -67,8 +66,6 @@ class TlsServer:
         raise Exception("Timeout")
 
     def _dump(self):
-        # self._close_pipes()
-        # return
         sys.stdout.flush()
         print(">>>> Captured TLS server stdout")
         for line in self._process.stdout:

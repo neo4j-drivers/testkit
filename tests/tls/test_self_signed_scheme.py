@@ -15,6 +15,7 @@ class TestSelfSignedScheme(TestkitTestCase):
     signed server certificate but not necessarily signed by an authority
     recognized by the driver.
     """
+
     def setUp(self):
         super().setUp()
         self._server = None
@@ -38,8 +39,8 @@ class TestSelfSignedScheme(TestkitTestCase):
 
     def test_trusted_ca_correct_hostname(self):
         """
-        A server certificate signed by a trusted CA should be accepted even when
-        configured for self signed.
+        A server certificate signed by a trusted CA should be accepted even
+        when configured for self signed.
         """
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
@@ -49,7 +50,8 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server = TlsServer("trustedRoot_thehost")
                     self.assertTrue(self._try_connect(scheme, "thehost",
                                                       driver_config))
-                self._server.reset()
+                if self._server is not None:
+                    self._server.reset()
 
     def test_trusted_ca_expired_server_correct_hostname(self):
         """
@@ -65,27 +67,31 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server = TlsServer("trustedRoot_thehost_expired")
                     self.assertTrue(self._try_connect(scheme, "thehost",
                                                       driver_config))
-                self._server.reset()
+                if self._server is not None:
+                    self._server.reset()
 
     def test_trusted_ca_wrong_hostname(self):
         """
-        A server certificate signed by a trusted CA but with wrong hostname will
-        still be accepted.
+        A server certificate signed by a trusted CA but with wrong hostname
+        will still be accepted.
         """
         # TLS server is setup to serve under the name 'thehost' but driver will
         # connect to this server using 'thehostbutwrong'. Note that the docker
         # container must map this hostname to same IP as 'thehost', if this
-        # hasn't been done we won't connect (expected) but get a timeout instead
-        # since the TLS server hasn't received any connect attempt at all.
+        # hasn't been done we won't connect (expected) but get a timeout
+        # instead since the TLS server hasn't received any connect attempt at
+        # all.
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
                 with self.subTest(scheme
                                   + "-" + str(driver_config)):
                     self._server = TlsServer("trustedRoot_thehost")
-                    self.assertTrue(self._try_connect(scheme, "thehostbutwrong",
+                    self.assertTrue(self._try_connect(scheme,
+                                                      "thehostbutwrong",
                                                       driver_config))
-                self._server.reset()
+                if self._server is not None:
+                    self._server.reset()
 
     def test_untrusted_ca_correct_hostname(self):
         """ Should connect """
@@ -97,7 +103,8 @@ class TestSelfSignedScheme(TestkitTestCase):
                     self._server = TlsServer("untrustedRoot_thehost")
                     self.assertTrue(self._try_connect(scheme, "thehost",
                                                       driver_config))
-                self._server.reset()
+                if self._server is not None:
+                    self._server.reset()
 
     def test_untrusted_ca_wrong_hostname(self):
         """ Should connect """
@@ -107,14 +114,16 @@ class TestSelfSignedScheme(TestkitTestCase):
                 with self.subTest(scheme
                                   + "-" + str(driver_config)):
                     self._server = TlsServer("untrustedRoot_thehost")
-                    self.assertTrue(self._try_connect(scheme, "thehostbutwrong",
+                    self.assertTrue(self._try_connect(scheme,
+                                                      "thehostbutwrong",
                                                       driver_config))
-                self._server.reset()
+                if self._server is not None:
+                    self._server.reset()
 
     def test_unencrypted(self):
         """
-        Verifies that driver doesn't connect when it has been configured for TLS
-        connections but the server doesn't speak TLS
+        Verifies that driver doesn't connect when it has been configured for
+        TLS connections but the server doesn't speak TLS
         """
         self.skip_if_missing_driver_features(*self.feature_requirement)
         for driver_config in self.extra_driver_configs:
@@ -124,10 +133,11 @@ class TestSelfSignedScheme(TestkitTestCase):
                     # The server cert doesn't really matter but set it to the
                     # one that would work if TLS happens to be on.
                     self._server = TlsServer("untrustedRoot_thehost",
-                                             disableTls=True)
+                                             disable_tls=True)
                     self.assertFalse(self._try_connect(scheme, "thehost",
                                                        driver_config))
-                self._server.reset()
+                if self._server is not None:
+                    self._server.reset()
 
 
 class TestTrustAllCertsConfig(TestSelfSignedScheme):

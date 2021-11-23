@@ -1,0 +1,35 @@
+!: BOLT 4.4
+
+C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "routing": {"{}": "*"}}
+S: SUCCESS {"server": "Neo4j/4.4.0", "connection_id": "example-connection-id:1"}
+*: RESET
+{{
+    # transaction
+    C: BEGIN {}
+    S: SUCCESS {}
+    C: RUN "*" {} {}
+    S: SUCCESS {"fields": ["1"]}
+    {{
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+    ----
+        C: DISCARD {}
+    }}
+    S: SUCCESS {}
+    C: COMMIT
+    S: SUCCESS {"type": "w", "bookmark": "bookmark:1"}
+----
+    # auto commit transaction
+    C: RUN "*" {} {}
+    S: SUCCESS {"fields": ["1"]}
+    {{
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+    ----
+        C: DISCARD {}
+    }}
+    S: RECORD [1]
+       SUCCESS {"type": "w", "bookmark": "bookmark:1"}
+}}
+*: RESET
+?: GOODBYE

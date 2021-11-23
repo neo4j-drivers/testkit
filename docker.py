@@ -1,8 +1,8 @@
-import pathlib
 import os
+import pathlib
 import re
 import subprocess
-
+from threading import Thread
 
 _running = {}
 _created_tags = set()
@@ -29,7 +29,8 @@ class Container:
             for k in env_map:
                 cmd.extend(["-e", "%s=%s" % (k, env_map[k])])
 
-    def exec(self, command, workdir=None, env_map=None, log_path=None):
+    def _exec(self, command, workdir=None, env_map=None, log_path=None,
+              check=True):
         cmd = ["docker", "exec"]
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
@@ -47,20 +48,30 @@ class Container:
                     err_fd.write(str(cmd) + "\n")
                     err_fd.flush()
                     print(cmd)
-                    subprocess.run(cmd, check=True,
+                    subprocess.run(cmd, check=check,
                                    stdout=out_fd, stderr=err_fd)
                     out_fd.write("\n")
                     out_fd.flush()
                     err_fd.write("\n")
                     err_fd.flush()
 
-    def exec_detached(self, command, workdir=None, env_map=None):
-        cmd = ["docker", "exec", "--detach"]
-        self._add(cmd, workdir, env_map)
-        cmd.append(self.name)
-        cmd.extend(command)
-        print(cmd)
-        subprocess.run(cmd, check=True)
+    def exec(self, command, workdir=None, env_map=None, log_path=None):
+        self._exec(command, workdir=workdir, env_map=env_map,
+                   log_path=log_path, check=True)
+
+    def exec_detached(self, command, workdir=None, env_map=None,
+                      log_path=None):
+        Thread(
+            target=self._exec,
+            args=(command,),
+            kwargs={
+                "workdir": workdir,
+                "env_map": env_map,
+                "log_path": log_path,
+                "check": False,
+            },
+            daemon=True
+        ).start()
 
     def rm(self):
         cmd = ["docker", "rm", "-f", "-v", self.name]
@@ -114,8 +125,9 @@ def start(name):
     return container
 
 
-def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
-        env_map=None, working_folder=None, network=None, aliases=None):
+def run(image, name, command=None, mount_map=None, host_map=None,
+        port_map=None, env_map=None, working_folder=None, network=None,
+        aliases=None):
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
@@ -138,7 +150,7 @@ def run(image, name, command=None, mount_map=None, host_map=None, port_map=None,
         cmd.extend(["-w", working_folder])
     if aliases is not None:
         for a in aliases:
-            cmd.append("--network-alias="+a)
+            cmd.append("--network-alias=" + a)
     if "TEST_DOCKER_USER" in os.environ:
         cmd.extend(["-u", os.environ["TEST_DOCKER_USER"]])
     cmd.append(image)
@@ -196,7 +208,7 @@ def cleanup():
     if os.environ.get("TEST_DOCKER_RMI", "").lower() \
             in ("true", "y", "yes", "1", "on"):
         for t in _created_tags:
-            print('cleanup (docker rmi %s)' % t)
+            print("cleanup (docker rmi %s)" % t)
             subprocess.run(["docker", "rmi", t])
 
 

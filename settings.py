@@ -1,49 +1,50 @@
-"""
-Retrieves the information needed to run main, stress or other test suite.
-"""
+"""Retrieves the information needed to run main, stress or other test suite."""
+
 import collections
 import os
 
 
-class InvalidArgs(Exception):
+class ArgumentError(Exception):
     pass
 
 
-Settings = collections.namedtuple('Settings', [
-    'in_teamcity', 'driver_name', 'branch', 'testkit_path', 'driver_repo',
-    'run_all_tests'
+Settings = collections.namedtuple("Settings", [
+    "in_teamcity", "driver_name", "branch", "testkit_path", "driver_repo",
+    "run_all_tests"
 ])
 
 
 def build(testkit_path):
-    """ Builds the context based on what is defined in environment variables.
-    """
-    in_teamcity = os.environ.get('TEST_IN_TEAMCITY', '').upper() in [
-            'TRUE', '1']
+    """Build. the context based environment variables."""
+    in_teamcity = (os.environ.get("TEST_IN_TEAMCITY", "").upper()
+                   in ("TRUE", "1"))
 
     # Retrieve path to driver git repository
     driver_repo = os.environ.get("TEST_DRIVER_REPO")
     if not driver_repo:
-        raise InvalidArgs(
-                "Missing environment variable TEST_DRIVER_REPO that contains "
-                "path to driver repository")
+        raise ArgumentError(
+            "Missing environment variable TEST_DRIVER_REPO that contains "
+            "path to driver repository"
+        )
 
     driver_name = os.environ.get("TEST_DRIVER_NAME")
     if not driver_name:
-        raise InvalidArgs(
-                "Missing environment variable TEST_DRIVER_NAME that contains "
-                "name of the driver")
+        raise ArgumentError(
+            "Missing environment variable TEST_DRIVER_NAME that contains "
+            "name of the driver"
+        )
 
     branch = os.environ.get("TEST_BRANCH")
     if not branch:
         if in_teamcity:
-            raise InvalidArgs(
+            raise ArgumentError(
                 "Missing environment variable TEST_BRANCH that contains "
                 "name of testkit branch. "
-                "This name is used to name Docker repository.")
+                "This name is used to name Docker repository."
+            )
         branch = "local"
 
-    run_all_tests = os.environ.get("TEST_RUN_ALL_TESTS", "").lower() \
-        in ("true", "y", "yes", "1", "on")
+    run_all_tests = (os.environ.get("TEST_RUN_ALL_TESTS", "").lower()
+                     in ("true", "y", "yes", "1", "on"))
 
     return Settings(**locals())
