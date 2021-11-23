@@ -24,7 +24,7 @@ Setting up the development environment:
    If you use `# noqa` on its own line, it will disable *all* checks for the
    whole file. Don't do that.  
    To disable certain rules for a whole file, check out
-   `.pre-commit-config`.  
+   `setup.cfg`.  
    If you want to run the checks manually, you can do so:
    ```bash
    $ pre-commit run --all-files
