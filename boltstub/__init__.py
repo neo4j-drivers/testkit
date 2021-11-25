@@ -111,13 +111,9 @@ class WebSocket (socket):
         payload_len = frame[1] & 0b0111_1111
 
         if payload_len == 126:
-            payload_len = struct.unpack(">H", self._socket.recv(2))
-            # print(payload_len)
-            # raise Exception('16bit')
+            payload_len, = struct.unpack(">H", self._socket.recv(2))
         elif payload_len == 127:
-            payload_len = struct.unpack(">Q", self._socket.recv(8))
-            # print(payload_len)
-            # raise Exception('64bit')
+            payload_len, = struct.unpack(">Q", self._socket.recv(8))
 
         if masked == 1:
             mask = self._socket.recv(4)
@@ -128,7 +124,10 @@ class WebSocket (socket):
             if mask == 0 \
             else bytearray([masked_payload[i] ^ mask[i % 4]
                             for i in range(payload_len)])
-
+        if opcode & 0b0000_1000 == 0b0000_1000:
+            return self.recv(__bufsize)
+        elif opcode == 0 and fin == 0:
+            return payload + self.recv(__bufsize)
         return payload
 
     def send(self, payload) -> int:
