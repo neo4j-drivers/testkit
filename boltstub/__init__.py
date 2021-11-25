@@ -26,6 +26,7 @@ from socketserver import (
     TCPServer,
     ThreadingMixIn,
 )
+import struct
 from sys import stdout
 from threading import (
     Lock,
@@ -96,29 +97,57 @@ class WebSocket (socket):
         pass
 
     def recv(self, __bufsize) -> bytes:
-        frame = self._socket.recv(__bufsize)
+        frame = self._socket.recv(2)
         if len(frame) == 0:
             return None
 
-        opcode_and_fin = frame[0]
+        fin = frame[0] >> 7
+        rsv1 = frame[0] & 0b0100_0000 == 0b0100_0000
+        rsv2 = frame[0] & 0b0010_0000 == 0b0010_0000
+        rsv3 = frame[0] & 0b0001_0000 == 0b0001_0000
+        opcode = frame[0] & 0b0000_1111
 
-        payload_len = frame[1] - 128
+        masked = frame[1] >> 7
+        payload_len = frame[1] & 0b0111_1111
 
-        mask = frame[2:6]
-        encrypted_payload = frame[6: 6 + payload_len]
+        if payload_len == 126:
+            payload_len = struct.unpack(">H", self._socket.recv(2))
+            # print(payload_len)
+            # raise Exception('16bit')
+        elif payload_len == 127:
+            payload_len = struct.unpack(">Q", self._socket.recv(8))
+            # print(payload_len)
+            # raise Exception('64bit')
 
-        payload = bytearray([encrypted_payload[i] ^ mask[i % 4]
-                             for i in range(payload_len)])
+        if masked == 1:
+            mask = self._socket.recv(4)
+
+        masked_payload = self._socket.recv(payload_len)
+
+        payload = masked_payload \
+            if mask == 0 \
+            else bytearray([masked_payload[i] ^ mask[i % 4]
+                            for i in range(payload_len)])
 
         return payload
 
     def send(self, payload) -> int:
-        frame = [129]
+        frame = [0b1000_0010]
+        payload_len = len(payload)
+        should_raise = False
+        if (payload_len < 126):
+            frame += [payload_len]
+        elif payload_len <= 0x10000:
+            frame += [126]
+            frame += bytearray(struct.pack(">H", payload_len))
+        else:
+            frame += [127]
+            frame += bytearray(struct.pack(">Q", payload_len))
 
-        frame += [len(payload)]
         frame_to_send = bytearray(frame) + bytearray(payload)
 
         self._socket.sendall(frame_to_send)
+
         return len(payload)
 
 
@@ -132,10 +161,10 @@ class WebSocketRequesetHandler(BaseRequestHandler):
                 if "Sec-WebSocket-Key" in h:
                     key = h.split(" ")[1]
             key = key + MAGIC_WS_STRING
-            
+
             resp_key = base64.standard_b64encode(
                 hashlib.sha1(key.encode(encoding)).digest()).decode(encoding)
-            
+
             self.request.sendall(("HTTP/1.1 101 Switching Protocols\r\n"
                                   + "Upgrade: websocket\r\n"
                                   + "Connection: Upgrade\r\n"
