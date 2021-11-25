@@ -10,6 +10,6 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
     C: PULL_ALL
     S: RECORD [1000, [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]]
        SUCCESS {"type": "r"}
+    *: RESET
 +}
-*: RESET
 ?: GOODBYE
