@@ -67,3 +67,6 @@ class RoutingV4x1(RoutingV4x4):
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         pass
+
+    def test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function(self):  # noqa: E501
+        super().test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function()  # noqa: E501
