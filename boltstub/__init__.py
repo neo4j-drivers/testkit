@@ -32,6 +32,7 @@ from threading import (
 )
 import time
 import traceback
+
 from .addressing import Address
 from .channel import Channel
 from .errors import ServerExit
@@ -41,8 +42,8 @@ from .parsing import (
     ScriptFailure,
 )
 from .wiring import (
-    ReadWakeup,
     create_wire,
+    ReadWakeup,
 )
 
 log = getLogger(__name__)

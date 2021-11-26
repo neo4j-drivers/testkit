@@ -23,7 +23,9 @@ as well as classes for modelling IP addresses, based on tuples.
 """
 
 
+import base64
 from functools import cached_property
+import hashlib
 from socket import (
     AF_INET,
     AF_INET6,
@@ -31,8 +33,6 @@ from socket import (
     timeout,
 )
 import struct
-import base64
-import hashlib
 
 BOLT_PORT_NUMBER = 7687
 HTTP_HEADER_MIN_SIZE = 26  # BYTES
@@ -346,7 +346,7 @@ def negotiate_socket(_socket):
         encoding = "utf-8"
         encoded = __buffer.strip().decode(encoding)
         headers = encoded.strip().split("\r\n")
-        if 'Upgrade: websocket' not in headers:
+        if "Upgrade: websocket" not in headers:
             return False
         for h in headers:
             if "Sec-WebSocket-Key" in h:
