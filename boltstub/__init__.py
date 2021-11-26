@@ -133,7 +133,6 @@ class WebSocket (socket):
     def send(self, payload) -> int:
         frame = [0b1000_0010]
         payload_len = len(payload)
-        should_raise = False
         if (payload_len < 126):
             frame += [payload_len]
         elif payload_len <= 0x10000:
@@ -150,10 +149,48 @@ class WebSocket (socket):
         return len(payload)
 
 
+class Socket (socket):
+
+    def __init__(self, _socket, data):
+        self._socket = _socket
+        self._data = data
+
+    def getsockname(self):
+        return self._socket.getsockname()
+
+    def getpeername(self):
+        return self._socket.getpeername()
+
+    def close(self) -> None:
+        return self._socket.close()
+
+    def settimeout(self, __value: float) -> None:
+        return self._socket.settimeout(__value)
+
+    def recv(self, __bufsize) -> bytes:
+        if (self._data):
+            buff = self._data
+            self._data = None
+            return buff
+        return self._socket.recv(__bufsize)
+
+    def send(self, payload) -> int:
+        return self._socket.send(payload)
+
+
 class WebSocketRequesetHandler(BaseRequestHandler):
-    def handle(self) -> None:
+    BOLT_PROTOCOL_HANDSHAKE_SIZE = 20
+    
+    def setup(self) -> None:
+        buffer = self.request.recv(1024)
+        if not self._try_negoatiate_websocket(buffer):
+            self.request = Socket(self.request, buffer)
+
+    def _try_negoatiate_websocket(self, buffer):
+        if len(buffer) <= self.BOLT_PROTOCOL_HANDSHAKE_SIZE:
+            return False
         encoding = "utf-8"
-        data = self.request.recv(1024).strip().decode(encoding)
+        data = buffer.strip().decode(encoding)
         headers = data.strip().split("\r\n")
         if 'Upgrade: websocket' in headers:
             for h in headers:
@@ -165,10 +202,12 @@ class WebSocketRequesetHandler(BaseRequestHandler):
                 hashlib.sha1(key.encode(encoding)).digest()).decode(encoding)
 
             self.request.sendall(("HTTP/1.1 101 Switching Protocols\r\n"
-                                  + "Upgrade: websocket\r\n"
-                                  + "Connection: Upgrade\r\n"
-                                  + "Sec-WebSocket-Accept: %s\r\n\r\n" % (resp_key)).encode(encoding))
+                                + "Upgrade: websocket\r\n"
+                                + "Connection: Upgrade\r\n"
+                                + "Sec-WebSocket-Accept: %s\r\n\r\n" % (resp_key)).encode(encoding))
             self.request = WebSocket(self.request)
+            return True
+        return False
 
 
 class BoltStubService:
@@ -203,6 +242,7 @@ class BoltStubService:
             server_address = None
 
             def setup(self):
+                super().setup()
                 self.wire = Wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
@@ -212,10 +252,6 @@ class BoltStubService:
                          self.client_address, self.server_address)
 
             def handle(self) -> None:
-                super().handle()
-                print('I am here')
-                self.wire = Wire(self.request, read_wake_up=True)
-
                 with service.actors_lock:
                     actor = BoltActor(deepcopy(script), self.wire)
                     service.actors.append(actor)
