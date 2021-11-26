@@ -1,5 +1,4 @@
 from nutkit import protocol as types
-from nutkit.frontend import Driver
 
 from ..shared import (
     dns_resolve_single,
@@ -9,7 +8,6 @@ from ..shared import (
 )
 from .shared import (
     cluster_unsafe_test,
-    get_authorization,
     get_driver,
     get_neo4j_host_and_http_port,
     get_neo4j_host_and_port,
@@ -69,26 +67,13 @@ class TestDirectDriver(TestkitTestCase):
         scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_http_port()
         uri = "%s://%s:%d" % (scheme, host, port)
-        self._driver = get_driver(self._backend, uri=uri)
+        self._driver = get_driver(self._backend, uri=uri,
+                                  connection_timeout_ms=500)
         with self.assertRaises(types.DriverError) as e:
             self._driver.verify_connectivity()
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
-
-    def test_should_fail_on_incorrect_password(self):
-        uri = "%s://%s:%d" % (get_neo4j_scheme(), *get_neo4j_host_and_port())
-        auth = get_authorization()
-        auth.credentials = auth.credentials + "-but-wrong!"
-        self._driver = Driver(self._backend, uri, auth)
-        self._session = self._driver.session("w")
-
-        with self.assertRaises(types.DriverError) as e:
-            self._session.run("RETURN 1").consume()
-
-        if get_driver_name() in ["python"]:
-            self.assertEqual(e.exception.errorType,
-                             "<class 'neo4j.exceptions.AuthError'>")
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_supports_multi_db(self):

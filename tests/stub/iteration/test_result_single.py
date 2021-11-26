@@ -18,6 +18,10 @@ class TestResultSingle(IterationTestBase):
         if driver in ["python"]:
             self.assertEqual("<class 'ToBeDecided'>",
                              error.errorType)
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::NoSuchRecordException",
+                error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -27,6 +31,10 @@ class TestResultSingle(IterationTestBase):
         if driver in ["python"]:
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              error.errorType)
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ServiceUnavailableException",
+                error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

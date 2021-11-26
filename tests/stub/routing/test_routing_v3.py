@@ -26,7 +26,7 @@ class RoutingV3(RoutingV4x4):
             "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#": ""
         }
 
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "ruby"]:
             v.update({
                 "#EXTR_HELLO_ROUTING_PROPS#":
                     ', "routing": ' + v["#ROUTINGCTX#"],

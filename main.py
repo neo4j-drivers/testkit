@@ -272,6 +272,11 @@ def main(settings, configurations):
             else:
                 raise
 
+    def _exit():
+        if failed:
+            return "One or more test suites failed."
+        return 0
+
     this_path = settings.testkit_path
     driver_name = settings.driver_name
     testkit_branch = settings.branch
@@ -281,9 +286,9 @@ def main(settings, configurations):
     artifacts_path = os.path.abspath(
         os.environ.get("ARTIFACTS_DIR", os.path.join(".", "artifacts"))
     )
-    driver_run_artifacts_path = os.path.join(artifacts_path, "driver_run")
     driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
     runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
+    backend_artifacts_path = os.path.join(artifacts_path, "driver_backend")
     docker_artifacts_path = os.path.join(artifacts_path, "docker")
     # wipe artifacts path
     try:
@@ -292,9 +297,9 @@ def main(settings, configurations):
         if e.errno != errno.ENOENT:
             raise
     os.makedirs(artifacts_path)
-    os.makedirs(driver_run_artifacts_path)
     os.makedirs(driver_build_artifacts_path)
     os.makedirs(runner_build_artifacts_path)
+    os.makedirs(backend_artifacts_path)
     os.makedirs(docker_artifacts_path)
     print("Putting artifacts in %s" % artifacts_path)
 
@@ -316,8 +321,7 @@ def main(settings, configurations):
 
     driver_container = driver.start_container(
         this_path, testkit_branch, driver_name, driver_repo,
-        driver_run_artifacts_path, docker_artifacts_path,
-        networks[0], networks[1]
+        docker_artifacts_path, networks[0], networks[1]
     )
 
     print("Build driver and test backend in driver container")
@@ -330,7 +334,7 @@ def main(settings, configurations):
         end_test_suite("Unit tests")
 
     print("Start test backend in driver container")
-    driver_container.start_backend()
+    driver_container.start_backend(backend_artifacts_path)
     print("Started test backend")
 
     # Start runner container, responsible for running the unit tests.
@@ -375,7 +379,7 @@ def main(settings, configurations):
             or (is_neo4j_test_selected_to_run()
                 and not test_flags["EXTERNAL_TESTKIT_TESTS"])):
         # no need to download any snapshots or start any servers
-        return
+        return _exit()
 
     """
     Neo4j server test matrix
@@ -476,8 +480,7 @@ def main(settings, configurations):
 
         server.stop()
 
-    if failed:
-        sys.exit("One or more test suites failed.")
+    return _exit()
 
 
 if __name__ == "__main__":
@@ -499,4 +502,4 @@ if __name__ == "__main__":
         print(e)
         sys.exit(-1)
 
-    main(settings, configurations)
+    sys.exit(main(settings, configurations))

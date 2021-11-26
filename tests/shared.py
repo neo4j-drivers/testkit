@@ -125,9 +125,7 @@ def get_driver_features(backend):
             features.add(protocol.Feature(raw))
         # TODO: remove this once all drivers manage the TLS feature flags
         #       themselves.
-        if get_driver_name() in ["java"]:
-            features.add(protocol.Feature.TLS_1_1)
-        if get_driver_name() in ["java", "dotnet"]:
+        if get_driver_name() in ["dotnet"]:
             features.add(protocol.Feature.TLS_1_2)
         if get_driver_name() in ["dotnet"]:
             features.add((
@@ -138,6 +136,11 @@ def get_driver_features(backend):
                 protocol.Feature.BOLT_4_3,
                 protocol.Feature.BOLT_4_4,
             ))
+        # TODO: remove this block once all drivers list this feature
+        #       they all support the functionality already
+        if get_driver_name() in ["python", "go", "dotnet"]:
+            assert protocol.Feature.API_SSL_SCHEMES not in features
+            features.add(protocol.Feature.API_SSL_SCHEMES)
         print("features", features)
         return features
     except (OSError, protocol.BaseError) as e:

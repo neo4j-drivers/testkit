@@ -305,7 +305,7 @@ class TestTxRun(TestkitTestCase):
             with self.assertRaises(types.DriverError):
                 tx.rollback()
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "ruby"]:
             # requires explicit rollback on a failed transaction
             tx.rollback()
         tx = self._session1.begin_transaction()

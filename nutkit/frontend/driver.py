@@ -6,7 +6,8 @@ class Driver:
     def __init__(self, backend, uri, auth_token, user_agent=None,
                  resolver_fn=None, domain_name_resolver_fn=None,
                  connection_timeout_ms=None, fetch_size=None,
-                 max_tx_retry_time_ms=None):
+                 max_tx_retry_time_ms=None, encrypted=None,
+                 trusted_certificates=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -15,7 +16,8 @@ class Driver:
             resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
-            fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms)
+            fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
+            encrypted=encrypted, trustedCertificates=trusted_certificates)
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be Driver but was %s" % res)

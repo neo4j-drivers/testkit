@@ -9,19 +9,19 @@ from tests.testenv import (
     get_test_result_class,
 )
 from tests.tls import (
-    securescheme,
-    selfsignedscheme,
-    tlsversions,
-    unsecurescheme,
+    test_secure_scheme,
+    test_self_signed_scheme,
+    test_tls_versions,
+    test_unsecure_scheme,
 )
 
 loader = unittest.TestLoader()
 
 tls_suite = unittest.TestSuite()
-tls_suite.addTests(loader.loadTestsFromModule(securescheme))
-tls_suite.addTests(loader.loadTestsFromModule(selfsignedscheme))
-tls_suite.addTests(loader.loadTestsFromModule(unsecurescheme))
-tls_suite.addTests(loader.loadTestsFromModule(tlsversions))
+tls_suite.addTests(loader.loadTestsFromModule(test_secure_scheme))
+tls_suite.addTests(loader.loadTestsFromModule(test_self_signed_scheme))
+tls_suite.addTests(loader.loadTestsFromModule(test_tls_versions))
+tls_suite.addTests(loader.loadTestsFromModule(test_unsecure_scheme))
 
 if __name__ == "__main__":
     suite_name = "TLS tests"

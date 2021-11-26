@@ -1098,31 +1098,30 @@ class Script:
 
 
 class ScriptTransformer(lark.Transformer):
-    @lark.v_args(tree=True)
-    def bang_line(self, tree):
-        return BangLine(tree.line, "".join(tree.children),
-                        tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def bang_line(self, meta, children):
+        return BangLine(meta.line, "".join(children),
+                        children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def client_line(self, tree):
-        return ClientLine(tree.line, "".join(tree.children),
-                          tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def client_line(self, meta, children):
+        return ClientLine(meta.line, "".join(children),
+                          children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def auto_line(self, tree):
-        return AutoLine(tree.line, "".join(tree.children),
-                        tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def auto_line(self, meta, children):
+        return AutoLine(meta.line, "".join(children),
+                        children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def server_line(self, tree):
-        return ServerLine(tree.line, "".join(tree.children),
-                          tree.children[-1].strip())
+    @lark.v_args(meta=True)
+    def server_line(self, meta, children):
+        return ServerLine(meta.line, "".join(children),
+                          children[-1].strip())
 
-    @lark.v_args(tree=True)
-    def start(self, tree):
+    def start(self, children):
         bang_lines = []
         block_list = None
-        for child in tree.children:
+        for child in children:
             if isinstance(child, BangLine):
                 bang_lines.append(child)
             elif isinstance(child, BlockList):
@@ -1130,10 +1129,10 @@ class ScriptTransformer(lark.Transformer):
                 break
         return Script(bang_lines, block_list)
 
-    @lark.v_args(tree=True)
-    def block_list(self, tree):
+    @lark.v_args(meta=True)
+    def block_list(self, meta, children):
         blocks = []
-        for child in tree.children:
+        for child in children:
             if isinstance(child, lark.Token):
                 continue
             if (blocks
@@ -1145,82 +1144,82 @@ class ScriptTransformer(lark.Transformer):
             else:
                 blocks.append(child)
 
-        return BlockList(blocks, tree.line)
+        return BlockList(blocks, meta.line)
 
-    @lark.v_args(tree=True)
-    def client_block(self, tree):
+    @lark.v_args(meta=True)
+    def client_block(self, meta, children):
         return ClientBlock(
             [
-                child for child in tree.children
+                child for child in children
                 if child.__class__ == ClientLine
             ],
-            tree.line
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def auto_block(self, tree):
-        assert len(tree.children) == 1
-        assert tree.children[0].__class__ == AutoLine
-        return AutoBlock(tree.children[0], tree.line)
+    @lark.v_args(meta=True)
+    def auto_block(self, meta, children):
+        assert len(children) == 1
+        assert children[0].__class__ == AutoLine
+        return AutoBlock(children[0], meta.line)
 
-    def _wrapped_auto_block(self, wrapper, tree):
-        assert len(tree.children) == 1
-        assert tree.children[0].__class__ == AutoLine
+    def _wrapped_auto_block(self, wrapper, meta, children):
+        assert len(children) == 1
+        assert children[0].__class__ == AutoLine
         return wrapper(
             BlockList(
-                [AutoBlock(tree.children[0], tree.line)],
-                tree.line
+                [AutoBlock(children[0], meta.line)],
+                meta.line
             ),
-            tree.line
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def auto_optional_block(self, tree):
-        return self._wrapped_auto_block(OptionalBlock, tree)
+    @lark.v_args(meta=True)
+    def auto_optional_block(self, meta, children):
+        return self._wrapped_auto_block(OptionalBlock, meta, children)
 
-    @lark.v_args(tree=True)
-    def auto_loop0_block(self, tree):
-        return self._wrapped_auto_block(Repeat0Block, tree)
+    @lark.v_args(meta=True)
+    def auto_loop0_block(self, meta, children):
+        return self._wrapped_auto_block(Repeat0Block, meta, children)
 
-    @lark.v_args(tree=True)
-    def auto_loop1_block(self, tree):
-        return self._wrapped_auto_block(Repeat1Block, tree)
+    @lark.v_args(meta=True)
+    def auto_loop1_block(self, meta, children):
+        return self._wrapped_auto_block(Repeat1Block, meta, children)
 
-    @lark.v_args(tree=True)
-    def server_block(self, tree):
+    @lark.v_args(meta=True)
+    def server_block(self, meta, children):
         return ServerBlock(
             [
-                child for child in tree.children
+                child for child in children
                 if child.__class__ == ServerLine
             ],
-            tree.line
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def alternative_block(self, tree):
+    @lark.v_args(meta=True)
+    def alternative_block(self, meta, children):
         return AlternativeBlock(
-            [c for c in tree.children if not isinstance(c, lark.Token)],
-            tree.line
+            [c for c in children if not isinstance(c, lark.Token)],
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def optional_block(self, tree):
-        return OptionalBlock(tree.children[2], tree.line)
+    @lark.v_args(meta=True)
+    def optional_block(self, meta, children):
+        return OptionalBlock(children[2], meta.line)
 
-    @lark.v_args(tree=True)
-    def parallel_block(self, tree):
+    @lark.v_args(meta=True)
+    def parallel_block(self, meta, children):
         return ParallelBlock(
-            [c for c in tree.children if not isinstance(c, lark.Token)],
-            tree.line
+            [c for c in children if not isinstance(c, lark.Token)],
+            meta.line
         )
 
-    @lark.v_args(tree=True)
-    def repeat_0_block(self, tree):
-        return Repeat0Block(tree.children[2], tree.line)
+    @lark.v_args(meta=True)
+    def repeat_0_block(self, meta, children):
+        return Repeat0Block(children[2], meta.line)
 
-    @lark.v_args(tree=True)
-    def repeat_1_block(self, tree):
-        return Repeat1Block(tree.children[2], tree.line)
+    @lark.v_args(meta=True)
+    def repeat_1_block(self, meta, children):
+        return Repeat1Block(children[2], meta.line)
 
 
 def parse(script: str, substitutions: Optional[dict] = None) -> Script:

@@ -203,7 +203,7 @@ class Summary:
                 return True
 
         from tests.shared import get_driver_name
-        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+        if get_driver_name() in ["java", "javascript", "go", "dotnet", "ruby"]:
             if "address" in data["serverInfo"]:
                 import warnings
                 warnings.warn(

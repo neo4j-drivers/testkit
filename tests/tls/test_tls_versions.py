@@ -24,6 +24,18 @@ class TestTlsVersions(TestkitTestCase):
             self._server = None
         super().tearDown()
 
+    def _try_connect(self):
+        if self.driver_supports_features(types.Feature.API_SSL_SCHEMES):
+            return try_connect(self._backend, self._server,
+                               "neo4j+s", "thehost")
+        elif self.driver_supports_features(types.Feature.API_SSL_CONFIG):
+            return try_connect(self._backend, self._server, "neo4j", "thehost",
+                               )
+        self.skipTest("Needs support for either of %s" % ", ".join(
+            map(lambda f: f.value,
+                (types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG))
+        ))
+
     def test_1_1(self):
         if self._driver in ["dotnet"]:
             self.skipTest("TLS 1.1 is not supported")
@@ -31,28 +43,22 @@ class TestTlsVersions(TestkitTestCase):
         self._server = TlsServer("trustedRoot_thehost",
                                  min_tls="1", max_tls="1")
         if self.driver_supports_features(types.Feature.TLS_1_1):
-            self.assertTrue(try_connect(self._backend, self._server,
-                                        "neo4j+s", "thehost"))
+            self.assertTrue(self._try_connect())
         else:
-            self.assertFalse(try_connect(self._backend, self._server,
-                                         "neo4j+s", "thehost"))
+            self.assertFalse(self._try_connect())
 
     def test_1_2(self):
         self._server = TlsServer("trustedRoot_thehost",
                                  min_tls="2", max_tls="2")
         if self.driver_supports_features(types.Feature.TLS_1_2):
-            self.assertTrue(try_connect(self._backend, self._server,
-                                        "neo4j+s", "thehost"))
+            self.assertTrue(self._try_connect())
         else:
-            self.assertFalse(try_connect(self._backend, self._server,
-                                         "neo4j+s", "thehost"))
+            self.assertFalse(self._try_connect())
 
     def test_1_3(self):
         self._server = TlsServer("trustedRoot_thehost",
                                  min_tls="3", max_tls="3")
         if self.driver_supports_features(types.Feature.TLS_1_3):
-            self.assertTrue(try_connect(self._backend, self._server,
-                                        "neo4j+s", "thehost"))
+            self.assertTrue(self._try_connect())
         else:
-            self.assertFalse(try_connect(self._backend, self._server,
-                                         "neo4j+s", "thehost"))
+            self.assertFalse(self._try_connect())

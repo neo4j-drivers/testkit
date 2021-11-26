@@ -160,10 +160,11 @@ class TestProtocolVersions(TestkitTestCase):
                     #               potentially more differences
                     continue
                 if reject and get_driver_name() in ["javascript", "go",
-                                                    "java"]:
+                                                    "java", "ruby"]:
                     # skip subtest: Does not reject server's agent string
                     continue
-                if agent == "Neo4j/Funky!" and get_driver_name() in ["java"]:
+                if agent == "Neo4j/Funky!" and get_driver_name() in ["java",
+                                                                     "ruby"]:
                     # skip subtest: Tries to parse the server agent
                     continue
                 if not self.driver_supports_bolt(version):
@@ -275,4 +276,8 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.UntrustedServerException",
+                e.errorType)
+        if get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::UntrustedServerException",
                 e.errorType)
