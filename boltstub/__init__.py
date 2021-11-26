@@ -20,13 +20,11 @@
 
 from copy import deepcopy
 from logging import getLogger
-from socket import socket
 from socketserver import (
     BaseRequestHandler,
     TCPServer,
     ThreadingMixIn,
 )
-import struct
 from sys import stdout
 from threading import (
     Lock,
@@ -34,12 +32,9 @@ from threading import (
 )
 import time
 import traceback
-import base64
-import hashlib
 from .addressing import Address
 from .channel import Channel
 from .errors import ServerExit
-from .packstream import PackStream
 from .parsing import (
     parse_file,
     Script,
@@ -47,12 +42,10 @@ from .parsing import (
 )
 from .wiring import (
     ReadWakeup,
-    Wire,
+    create_wire,
 )
 
 log = getLogger(__name__)
-
-MAGIC_WS_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 
 class BoltStubServer(TCPServer):
@@ -77,137 +70,6 @@ class BoltStubServer(TCPServer):
 
 class ThreadedBoltStubServer(ThreadingMixIn, BoltStubServer):
     pass
-
-
-class WebSocket (socket):
-
-    def __init__(self, _socket):
-        self._socket = _socket
-
-    def getsockname(self):
-        return self._socket.getsockname()
-
-    def getpeername(self):
-        return self._socket.getpeername()
-
-    def close(self) -> None:
-        return self._socket.close()
-
-    def settimeout(self, __value: float) -> None:
-        pass
-
-    def recv(self, __bufsize) -> bytes:
-        frame = self._socket.recv(2)
-        if len(frame) == 0:
-            return None
-
-        fin = frame[0] >> 7
-        rsv1 = frame[0] & 0b0100_0000 == 0b0100_0000
-        rsv2 = frame[0] & 0b0010_0000 == 0b0010_0000
-        rsv3 = frame[0] & 0b0001_0000 == 0b0001_0000
-        opcode = frame[0] & 0b0000_1111
-
-        masked = frame[1] >> 7
-        payload_len = frame[1] & 0b0111_1111
-
-        if payload_len == 126:
-            payload_len, = struct.unpack(">H", self._socket.recv(2))
-        elif payload_len == 127:
-            payload_len, = struct.unpack(">Q", self._socket.recv(8))
-
-        if masked == 1:
-            mask = self._socket.recv(4)
-
-        masked_payload = self._socket.recv(payload_len)
-
-        payload = masked_payload \
-            if mask == 0 \
-            else bytearray([masked_payload[i] ^ mask[i % 4]
-                            for i in range(payload_len)])
-        if opcode & 0b0000_1000 == 0b0000_1000:
-            return self.recv(__bufsize)
-        elif opcode == 0 and fin == 0:
-            return payload + self.recv(__bufsize)
-        return payload
-
-    def send(self, payload) -> int:
-        frame = [0b1000_0010]
-        payload_len = len(payload)
-        if (payload_len < 126):
-            frame += [payload_len]
-        elif payload_len <= 0x10000:
-            frame += [126]
-            frame += bytearray(struct.pack(">H", payload_len))
-        else:
-            frame += [127]
-            frame += bytearray(struct.pack(">Q", payload_len))
-
-        frame_to_send = bytearray(frame) + bytearray(payload)
-
-        self._socket.sendall(frame_to_send)
-
-        return len(payload)
-
-
-class Socket (socket):
-
-    def __init__(self, _socket, data):
-        self._socket = _socket
-        self._data = data
-
-    def getsockname(self):
-        return self._socket.getsockname()
-
-    def getpeername(self):
-        return self._socket.getpeername()
-
-    def close(self) -> None:
-        return self._socket.close()
-
-    def settimeout(self, __value: float) -> None:
-        return self._socket.settimeout(__value)
-
-    def recv(self, __bufsize) -> bytes:
-        if (self._data):
-            buff = self._data
-            self._data = None
-            return buff
-        return self._socket.recv(__bufsize)
-
-    def send(self, payload) -> int:
-        return self._socket.send(payload)
-
-
-class WebSocketRequesetHandler(BaseRequestHandler):
-    BOLT_PROTOCOL_HANDSHAKE_SIZE = 20
-    
-    def setup(self) -> None:
-        buffer = self.request.recv(1024)
-        if not self._try_negoatiate_websocket(buffer):
-            self.request = Socket(self.request, buffer)
-
-    def _try_negoatiate_websocket(self, buffer):
-        if len(buffer) <= self.BOLT_PROTOCOL_HANDSHAKE_SIZE:
-            return False
-        encoding = "utf-8"
-        data = buffer.strip().decode(encoding)
-        headers = data.strip().split("\r\n")
-        if 'Upgrade: websocket' in headers:
-            for h in headers:
-                if "Sec-WebSocket-Key" in h:
-                    key = h.split(" ")[1]
-            key = key + MAGIC_WS_STRING
-
-            resp_key = base64.standard_b64encode(
-                hashlib.sha1(key.encode(encoding)).digest()).decode(encoding)
-
-            self.request.sendall(("HTTP/1.1 101 Switching Protocols\r\n"
-                                + "Upgrade: websocket\r\n"
-                                + "Connection: Upgrade\r\n"
-                                + "Sec-WebSocket-Accept: %s\r\n\r\n" % (resp_key)).encode(encoding))
-            self.request = WebSocket(self.request)
-            return True
-        return False
 
 
 class BoltStubService:
@@ -236,14 +98,13 @@ class BoltStubService:
         self.actors_lock = Lock()
         service = self
 
-        class BoltStubRequestHandler(WebSocketRequesetHandler):
+        class BoltStubRequestHandler(BaseRequestHandler):
             wire = None
             client_address = None
             server_address = None
 
             def setup(self):
-                super().setup()
-                self.wire = Wire(self.request, read_wake_up=True)
+                self.wire = create_wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
                 log.info("[#%04X>#%04X]  S: <ACCEPT> %s -> %s",

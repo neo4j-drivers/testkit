@@ -30,8 +30,13 @@ from socket import (
     getservbyname,
     timeout,
 )
+import struct
+import base64
+import hashlib
 
 BOLT_PORT_NUMBER = 7687
+HTTP_HEADER_MIN_SIZE = 26  # BYTES
+MAGIC_WS_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 
 class ReadWakeup(timeout):
@@ -127,6 +132,82 @@ class IPv6Address(Address):
 
     def __str__(self):
         return "[{}]:{}".format(*self)
+
+
+class RegularSocket:
+    def __init__(self, _socket, _cache) -> None:
+        self._socket = _socket
+        self._cache = _cache
+
+    def __getattr__(self, item):
+        return getattr(self._socket, item)
+
+    def recv(self, __bufsize) -> bytes:
+        if (self._cache):
+            buff = self._cache
+            self._cache = None
+            return buff
+        return self._socket.recv(__bufsize)
+
+
+class WebSocket:
+    def __init__(self, _socket) -> None:
+        self._socket = _socket
+
+    def __getattr__(self, item):
+        return getattr(self._socket, item)
+
+    def recv(self, __bufsize) -> bytes:
+        frame = self._socket.recv(2)
+        if len(frame) == 0:
+            return None
+
+        fin = frame[0] >> 7
+        # rsv1 = frame[0] & 0b0100_0000 == 0b0100_0000
+        # rsv2 = frame[0] & 0b0010_0000 == 0b0010_0000
+        # rsv3 = frame[0] & 0b0001_0000 == 0b0001_0000
+        opcode = frame[0] & 0b0000_1111
+
+        masked = frame[1] >> 7
+        payload_len = frame[1] & 0b0111_1111
+
+        if payload_len == 126:
+            payload_len, = struct.unpack(">H", self._socket.recv(2))
+        elif payload_len == 127:
+            payload_len, = struct.unpack(">Q", self._socket.recv(8))
+
+        if masked == 1:
+            mask = self._socket.recv(4)
+
+        masked_payload = self._socket.recv(payload_len)
+
+        payload = masked_payload \
+            if mask == 0 \
+            else bytearray([masked_payload[i] ^ mask[i % 4]
+                            for i in range(payload_len)])
+        if opcode & 0b0000_1000 == 0b0000_1000:
+            return self.recv(__bufsize)
+        elif opcode == 0 and fin == 0:
+            return payload + self.recv(__bufsize)
+        return payload
+
+    def send(self, payload) -> int:
+        frame = [0b1000_0010]
+        payload_len = len(payload)
+        if (payload_len < 126):
+            frame += [payload_len]
+        elif payload_len <= 0x10000:
+            frame += [126]
+            frame += bytearray(struct.pack(">H", payload_len))
+        else:
+            frame += [127]
+            frame += bytearray(struct.pack(">Q", payload_len))
+
+        frame_to_send = bytearray(frame) + bytearray(payload)
+
+        self._socket.sendall(frame_to_send)
+
+        return len(payload)
 
 
 class Wire(object):
@@ -258,3 +339,39 @@ class WireError(OSError):
 
 class BrokenWireError(WireError):
     """Raised when a connection is broken by the network or remote peer."""
+
+
+def negotiate_socket(_socket):
+    def _try_to_negotiate_websocket(__socket, __buffer):
+        encoding = "utf-8"
+        encoded = __buffer.strip().decode(encoding)
+        headers = encoded.strip().split("\r\n")
+        if 'Upgrade: websocket' not in headers:
+            return False
+        for h in headers:
+            if "Sec-WebSocket-Key" in h:
+                key = h.split(" ")[1]
+        key = key + MAGIC_WS_STRING
+        encoded_key = key.encode(encoding)
+        encrypeted_key = hashlib.sha1(encoded_key).digest()
+        base64_key = base64.standard_b64encode(encrypeted_key).decode(encoding)
+        response = ("HTTP/1.1 101 Switching Protocols\r\n"
+                    + "Upgrade: websocket\r\n"
+                    + "Connection: Upgrade\r\n"
+                    + "Sec-WebSocket-Accept: %s\r\n\r\n") % (base64_key)
+        encoded_response = response.encode(encoding)
+        __socket.sendall(encoded_response)
+        return True
+
+    buffer = _socket.recv(1024)
+    if len(buffer) >= HTTP_HEADER_MIN_SIZE:
+        negotiated = _try_to_negotiate_websocket(_socket, buffer)
+        if negotiated:
+            return WebSocket(_socket)
+
+    return RegularSocket(_socket, buffer)
+
+
+def create_wire(s, read_wake_up, wrap_socket=negotiate_socket):
+    actual_socket = wrap_socket(s)
+    return Wire(actual_socket, read_wake_up)
