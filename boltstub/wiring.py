@@ -182,7 +182,7 @@ class WebSocket:
         masked_payload = self._socket.recv(payload_len)
 
         payload = masked_payload \
-            if mask == 0 \
+            if masked == 0 \
             else bytearray([masked_payload[i] ^ mask[i % 4]
                             for i in range(payload_len)])
         if opcode & 0b0000_1000 == 0b0000_1000:
@@ -196,7 +196,7 @@ class WebSocket:
         payload_len = len(payload)
         if (payload_len < 126):
             frame += [payload_len]
-        elif payload_len <= 0x10000:
+        elif payload_len < 0x10000:
             frame += [126]
             frame += bytearray(struct.pack(">H", payload_len))
         else:
@@ -208,6 +208,9 @@ class WebSocket:
         self._socket.sendall(frame_to_send)
 
         return len(payload)
+
+    def sendall(self, payload):
+        self.send(payload)
 
 
 class Wire(object):

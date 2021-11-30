@@ -1,7 +1,12 @@
 
+from random import randbytes
+
 import pytest
 
-from ..wiring import RegularSocket
+from ..wiring import (
+    RegularSocket,
+    WebSocket,
+)
 
 
 class TestRegularSocket:
@@ -61,6 +66,98 @@ class TestRegularSocket:
     def test_proxying_sockets_members(self, method_name, mocker):
         socket_mock = mocker.Mock()
         regular_socket = RegularSocket(socket_mock, None)
+
+        wrapped_method = getattr(regular_socket, method_name)
+        original_method = getattr(socket_mock, method_name)
+
+        assert wrapped_method == original_method
+
+
+def duplicate(obj, times):
+    if times == 1:
+        return obj
+    return duplicate(obj + obj, times - 1)
+
+
+class TestWebSocket:
+
+    @pytest.mark.parametrize("payload,frame", [
+        (randbytes(0), b"\x82\x00"),
+        (randbytes(7), b"\x82\x07"),
+        (randbytes(125), b"\x82\x7D"),
+        (randbytes(126), b"\x82\x7E\x00\x7E"),
+        (randbytes(65535), b"\x82\x7E\xFF\xFF"),
+        (randbytes(65536), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x00"),
+        (randbytes(65537), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x01")
+    ])
+    def test_send(self, payload, frame, mocker):
+        socket_mock = mocker.Mock()
+        websocket = WebSocket(socket_mock)
+
+        bytes_sent = websocket.send(payload)
+
+        assert len(payload) == bytes_sent
+        socket_mock.sendall.assert_called_once()
+        socket_mock.sendall.assert_called_with(frame + payload)
+
+    @pytest.mark.parametrize("payload,frame", [
+        (randbytes(0), b"\x82\x00"),
+        (randbytes(7), b"\x82\x07"),
+        (randbytes(125), b"\x82\x7D"),
+        (randbytes(126), b"\x82\x7E\x00\x7E"),
+        (randbytes(65535), b"\x82\x7E\xFF\xFF"),
+        (randbytes(65536), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x00"),
+        (randbytes(65537), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x01")
+    ])
+    def test_sendall(self, payload, frame, mocker):
+        socket_mock = mocker.Mock()
+        websocket = WebSocket(socket_mock)
+
+        websocket.sendall(payload)
+
+        socket_mock.sendall.assert_called_once()
+        socket_mock.sendall.assert_called_with(frame + payload)
+
+    @pytest.mark.parametrize("payload,frame", [
+        (randbytes(0), b"\x82\x00"),
+        (randbytes(7), b"\x82\x07"),
+        (randbytes(125), b"\x82\x7D"),
+        (randbytes(126), b"\x82\x7E\x00\x7E"),
+        (randbytes(65535), b"\x82\x7E\xFF\xFF"),
+        (randbytes(65536), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x00"),
+        (randbytes(65537), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x01")
+    ])
+    def test_recv(self, payload, frame, mocker):
+        def mock_recv(payload_):
+            state = {"pos": 0}
+
+            def recv(*args, **kwargs):
+                size = args[0]
+                start = state.get("pos")
+                end = start + size
+                state["pos"] = end
+                return payload_[start:end]
+            return recv
+
+        socket_mock = mocker.Mock()
+        framed_payload = frame + payload
+        socket_mock.recv.side_effect = mock_recv(framed_payload)
+
+        websocket = WebSocket(socket_mock)
+
+        received_payload = websocket.recv(framed_payload)
+
+        assert received_payload == payload
+
+    @pytest.mark.parametrize("method_name", [
+        ("close"),
+        ("settimeout"),
+        ("getsockname"),
+        ("getpeername")
+    ])
+    def test_proxying_sockets_members(self, method_name, mocker):
+        socket_mock = mocker.Mock()
+        regular_socket = WebSocket(socket_mock)
 
         wrapped_method = getattr(regular_socket, method_name)
         original_method = getattr(socket_mock, method_name)
