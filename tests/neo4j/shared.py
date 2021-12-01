@@ -160,8 +160,8 @@ def requires_min_bolt_version(feature):
     server_max_version = get_server_info().max_protocol_version
     all_viable_versions = [
         f for f in protocol.Feature
-        if (f.value.startswith("BOLT_")
-            and min_version <= f.value.spit(":")[-1] <= server_max_version)
+        if (f.name.startswith("BOLT_")
+            and min_version <= f.value.split(":")[-1] <= server_max_version)
     ]
 
     def get_valid_test_case(*args, **kwargs):
