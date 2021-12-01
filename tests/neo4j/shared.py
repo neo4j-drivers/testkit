@@ -20,8 +20,6 @@ from warnings import warn
 
 from nutkit import protocol
 from nutkit.frontend import Driver
-from nutkit import protocol
-from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
     dns_resolve_single,

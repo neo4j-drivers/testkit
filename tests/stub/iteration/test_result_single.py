@@ -2,7 +2,6 @@ import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
     get_driver_name,
-    TestkitTestCase,
 )
 
 from ._common import IterationTestBase

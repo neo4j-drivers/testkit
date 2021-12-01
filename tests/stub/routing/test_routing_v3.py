@@ -79,6 +79,3 @@ class RoutingV3(RoutingV4x4):
                 self.assertIn("routing", e.msg)
 
         self.assertTrue(failed)
-
-    def test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function(self):  # noqa: E501
-        super().test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function()  # noqa: E501

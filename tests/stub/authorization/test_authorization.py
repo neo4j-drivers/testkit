@@ -48,8 +48,6 @@ class AuthorizationBase(TestkitTestCase):
                 "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
             )
         elif driver in ["go", "javascript"]:
-            self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                             error.code)
             self.assertIn(
                 "Token expired", error.msg
             )
@@ -57,19 +55,14 @@ class AuthorizationBase(TestkitTestCase):
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TokenExpiredException",
                 error.errorType)
-            self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                             error.code)
             self.assertIn("Token expired", error.msg)
         elif driver == "ruby":
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::TokenExpiredException",
                 error.errorType)
-            self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                             error.code)
             self.assertIn("Token expired", error.msg)
         elif driver == 'dotnet':
             self.assertEqual("ClientError", error.errorType)
-            self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
             self.assertIn("Token expired", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
