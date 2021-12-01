@@ -61,7 +61,7 @@ class AuthorizationBase(TestkitTestCase):
                 "Neo4j::Driver::Exceptions::TokenExpiredException",
                 error.errorType)
             self.assertIn("Token expired", error.msg)
-        elif driver == 'dotnet':
+        elif driver == "dotnet":
             self.assertEqual("ClientError", error.errorType)
             self.assertIn("Token expired", error.msg)
         else:
