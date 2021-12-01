@@ -2545,3 +2545,95 @@ class RoutingV4x4(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer2.done()
+
+    def test_should_rediscover_when_all_connections_fail_using_s_and_tx_run(
+            self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["go"]:
+            self.skipTest("Session close fails with ConnectivityError")
+        # TODO remove this block once fixed
+        if get_driver_name() in ["javascript"]:
+            self.skipTest("write_session result consumption times out")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(
+            self._routingServer1,
+            "router_yielding_writer1_sequentially.script")
+        self.start_server(
+            self._writeServer1,
+            "writer_with_unexpected_interruption_on_second_run.script")
+        self.start_server(
+            self._readServer1,
+            "reader_tx_with_unexpected_interruption_on_second_run.script")
+        self.start_server(
+            self._readServer2,
+            "reader_tx_with_unexpected_interruption_on_second_run.script")
+
+        write_session = driver.session("w", database=self.adb)
+        read_session1 = driver.session("r", database=self.adb)
+        read_tx1 = read_session1.begin_transaction()
+        read_session2 = driver.session("r", database=self.adb)
+        read_tx2 = read_session2.begin_transaction()
+
+        list(write_session.run("RETURN 1 as n"))
+        list(read_tx1.run("RETURN 1 as n"))
+        list(read_tx2.run("RETURN 1 as n"))
+        read_tx1.commit()
+        read_tx2.commit()
+
+        def run_and_verify_error(runner):
+            failed = False
+            try:
+                # drivers doing eager loading will fail here
+                result = runner.run("RETURN 1 as n")
+                # drivers doing lazy loading should fail here
+                result.next()
+            except types.DriverError as e:
+                if get_driver_name() in ["java"]:
+                    self.assertEqual(
+                        "org.neo4j.driver.exceptions.SessionExpiredException",
+                        e.errorType
+                    )
+                elif get_driver_name() in ["python"]:
+                    self.assertEqual(
+                        "<class 'neo4j.exceptions.SessionExpired'>",
+                        e.errorType
+                    )
+                elif get_driver_name() in ["ruby"]:
+                    self.assertEqual(
+                        "Neo4j::Driver::Exceptions::SessionExpiredException",
+                        e.errorType
+                    )
+                failed = True
+            return failed
+
+        self.assertTrue(run_and_verify_error(write_session))
+        self.assertTrue(
+            run_and_verify_error(read_session1.begin_transaction()))
+        self.assertTrue(
+            run_and_verify_error(read_session2.begin_transaction()))
+
+        write_session.close()
+        read_session1.close()
+        read_session2.close()
+        route_count1 = self.route_call_count(self._routingServer1)
+        self.assertTrue(route_count1 > 0)
+        self._writeServer1.done()
+        self._readServer1.done()
+        self._readServer2.done()
+
+        self.start_server(self._writeServer1, "writer.script")
+        self.start_server(self._readServer1, "reader.script")
+
+        write_session = driver.session("w", database=self.adb)
+        list(write_session.run("RETURN 1 as n"))
+
+        read_session1 = driver.session("r", database=self.adb)
+        list(read_session1.run("RETURN 1 as n"))
+
+        driver.close()
+        route_count2 = self.route_call_count(self._routingServer1)
+        self.assertTrue(route_count2 > route_count1)
+        self._routingServer1.done()
+        self._writeServer1.done()
+        self._readServer1.done()
