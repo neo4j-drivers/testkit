@@ -5,6 +5,7 @@ from random import randbytes
 import pytest
 
 from ..wiring import (
+    create_wire,
     RegularSocket,
     WebSocket,
 )
@@ -272,3 +273,17 @@ class TestWebSocket:
             state["pos"] = end
             return payload_[start:end]
         return recv
+
+
+def test_create_wire(mocker):
+    socket = mocker.Mock()
+    read_wake_up = False
+    wrap_socket = mocker.Mock()
+
+    regular_socket = RegularSocket(socket, None)
+    wrap_socket.return_value = regular_socket
+
+    wire = create_wire(socket, read_wake_up, wrap_socket)
+
+    assert wire._socket == regular_socket
+    wrap_socket.assert_called_with(socket)

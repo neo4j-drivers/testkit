@@ -338,6 +338,10 @@ class Wire(object):
         """
         return Address(self.__socket.getpeername())
 
+    @property
+    def _socket(self):
+        return self.__socket
+
 
 class WireError(OSError):
     """Raised when a connection error occurs."""
