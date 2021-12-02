@@ -204,6 +204,24 @@ class TestWebSocket:
 
         assert received_payload == payload
 
+    def test_recv_masked_frame(self, mocker):
+        payload = bytearray(125)
+        mask = b"\x0A\x0B\x0C\x0C"
+        frame = b"\x82\xFD" + mask
+        masked_payload = bytearray(
+            [payload[i] ^ mask[i % 4] for i in range(125)])
+
+        framed_payload = frame + masked_payload
+
+        socket_mock = mocker.Mock()
+        socket_mock.recv.side_effect = TestWebSocket.mock_recv(framed_payload)
+
+        websocket = WebSocket(socket_mock)
+
+        received_payload = websocket.recv(1234)
+
+        assert received_payload == payload
+
     def test_recv_multiple_frames(self, mocker):
         payload_list = [
             (randbytes(0), b"\x02\x00"),
