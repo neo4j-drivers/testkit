@@ -141,7 +141,7 @@ class TestWebSocket:
 
     def test_recv_multiple_frames(self, mocker):
         payload_list = [
-            (randbytes(0), b"\x00\x00"),
+            (randbytes(0), b"\x02\x00"),
             (randbytes(7), b"\x00\x07"),
             (randbytes(125), b"\x00\x7D"),
             (randbytes(126), b"\x00\x7E\x00\x7E"),

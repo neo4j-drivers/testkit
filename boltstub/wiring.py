@@ -187,7 +187,7 @@ class WebSocket:
                             for i in range(payload_len)])
         if opcode & 0b0000_1000 == 0b0000_1000:
             return self.recv(__bufsize)
-        elif opcode == 0 and fin == 0:
+        elif fin == 0:
             return payload + self.recv(__bufsize)
         return payload
 
