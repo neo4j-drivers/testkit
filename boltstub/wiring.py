@@ -37,6 +37,7 @@ import struct
 BOLT_PORT_NUMBER = 7687
 HTTP_HEADER_MIN_SIZE = 26  # BYTES
 MAGIC_WS_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+PONG = b"\x0A\x00"
 
 
 class ReadWakeup(timeout):
@@ -186,6 +187,8 @@ class WebSocket:
             else bytearray([masked_payload[i] ^ mask[i % 4]
                             for i in range(payload_len)])
         if opcode & 0b0000_1000 == 0b0000_1000:
+            if opcode == 0x09:  # PING
+                self._socket.sendall(PONG)
             return self.recv(__bufsize)
         elif fin == 0:
             return payload + self.recv(__bufsize)

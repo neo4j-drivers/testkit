@@ -160,6 +160,30 @@ class TestWebSocket:
 
         assert received_payload == payload
 
+    @pytest.mark.parametrize("payload,frame", [
+        (randbytes(0), b"\x82\x00"),
+        (randbytes(7), b"\x82\x07"),
+        (randbytes(125), b"\x82\x7D"),
+        (randbytes(126), b"\x82\x7E\x00\x7E"),
+        (randbytes(65535), b"\x82\x7E\xFF\xFF"),
+        (randbytes(65536), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x00"),
+        (randbytes(65537), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x01")
+    ])
+    def test_recv_ping(self, payload, frame, mocker):
+        socket_mock = mocker.Mock()
+        ping = b"\x09\x00"
+        pong = b"\x0A\x00"
+        framed_payload = ping + frame + payload
+        socket_mock.recv.side_effect = TestWebSocket.mock_recv(framed_payload)
+
+        websocket = WebSocket(socket_mock)
+
+        received_payload = websocket.recv(1234)
+
+        assert received_payload == payload
+        socket_mock.sendall.assert_called_once()
+        socket_mock.sendall.assert_called_with(pong)
+
     def test_recv_multiple_frames(self, mocker):
         payload_list = [
             (randbytes(0), b"\x02\x00"),
