@@ -6,6 +6,7 @@ import pytest
 
 from ..wiring import (
     create_wire,
+    negotiate_socket,
     RegularSocket,
     WebSocket,
 )
@@ -287,3 +288,16 @@ def test_create_wire(mocker):
 
     assert wire._socket == regular_socket
     wrap_socket.assert_called_with(socket)
+
+
+def test_negotiate_socket_negotiate_regular_socket(mocker):
+    payload = b"\x60\x60\xB0\x17\x00\x00\x01\x04\x00\x00\x00\x04\x00\x00\x00\x03\x00\x00\x00\x00"  # noqa: E501
+    socket = mocker.Mock()
+    socket.recv.return_value = payload
+
+    negotiated_socket = negotiate_socket(socket)
+
+    assert isinstance(negotiated_socket,  RegularSocket)
+    assert negotiated_socket._socket == socket
+    assert negotiated_socket._cache == payload
+    socket.recv.assert_called_once()
