@@ -1,6 +1,6 @@
 
 from functools import reduce
-from random import randbytes
+from random import getrandbits
 
 import pytest
 
@@ -10,6 +10,10 @@ from ..wiring import (
     RegularSocket,
     WebSocket,
 )
+
+
+def randbytes(size):
+    return bytearray(getrandbits(8) for _ in range(size))
 
 
 class TestRegularSocket:
