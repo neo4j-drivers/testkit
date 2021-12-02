@@ -1,0 +1,12 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"db": "adb"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "w"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"db": "adb"}
+S: <EXIT>
