@@ -2587,21 +2587,21 @@ class RoutingV4x4(RoutingBase):
                 result = runner.run("RETURN 1 as n")
                 # drivers doing lazy loading should fail here
                 result.next()
-            
+
             if get_driver_name() in ["java"]:
                 self.assertEqual(
                     "org.neo4j.driver.exceptions.SessionExpiredException",
-                    exc.errorType
+                    exc.exception.errorType
                 )
             elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.SessionExpired'>",
-                    exc.errorType
+                    exc.exception.errorType
                 )
             elif get_driver_name() in ["ruby"]:
                 self.assertEqual(
                     "Neo4j::Driver::Exceptions::SessionExpiredException",
-                    exc.errorType
+                    exc.exception.errorType
                 )
 
         run_and_assert_error(write_session)
@@ -2612,7 +2612,6 @@ class RoutingV4x4(RoutingBase):
         read_session1.close()
         read_session2.close()
         route_count1 = self.route_call_count(self._routingServer1)
-        self.assertTrue(route_count1 > 0)
         self._writeServer1.done()
         self._readServer1.done()
         self._readServer2.done()
@@ -2628,7 +2627,7 @@ class RoutingV4x4(RoutingBase):
 
         driver.close()
         route_count2 = self.route_call_count(self._routingServer1)
-        self.assertTrue(route_count2 > route_count1)
+        self.assertTrue(route_count2 > route_count1 > 0)
         self._routingServer1.done()
         self._writeServer1.done()
         self._readServer1.done()

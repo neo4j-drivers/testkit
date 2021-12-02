@@ -16,4 +16,3 @@ C: BEGIN {"mode": "r"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: <EXIT>
-?: GOODBYE

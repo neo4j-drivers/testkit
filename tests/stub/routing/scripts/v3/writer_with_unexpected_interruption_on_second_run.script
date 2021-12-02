@@ -9,4 +9,3 @@ S: SUCCESS {"type": "w"}
 *: RESET
 C: RUN "RETURN 1 as n" {} {}
 S: <EXIT>
-?: GOODBYE

@@ -10,4 +10,3 @@ S: RECORD [1]
 *: RESET
 C: RUN "RETURN 1 as n" {} {"db": "adb"}
 S: <EXIT>
-?: GOODBYE
