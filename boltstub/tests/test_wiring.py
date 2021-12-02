@@ -301,3 +301,34 @@ def test_negotiate_socket_negotiate_regular_socket(mocker):
     assert negotiated_socket._socket == socket
     assert negotiated_socket._cache == payload
     socket.recv.assert_called_once()
+
+
+def test_negotiate_socket_negotiate_web_socket(mocker):
+    payload_text = ("GET /chat HTTP/1.1\r\n"
+                    + "Host: server.example.com\r\n"
+                    + "Upgrade: websocket\r\n"
+                    + "Connection: Upgrade\r\n"
+                    + "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                    + "Origin: http://example.com\r\n"
+                    + "Sec-WebSocket-Protocol: chat, superchat\r\n"
+                    + "Sec-WebSocket-Version: 13\r\n\r\n")
+    payload = payload_text.encode("utf-8")
+
+    response_payload_text = ("HTTP/1.1 101 Switching Protocols\r\n"
+                             + "Upgrade: websocket\r\n"
+                             + "Connection: Upgrade\r\n"
+                             + "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n")  # noqa: E501
+
+    socket = mocker.Mock()
+    socket.recv.return_value = payload
+
+    negotiated_socket = negotiate_socket(socket)
+
+    assert isinstance(negotiated_socket,  WebSocket)
+    assert negotiated_socket._socket == socket
+    socket.recv.assert_called_once()
+    socket.sendall.assert_called_once()
+
+    encoded_sent_response, = socket.sendall.call_args.args
+    decoded_sent_response = encoded_sent_response.decode("utf-8")
+    assert decoded_sent_response == response_payload_text
