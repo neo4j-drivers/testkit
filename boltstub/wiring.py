@@ -136,6 +136,8 @@ class IPv6Address(Address):
 
 
 class RegularSocket:
+    """A socket with an already receive cached value."""
+
     def __init__(self, _socket, _cache) -> None:
         self._socket = _socket
         self._cache = _cache
@@ -152,6 +154,11 @@ class RegularSocket:
 
 
 class WebSocket:
+    """Implementation of Websockets [rfc6455].
+
+    This implementation doesn't support extensions
+    """
+
     def __init__(self, _socket) -> None:
         self._socket = _socket
 
@@ -159,6 +166,11 @@ class WebSocket:
         return getattr(self._socket, item)
 
     def recv(self, __bufsize) -> bytes:
+        """Receives data from the socket.
+
+        The `__bufsize` parameter is ignored. This method returns the entire
+        frame payload and handles control frames doing the needed actions.
+        """
         frame = self._socket.recv(2)
         if len(frame) == 0:
             return None
@@ -195,6 +207,7 @@ class WebSocket:
         return payload
 
     def send(self, payload) -> int:
+        """Send the payload over the socket inside a Websocket frame."""
         frame = [0b1000_0010]
         payload_len = len(payload)
         if (payload_len < 126):
@@ -213,6 +226,7 @@ class WebSocket:
         return len(payload)
 
     def sendall(self, payload):
+        """Send the payload over the socket inside a Websocket frame."""
         self.send(payload)
 
 
