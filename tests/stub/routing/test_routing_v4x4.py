@@ -2626,8 +2626,8 @@ class RoutingV4x4(RoutingBase):
         list(read_session1.run("RETURN 1 as n"))
 
         driver.close()
+        self._routingServer1.done()
         route_count2 = self.route_call_count(self._routingServer1)
         self.assertTrue(route_count2 > route_count1 > 0)
-        self._routingServer1.done()
         self._writeServer1.done()
         self._readServer1.done()
