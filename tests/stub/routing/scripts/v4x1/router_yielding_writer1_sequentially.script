@@ -1,0 +1,15 @@
+!: BOLT #VERSION#
+!: ALLOW RESTART
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+{+
+    C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": []}
+    S: SUCCESS {"fields": ["ttl", "servers"]}
+    C: PULL {"n": -1}
+    S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]]
+       SUCCESS {"type": "r"}
+    *: RESET
++}
+?: GOODBYE
