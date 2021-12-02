@@ -1,4 +1,5 @@
 
+from functools import reduce
 from random import randbytes
 
 import pytest
@@ -128,26 +129,39 @@ class TestWebSocket:
         (randbytes(65537), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x01")
     ])
     def test_recv(self, payload, frame, mocker):
-        def mock_recv(payload_):
-            state = {"pos": 0}
-
-            def recv(*args, **kwargs):
-                size = args[0]
-                start = state.get("pos")
-                end = start + size
-                state["pos"] = end
-                return payload_[start:end]
-            return recv
-
         socket_mock = mocker.Mock()
         framed_payload = frame + payload
-        socket_mock.recv.side_effect = mock_recv(framed_payload)
+        socket_mock.recv.side_effect = TestWebSocket.mock_recv(framed_payload)
 
         websocket = WebSocket(socket_mock)
 
-        received_payload = websocket.recv(framed_payload)
+        received_payload = websocket.recv(1234)
 
         assert received_payload == payload
+
+    def test_recv_multiple_frames(self, mocker):
+        payload_list = [
+            (randbytes(0), b"\x00\x00"),
+            (randbytes(7), b"\x00\x07"),
+            (randbytes(125), b"\x00\x7D"),
+            (randbytes(126), b"\x00\x7E\x00\x7E"),
+            (randbytes(65535), b"\x00\x7E\xFF\xFF"),
+            (randbytes(65536), b"\x00\x7F\x00\x00\x00\x00\x00\x01\x00\x00"),
+            (randbytes(65537), b"\x82\x7F\x00\x00\x00\x00\x00\x01\x00\x01")
+        ]
+        framed_payload = reduce(lambda x, y: x + y,
+                                map(lambda p: p[1] + p[0], payload_list))
+        full_payload = reduce(lambda x, y: x + y,
+                              map(lambda p: p[0], payload_list))
+
+        socket_mock = mocker.Mock()
+        socket_mock.recv.side_effect = TestWebSocket.mock_recv(framed_payload)
+
+        websocket = WebSocket(socket_mock)
+
+        received_payload = websocket.recv(1234)
+
+        assert received_payload == full_payload
 
     @pytest.mark.parametrize("method_name", [
         ("close"),
@@ -163,3 +177,15 @@ class TestWebSocket:
         original_method = getattr(socket_mock, method_name)
 
         assert wrapped_method == original_method
+
+    @staticmethod
+    def mock_recv(payload_):
+        state = {"pos": 0}
+
+        def recv(*args, **kwargs):
+            size = args[0]
+            start = state.get("pos")
+            end = start + size
+            state["pos"] = end
+            return payload_[start:end]
+        return recv
