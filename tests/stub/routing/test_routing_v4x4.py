@@ -2581,37 +2581,32 @@ class RoutingV4x4(RoutingBase):
         read_tx1.commit()
         read_tx2.commit()
 
-        def run_and_verify_error(runner):
-            failed = False
-            try:
+        def run_and_assert_error(runner):
+            with self.assertRaises(types.DriverError) as exc:
                 # drivers doing eager loading will fail here
                 result = runner.run("RETURN 1 as n")
                 # drivers doing lazy loading should fail here
                 result.next()
-            except types.DriverError as e:
-                if get_driver_name() in ["java"]:
-                    self.assertEqual(
-                        "org.neo4j.driver.exceptions.SessionExpiredException",
-                        e.errorType
-                    )
-                elif get_driver_name() in ["python"]:
-                    self.assertEqual(
-                        "<class 'neo4j.exceptions.SessionExpired'>",
-                        e.errorType
-                    )
-                elif get_driver_name() in ["ruby"]:
-                    self.assertEqual(
-                        "Neo4j::Driver::Exceptions::SessionExpiredException",
-                        e.errorType
-                    )
-                failed = True
-            return failed
+            
+            if get_driver_name() in ["java"]:
+                self.assertEqual(
+                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    exc.errorType
+                )
+            elif get_driver_name() in ["python"]:
+                self.assertEqual(
+                    "<class 'neo4j.exceptions.SessionExpired'>",
+                    exc.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
+                    exc.errorType
+                )
 
-        self.assertTrue(run_and_verify_error(write_session))
-        self.assertTrue(
-            run_and_verify_error(read_session1.begin_transaction()))
-        self.assertTrue(
-            run_and_verify_error(read_session2.begin_transaction()))
+        run_and_assert_error(write_session)
+        run_and_assert_error(read_session1.begin_transaction())
+        run_and_assert_error(read_session2.begin_transaction())
 
         write_session.close()
         read_session1.close()
