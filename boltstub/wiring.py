@@ -231,17 +231,17 @@ class WebSocket:
 class Wire(object):
     """Buffered socket wrapper for reading and writing bytes."""
 
-    __closed = False
+    _closed = False
 
-    __broken = False
+    _broken = False
 
     def __init__(self, s, read_wake_up=False):
         # ensure wrapped socket is in blocking mode but wakes up occasionally
         # if wake_up == True
         s.settimeout(.1 if read_wake_up else None)
-        self.__socket = s
-        self.__input = bytearray()
-        self.__output = bytearray()
+        self._socket = s
+        self._input = bytearray()
+        self._output = bytearray()
 
     def secure(self, verify=True, hostname=None):
         """Apply a layer of security onto this connection."""
@@ -259,8 +259,8 @@ class Wire(object):
             context.verify_mode = CERT_NONE
         context.load_default_certs()
         try:
-            self.__socket = context.wrap_socket(self.__socket,
-                                                server_hostname=hostname)
+            self._socket = context.wrap_socket(self._socket,
+                                               server_hostname=hostname)
         except OSError:
             # TODO: add connection failure/diagnostic callback
             raise WireError(
@@ -269,47 +269,47 @@ class Wire(object):
 
     def read(self, n):
         """Read bytes from the network."""
-        while len(self.__input) < n:
-            required = n - len(self.__input)
+        while len(self._input) < n:
+            required = n - len(self._input)
             requested = max(required, 8192)
             try:
-                received = self.__socket.recv(requested)
+                received = self._socket.recv(requested)
             except timeout:
                 raise ReadWakeup
             except OSError:
-                self.__broken = True
+                self._broken = True
                 raise BrokenWireError("Broken")
             else:
                 if received:
-                    self.__input.extend(received)
+                    self._input.extend(received)
                 else:
-                    self.__broken = True
+                    self._broken = True
                     raise BrokenWireError("Network read incomplete "
                                           "(received %d of %d bytes)" %
-                                          (len(self.__input), n))
-        data = self.__input[:n]
-        self.__input[:n] = []
+                                          (len(self._input), n))
+        data = self._input[:n]
+        self._input[:n] = []
         return data
 
     def write(self, b):
         """Write bytes to the output buffer."""
-        self.__output.extend(b)
+        self._output.extend(b)
 
     def send(self):
         """Send the contents of the output buffer to the network."""
-        if self.__closed:
+        if self._closed:
             raise WireError("Closed")
         sent = 0
-        while self.__output:
+        while self._output:
             try:
-                n = self.__socket.send(self.__output)
+                n = self._socket.send(self._output)
             except timeout:
                 continue
             except OSError:
-                self.__broken = True
+                self._broken = True
                 raise BrokenWireError("Broken")
             else:
-                self.__output[:n] = []
+                self._output[:n] = []
                 sent += n
         return sent
 
@@ -317,22 +317,22 @@ class Wire(object):
         """Close the connection."""
         try:
             # TODO: shutdown
-            self.__socket.close()
+            self._socket.close()
         except OSError:
-            self.__broken = True
+            self._broken = True
             raise BrokenWireError("Broken")
         else:
-            self.__closed = True
+            self._closed = True
 
     @property
     def closed(self):
         """Flag indicating whether this connection has been closed locally."""
-        return self.__closed
+        return self._closed
 
     @property
     def broken(self):
         """Flag indicating whether this connection has been closed remotely."""
-        return self.__broken
+        return self._broken
 
     @cached_property
     def local_address(self):
@@ -340,7 +340,7 @@ class Wire(object):
 
         :rtype: Address
         """
-        return Address(self.__socket.getsockname())
+        return Address(self._socket.getsockname())
 
     @cached_property
     def remote_address(self):
@@ -348,11 +348,7 @@ class Wire(object):
 
         :rtype: Address
         """
-        return Address(self.__socket.getpeername())
-
-    @property
-    def _socket(self):
-        return self.__socket
+        return Address(self._socket.getpeername())
 
 
 class WireError(OSError):
