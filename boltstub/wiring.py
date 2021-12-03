@@ -138,9 +138,9 @@ class IPv6Address(Address):
 class RegularSocket:
     """A socket with an already receive cached value."""
 
-    def __init__(self, socket_, cache_) -> None:
+    def __init__(self, socket_, cache) -> None:
         self._socket = socket_
-        self._cache = cache_
+        self._cache = cache
 
     def __getattr__(self, item):
         return getattr(self._socket, item)
@@ -364,7 +364,7 @@ class BrokenWireError(WireError):
 
 
 def negotiate_socket(socket_):
-    def try_to_negotiate_websocket(socket_, buffer_):
+    def try_to_negotiate_websocket(socket__, buffer_):
         encoding = "utf-8"
         encoded = buffer_.strip().decode(encoding)
         headers = encoded.strip().split("\r\n")
@@ -382,7 +382,7 @@ def negotiate_socket(socket_):
                     + "Connection: Upgrade\r\n"
                     + "Sec-WebSocket-Accept: %s\r\n\r\n") % (base64_key)
         encoded_response = response.encode(encoding)
-        socket_.sendall(encoded_response)
+        socket__.sendall(encoded_response)
         return True
 
     buffer = socket_.recv(1024)
