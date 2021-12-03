@@ -113,7 +113,7 @@ class TestBookmarks(TestkitTestCase):
                 params={"uuid": types.CypherString(test_execution_id)})
             result.consume()
 
-        for _i in range(0, expected_node_count):
+        for _ in range(expected_node_count):
             self._session = self._driver.session("w")
             self._session.write_transaction(create_node)
             bookmarks.append(self._session.last_bookmarks())
