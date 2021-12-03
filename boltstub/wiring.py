@@ -138,19 +138,19 @@ class IPv6Address(Address):
 class RegularSocket:
     """A socket with an already receive cached value."""
 
-    def __init__(self, _socket, _cache) -> None:
-        self._socket = _socket
-        self._cache = _cache
+    def __init__(self, socket_, cache_) -> None:
+        self._socket = socket_
+        self._cache = cache_
 
     def __getattr__(self, item):
         return getattr(self._socket, item)
 
-    def recv(self, __bufsize) -> bytes:
+    def recv(self, bufsize) -> bytes:
         if (self._cache):
             buff = self._cache
             self._cache = None
             return buff
-        return self._socket.recv(__bufsize)
+        return self._socket.recv(bufsize)
 
 
 class WebSocket:
@@ -159,16 +159,16 @@ class WebSocket:
     This implementation doesn't support extensions
     """
 
-    def __init__(self, _socket) -> None:
-        self._socket = _socket
+    def __init__(self, socket_) -> None:
+        self._socket = socket_
 
     def __getattr__(self, item):
         return getattr(self._socket, item)
 
-    def recv(self, __bufsize) -> bytes:
+    def recv(self, bufsize) -> bytes:
         """Receive data from the socket.
 
-        The `__bufsize` parameter is ignored. This method returns the entire
+        The `bufsize` parameter is ignored. This method returns the entire
         frame payload and handles control frames doing the needed actions.
         """
         frame = self._socket.recv(2)
@@ -201,9 +201,9 @@ class WebSocket:
         if opcode & 0b0000_1000 == 0b0000_1000:
             if opcode == 0x09:  # PING
                 self._socket.sendall(PONG)
-            return self.recv(__bufsize)
+            return self.recv(bufsize)
         elif fin == 0:
-            return payload + self.recv(__bufsize)
+            return payload + self.recv(bufsize)
         return payload
 
     def send(self, payload) -> int:
@@ -363,10 +363,10 @@ class BrokenWireError(WireError):
     """Raised when a connection is broken by the network or remote peer."""
 
 
-def negotiate_socket(_socket):
-    def _try_to_negotiate_websocket(__socket, __buffer):
+def negotiate_socket(socket_):
+    def try_to_negotiate_websocket(socket_, buffer_):
         encoding = "utf-8"
-        encoded = __buffer.strip().decode(encoding)
+        encoded = buffer_.strip().decode(encoding)
         headers = encoded.strip().split("\r\n")
         if "Upgrade: websocket" not in headers:
             return False
@@ -382,16 +382,16 @@ def negotiate_socket(_socket):
                     + "Connection: Upgrade\r\n"
                     + "Sec-WebSocket-Accept: %s\r\n\r\n") % (base64_key)
         encoded_response = response.encode(encoding)
-        __socket.sendall(encoded_response)
+        socket_.sendall(encoded_response)
         return True
 
-    buffer = _socket.recv(1024)
+    buffer = socket_.recv(1024)
     if len(buffer) >= HTTP_HEADER_MIN_SIZE:
-        negotiated = _try_to_negotiate_websocket(_socket, buffer)
+        negotiated = try_to_negotiate_websocket(socket_, buffer)
         if negotiated:
-            return WebSocket(_socket)
+            return WebSocket(socket_)
 
-    return RegularSocket(_socket, buffer)
+    return RegularSocket(socket_, buffer)
 
 
 def create_wire(s, read_wake_up, wrap_socket=negotiate_socket):
