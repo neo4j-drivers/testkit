@@ -38,7 +38,7 @@ class TestRegularSocket:
             socket_mock.recv.return_value = expected
             regular_socket = RegularSocket(socket_mock, cache)
 
-            _ = regular_socket.recv(1024)
+            regular_socket.recv(1024)
             actual = regular_socket.recv(1024)
 
             assert actual == expected
@@ -295,7 +295,8 @@ def test_create_wire(mocker):
 
 
 def test_negotiate_socket_negotiate_regular_socket(mocker):
-    payload = b"\x60\x60\xB0\x17\x00\x00\x01\x04\x00\x00\x00\x04\x00\x00\x00\x03\x00\x00\x00\x00"  # noqa: E501
+    payload = (b"\x60\x60\xB0\x17\x00\x00\x01\x04\x00\x00\x00\x04\x00\x00\x00"
+               b"\x03\x00\x00\x00\x00")
     socket = mocker.Mock()
     socket.recv.return_value = payload
 
@@ -318,10 +319,12 @@ def test_negotiate_socket_negotiate_web_socket(mocker):
                     + "Sec-WebSocket-Version: 13\r\n\r\n")
     payload = payload_text.encode("utf-8")
 
-    response_payload_text = ("HTTP/1.1 101 Switching Protocols\r\n"
-                             + "Upgrade: websocket\r\n"
-                             + "Connection: Upgrade\r\n"
-                             + "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n")  # noqa: E501
+    response_payload_text = (
+        "HTTP/1.1 101 Switching Protocols\r\n"
+        + "Upgrade: websocket\r\n"
+        + "Connection: Upgrade\r\n"
+        + "Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=\r\n\r\n"
+    )
 
     socket = mocker.Mock()
     socket.recv.return_value = payload

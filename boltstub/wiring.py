@@ -166,7 +166,7 @@ class WebSocket:
         return getattr(self._socket, item)
 
     def recv(self, __bufsize) -> bytes:
-        """Receives data from the socket.
+        """Receive data from the socket.
 
         The `__bufsize` parameter is ignored. This method returns the entire
         frame payload and handles control frames doing the needed actions.
@@ -225,9 +225,7 @@ class WebSocket:
 
         return len(payload)
 
-    def sendall(self, payload):
-        """Send the payload over the socket inside a Websocket frame."""
-        self.send(payload)
+    sendall = send
 
 
 class Wire(object):
