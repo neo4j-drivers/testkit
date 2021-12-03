@@ -102,6 +102,40 @@ class TestBookmarks(TestkitTestCase):
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmark",
                          exc.exception.code)
 
+    def test_fails_on_invalid_bookmark_using_tx_func(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            self.skipTest("Fails the exception code assertion")
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript"]:
+            self.skipTest("Times out when invoking the transaction function")
+        self._session = self._driver.session(
+            "w", ["hi, this is an invalid bookmark"])
+
+        def work(tx):
+            result = tx.run("RETURN 1")
+            result.next()
+
+        with self.assertRaises(types.DriverError) as exc:
+            self._session.read_transaction(work)
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ClientException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ClientError'>",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ClientException",
+                exc.exception.errorType
+            )
+        self.assertEqual("Neo.ClientError.Transaction.InvalidBookmark",
+                         exc.exception.code)
+
     def test_can_handle_multiple_bookmarks(self):
         bookmarks = []
         expected_node_count = 5
