@@ -174,8 +174,8 @@ class TestBookmarks(TestkitTestCase):
         self._session = self._driver.session("r", bookmarks)
         tx = self._session.begin_transaction()
         result = tx.run(
-            "MATCH (t:AccessModeTest {testId:$uuid})"
-            " RETURN count(t)",
+            "MATCH (t:AccessModeTest {testId:$uuid}) "
+            "RETURN count(t)",
             params={"uuid": types.CypherString(test_execution_id)})
         record = result.next()
         node_count1 = record.values[0]
