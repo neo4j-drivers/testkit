@@ -200,7 +200,7 @@ class TestSessionRunParameters(TestkitTestCase):
             self.skipTest("rejects empty string")
         for routing in (True, False):
             with self.subTest("routing" if routing else "direct"):
-                self._start_servers_and_driver("empty_query", routing,
+                self._start_servers_and_driver("emptyquery", routing,
                                                None, None)
                 session = self._driver.session("w")
                 session.run("").next()
