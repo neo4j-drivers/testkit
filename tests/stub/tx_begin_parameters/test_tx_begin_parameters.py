@@ -36,7 +36,7 @@ class TestTxBeginParameters(TestkitTestCase):
             if db:
                 router_script = router_script % ("_" + db)
             else:
-                router_script = router_script % "_default_db"
+                router_script = router_script % "_defaultdb"
             if impersonation:
                 router_script = router_script % "_impersonation"
             else:
@@ -211,6 +211,10 @@ class TestTxBeginParameters(TestkitTestCase):
                         exc.exception.errorType,
                         "Neo4j::Driver::Exceptions::ClientException"
                     )
+                elif self._driver_name in ["dotnet"]:
+                    self.assertEqual(
+                        exc.exception.errorType,
+                        "ArgumentError")
 
     @driver_feature(types.Feature.IMPERSONATION,
                     types.Feature.BOLT_4_4)
