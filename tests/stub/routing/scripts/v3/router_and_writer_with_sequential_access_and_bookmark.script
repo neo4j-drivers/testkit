@@ -1,0 +1,28 @@
+!: BOLT #VERSION#
+!: ALLOW CONCURRENT
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007"#EXTR_HELLO_ROUTING_PROPS#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+{?
+    C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
+    S: SUCCESS {"fields": ["ttl", "servers"]}
+    C: PULL_ALL
+    S: RECORD [1000, [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]]
+       SUCCESS {"type": "r"}
+?}
+*: RESET
+{?
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL_ALL
+    S: SUCCESS {"type": "w", "bookmark": "NewBookmark"}
+    *: RESET
+    C: RUN "RETURN 1 as n" {} {"bookmarks": ["NewBookmark"]}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL_ALL
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+?}
+*: RESET
+?: GOODBYE

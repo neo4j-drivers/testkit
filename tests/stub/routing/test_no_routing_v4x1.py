@@ -60,8 +60,9 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_read_successfully_using_write_session_run(self):
@@ -84,8 +85,9 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_exclude_routing_context(self):
@@ -114,8 +116,9 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_send_custom_user_agent_using_write_session_run(self):
@@ -142,8 +145,9 @@ class NoRoutingV4x1(TestkitTestCase):
         session.close()
         driver.close()
 
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_error_on_rollback_failure_using_tx_rollback(self):
@@ -176,8 +180,9 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self._assert_is_transient_rollback_exception(exc.exception)
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     @driver_feature(types.Feature.TMP_TRANSACTION_CLOSE)
@@ -206,8 +211,9 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self._assert_is_transient_rollback_exception(exc.exception)
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_error_on_rollback_failure_using_session_close(
@@ -241,8 +247,9 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self._assert_is_transient_rollback_exception(exc.exception)
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
@@ -383,8 +390,9 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self._assert_is_transient_commit_exception(exc.exception)
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_check_multi_db_support(self):
@@ -462,8 +470,9 @@ class NoRoutingV4x1(TestkitTestCase):
 
         self._assert_is_transient_commit_exception(
             exc.exception, expected_msg="Database shut down.")
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
         self._server.done()
 
     def test_should_error_on_database_shutdown_using_tx_run(self):

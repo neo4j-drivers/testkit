@@ -203,7 +203,7 @@ class Summary:
                 return True
 
         from tests.shared import get_driver_name
-        if get_driver_name() in ["java", "javascript", "go", "dotnet", "ruby"]:
+        if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
             if "address" in data["serverInfo"]:
                 import warnings
                 warnings.warn(
@@ -373,6 +373,13 @@ class RoutingTable:
         self.routers = routers
         self.readers = readers
         self.writers = writers
+
+
+class ConnectionPoolMetrics:
+    def __init__(self, inUse, idle):
+        """Sent from the backend in response to GetConnectionPoolMetrics."""
+        self.in_use = inUse
+        self.idle = idle
 
 
 class BaseError(Exception):
