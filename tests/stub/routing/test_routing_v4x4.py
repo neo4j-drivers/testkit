@@ -30,7 +30,7 @@ class RoutingV4x4(RoutingBase):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1,
-                          "router_connectivity_db.script")
+                          "router_connectivitydb.script")
         driver.verify_connectivity()
         driver.close()
 
@@ -90,8 +90,8 @@ class RoutingV4x4(RoutingBase):
             self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_default_db.script")
-        self.start_server(self._readServer1, "reader_default_db.script")
+        self.start_server(self._routingServer1, "router_defaultdb.script")
+        self.start_server(self._readServer1, "reader_defaultdb.script")
 
         session = driver.session("r")
         result = session.run("RETURN 1 as n")
@@ -134,7 +134,7 @@ class RoutingV4x4(RoutingBase):
             self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_default_db.script")
+        self.start_server(self._routingServer1, "router_defaultdb.script")
         self.start_server(self._readServer1, "reader_tx_default_db.script")
 
         session = driver.session("r")
@@ -1991,7 +1991,7 @@ class RoutingV4x4(RoutingBase):
 
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_default_db.script")
+        self.start_server(self._routingServer1, "router_defaultdb.script")
         self.start_server(self._readServer1, "empty_reader.script")
 
         supports_multi_db = driver.supports_multi_db()
