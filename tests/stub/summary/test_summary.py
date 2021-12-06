@@ -17,8 +17,6 @@ class TestSummary(TestkitTestCase):
 
     required_features = types.Feature.BOLT_4_4,
 
-    required_features = types.Feature.BOLT_4_4,
-
     def setUp(self):
         super().setUp()
         self._server = StubServer(9000)

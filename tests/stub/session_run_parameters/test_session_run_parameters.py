@@ -36,7 +36,7 @@ class TestSessionRunParameters(TestkitTestCase):
             if db:
                 router_script = router_script % ("_" + db)
             else:
-                router_script = router_script % "_defaultdb"
+                router_script = router_script % "_default_db"
             if impersonation:
                 router_script = router_script % "_impersonation"
             else:
@@ -200,7 +200,7 @@ class TestSessionRunParameters(TestkitTestCase):
             self.skipTest("rejects empty string")
         for routing in (True, False):
             with self.subTest("routing" if routing else "direct"):
-                self._start_servers_and_driver("emptyquery", routing,
+                self._start_servers_and_driver("empty_query", routing,
                                                None, None)
                 session = self._driver.session("w")
                 session.run("").next()
