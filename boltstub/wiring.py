@@ -23,15 +23,21 @@ as well as classes for modelling IP addresses, based on tuples.
 """
 
 
+import base64
 from functools import cached_property
+import hashlib
 from socket import (
     AF_INET,
     AF_INET6,
     getservbyname,
     timeout,
 )
+import struct
 
 BOLT_PORT_NUMBER = 7687
+HTTP_HEADER_MIN_SIZE = 26  # BYTES
+MAGIC_WS_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+PONG = b"\x0A\x00"
 
 
 class ReadWakeup(timeout):
@@ -129,20 +135,113 @@ class IPv6Address(Address):
         return "[{}]:{}".format(*self)
 
 
+class RegularSocket:
+    """A socket with an already receive cached value."""
+
+    def __init__(self, socket_, cache) -> None:
+        self._socket = socket_
+        self._cache = cache
+
+    def __getattr__(self, item):
+        return getattr(self._socket, item)
+
+    def recv(self, bufsize) -> bytes:
+        if (self._cache):
+            buff = self._cache
+            self._cache = None
+            return buff
+        return self._socket.recv(bufsize)
+
+
+class WebSocket:
+    """Implementation of Websockets [rfc6455].
+
+    This implementation doesn't support extensions
+    """
+
+    def __init__(self, socket_) -> None:
+        self._socket = socket_
+
+    def __getattr__(self, item):
+        return getattr(self._socket, item)
+
+    def recv(self, bufsize) -> bytes:
+        """Receive data from the socket.
+
+        The `bufsize` parameter is ignored. This method returns the entire
+        frame payload and handles control frames doing the needed actions.
+        """
+        frame = self._socket.recv(2)
+        if len(frame) == 0:
+            return None
+
+        fin = frame[0] >> 7
+        # rsv1 = frame[0] & 0b0100_0000 == 0b0100_0000
+        # rsv2 = frame[0] & 0b0010_0000 == 0b0010_0000
+        # rsv3 = frame[0] & 0b0001_0000 == 0b0001_0000
+        opcode = frame[0] & 0b0000_1111
+
+        masked = frame[1] >> 7
+        payload_len = frame[1] & 0b0111_1111
+
+        if payload_len == 126:
+            payload_len, = struct.unpack(">H", self._socket.recv(2))
+        elif payload_len == 127:
+            payload_len, = struct.unpack(">Q", self._socket.recv(8))
+
+        if masked == 1:
+            mask = self._socket.recv(4)
+
+        masked_payload = self._socket.recv(payload_len)
+
+        payload = masked_payload \
+            if masked == 0 \
+            else bytearray([masked_payload[i] ^ mask[i % 4]
+                            for i in range(payload_len)])
+        if opcode & 0b0000_1000 == 0b0000_1000:
+            if opcode == 0x09:  # PING
+                self._socket.sendall(PONG)
+            return self.recv(bufsize)
+        elif fin == 0:
+            return payload + self.recv(bufsize)
+        return payload
+
+    def send(self, payload) -> int:
+        """Send the payload over the socket inside a Websocket frame."""
+        frame = [0b1000_0010]
+        payload_len = len(payload)
+        if (payload_len < 126):
+            frame += [payload_len]
+        elif payload_len < 0x10000:
+            frame += [126]
+            frame += bytearray(struct.pack(">H", payload_len))
+        else:
+            frame += [127]
+            frame += bytearray(struct.pack(">Q", payload_len))
+
+        frame_to_send = bytearray(frame) + bytearray(payload)
+
+        self._socket.sendall(frame_to_send)
+
+        return len(payload)
+
+    sendall = send
+
+
 class Wire(object):
     """Buffered socket wrapper for reading and writing bytes."""
 
-    __closed = False
+    _closed = False
 
-    __broken = False
+    _broken = False
 
     def __init__(self, s, read_wake_up=False):
         # ensure wrapped socket is in blocking mode but wakes up occasionally
         # if wake_up == True
         s.settimeout(.1 if read_wake_up else None)
-        self.__socket = s
-        self.__input = bytearray()
-        self.__output = bytearray()
+        self._socket = s
+        self._input = bytearray()
+        self._output = bytearray()
 
     def secure(self, verify=True, hostname=None):
         """Apply a layer of security onto this connection."""
@@ -160,8 +259,8 @@ class Wire(object):
             context.verify_mode = CERT_NONE
         context.load_default_certs()
         try:
-            self.__socket = context.wrap_socket(self.__socket,
-                                                server_hostname=hostname)
+            self._socket = context.wrap_socket(self._socket,
+                                               server_hostname=hostname)
         except OSError:
             # TODO: add connection failure/diagnostic callback
             raise WireError(
@@ -170,47 +269,47 @@ class Wire(object):
 
     def read(self, n):
         """Read bytes from the network."""
-        while len(self.__input) < n:
-            required = n - len(self.__input)
+        while len(self._input) < n:
+            required = n - len(self._input)
             requested = max(required, 8192)
             try:
-                received = self.__socket.recv(requested)
+                received = self._socket.recv(requested)
             except timeout:
                 raise ReadWakeup
             except OSError:
-                self.__broken = True
+                self._broken = True
                 raise BrokenWireError("Broken")
             else:
                 if received:
-                    self.__input.extend(received)
+                    self._input.extend(received)
                 else:
-                    self.__broken = True
+                    self._broken = True
                     raise BrokenWireError("Network read incomplete "
                                           "(received %d of %d bytes)" %
-                                          (len(self.__input), n))
-        data = self.__input[:n]
-        self.__input[:n] = []
+                                          (len(self._input), n))
+        data = self._input[:n]
+        self._input[:n] = []
         return data
 
     def write(self, b):
         """Write bytes to the output buffer."""
-        self.__output.extend(b)
+        self._output.extend(b)
 
     def send(self):
         """Send the contents of the output buffer to the network."""
-        if self.__closed:
+        if self._closed:
             raise WireError("Closed")
         sent = 0
-        while self.__output:
+        while self._output:
             try:
-                n = self.__socket.send(self.__output)
+                n = self._socket.send(self._output)
             except timeout:
                 continue
             except OSError:
-                self.__broken = True
+                self._broken = True
                 raise BrokenWireError("Broken")
             else:
-                self.__output[:n] = []
+                self._output[:n] = []
                 sent += n
         return sent
 
@@ -218,22 +317,22 @@ class Wire(object):
         """Close the connection."""
         try:
             # TODO: shutdown
-            self.__socket.close()
+            self._socket.close()
         except OSError:
-            self.__broken = True
+            self._broken = True
             raise BrokenWireError("Broken")
         else:
-            self.__closed = True
+            self._closed = True
 
     @property
     def closed(self):
         """Flag indicating whether this connection has been closed locally."""
-        return self.__closed
+        return self._closed
 
     @property
     def broken(self):
         """Flag indicating whether this connection has been closed remotely."""
-        return self.__broken
+        return self._broken
 
     @cached_property
     def local_address(self):
@@ -241,7 +340,7 @@ class Wire(object):
 
         :rtype: Address
         """
-        return Address(self.__socket.getsockname())
+        return Address(self._socket.getsockname())
 
     @cached_property
     def remote_address(self):
@@ -249,7 +348,7 @@ class Wire(object):
 
         :rtype: Address
         """
-        return Address(self.__socket.getpeername())
+        return Address(self._socket.getpeername())
 
 
 class WireError(OSError):
@@ -258,3 +357,39 @@ class WireError(OSError):
 
 class BrokenWireError(WireError):
     """Raised when a connection is broken by the network or remote peer."""
+
+
+def negotiate_socket(socket_):
+    def try_to_negotiate_websocket(socket__, buffer_):
+        encoding = "utf-8"
+        encoded = buffer_.strip().decode(encoding)
+        headers = encoded.strip().split("\r\n")
+        if "Upgrade: websocket" not in headers:
+            return False
+        for h in headers:
+            if "Sec-WebSocket-Key" in h:
+                key = h.split(" ")[1]
+        key = key + MAGIC_WS_STRING
+        encoded_key = key.encode(encoding)
+        encrypeted_key = hashlib.sha1(encoded_key).digest()
+        base64_key = base64.standard_b64encode(encrypeted_key).decode(encoding)
+        response = ("HTTP/1.1 101 Switching Protocols\r\n"
+                    + "Upgrade: websocket\r\n"
+                    + "Connection: Upgrade\r\n"
+                    + "Sec-WebSocket-Accept: %s\r\n\r\n") % (base64_key)
+        encoded_response = response.encode(encoding)
+        socket__.sendall(encoded_response)
+        return True
+
+    buffer = socket_.recv(1024)
+    if len(buffer) >= HTTP_HEADER_MIN_SIZE:
+        negotiated = try_to_negotiate_websocket(socket_, buffer)
+        if negotiated:
+            return WebSocket(socket_)
+
+    return RegularSocket(socket_, buffer)
+
+
+def create_wire(s, read_wake_up, wrap_socket=negotiate_socket):
+    actual_socket = wrap_socket(s)
+    return Wire(actual_socket, read_wake_up)
