@@ -36,7 +36,7 @@ class TestTxBeginParameters(TestkitTestCase):
             if db:
                 router_script = router_script % ("_" + db)
             else:
-                router_script = router_script % "_defaultdb"
+                router_script = router_script % "_default_db"
             if impersonation:
                 router_script = router_script % "_impersonation"
             else:
