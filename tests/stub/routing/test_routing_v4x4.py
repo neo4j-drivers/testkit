@@ -2716,7 +2716,7 @@ class RoutingV4x4(RoutingBase):
         )
 
         session = driver.session("w", database=self.adb)
-        session.run("RETURN 1 as n").consume()
+        list(session.run("RETURN 1 as n"))
         records = list(session.run("RETURN 1 as n"))
         session.close()
         driver.close()
@@ -2738,7 +2738,7 @@ class RoutingV4x4(RoutingBase):
         )
 
         session = driver.session("w", database=self.adb)
-        session.run("RETURN 1 as n").consume()
+        list(session.run("RETURN 1 as n"))
         records = list(session.run("RETURN 1 as n"))
         session.close()
         driver.close()
@@ -2768,7 +2768,7 @@ class RoutingV4x4(RoutingBase):
             txs.append(tx)
 
         for tx in txs:
-            tx.run("RETURN 1 as n").consume()
+            list(tx.run("RETURN 1 as n"))
             tx.commit()
 
         for session in sessions:
@@ -2777,7 +2777,7 @@ class RoutingV4x4(RoutingBase):
         self._wait_for_idle_connections(driver, 5)
 
         session = driver.session("w", database=self.adb)
-        session.run("RETURN 1 as n").consume()
+        list(session.run("RETURN 1 as n"))
         session.close()
 
         self._wait_for_idle_connections(driver, 1)
@@ -2821,14 +2821,14 @@ class RoutingV4x4(RoutingBase):
 
         session3 = driver.session("r", database=self.adb)
         tx3 = session3.begin_transaction()
-        tx3.run("RETURN 1 as n").consume()
+        list(tx3.run("RETURN 1 as n"))
         tx3.commit()
         session3.close()
 
-        tx0.run("RETURN 1 as n").consume()
+        list(tx0.run("RETURN 1 as n"))
         tx0.commit()
         session0.close()
-        tx1.run("RETURN 1 as n").consume()
+        list(tx1.run("RETURN 1 as n"))
         tx1.commit()
         session1.close()
         driver.close()
