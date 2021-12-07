@@ -24,6 +24,8 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The driver supports connection liveness check.
+    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -127,3 +129,15 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the TransactionClose request
     TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the max connection pool size config.
+    TMP_DRIVER_MAX_CONNECTION_POOL_SIZE = \
+        "Temporary:DriverMaxConnectionPoolSize"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the connection acquisition timeout config.
+    TMP_CONNECTION_ACQUISITION_TIMEOUT = \
+        "Temporary:ConnectionAcquisitionTimeout"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the GetConnectionPoolMetrics request.
+    TMP_GET_CONNECTION_POOL_METRICS = \
+        "Temporary:GetConnectionPoolMetrics"
