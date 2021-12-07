@@ -2717,7 +2717,7 @@ class RoutingV4x4(RoutingBase):
 
         session = driver.session("w", database=self.adb)
         list(session.run("RETURN 1 as n"))
-        records = list(session.run("RETURN 1 as n"))
+        records = list(session.run("RETURN 5 as n"))
         session.close()
         driver.close()
 
@@ -2739,7 +2739,7 @@ class RoutingV4x4(RoutingBase):
 
         session = driver.session("w", database=self.adb)
         list(session.run("RETURN 1 as n"))
-        records = list(session.run("RETURN 1 as n"))
+        records = list(session.run("RETURN 5 as n"))
         session.close()
         driver.close()
 
