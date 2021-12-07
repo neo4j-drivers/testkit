@@ -1,0 +1,25 @@
+!: BOLT #VERSION#
+!: ALLOW CONCURRENT
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+{?
+    C: ROUTE #ROUTINGCTX# [] {"db": "adb"}
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]}}
+?}
+*: RESET
+{?
+    C: RUN "RETURN 1 as n" {} {"db": "adb"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "w", "bookmark": "NewBookmark"}
+    *: RESET
+    C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["NewBookmark"]}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+?}
+*: RESET
+?: GOODBYE
