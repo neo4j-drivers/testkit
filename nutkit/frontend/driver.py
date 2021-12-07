@@ -7,7 +7,9 @@ class Driver:
                  resolver_fn=None, domain_name_resolver_fn=None,
                  connection_timeout_ms=None, fetch_size=None,
                  max_tx_retry_time_ms=None, encrypted=None,
-                 trusted_certificates=None):
+                 trusted_certificates=None, liveness_check_timeout_ms=None,
+                 max_connection_pool_size=None,
+                 connection_acquisition_timeout_ms=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -17,7 +19,11 @@ class Driver:
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
             fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
-            encrypted=encrypted, trustedCertificates=trusted_certificates)
+            encrypted=encrypted, trustedCertificates=trusted_certificates,
+            liveness_check_timeout_ms=liveness_check_timeout_ms,
+            max_connection_pool_size=max_connection_pool_size,
+            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms
+        )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be Driver but was %s" % res)
@@ -85,4 +91,11 @@ class Driver:
         res = self._backend.send_and_receive(req)
         if not isinstance(res, protocol.RoutingTable):
             raise Exception("Should be RoutingTable")
+        return res
+
+    def get_connection_pool_metrics(self, address):
+        req = protocol.GetConnectionPoolMetrics(self._driver.id, address)
+        res = self._backend.send_and_receive(req)
+        if not isinstance(res, protocol.ConnectionPoolMetrics):
+            raise Exception("Should be ConnectionPoolMetrics")
         return res

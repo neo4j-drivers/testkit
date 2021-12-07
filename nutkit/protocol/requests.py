@@ -49,7 +49,9 @@ class NewDriver:
         self, uri, authToken, userAgent=None, resolverRegistered=False,
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
         fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
-        trustedCertificates=None
+        trustedCertificates=None, liveness_check_timeout_ms=None,
+        max_connection_pool_size=None,
+        connection_acquisition_timeout_ms=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -71,6 +73,19 @@ class NewDriver:
         assert hasattr(Feature, "TMP_DRIVER_MAX_TX_RETRY_TIME")
         if maxTxRetryTimeMs is not None:
             self.maxTxRetryTimeMs = maxTxRetryTimeMs
+        if liveness_check_timeout_ms is not None:
+            self.livenessCheckTimeoutMs = liveness_check_timeout_ms
+        # TODO: remove assertion and condition as soon as all drivers support
+        #       driver-scoped max connection pool size config
+        assert hasattr(Feature, "TMP_DRIVER_MAX_CONNECTION_POOL_SIZE")
+        if max_connection_pool_size is not None:
+            self.maxConnectionPoolSize = max_connection_pool_size
+        # TODO: remove assertion and condition as soon as all drivers support
+        #       driver-scoped connection acquisition timeout config
+        assert hasattr(Feature, "TMP_CONNECTION_ACQUISITION_TIMEOUT")
+        if connection_acquisition_timeout_ms is not None:
+            self.connectionAcquisitionTimeoutMs = \
+                connection_acquisition_timeout_ms
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -453,3 +468,17 @@ class GetRoutingTable:
     def __init__(self, driverId, database=None):
         self.driverId = driverId
         self.database = database
+
+
+class GetConnectionPoolMetrics:
+    """
+    Request the backend to return connection pool metrics for given address.
+
+    Note that depending on implementation driver might keep connection pools
+    indexed by domain names or resolved ip addresses.
+    The Backend should respond with a ConnectionPoolMetrics response.
+    """
+
+    def __init__(self, driverId, address):
+        self.driverId = driverId
+        self.address = address
