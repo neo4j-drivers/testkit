@@ -1,0 +1,27 @@
+!: BOLT #VERSION#
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+*: RESET
+{{
+    C: BEGIN {"db": "adb"}
+    S: SUCCESS {}
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "w"}
+    C: COMMIT
+    S: SUCCESS {}
+    C: RESET
+    S: SUCCESS {}
+    C: RESET
+    S: <EXIT>
+----
+    C: RUN "RETURN 1 as n" {} {"db": "adb"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: RECORD [1]
+       SUCCESS {"type": "w"}
+    *: RESET
+    ?: GOODBYE
+}}

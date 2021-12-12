@@ -1,0 +1,21 @@
+!: BOLT #VERSION#
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+*: RESET
+{?
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL_ALL
+    S: SUCCESS {"type": "w", "bookmark": "NewBookmark"}
+    *: RESET
+?}
+{?
+    C: RUN "RETURN 5 as n" {} {"bookmarks": ["NewBookmark"]}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL_ALL
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    *: RESET
+?}
+?: GOODBYE
