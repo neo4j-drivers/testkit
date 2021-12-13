@@ -85,9 +85,7 @@ def initialise_configurations():
             cluster=cluster,
             suite=version_without_drop,
             scheme=scheme,
-            download=teamcity.DockerImage(
-                "neo4j-%s-%s-docker-loadable.tar" % (edition, version)
-            ),
+            download=teamcity.DockerImage("neo4j-%s-%s" % (edition, version)),
             stress_test_duration=stress_test
         )
 
@@ -116,13 +114,13 @@ def initialise_configurations():
                            stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
             # nightly build of official backwards-compatible version
-            ("4.3.7",     True,     True,     "neo4j", 60),
+            ("4.3",    True,        True,     "neo4j", 60),
             # latest version
-            ("4.4.0-dev", False,    False,    "bolt",   0),
-            ("4.4.0-dev", False,    False,    "neo4j",  0),
-            ("4.4.0-dev", True,     False,    "bolt",  90),
-            ("4.4.0-dev", True,     False,    "neo4j",  0),
-            ("4.4.0-dev", True,     True,     "neo4j", 90),
+            ("4.4",    False,       False,    "bolt",   0),
+            ("4.4",    False,       False,    "neo4j",  0),
+            ("4.4",    True,        False,    "bolt",  90),
+            ("4.4",    True,        False,    "neo4j",  0),
+            ("4.4",    True,        True,     "neo4j", 90),
         )
     ]
 
