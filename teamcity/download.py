@@ -26,6 +26,6 @@ class DockerImage:
 
     def get(self):
         return download_artifact(
-            "DriversTestkitNeo4jDockers", ".lastSuccessful",
+            "DriversTestkitNeo4jDockers", "latest.lastSuccessful",
             "neo4j-docker/" + self.name
         )
