@@ -1,0 +1,65 @@
+!: BOLT #VERSION#
+!: AUTO HELLO
+!: AUTO GOODBYE
+!: AUTO RESET
+!: ALLOW CONCURRENT
+
+{+
+    {{
+        C: RUN "AuthorizationExpired" {} {"mode": "r"}
+           PULL {"n": 1000}
+        S: SUCCESS {"fields": ["n"]}
+           FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
+        S: <EXIT>
+    ----
+        C: RUN "INFINITE RECORDS UNTIL DISCARD" {} {"mode": "r"}
+        S: SUCCESS {"fields": ["n"]}
+        {+
+            C: PULL {"n": 1}
+            S: RECORD [1]
+               SUCCESS {"type": "r", "has_more": true}
+        +}
+        C: DISCARD {"n": -1}
+        S: SUCCESS {}
+    ----
+        C: RUN "ONE RECORD" {} {"mode": "r"}
+           PULL {"n": "*"}
+        S: SUCCESS {"fields": ["n"]}
+           RECORD [1]
+           SUCCESS {"type": "r"}
+    ----
+        C: BEGIN {"mode": "r"}
+        S: SUCCESS {}
+
+        {{
+            C: RUN "TX RUN 1/3 ONE RECORD" {} {}
+            S: SUCCESS {"fields": ["n"]}
+            C: PULL {"n": "*"}
+            S: RECORD [1]
+               SUCCESS {"type": "r"}
+
+            C: RUN "TX RUN 2/3 ONE RECORD" {} {}
+            S: SUCCESS {"fields": ["n"]}
+            C: PULL {"n": "*"}
+            S: RECORD [1]
+               SUCCESS {"type": "r"}
+
+            C: RUN "TX RUN 3/3 ONE RECORD" {} {}
+            S: SUCCESS {"fields": ["n"]}
+            C: PULL {"n": "*"}
+            S: RECORD [1]
+               SUCCESS {"type": "r"}
+
+            C: COMMIT
+            S: SUCCESS {}
+        ----
+            C: RUN "TX RUN ONE RECORD" {} {}
+            S: SUCCESS {"fields": ["n"]}
+            C: PULL {"n": "*"}
+            S: RECORD [1]
+               SUCCESS {"type": "r"}
+            C: COMMIT
+            S: SUCCESS {}
+        }}
+    }}
++}
