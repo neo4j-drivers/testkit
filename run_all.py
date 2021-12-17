@@ -33,6 +33,8 @@ drivers = [
             " XX   XXX ",
         ],
         "branch-translation": {
+            # TODO: until a 5.0 branch has been created
+            "5.0": "4.4",
         }
     },
     {
@@ -48,6 +50,21 @@ drivers = [
         ],
     },
     {
+        "name": "python",
+        "repo": "https://github.com/neo4j/neo4j-python-driver.git",
+        "art": [
+            "XXX   X  X      XX    XXX  X  X  X  X   XXX",
+            "X  X  X  X     X  X  X     X  X  XX X  XX  ",
+            "X  X  X  X     XXXX  XXX   X  X  X XX  X   ",
+            "X X    XX      X  X     X   XX   X XX  X   ",
+            "X      XX      X  X     X   XX   X  X  XX  ",
+            "X      XX      X  X  XXX    XX   X  X   XXX",
+        ],
+        "extra-env": {
+            "TEST_BACKEND_SERVER": "async"
+        },
+    },
+    {
         "name": "java",
         "repo": "https://github.com/neo4j/neo4j-java-driver.git",
         "art": [
@@ -60,22 +77,22 @@ drivers = [
         ],
     },
     {
-        "name": "java-async",
+        "name": "java",
         "repo": "https://github.com/neo4j/neo4j-java-driver.git",
         "art": [
-            "   X   XX       XX    XXX  X  X  X  X   CCC",
-            "   X  X  X     X  X  X     X  X  XX X  CC  ",
-            "   X  XXXX     XXXX  XXX   X  X  X XX  C   ",
-            "X  X  X  X     X  X     X   XX   X XX  C   ",
-            "X  X  X  X     X  X     X   XX   X  X  CC  ",
-            " XX   X  X     X  X  XXX    XX   X  X   CCC",
+            "   X   XX       XX    XXX  X  X  X  X   XXX",
+            "   X  X  X     X  X  X     X  X  XX X  XX  ",
+            "   X  XXXX     XXXX  XXX   X  X  X XX  X   ",
+            "X  X  X  X     X  X     X   XX   X XX  X   ",
+            "X  X  X  X     X  X     X   XX   X  X  XX  ",
+            " XX   X  X     X  X  XXX    XX   X  X   XXX",
         ],
         "extra-env": {
             "TEST_BACKEND_SERVER": "async"
         },
     },
     {
-        "name": "java-reactive",
+        "name": "java",
         "repo": "https://github.com/neo4j/neo4j-java-driver.git",
         "art": [
             "   X   XX      XXX   X  X",
@@ -101,8 +118,8 @@ drivers = [
             " XX X  X",
         ],
         "branch-translation": {
-            # TODO: until a 4.4 branch has been created
-            "4.4": "4.3",
+            # TODO: until a 5.0 branch has been created
+            "5.0": "4.4",
         }
     }
 ]
