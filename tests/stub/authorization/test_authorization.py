@@ -811,7 +811,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         accept_count = self._server.count_responses("<ACCEPT>")
 
         # fetching another connection and run a query to force
-        # drivers which lazy close the connection do it
+        # drivers which lazily close the connection do it
         session3 = driver.session("r")
         session3.run("RETURN 3 as n").next()
         session3.close()
@@ -883,14 +883,13 @@ class TestNoRoutingAuthorization(AuthorizationBase):
 
         list(tx1.run("RETURN 4 as n"))
 
-        tx1.commit()
-
         # now, when session1 has releases its connection, the driver should
         # remove the connection
         hangup_count_pre = self._server.count_responses("<HANGUP>")
+        tx1.commit()
         session1.close()
         # fetching another connection and run a query to force
-        # drivers which lazy close the connection do it
+        # drivers which lazily close the connection do it
         list(driver.session("r").run("RETURN 3 as n"))
         hangup_count_post = self._server.count_responses("<HANGUP>")
         self.assertEqual(hangup_count_pre + 1, hangup_count_post)
