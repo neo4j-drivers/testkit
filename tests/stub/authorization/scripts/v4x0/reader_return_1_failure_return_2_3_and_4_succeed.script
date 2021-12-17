@@ -26,7 +26,32 @@ A: HELLO {"{}": "*"}
         C: PULL {"n": "*"}
         S: RECORD [1]
            SUCCESS {"type": "r"}
+    ----
+        C: BEGIN {"mode": "r"}
+        S: SUCCESS {}
+
+        C: RUN "RETURN 4 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+
+        C: RUN "RETURN 4 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+
+        C: RUN "RETURN 4 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": "*"}
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+
+        C: COMMIT
+        S: SUCCESS {}
     }}
+
     *: RESET
 +}
 ?: GOODBYE
