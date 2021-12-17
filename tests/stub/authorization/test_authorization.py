@@ -858,7 +858,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
 
         def allocate_connections(n):
             sessions = [driver.session("r") for _ in range(n)]
-            txs = [s.beginTransaction() for s in sessions]
+            txs = [s.begin_transaction() for s in sessions]
             [list(tx.run("TX RUN ONE RECORD")) for tx in txs]
             [tx.commit() for tx in txs]
             [s.close() for s in sessions]
