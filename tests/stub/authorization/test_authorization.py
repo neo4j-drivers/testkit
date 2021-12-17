@@ -441,7 +441,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
     def test_should_drop_connection_after_AuthorizationExpired(self):
         self.start_server(
             self._server,
-            "reader_return_1_failure_return_2_and_3_succeed.script"
+            "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
         )
         driver = Driver(self._backend, self._uri, self._auth,
                         userAgent=self._userAgent)
@@ -449,10 +449,10 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1 = driver.session('r', fetchSize=1)
         session2 = driver.session('r')
 
-        session1.run('RETURN 2 as n').next()
+        session1.run('INFINITE RECORDS UNTIL DISCARD').next()
 
         try:
-            session2.run('RETURN 1 as n').next()
+            session2.run('AuthorizationExpired').next()
         except types.DriverError as e:
             self.assert_is_authorization_error(e)
 
@@ -462,9 +462,9 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         accept_count = self._server.count_responses("<ACCEPT>")
 
         # fetching another connection and run a query to force
-        # drivers which lazy close the connection do it
+        # drivers which lazily close the connection do it
         session3 = driver.session('r')
-        session3.run('RETURN 3 as n').next()
+        session3.run('ONE RECORD').next()
         session3.close()
 
         hangup_count = self._server.count_responses("<HANGUP>")
@@ -478,7 +478,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
     def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(self):
         self.start_server(
             self._server,
-            "reader_return_1_failure_return_2_and_3_succeed.script"
+            "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
         )
 
         driver = Driver(self._backend, self._uri, self._auth,
@@ -487,14 +487,72 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1 = driver.session('r', fetchSize=1)
         session2 = driver.session('r')
 
-        session1.run('RETURN 3 as n').consume()
+        session1.run("ONE RECORD").consume()
 
         try:
-            session2.run('RETURN 1 as n').next()
+            session2.run("AuthorizationExpired").next()
         except types.DriverError as e:
             self.assert_is_authorization_error(e)
 
         session2.close()
 
-        session1.run('RETURN 2 as n').next()
+        session1.run("INFINITE RECORDS UNTIL DISCARD").next()
         session1.close()
+
+    @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
+    def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(  # noqa: N802,E501
+            self):
+        self.start_server(
+            self._server,
+            "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
+        )
+
+        def allocate_connections(n):
+            sessions = [driver.session("r") for _ in range(n)]
+            txs = [s.beginTransaction() for s in sessions]
+            [list(tx.run("TX RUN ONE RECORD")) for tx in txs]
+            [tx.commit() for tx in txs]
+            [s.close() for s in sessions]
+
+        driver = Driver(self._backend, self._uri, self._auth,
+                        userAgent=self._userAgent)
+
+        session1 = driver.session("r", fetchSize=1)
+        session2 = driver.session("r")
+
+        tx1 = session1.beginTransaction()
+        list(tx1.run("TX RUN 1/3 ONE RECORD"))
+
+        with self.assertRaises(types.DriverError) as exc:
+            session2.run("AuthorizationExpired").next()
+        self.assert_is_authorization_error(exc.exception)
+
+        list(tx1.run("TX RUN 2/3 ONE RECORD"))
+        # running a query in a session to make sure drivers that close
+        # connections lazily, will encounter session1's connection which after
+        # the AuthorizationExpired is flagged to be removed. BUT: it's still
+        # in use by session1, so is must survive.
+        allocate_connections(1)
+
+        session2.close()
+
+        # same as above!
+        # allocating increasing number of connections makes sure the driver has
+        # to run through all existing connections and potentially clean them up
+        # before eventually deciding a new connection must be created
+        allocate_connections(2)
+
+        list(tx1.run("TX RUN 3/3 ONE RECORD"))
+
+        # now, when session1 has releases its connection, the driver should
+        # remove the connection
+        hangup_count_pre = self._server.count_responses("<HANGUP>")
+        tx1.commit()
+        session1.close()
+        # fetching another connection and run a query to force
+        # drivers which lazily close the connection do it
+        allocate_connections(3)
+        hangup_count_post = self._server.count_responses("<HANGUP>")
+
+        self._server._dump()
+        self.assertEqual(hangup_count_pre + 1, hangup_count_post)
