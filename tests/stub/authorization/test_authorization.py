@@ -788,7 +788,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
     def test_should_drop_connection_after_AuthorizationExpired(self):  # noqa: N802,E501
         self.start_server(
             self._server,
-            "reader_return_1_failure_return_2_and_3_succeed.script"
+            "reader_return_1_failure_return_2_3_and_4_succeed.script"
         )
         driver = Driver(self._backend, self._uri, self._auth,
                         user_agent=self._userAgent)
@@ -825,7 +825,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
             self):
         self.start_server(
             self._server,
-            "reader_return_1_failure_return_2_and_3_succeed.script"
+            "reader_return_1_failure_return_2_3_and_4_succeed.script"
         )
 
         driver = Driver(self._backend, self._uri, self._auth,
@@ -844,6 +844,53 @@ class TestNoRoutingAuthorization(AuthorizationBase):
 
         session1.run("RETURN 2 as n").next()
         session1.close()
+
+    @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
+    def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(  # noqa: N802,E501
+            self):
+        self.start_server(
+            self._server,
+            "reader_return_1_failure_return_2_3_and_4_succeed.script"
+        )
+
+        driver = Driver(self._backend, self._uri, self._auth,
+                        user_agent=self._userAgent)
+
+        session1 = driver.session("r", fetch_size=1)
+        session2 = driver.session("r")
+
+        tx1 = session1.begin_transaction()
+        list(tx1.run("RETURN 4 as n"))
+
+        with self.assertRaises(types.DriverError) as exc:
+            session2.run("RETURN 1 as n").next()
+        self.assert_is_authorization_error(exc.exception)
+
+        list(tx1.run("RETURN 4 as n"))
+        # running a query in a session to make sure drivers that close
+        # connections lazily, will encounter session1's connection which after
+        # the AuthorizationExpired is flagged to be removed. BUT: it's still
+        # in use by session1, so is must survive.
+        list(driver.session("r").run("RETURN 3 as n"))
+
+        session2.close()
+
+        # same as above!
+        list(driver.session("r").run("RETURN 3 as n"))
+
+        list(tx1.run("RETURN 4 as n"))
+
+        tx1.commit()
+
+        # now, when session1 has releases its connection, the driver should
+        # remove the connection
+        hangup_count_pre = self._server.count_responses("<HANGUP>")
+        session1.close()
+        # fetching another connection and run a query to force
+        # drivers which lazy close the connection do it
+        list(driver.session("r").run("RETURN 3 as n"))
+        hangup_count_post = self._server.count_responses("<HANGUP>")
+        self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
 
 class TestAuthenticationSchemes(AuthorizationBase):
