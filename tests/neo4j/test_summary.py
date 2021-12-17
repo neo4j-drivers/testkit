@@ -100,8 +100,15 @@ class TestDirectDriver(TestkitTestCase):
         if isinstance(summary, dict) and get_driver_name() in ["java"]:
             self.skipTest("Java 4.2 backend does not support summary")
 
-        version = ".".join(summary.server_info.agent.split(".")[:2])
-        self.assertEqual(version, get_server_info().server_agent)
+        version = summary.server_info.agent
+        self.assertIsInstance(version, str)
+        server_info = get_server_info()
+        if server_info.edition == "aura":
+            # for aura the agent string tends to be all over the place...
+            self.assertTrue(version.startswith("Neo4j/"))
+        else:
+            version = ".".join(summary.server_info.agent.split(".")[:2])
+            self.assertEqual(version, get_server_info().server_agent)
 
     def _assert_counters(self, summary, nodes_created=0, nodes_deleted=0,
                          relationships_created=0, relationships_deleted=0,
