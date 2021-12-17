@@ -5,13 +5,13 @@ A: HELLO {"{}": "*"}
 *: RESET
 {+
     {{
-        C: RUN "RETURN 1 as n" {} {"mode": "r"}
+        C: RUN "AuthorizationExpired" {} {"mode": "r"}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}
            <EXIT>
     ----
-        C: RUN "RETURN 2 as n" {} {"mode": "r"}
+        C: RUN "INFINITE RECORDS UNTIL DISCARD" {} {"mode": "r"}
         S: SUCCESS {"fields": ["n"]}
         {+
             C: PULL {"n": 1}
@@ -21,7 +21,7 @@ A: HELLO {"{}": "*"}
         C: DISCARD {"n": -1}
         S: SUCCESS {}
     ----
-        C: RUN "RETURN 3 as n" {} {"mode": "r"}
+        C: RUN "ONE RECORD" {} {"mode": "r"}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": "*"}
         S: RECORD [1]
