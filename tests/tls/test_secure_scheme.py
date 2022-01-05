@@ -146,6 +146,8 @@ class TestTrustCustomCertsConfig(TestTrustSystemCertsConfig):
         {"encrypted": True, "trusted_certificates": ["customRoot.crt"]},
         {"encrypted": True,
          "trusted_certificates": ["customRoot2.crt", "customRoot.crt"]},
+        {"encrypted": True,
+         "trusted_certificates": ["customRoot.crt", "customRoot2.crt"]},
     )
     cert_prefix = "customRoot_"
 
