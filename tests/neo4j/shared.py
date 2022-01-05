@@ -89,8 +89,10 @@ class ServerInfo:
 
     @property
     def server_agent(self):
-        if self.edition == "aura" and self.version >= "4":
-            return "Neo4j/4.0-aura"
+        if self.edition == "aura":
+            raise ValueError(
+                "We can't predict the server's agent string for aura!"
+            )
         return "Neo4j/" + self.version
 
     @property
