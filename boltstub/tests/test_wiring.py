@@ -79,12 +79,6 @@ class TestRegularSocket:
         assert wrapped_method == original_method
 
 
-def duplicate(obj, times):
-    if times == 1:
-        return obj
-    return duplicate(obj + obj, times - 1)
-
-
 class TestWebSocket:
 
     @pytest.mark.parametrize("payload,frame", [
