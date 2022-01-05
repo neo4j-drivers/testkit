@@ -36,15 +36,14 @@ import traceback
 from .addressing import Address
 from .channel import Channel
 from .errors import ServerExit
-from .packstream import PackStream
 from .parsing import (
     parse_file,
     Script,
     ScriptFailure,
 )
 from .wiring import (
+    create_wire,
     ReadWakeup,
-    Wire,
 )
 
 log = getLogger(__name__)
@@ -106,7 +105,7 @@ class BoltStubService:
             server_address = None
 
             def setup(self):
-                self.wire = Wire(self.request, read_wake_up=True)
+                self.wire = create_wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
                 log.info("[#%04X>#%04X]  S: <ACCEPT> %s -> %s",
@@ -114,7 +113,7 @@ class BoltStubService:
                          self.server_address.port_number,
                          self.client_address, self.server_address)
 
-            def handle(self):
+            def handle(self) -> None:
                 with service.actors_lock:
                     actor = BoltActor(deepcopy(script), self.wire)
                     service.actors.append(actor)

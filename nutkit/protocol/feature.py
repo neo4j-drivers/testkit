@@ -15,6 +15,8 @@ class Feature(Enum):
     # This methods asserts that exactly one record in left in the result
     # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
+    # The driver supports connection liveness check.
+    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -24,8 +26,6 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
-    # The driver supports connection liveness check.
-    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -103,12 +103,20 @@ class Feature(Enum):
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
 
     # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the connection acquisition timeout config.
+    TMP_CONNECTION_ACQUISITION_TIMEOUT = \
+        "Temporary:ConnectionAcquisitionTimeout"
+    # Temporary driver feature that will be removed when all official driver
     # backends have implemented path and relationship types
     TMP_CYPHER_PATH_AND_RELATIONSHIP = "Temporary:CypherPathAndRelationship"
     # TODO Update this once the decision has been made.
     # Temporary driver feature. There is a pending decision on whether it
     # should be supported in all drivers or be removed from all of them.
     TMP_DRIVER_FETCH_SIZE = "Temporary:DriverFetchSize"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the max connection pool size config.
+    TMP_DRIVER_MAX_CONNECTION_POOL_SIZE = \
+        "Temporary:DriverMaxConnectionPoolSize"
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented it.
     TMP_DRIVER_MAX_TX_RETRY_TIME = "Temporary:DriverMaxTxRetryTime"
@@ -119,6 +127,10 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented all summary response fields.
     TMP_FULL_SUMMARY = "Temporary:FullSummary"
+    # Temporary driver feature that will be removed when all official driver
+    # backends have implemented the GetConnectionPoolMetrics request.
+    TMP_GET_CONNECTION_POOL_METRICS = \
+        "Temporary:GetConnectionPoolMetrics"
     # Temporary driver feature that will be removed when all official drivers
     # have been unified in their behaviour of when they return a Result object.
     # We aim for drivers to not providing a Result until the server replied
@@ -129,15 +141,3 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the TransactionClose request
     TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the max connection pool size config.
-    TMP_DRIVER_MAX_CONNECTION_POOL_SIZE = \
-        "Temporary:DriverMaxConnectionPoolSize"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the connection acquisition timeout config.
-    TMP_CONNECTION_ACQUISITION_TIMEOUT = \
-        "Temporary:ConnectionAcquisitionTimeout"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the GetConnectionPoolMetrics request.
-    TMP_GET_CONNECTION_POOL_METRICS = \
-        "Temporary:GetConnectionPoolMetrics"
