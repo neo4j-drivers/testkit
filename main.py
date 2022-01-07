@@ -98,7 +98,6 @@ def initialise_configurations():
             ("3.5",    True,        False,    "bolt",   0),
             ("3.5",    True,        True,     "neo4j", 60),
             # not officially supported versions
-            ("4.0",    True,        False,    "neo4j",  0),
             ("4.1",    True,        False,    "neo4j",  0),
             ("4.2",    True,        False,    "neo4j",  0),
             # official backwards-compatibility
