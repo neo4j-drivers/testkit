@@ -171,14 +171,26 @@ def network_connect(network, name):
 
 def load(readable):
     cmd = ["docker", "load"]
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
     outs, errs = p.communicate(input=readable.read())
+    loaded_image = None
     if outs:
-        print(str(outs))
+        outs = outs.decode("utf-8")
+        print(outs)
+        for line in outs.split("\n"):
+            if line.lower().strip().startswith("loaded image: "):
+                if loaded_image is not None:
+                    raise ValueError("Loaded multiple images:\n%s" % outs)
+                loaded_image = line.rsplit(maxsplit=1)[1]
     if errs:
         print(str(errs))
     if p.returncode != 0:
         raise Exception("Failed to load docker image")
+    if loaded_image is None:
+        raise Exception("Docker reported no loaded image:\n%s" % outs)
+    return loaded_image
 
 
 def build_and_tag(tag_name, dockerfile_path, cwd=None, log_path=None):

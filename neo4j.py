@@ -1,14 +1,26 @@
 """Neo4j instance test configuration (no runtime properties)."""
 
-import collections
+from dataclasses import dataclass
 from os.path import join
+from typing import Optional
 
 import docker
+from teamcity.download import DockerImage
 
-Config = collections.namedtuple("Config", [
-    "name", "image", "version", "edition", "cluster", "suite",
-    "scheme", "download", "stress_test_duration"
-])
+
+@dataclass
+class Config:
+    """Configuration for a Neo4j instance."""
+
+    name: str
+    image: str
+    version: str
+    edition: str
+    cluster: bool
+    suite: str
+    scheme: str
+    download: Optional[DockerImage]
+    stress_test_duration: int
 
 
 username = "neo4j"

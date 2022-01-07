@@ -385,7 +385,7 @@ def main(settings, configurations):
         download = neo4j_config.download
         if download:
             print("Downloading Neo4j docker image")
-            docker.load(download.get())
+            neo4j_config.image = docker.load(download.get())
 
         cluster = neo4j_config.cluster
         server_name = neo4j_config.name
