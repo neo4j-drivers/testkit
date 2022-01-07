@@ -84,18 +84,11 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w")
         summary = self._session.read_transaction(work)
         result = self._driver.supports_multi_db()
-        server_version = tuple(map(int, get_server_info().version.split(".")))
 
-        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3), (4, 4)):
-            self.assertTrue(result)
-            # This is the default database name if not set explicitly on the
-            # Neo4j Server
-            self.assertEqual(summary.database, "neo4j")
-        elif server_version == (3, 5):
-            self.assertFalse(result)
-            self.assertIsNone(summary.database)
-        else:
-            self.fail("Unexpected server version %s" % get_server_info())
+        self.assertTrue(result)
+        # This is the default database name if not set explicitly on the
+        # Neo4j Server
+        self.assertEqual(summary.database, "neo4j")
 
         self.assertEqual(summary.query_type, "r")
 

@@ -2,7 +2,6 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
-    get_server_info,
 )
 from tests.shared import (
     driver_feature,
@@ -132,21 +131,12 @@ class TestSessionRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_autocommit_transactions_should_support_metadata(self):
-        server_info = get_server_info()
-        if server_info.version.startswith("3."):
-            if server_info.edition != "enterprise":
-                self.skipTest("cannot query tx meta data in community edition")
-            query = "CALL dbms.getTXMetaData"
-        elif server_info.version.startswith("4."):
-            query = "CALL tx.getMetaData"
-        else:
-            self.fail("Unknown server version %s should be 3.x or 4.x." %
-                      server_info.version)
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
         result = self._session1.run(
-            query, tx_meta={k: v.value for k, v in metadata.items()}
+            "CALL tx.getMetaData",
+            tx_meta={k: v.value for k, v in metadata.items()}
         )
         record = result.next()
         self.assertIsInstance(record, types.Record)

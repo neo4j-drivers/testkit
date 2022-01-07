@@ -108,7 +108,7 @@ class TestSummary(TestkitTestCase):
                           ("4.2", "4.1"))
         else:
             self.assertEqual(summary.server_info.protocol_version,
-                             get_server_info().max_protocol_version)
+                             common_max_version)
 
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
