@@ -92,21 +92,16 @@ def initialise_configurations():
     configurations = [
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
-            # LTS version
-            # 3.5 servers only support routing scheme if configured as cluster
-            ("3.5",    False,       False,    "bolt",   0),
-            ("3.5",    True,        False,    "bolt",   0),
-            ("3.5",    True,        True,     "neo4j", 60),
             # not officially supported versions
-            ("4.0",    True,        False,    "neo4j",  0),
-            ("4.1",    True,        False,    "neo4j",  0),
             ("4.2",    True,        False,    "neo4j",  0),
-            # official backwards-compatibility
-            ("4.3",    False,       False,    "bolt",   0),
-            ("4.3",    False,       False,    "neo4j",  0),
-            ("4.3",    True,        False,    "bolt",   0),
             ("4.3",    True,        False,    "neo4j",  0),
-            ("4.3",    True,        True,     "neo4j", 90),
+            # official backwards-compatibility
+            # LTS version
+            ("4.4",    False,       False,    "bolt",   0),
+            ("4.4",    False,       False,    "neo4j",  0),
+            ("4.4",    True,        False,    "bolt",   0),
+            ("4.4",    True,        False,    "neo4j",  0),
+            ("4.4",    True,        True,     "neo4j", 90),
         )
     ]
     configurations += [
@@ -114,13 +109,13 @@ def initialise_configurations():
                            stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
             # nightly build of official backwards-compatible version
-            ("4.3",    True,        True,     "neo4j", 60),
+            ("4.4",    True,        True,     "neo4j", 60),
             # latest version
-            ("4.4",    False,       False,    "bolt",   0),
-            ("4.4",    False,       False,    "neo4j",  0),
-            ("4.4",    True,        False,    "bolt",  90),
-            ("4.4",    True,        False,    "neo4j",  0),
-            ("4.4",    True,        True,     "neo4j", 90),
+            ("5.0",    False,       False,    "bolt",   0),
+            ("5.0",    False,       False,    "neo4j",  0),
+            ("5.0",    True,        False,    "bolt",  90),
+            ("5.0",    True,        False,    "neo4j",  0),
+            ("5.0",    True,        True,     "neo4j", 90),
         )
     ]
 
