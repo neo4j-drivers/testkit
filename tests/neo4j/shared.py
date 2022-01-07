@@ -102,9 +102,6 @@ class ServerInfo:
     @property
     def max_protocol_version(self):
         return {
-            "3.5": "3.0",
-            "4.0": "4.0",
-            "4.1": "4.1",
             "4.2": "4.2",
             "4.3": "4.3",
             "4.4": "4.4",
@@ -114,7 +111,7 @@ class ServerInfo:
 
 def get_server_info():
     return ServerInfo(
-        version=os.environ.get(env_neo4j_version, "4.4"),
+        version=os.environ.get(env_neo4j_version, "5.0"),
         edition=os.environ.get(env_neo4j_edition, "enterprise"),
         cluster=(os.environ.get(env_neo4j_cluster, "False").lower()
                  in ("true", "yes", "y", "1"))

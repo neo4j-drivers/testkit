@@ -23,33 +23,17 @@ from tests.testenv import (
 loader = unittest.TestLoader()
 
 #######################
-# Suite for Neo4j 3.5 #
-#######################
-suite_3x5 = unittest.TestSuite()
-suite_3x5.addTests(loader.loadTestsFromModule(test_authentication))
-suite_3x5.addTests(loader.loadTestsFromModule(test_bookmarks))
-suite_3x5.addTests(loader.loadTestsFromModule(test_datatypes))
-suite_3x5.addTests(loader.loadTestsFromModule(test_direct_driver))
-suite_3x5.addTests(loader.loadTestsFromModule(test_session_run))
-suite_3x5.addTests(loader.loadTestsFromModule(test_summary))
-suite_3x5.addTests(loader.loadTestsFromModule(test_tx_func_run))
-suite_3x5.addTests(loader.loadTestsFromModule(test_tx_run))
-
-#######################
-# Suite for Neo4j 4.0 #
-#######################
-suite_4x0 = suite_3x5
-
-
-#######################
-# Suite for Neo4j 4.1 #
-#######################
-suite_4x1 = suite_4x0
-
-#######################
 # Suite for Neo4j 4.2 #
 #######################
-suite_4x2 = suite_4x1
+suite_4x2 = unittest.TestSuite()
+suite_4x2.addTests(loader.loadTestsFromModule(test_authentication))
+suite_4x2.addTests(loader.loadTestsFromModule(test_bookmarks))
+suite_4x2.addTests(loader.loadTestsFromModule(test_datatypes))
+suite_4x2.addTests(loader.loadTestsFromModule(test_direct_driver))
+suite_4x2.addTests(loader.loadTestsFromModule(test_session_run))
+suite_4x2.addTests(loader.loadTestsFromModule(test_summary))
+suite_4x2.addTests(loader.loadTestsFromModule(test_tx_func_run))
+suite_4x2.addTests(loader.loadTestsFromModule(test_tx_run))
 
 #######################
 # Suite for Neo4j 4.3 #
@@ -72,13 +56,7 @@ if __name__ == "__main__":
         sys.exit(-10)
     name = sys.argv[1]
     suite = None
-    if name == "3.5":
-        suite = suite_3x5
-    if name == "4.0":
-        suite = suite_4x0
-    elif name == "4.1":
-        suite = suite_4x1
-    elif name == "4.2":
+    if name == "4.2":
         suite = suite_4x2
     elif name == "4.3":
         suite = suite_4x3
