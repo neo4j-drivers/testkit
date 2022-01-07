@@ -61,6 +61,11 @@ suite_4x3 = suite_4x2
 #######################
 suite_4x4 = suite_4x3
 
+#######################
+# Suite for Neo4j 5.0 #
+#######################
+suite_5x0 = suite_4x3
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Missing suite name parameter")
@@ -79,6 +84,8 @@ if __name__ == "__main__":
         suite = suite_4x3
     elif name == "4.4":
         suite = suite_4x4
+    elif name == "5.0":
+        suite = suite_5x0
 
     if not suite:
         print("Unknown suite name: " + name)
