@@ -1,0 +1,17 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+# We expect the driver to not even try this. So should it do so nonetheless,
+# we will let is pass to not cause any error. The error should be generated
+# inside the driver.
+C: BEGIN {"[tx_timeout]": "*"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+*: RESET
+?: GOODBYE

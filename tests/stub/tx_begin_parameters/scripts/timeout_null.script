@@ -1,0 +1,14 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"[tx_timeout]": null}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+*: RESET
+?: GOODBYE

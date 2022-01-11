@@ -122,8 +122,28 @@ class TestSessionRunParameters(TestkitTestCase):
     def test_timeout(self):
         for routing in (True, False):
             with self.subTest("routing" if routing else "direct"):
-                self._run("timeout", routing,
+                self._run("timeout_17", routing,
                           session_args=("w",), run_kwargs={"timeout": 17})
+
+    @driver_feature(types.Feature.BOLT_4_4)
+    def test_0_timeout(self):
+        self._run("timeout_0", routing=False,
+                  session_args=("w",), run_kwargs={"timeout": 0})
+
+    @driver_feature(types.Feature.BOLT_4_4)
+    def test_null_timeout(self):
+        self._run("timeout_null", routing=False,
+                  session_args=("w",), run_kwargs={"timeout": None})
+
+    @driver_feature(types.Feature.BOLT_4_4)
+    def test_default_timeout(self):
+        self._run("timeout_null", routing=False, session_args=("w",))
+
+    @driver_feature(types.Feature.BOLT_4_4)
+    def test_negative_timeout(self):
+        with self.assertRaises(types.DriverError):
+            self._run("timeout_-1", routing=False,
+                      session_args=("w",), run_kwargs={"timeout": -1})
 
     @driver_feature(types.Feature.IMPERSONATION,
                     types.Feature.BOLT_4_4)
