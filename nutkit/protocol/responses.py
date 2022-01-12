@@ -226,7 +226,7 @@ class Summary:
                     "Backend supports well-formatted counter. "
                     "Remove the backwards compatibility check!"
                 )
-        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+        if get_driver_name() in ["javascript", "go", "dotnet"]:
             if "counters" in data:
                 import warnings
                 warnings.warn(
