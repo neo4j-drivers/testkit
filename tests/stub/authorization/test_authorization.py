@@ -903,7 +903,6 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         allocate_connections(3)
         hangup_count_post = self._server.count_responses("<HANGUP>")
 
-        self._server._dump()
         self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
 
@@ -924,7 +923,6 @@ class TestAuthenticationSchemes(AuthorizationBase):
 
     def tearDown(self):
         self._server.reset()
-        self._server._dump()
         super().tearDown()
 
     def test_basic_scheme(self):
