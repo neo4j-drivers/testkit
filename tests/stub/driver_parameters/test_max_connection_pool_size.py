@@ -29,7 +29,6 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
         # If test raised an exception this will make sure that the stub server
         # is killed and it's output is dumped for analysis.
         self._server.reset()
-        self._server._dump()
         for tx in self._transactions:
             with self.assertRaises(types.DriverError):
                 # The server does not accept ending the transaction.
