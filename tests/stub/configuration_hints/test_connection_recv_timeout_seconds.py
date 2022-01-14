@@ -98,11 +98,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             # has async iterator api
             if get_driver_name() in ["javascript"]:
                 result.next()
-        # TODO remove once Go driver does not raise the last seen error upon
-        #      tx closure
-        if get_driver_name() in ["go"]:
-            with self.assertRaises(types.DriverError) as exc:
-                tx.close()
+        tx.close()
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ["java", "ruby"]:
             tx.rollback()
@@ -135,11 +131,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             if get_driver_name() in ["javascript"]:
                 result.next()
 
-        # TODO remove once Go driver does not raise the last seen error upon
-        #      tx closure
-        if get_driver_name() in ["go"]:
-            with self.assertRaises(types.DriverError):
-                tx.close()
+        tx.close()
 
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ["java", "ruby"]:
