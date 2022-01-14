@@ -48,8 +48,6 @@ class AuthorizationBase(TestkitTestCase):
                 "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
             )
         elif driver in ["go", "javascript"]:
-            self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                             error.code)
             self.assertIn(
                 "Token expired", error.msg
             )
@@ -57,15 +55,14 @@ class AuthorizationBase(TestkitTestCase):
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TokenExpiredException",
                 error.errorType)
-            self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                             error.code)
             self.assertIn("Token expired", error.msg)
         elif driver == "ruby":
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::TokenExpiredException",
                 error.errorType)
-            self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                             error.code)
+            self.assertIn("Token expired", error.msg)
+        elif driver == "dotnet":
+            self.assertEqual("ClientError", error.errorType)
             self.assertIn("Token expired", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
@@ -831,6 +828,13 @@ class TestNoRoutingAuthorization(AuthorizationBase):
             "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
         )
 
+        def allocate_connections(n):
+            sessions = [driver.session("r") for _ in range(n)]
+            txs = [s.begin_transaction() for s in sessions]
+            [list(tx.run("TX RUN ONE RECORD")) for tx in txs]
+            [tx.commit() for tx in txs]
+            [s.close() for s in sessions]
+
         driver = Driver(self._backend, self._uri, self._auth,
                         user_agent=self._userAgent)
 
@@ -843,10 +847,24 @@ class TestNoRoutingAuthorization(AuthorizationBase):
             session2.run("AuthorizationExpired").next()
         self.assert_is_authorization_error(exc.exception)
 
+        list(tx1.run("TX RUN 2/3 ONE RECORD"))
+        # running a query in a session to make sure drivers that close
+        # connections lazily, will encounter session1's connection which after
+        # the AuthorizationExpired is flagged to be removed. BUT: it's still
+        # in use by session1, so is must survive.
+        allocate_connections(1)
+
         session2.close()
 
         session1.run("INFINITE RECORDS UNTIL DISCARD").next()
         session1.close()
+        # fetching another connection and run a query to force
+        # drivers which lazily close the connection do it
+        allocate_connections(3)
+        hangup_count_post = self._server.count_responses("<HANGUP>")
+
+        self._server._dump()
+        self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(  # noqa: N802,E501
