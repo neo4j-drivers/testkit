@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+import json
+
 from nutkit import protocol as types
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
@@ -25,75 +28,153 @@ class TestBookmarksV4(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def test_bookmarks_can_be_set(self):
-        def test():
-            bookmarks = ["bm:%i" % (i + 1) for i in range(bm_count)]
-            session = self._driver.session(mode[0], bookmarks=bookmarks)
-            self.assertEqual(session.last_bookmarks(), bookmarks)
+    @contextmanager
+    def _new_server(self, tx, bms_in, bm_out):
+        script = "bookmarks_tx.script" if tx else "bookmarks.script"
+        vars_ = {}
+        if bms_in:
+            vars_["#BM_IN#"] = '"bookmarks{}": %s' % json.dumps(bms_in)
+        else:
+            vars_["#BM_IN#"] = '"[bookmarks]": []'
+        assert bm_out
+        vars_["#BM_OUT#"] = str(bm_out)
+        self._server.start(
+            path=self.script_path(self.version_dir, script),
+            vars_=vars_
+        )
+        try:
+            yield self._server
+        finally:
+            self._server.reset()
+
+    @contextmanager
+    def _new_driver(self):
+        if self._driver:
+            self._driver.close()
+        uri = "bolt://%s" % self._server.address
+        auth = AuthorizationToken("basic", principal="", credentials="")
+        self._driver = Driver(self._backend, uri, auth)
+        try:
+            yield self._driver
+        finally:
+            self._driver.close()
+            self._driver = None
+
+    def test_bookmarks_on_unused_sessions_are_returned(self):
+        def test(mode_, bm_count_):
+            bookmarks = ["bm:%i" % (i + 1) for i in range(bm_count_)]
+            session = self._driver.session(mode_[0], bookmarks=bookmarks)
+            self.assertEqual(sorted(session.last_bookmarks()),
+                             sorted(bookmarks))
             session.close()
 
         for mode in ("read", "write"):
-            # TODO: decide what we expect to happen when multiple bookmarks are
-            #       passed in: return all or only the last one?
-            for bm_count in (0, 1):
+            for bm_count in (0, 1, 2):
                 with self.subTest(mode + "_%i_bookmarks" % bm_count):
-                    test()
+                    test(mode, bm_count)
 
-    # Tests that a committed transaction can return the last bookmark
-    def test_last_bookmark(self):
-        self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "send_bookmark_write_tx.script")
-        )
-        session = self._driver.session("w")
-        tx = session.begin_transaction()
-        list(tx.run("RETURN 1 as n"))
-        tx.commit()
-        bookmarks = session.last_bookmarks()
-        session.close()
-        self._driver.close()
-        self._server.done()
+    def test_bookmarks_session_run(self):
+        def test(mode_, bm_count_, check_bms_pre_query_, consume_):
+            bookmarks = ["bm:%i" % (i + 1) for i in range(bm_count_)]
+            with self._new_server(tx=False, bms_in=bookmarks,
+                                  bm_out="bm:re") as server:
+                with self._new_driver() as driver:
+                    session = driver.session(mode_[0], bookmarks=bookmarks)
+                    if check_bms_pre_query_:
+                        self.assertEqual(sorted(session.last_bookmarks()),
+                                         sorted(bookmarks))
+                    res = session.run("RETURN 1 AS n")
+                    if consume_:
+                        res.consume()
+                    self.assertEqual(session.last_bookmarks(), ["bm:re"])
+                    session.close()
+                server.done()
 
-        self.assertEqual(bookmarks, ["bm"])
+        for mode in ("read", "write"):
+            for bm_count in (0, 1, 2):
+                for check_bms_pre_query in (False, True):
+                    # TODO: make a decision if consume should be triggered
+                    #       implicitly or not.
+                    for consume in (False, True)[1:]:
+                        with self.subTest(mode + "_%i_bookmarks%s%s" % (
+                            bm_count,
+                            "_check_bms_pre_query" if check_bms_pre_query
+                            else "",
+                            "_consume" if consume else "_no_consume"
+                        )):
+                            test(mode, bm_count, check_bms_pre_query, consume)
 
-    def test_send_and_receive_bookmarks_read_tx(self):
-        self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "send_and_receive_bookmark_read_tx.script")
-        )
-        session = self._driver.session(
-            access_mode="r",
-            bookmarks=["neo4j:bookmark:v1:tx42"]
-        )
-        tx = session.begin_transaction()
-        result = tx.run("MATCH (n) RETURN n.name AS name")
-        result.next()
-        tx.commit()
-        bookmarks = session.last_bookmarks()
+    def test_bookmarks_tx_run(self):
+        def test(mode_, bm_count_, check_bms_pre_query_, consume_):
+            bookmarks = ["bm:%i" % (i + 1) for i in range(bm_count_)]
+            with self._new_server(tx=True, bms_in=bookmarks,
+                                  bm_out="bm:re") as server:
+                with self._new_driver() as driver:
+                    session = driver.session(mode_[0], bookmarks=bookmarks)
+                    if check_bms_pre_query_:
+                        self.assertEqual(sorted(session.last_bookmarks()),
+                                         sorted(bookmarks))
+                    tx = session.begin_transaction()
+                    res = tx.run("RETURN 1 AS n")
+                    if consume_:
+                        res.consume()
+                    if check_bms_pre_query_:
+                        self.assertEqual(sorted(session.last_bookmarks()),
+                                         sorted(bookmarks))
+                    tx.commit()
+                    self.assertEqual(session.last_bookmarks(), ["bm:re"])
+                    session.close()
+                server.done()
 
-        self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx4242"])
-        self._server.done()
+        for mode in ("read", "write"):
+            for bm_count in (0, 1, 2):
+                for check_bms_pre_query in (False, True):
+                    for consume in (False, True):
+                        with self.subTest(mode + "_%i_bookmarks%s%s" % (
+                            bm_count,
+                            "_check_bms_pre_query" if check_bms_pre_query
+                            else "",
+                            "_consume" if consume else "_no_consume"
+                        )):
+                            test(mode, bm_count, check_bms_pre_query, consume)
 
-    def test_send_and_receive_bookmarks_write_tx(self):
-        self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "send_and_receive_bookmark_write_tx.script"),
-            vars_={
-                "#BOOKMARKS#": '["neo4j:bookmark:v1:tx42"]'
-            }
-        )
-        session = self._driver.session(
-            access_mode="w",
-            bookmarks=["neo4j:bookmark:v1:tx42"]
-        )
-        tx = session.begin_transaction()
-        result = tx.run("MATCH (n) RETURN n.name AS name")
-        result.next()
-        tx.commit()
-        bookmarks = session.last_bookmarks()
+    def test_bookmarks_tx_func(self):
+        def work_consume(tx):
+            res = tx.run("RETURN 1 AS n")
+            res.consume()
 
-        self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx4242"])
-        self._server.done()
+        def work_no_consume(tx):
+            tx.run("RETURN 1 AS n")
+
+        def test(mode_, bm_count_, check_bms_pre_query_, consume_):
+            bookmarks = ["bm:%i" % (i + 1) for i in range(bm_count_)]
+            with self._new_server(tx=True, bms_in=bookmarks,
+                                  bm_out="bm:re") as server:
+                with self._new_driver() as driver:
+                    session = driver.session(mode_[0], bookmarks=bookmarks)
+                    if check_bms_pre_query_:
+                        self.assertEqual(sorted(session.last_bookmarks()),
+                                         sorted(bookmarks))
+                    work = work_consume if consume_ else work_no_consume
+                    if mode == "write":
+                        session.write_transaction(work)
+                    else:
+                        session.read_transaction(work)
+                    self.assertEqual(session.last_bookmarks(), ["bm:re"])
+                    session.close()
+                server.done()
+
+        for mode in ("read", "write"):
+            for bm_count in (0, 1, 2):
+                for check_bms_pre_query in (False, True):
+                    for consume in (False, True):
+                        with self.subTest(mode + "_%i_bookmarks%s%s" % (
+                            bm_count,
+                            "_check_bms_pre_query" if check_bms_pre_query
+                            else "",
+                            "_consume" if consume else "_no_consume"
+                        )):
+                            test(mode, bm_count, check_bms_pre_query, consume)
 
     def test_sequence_of_writing_and_reading_tx(self):
         self._server.start(
@@ -122,33 +203,4 @@ class TestBookmarksV4(TestkitTestCase):
         bookmarks = session.last_bookmarks()
         self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx424242"])
 
-        self._server.done()
-
-    def test_send_and_receive_multiple_bookmarks_write_tx(self):
-        self._server.start(
-            path=self.script_path(self.version_dir,
-                                  "send_and_receive_bookmark_write_tx.script"),
-            vars_={
-                "#BOOKMARKS#": '["neo4j:bookmark:v1:tx42", '
-                               '"neo4j:bookmark:v1:tx43", '
-                               '"neo4j:bookmark:v1:tx44", '
-                               '"neo4j:bookmark:v1:tx45", '
-                               '"neo4j:bookmark:v1:tx46"] '
-            }
-        )
-        session = self._driver.session(
-            access_mode="w",
-            bookmarks=[
-                "neo4j:bookmark:v1:tx42", "neo4j:bookmark:v1:tx43",
-                "neo4j:bookmark:v1:tx44", "neo4j:bookmark:v1:tx45",
-                "neo4j:bookmark:v1:tx46"
-            ]
-        )
-        tx = session.begin_transaction()
-        result = tx.run("MATCH (n) RETURN n.name AS name")
-        result.next()
-        tx.commit()
-        bookmarks = session.last_bookmarks()
-
-        self.assertEqual(bookmarks, ["neo4j:bookmark:v1:tx4242"])
         self._server.done()

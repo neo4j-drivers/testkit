@@ -1,0 +1,33 @@
+!: BOLT 3
+
+A: HELLO {"{}": "*"}
+*: RESET
+
+{{
+    C: BEGIN {#BM_IN#, "[mode]": "w"}
+    S: SUCCESS {}
+    C: RUN "RETURN 1 AS n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    {{
+        C: PULL_ALL
+    ----
+        C: DISCARD_ALL
+    }}
+    S: SUCCESS {"type": "w"}
+----
+    C: BEGIN {#BM_IN#, "mode": "r"}
+    S: SUCCESS {}
+    C: RUN "RETURN 1 AS n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    {{
+        C: PULL_ALL
+    ----
+        C: DISCARD_ALL
+    }}
+    S: SUCCESS {"type": "r"}
+}}
+C: COMMIT
+S: SUCCESS {"bookmark": "#BM_OUT#"}
+
+*: RESET
+?: GOODBYE
