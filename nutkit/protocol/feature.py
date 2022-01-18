@@ -26,7 +26,9 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
-    # The driver offers a method to close transaction.
+    # The driver offers a method to close transactions. This method should be
+    # a no-op if the session is already closed. Else, it should roll back
+    # the transaction.
     API_TRANSACTION_CLOSE = "Feature:API:Transaction.Close"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
