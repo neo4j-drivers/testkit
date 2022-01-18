@@ -193,10 +193,6 @@ class TestDataTypes(TestkitTestCase):
         )
 
     def test_should_echo_relationship(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["java"]:
-            self.skipTest("Backend does not serialize relationships.")
-
         def work(tx):
             result = tx.run("CREATE (a)-[r:KNOWS {since:1999}]->(b) "
                             "RETURN a, b, r")
