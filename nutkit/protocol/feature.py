@@ -26,6 +26,8 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The driver offers a method to close transaction.
+    API_TRANSACTION_CLOSE = "Feature:API:Transaction.Close"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -138,6 +140,3 @@ class Feature(Enum):
     # the Result object without further waiting or communication with the
     # server.
     TMP_RESULT_KEYS = "Temporary:ResultKeys"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the TransactionClose request
-    TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"

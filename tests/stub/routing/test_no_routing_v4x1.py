@@ -185,7 +185,7 @@ class NoRoutingV4x1(TestkitTestCase):
                          self._server.address])
         self._server.done()
 
-    @driver_feature(types.Feature.TMP_TRANSACTION_CLOSE)
+    @driver_feature(types.Feature.API_TRANSACTION_CLOSE)
     def test_should_error_on_rollback_failure_using_tx_close(self):
         uri = "bolt://%s" % self._server.address
         self._server.start(
