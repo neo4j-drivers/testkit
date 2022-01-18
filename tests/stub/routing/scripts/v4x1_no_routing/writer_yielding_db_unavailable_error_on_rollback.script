@@ -11,11 +11,10 @@ S: SUCCESS {"fields": ["n"]}
 {{
     C: PULL {"n": 1000}
     S: RECORD [1]
-       SUCCESS {"type": "r"}
 ----
     C: DISCARD {"n": -1}
-    S: SUCCESS {}
 }}
+S: SUCCESS {"type": "r"}
 C: ROLLBACK
 S: FAILURE {"code": "Neo.TransientError.General.DatabaseUnavailable", "message": "Unable to rollback"}
 +: RESET
