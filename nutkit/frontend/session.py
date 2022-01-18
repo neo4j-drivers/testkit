@@ -1,5 +1,4 @@
 from .. import protocol
-from ..backend.backend import DEFAULT_TIMEOUT
 from .result import Result
 from .transaction import Transaction
 
@@ -50,7 +49,7 @@ class Session:
         self._backend.send(req, hooks=hooks)
         x = None
         while True:
-            res = self._backend.receive(timeout=DEFAULT_TIMEOUT, hooks=hooks)
+            res = self._backend.receive(hooks=hooks)
             if isinstance(res, protocol.RetryableTry):
                 tx = Transaction(self._backend, res.id)
                 try:
