@@ -51,25 +51,25 @@ class TestServerSideRouting(TestkitTestCase):
         params = "region=china&policy=my_policy"
         uri = "bolt://%s?%s" % (self._server.address, params)
         self._start_server()
-        try:
+        with self.assertRaises(types.DriverError) as exc:
             driver = Driver(self._backend, uri, self._auth, self._userAgent)
-        except types.DriverError as e:
-            if get_driver_name() in ["java"]:
-                self.assertEqual("java.lang.IllegalArgumentException",
-                                 e.errorType)
-            elif get_driver_name() in ["ruby"]:
-                self.assertEqual("ArgumentError", e.errorType)
-        except types.BackendError:
-            if get_driver_name() in ["javascript"]:
-                # TODO: this shouldn't be communicated as backend error
-                return
-
+        if get_driver_name() in ["java"]:
+            self.assertEqual("java.lang.IllegalArgumentException",
+                             exc.exception.errorType)
+            self.assertIn(uri, exc.exception.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual("ArgumentError", exc.exception.errorType)
+        elif get_driver_name() in ["python"]:
+            self.assertEqual("<class 'ValueError'>", exc.exception.errorType)
+            self.assertIn(uri, exc.exception.msg)
+        elif get_driver_name() in ["javascript"]:
+            self.assertIn(uri, exc.exception.msg)
+        elif get_driver_name() in ["go"]:
+            self.assertIn("bolt", exc.exception.msg.lower())
+            self.assertIn("routing", exc.exception.msg.lower())
+        elif get_driver_name() in ["dotnet"]:
+            self.assertEqual("ArgumentError", exc.exception.errorType)
+            # not asserting on the whole URI because the backend normalizes it.
+            self.assertIn(params, exc.exception.msg)
         else:
-            # Python driver
-            session = driver.session("w", fetch_size=1000)
-            session.run("RETURN 1 AS n")
-            # Otherwise the script will not fail when the protocol is not
-            # present (on backends where run is lazily evaluated)
-            session.close()
-            self._server.done()
-            driver.close()
+            self.fail("no error mapping is defined for %s driver" % driver)
