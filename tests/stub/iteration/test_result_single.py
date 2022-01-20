@@ -15,8 +15,10 @@ class TestResultSingle(IterationTestBase):
         self.assertIsInstance(error, types.DriverError)
         driver = get_driver_name()
         if driver in ["python"]:
-            self.assertEqual("<class 'ToBeDecided'>",
-                             error.errorType)
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ResultNotSingleError'>",
+                error.errorType
+            )
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::NoSuchRecordException",
