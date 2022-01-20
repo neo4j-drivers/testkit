@@ -101,9 +101,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             # has async iterator api
             if get_driver_name() in ["javascript", "dotnet"]:
                 result.next()
-        tx.close()
         # TODO Remove when explicit rollback requirement is removed
-        if get_driver_name() in ["java", "ruby"]:
+        if get_driver_name() in ["java", "ruby", "go"]:
             tx.rollback()
 
         tx = self._session.begin_transaction()
@@ -133,8 +132,6 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             result = tx.run("in time")
             if get_driver_name() in ["javascript", "dotnet"]:
                 result.next()
-
-        tx.close()
 
         # TODO Remove when explicit rollback requirement is removed
         if get_driver_name() in ["java", "ruby"]:
