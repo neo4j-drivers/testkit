@@ -192,13 +192,17 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
-        with self.assertRaises(types.DriverError) as exc:
+
+        # TODO: remove block when all drivers behave the same way
+        if get_driver_name() in ["javascript", "go"]:
             tx = session.begin_transaction()
-            # TODO: remove block when all drivers behave the same way
-            if get_driver_name() in ["javascript", "go"]:
+            with self.assertRaises(types.DriverError) as exc:
                 tx.run("cypher").next()
+        else:
+            # this is what all drivers should do
+            with self.assertRaises(types.DriverError) as exc:
+                session.begin_transaction()
         error_assertion(exc.exception)
-        tx.close()
         session.close()
         driver.close()
 
