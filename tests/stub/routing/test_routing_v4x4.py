@@ -695,11 +695,11 @@ class RoutingV4x4(RoutingBase):
         )
 
     def _should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(  # noqa: E501
-            self, interrupting_writer_script):
+            self, interrupting_writer_script, list_records=False):
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
             self.skipTest("requires investigation")
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -711,8 +711,10 @@ class RoutingV4x4(RoutingBase):
         failed = False
         try:
             # drivers doing eager loading will fail here
-            tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 as n")
             # else they should fail here
+            if list_records:
+                list(result)
             tx.commit()
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
@@ -748,7 +750,8 @@ class RoutingV4x4(RoutingBase):
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_on_pull_using_tx_run(  # noqa: E501
             self):
         self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(  # noqa: E501
-            "writer_tx_with_unexpected_interruption_on_pull.script"
+            "writer_tx_with_unexpected_interruption_on_pull.script",
+            list_records=True
         )
 
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(  # noqa: E501
@@ -823,7 +826,7 @@ class RoutingV4x4(RoutingBase):
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -877,7 +880,7 @@ class RoutingV4x4(RoutingBase):
     def test_should_fail_when_writing_on_writer_that_returns_forbidden_on_read_only_database(  # noqa: E501
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -923,7 +926,7 @@ class RoutingV4x4(RoutingBase):
     def test_should_fail_when_writing_on_writer_that_returns_database_unavailable(  # noqa: E501
             self):
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -971,7 +974,7 @@ class RoutingV4x4(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
             self.skipTest("requires investigation")
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -1033,7 +1036,7 @@ class RoutingV4x4(RoutingBase):
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
             self.skipTest("consume not implemented in backend")
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -1087,7 +1090,7 @@ class RoutingV4x4(RoutingBase):
         if get_driver_name() in ["go"]:
             self.skipTest("requires investigation")
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "java", "dotnet"]:
+        if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
