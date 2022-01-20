@@ -238,12 +238,13 @@ class SessionRun:
     Backend should respond with a Result response or an Error response.
     """
 
-    def __init__(self, sessionId, cypher, params, txMeta=None, timeout=None):
+    def __init__(self, sessionId, cypher, params, txMeta=None, **kwargs):
         self.sessionId = sessionId
         self.cypher = cypher
         self.params = params
         self.txMeta = txMeta
-        self.timeout = timeout
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
 
 
 class SessionReadTransaction:
@@ -253,10 +254,11 @@ class SessionReadTransaction:
     Backend should respond with a RetryableTry response or an Error response.
     """
 
-    def __init__(self, sessionId, txMeta=None, timeout=None):
+    def __init__(self, sessionId, txMeta=None, **kwargs):
         self.sessionId = sessionId
         self.txMeta = txMeta
-        self.timeout = timeout
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
 
 
 class SessionWriteTransaction:
@@ -266,10 +268,11 @@ class SessionWriteTransaction:
     Backend should respond with a RetryableTry response or an Error response.
     """
 
-    def __init__(self, sessionId, txMeta=None, timeout=None):
+    def __init__(self, sessionId, txMeta=None, **kwargs):
         self.sessionId = sessionId
         self.txMeta = txMeta
-        self.timeout = timeout
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
 
 
 class SessionBeginTransaction:
@@ -279,10 +282,11 @@ class SessionBeginTransaction:
     Backend should respond with a Transaction response or an Error response.
     """
 
-    def __init__(self, sessionId, txMeta=None, timeout=None):
+    def __init__(self, sessionId, txMeta=None, **kwargs):
         self.sessionId = sessionId
         self.txMeta = txMeta
-        self.timeout = timeout
+        if "timeout" in kwargs:
+            self.timeout = kwargs["timeout"]
 
 
 class SessionLastBookmarks:

@@ -16,7 +16,7 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
 
     def setUp(self):
         super().setUp()
-        self._server = StubServer(9010)
+        self._server = StubServer(9999)
         self._server.start(
             self.script_path("tx_without_commit_or_rollback.script")
         )
