@@ -207,3 +207,23 @@ Environment variables:
     Username used to connect, defaults to neo4j
   * `TEST_NEO4J_PASS`  
     Password used to connect
+
+## Sending build args for the Driver Docker Image
+
+Testkit is able to send diffent `--build-arg` for building the driver docker image.
+This configuration is done by setting environment variables prefixed by
+`TESTKIT_DRIVER_BUILD_ARG_`, driver build will called with all build args defined
+removing the prefix from the name.
+
+For example:
+
+```console
+export TESTKIT_DRIVER_BUILD_ARG_NODE_VERSION=12
+export TESTKIT_DRIVER_BUILD_ARG_NPM_VERSION=7
+python main.py
+```
+It should result in a build command line like this:
+
+```console
+['docker', 'build', '--build-arg', 'NODE_VERSION=12','--build-arg', 'NPM_VERSION=7', '--tag', 'drivers-javascript:local', '/driver/path/testkit']
+```
