@@ -19,9 +19,9 @@ class Session:
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session but was: %s" % res)
 
-    def run(self, cypher, params=None, tx_meta=None, timeout=None, hooks=None):
+    def run(self, cypher, params=None, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionRun(self._session.id, cypher, params,
-                                  txMeta=tx_meta, timeout=timeout)
+                                  txMeta=tx_meta, **kwargs)
         self._backend.send(req, hooks=hooks)
         while True:
             res = self._backend.receive(hooks=hooks)
@@ -91,23 +91,23 @@ class Session:
             elif isinstance(res, protocol.RetryableDone):
                 return x
 
-    def read_transaction(self, fn, tx_meta=None, timeout=None, hooks=None):
+    def read_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionReadTransaction(
-            self._session.id, txMeta=tx_meta, timeout=timeout
+            self._session.id, txMeta=tx_meta, **kwargs
         )
         return self.process_transaction(req, fn, hooks=hooks)
 
-    def write_transaction(self, fn, tx_meta=None, timeout=None, hooks=None):
+    def write_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionWriteTransaction(
-            self._session.id, txMeta=tx_meta, timeout=timeout
+            self._session.id, txMeta=tx_meta, **kwargs
         )
         return self.process_transaction(req, fn, hooks=hooks)
 
-    def begin_transaction(self, tx_meta=None, timeout=None, hooks=None):
+    def begin_transaction(self, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionBeginTransaction(
-            self._session.id, txMeta=tx_meta, timeout=timeout
+            self._session.id, txMeta=tx_meta, **kwargs
         )
         res = self._backend.send_and_receive(req, hooks=hooks)
         if not isinstance(res, protocol.Transaction):
