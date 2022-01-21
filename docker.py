@@ -198,11 +198,8 @@ def build_and_tag(tag_name, dockerfile_path, cwd=None,
                   log_path=None, args=None):
     if args is None:
         args = {}
-    build_args = list(reduce(lambda a, b: a + b,
-                             map(lambda k: [
-                                 "--build-arg",
-                                 "%s=%s" % (k, args[k])
-                             ], args), []))
+    build_args = [e for k, v in args.items()
+                  for e in ("--build-args", f"{k}={v}")]
 
     if not log_path:
         subprocess.check_call([
