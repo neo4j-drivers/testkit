@@ -695,7 +695,7 @@ class RoutingV4x4(RoutingBase):
         )
 
     def _should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(  # noqa: E501
-            self, interrupting_writer_script, list_records=False):
+            self, interrupting_writer_script, fails_on_next=False):
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
             self.skipTest("requires investigation")
@@ -708,21 +708,26 @@ class RoutingV4x4(RoutingBase):
 
         session = driver.session("w", database=self.adb)
         tx = session.begin_transaction()
-        failed = False
-        try:
-            # drivers doing eager loading will fail here
+        pipelining_driver = self.driver_supports_features(
+            types.Feature.OPT_PULL_PIPELINING
+        )
+        # TODO: It will be removed as soon as JS Driver
+        #       has async iterator api
+        if get_driver_name() in ["javascript"] or not pipelining_driver:
+            fails_on_next = True
+        if fails_on_next:
             result = tx.run("RETURN 1 as n")
-            # else they should fail here
-            if list_records:
-                list(result)
-            tx.commit()
-        except types.DriverError as e:
-            if get_driver_name() in ["java"]:
-                self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
-                    e.errorType
-                )
-            failed = True
+            with self.assertRaises(types.DriverError) as exc:
+                result.next()
+        else:
+            with self.assertRaises(types.DriverError) as exc:
+                tx.run("RETURN 1 as n")
+
+        if get_driver_name() in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.SessionExpiredException",
+                exc.exception.errorType
+            )
         session.close()
 
         self.assertNotIn(self._writeServer1.address,
@@ -732,7 +737,6 @@ class RoutingV4x4(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer1.done()
-        self.assertTrue(failed)
 
     @driver_feature(types.Feature.OPT_PULL_PIPELINING)
     def test_should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(  # noqa: E501
@@ -751,7 +755,7 @@ class RoutingV4x4(RoutingBase):
             self):
         self._should_fail_when_writing_on_unexpectedly_interrupting_writer_using_tx_run(  # noqa: E501
             "writer_tx_with_unexpected_interruption_on_pull.script",
-            list_records=True
+            fails_on_next=True
         )
 
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(  # noqa: E501
