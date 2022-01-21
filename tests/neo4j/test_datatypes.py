@@ -219,10 +219,6 @@ class TestDataTypes(TestkitTestCase):
         ))
 
     def test_should_echo_path(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["java"]:
-            self.skipTest("Backend does not serialize paths.")
-
         def work(tx):
             result = tx.run("CREATE p=(a)-[ab:X]->(b)-[bc:X]->(c) "
                             "RETURN a, b, c, ab, bc, p")

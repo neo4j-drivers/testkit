@@ -2,7 +2,6 @@ from nutkit import protocol as types
 
 from ..shared import (
     driver_feature,
-    get_driver_name,
     TestkitTestCase,
 )
 from .shared import (
@@ -112,8 +111,6 @@ class TestSummary(TestkitTestCase):
 
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
-        if isinstance(summary, dict) and get_driver_name() in ["java"]:
-            self.skipTest("Java 4.2 backend does not support summary")
 
         version = summary.server_info.agent
         self.assertIsInstance(version, str)
@@ -128,8 +125,6 @@ class TestSummary(TestkitTestCase):
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
         summary = self.get_summary("RETURN 1 AS number")
-        if isinstance(summary, dict) and get_driver_name() in ["java"]:
-            self.skipTest("Java 4.2 backend does not support summary")
         self.assertTrue(summary.server_info.address in
                         ["%s:%s" % get_neo4j_resolved_host_and_port(),
                          "%s:%s" % get_neo4j_host_and_port()])
