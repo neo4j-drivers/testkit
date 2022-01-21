@@ -244,7 +244,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                 result.consume()
 
         error_assertion(exc.exception)
-        tx.close()
+        tx.rollback()
         session.close()
         driver.close()
 
