@@ -1,4 +1,3 @@
-from functools import reduce
 import os
 import pathlib
 import re
@@ -199,24 +198,21 @@ def build_and_tag(tag_name, dockerfile_path, cwd=None,
     if args is None:
         args = {}
     build_args = [e for k, v in args.items()
-                  for e in ("--build-args", f"{k}={v}")]
+                  for e in ("--build-arg", f"{k}={v}")]
+
+    cmd = ["docker", "build", *build_args, "--tag", tag_name, dockerfile_path]
+    print(cmd)
 
     if not log_path:
-        subprocess.check_call([
-            "docker", "build", *build_args, "--tag", tag_name, dockerfile_path
-        ], cwd=cwd)
+        subprocess.check_call(cmd, cwd=cwd)
     else:
         clean_tag = re.sub(r"\W", "_", tag_name)
         out_path = os.path.join(log_path, "build_{}_out.log".format(clean_tag))
         err_path = os.path.join(log_path, "build_{}_err.log".format(clean_tag))
         with open(out_path, "w") as out_fd:
             with open(err_path, "w") as err_fd:
-                print(["docker", "build", *build_args,
-                       "--tag", tag_name, dockerfile_path])
-                subprocess.check_call([
-                    "docker", "build", *build_args,
-                    "--tag", tag_name, dockerfile_path
-                ], cwd=cwd, stdout=out_fd, stderr=err_fd)
+                subprocess.check_call(cmd,
+                                      cwd=cwd, stdout=out_fd, stderr=err_fd)
     _created_tags.add(tag_name)
     remove_dangling()
 

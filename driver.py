@@ -55,7 +55,7 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
 
 
 def _get_build_args():
-    return {k.removeprefix(BUILD_ARG_PREFIX): v
+    return {k[len(BUILD_ARG_PREFIX):]: v
             for (k, v) in os.environ.items()
             if k.startswith(BUILD_ARG_PREFIX)}
 
