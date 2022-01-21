@@ -279,7 +279,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 as n")
             result.next()
         error_assertion(exc.exception)
-        tx.close()
+        tx.rollback()
         session.close()
         driver.close()
 
