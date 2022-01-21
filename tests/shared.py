@@ -123,19 +123,6 @@ def get_driver_features(backend):
         features = set()
         for raw in raw_features:
             features.add(protocol.Feature(raw))
-        # TODO: remove this once all drivers manage the TLS feature flags
-        #       themselves.
-        if get_driver_name() in ["dotnet"]:
-            features.add(protocol.Feature.TLS_1_2)
-        if get_driver_name() in ["dotnet"]:
-            features.add((
-                protocol.Feature.BOLT_3_0,
-                protocol.Feature.BOLT_4_0,
-                protocol.Feature.BOLT_4_1,
-                protocol.Feature.BOLT_4_2,
-                protocol.Feature.BOLT_4_3,
-                protocol.Feature.BOLT_4_4,
-            ))
         # TODO: remove this block once all drivers list this feature
         #       they all support the functionality already
         if get_driver_name() in ["go", "dotnet"]:
