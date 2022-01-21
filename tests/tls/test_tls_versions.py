@@ -1,15 +1,12 @@
 import nutkit.protocol as types
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import get_driver_name
 from tests.tls.shared import (
+    TestkitTlsTestCase,
     TlsServer,
-    try_connect,
 )
 
 
-class TestTlsVersions(TestkitTestCase):
+class TestTlsVersions(TestkitTlsTestCase):
 
     def setUp(self):
         super().setUp()
@@ -24,13 +21,12 @@ class TestTlsVersions(TestkitTestCase):
             self._server = None
         super().tearDown()
 
-    def _try_connect(self):
+    def _try_connect_smart(self):
         if self.driver_supports_features(types.Feature.API_SSL_SCHEMES):
-            return try_connect(self._backend, self._server,
-                               "neo4j+s", "thehost")
+            return super()._try_connect(self._server, "neo4j+s", "thehost")
         elif self.driver_supports_features(types.Feature.API_SSL_CONFIG):
-            return try_connect(self._backend, self._server, "neo4j", "thehost",
-                               )
+            return super()._try_connect(self._server, "neo4j", "thehost",
+                                        encrypted=True)
         self.skipTest("Needs support for either of %s" % ", ".join(
             map(lambda f: f.value,
                 (types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG))
@@ -43,22 +39,22 @@ class TestTlsVersions(TestkitTestCase):
         self._server = TlsServer("trustedRoot_thehost",
                                  min_tls="1", max_tls="1")
         if self.driver_supports_features(types.Feature.TLS_1_1):
-            self.assertTrue(self._try_connect())
+            self.assertTrue(self._try_connect_smart())
         else:
-            self.assertFalse(self._try_connect())
+            self.assertFalse(self._try_connect_smart())
 
     def test_1_2(self):
         self._server = TlsServer("trustedRoot_thehost",
                                  min_tls="2", max_tls="2")
         if self.driver_supports_features(types.Feature.TLS_1_2):
-            self.assertTrue(self._try_connect())
+            self.assertTrue(self._try_connect_smart())
         else:
-            self.assertFalse(self._try_connect())
+            self.assertFalse(self._try_connect_smart())
 
     def test_1_3(self):
         self._server = TlsServer("trustedRoot_thehost",
                                  min_tls="3", max_tls="3")
         if self.driver_supports_features(types.Feature.TLS_1_3):
-            self.assertTrue(self._try_connect())
+            self.assertTrue(self._try_connect_smart())
         else:
-            self.assertFalse(self._try_connect())
+            self.assertFalse(self._try_connect_smart())
