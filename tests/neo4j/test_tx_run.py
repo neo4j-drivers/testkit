@@ -150,12 +150,6 @@ class TestTxRun(TestkitTestCase):
             # TODO: remove this block once all languages work
             if get_driver_name() in ["javascript"]:
                 result.next()
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # go requires explicit rollback on a failed transaction but will
-            # complain about the transaction being broken.
-            with self.assertRaises(types.DriverError):
-                tx.rollback()
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
@@ -299,13 +293,7 @@ class TestTxRun(TestkitTestCase):
             if get_driver_name() in ["javascript"]:
                 result.next()
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # go requires explicit rollback on a failed transaction but will
-            # complain about the transaction being broken.
-            with self.assertRaises(types.DriverError):
-                tx.rollback()
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["java", "ruby"]:
+        if get_driver_name() in ["java", "ruby", "go"]:
             # requires explicit rollback on a failed transaction
             tx.rollback()
         tx = self._session1.begin_transaction()
@@ -349,14 +337,6 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as e:
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            # requires explicit termination of transactions
-            tx1.rollback()
-            with self.assertRaises(types.DriverError):
-                tx2.rollback()
-            # does not set exception code
-            return
         self.assertEqual(e.exception.code,
                          "Neo.TransientError.Transaction.LockClientStopped")
         if get_driver_name() in ["python"]:
