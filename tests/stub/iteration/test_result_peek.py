@@ -28,10 +28,9 @@ class TestResultPeek(IterationTestBase):
                 error.errorType
             )
         elif driver in ["go"]:
-            self.assertEqual(
-                "ConnectivityError",
-                error.errorType
-            )
+            self.assertEqual("ConnectivityError", error.errorType)
+        elif driver in ["dotnet"]:
+            self.assertEqual("ServiceUnavailableError", error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
