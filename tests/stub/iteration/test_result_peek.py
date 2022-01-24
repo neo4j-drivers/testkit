@@ -17,10 +17,21 @@ class TestResultPeek(IterationTestBase):
         if driver in ["python"]:
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              error.errorType)
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                error.errorType
+            )
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ServiceUnavailableException",
-                error.errorType)
+                error.errorType
+            )
+        elif driver in ["go"]:
+            self.assertEqual(
+                "ConnectivityError",
+                error.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
