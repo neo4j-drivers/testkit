@@ -21,6 +21,8 @@ class TestResultPeek(IterationTestBase):
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ServiceUnavailableException",
                 error.errorType)
+        elif driver in ["dotnet"]:
+            self.assertEqual("ServiceUnavailableError", error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
