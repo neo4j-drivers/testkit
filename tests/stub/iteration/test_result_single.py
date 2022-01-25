@@ -24,10 +24,7 @@ class TestResultSingle(IterationTestBase):
                 "Neo4j::Driver::Exceptions::NoSuchRecordException",
                 error.errorType)
         elif driver in ["dotnet"]:
-            self.assertEqual(
-                "InvalidOperationException",
-                error.errorType
-            )
+            self.assertEqual("InvalidOperationException", error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

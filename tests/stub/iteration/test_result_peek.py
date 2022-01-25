@@ -29,7 +29,6 @@ class TestResultPeek(IterationTestBase):
             )
         elif driver in ["go"]:
             self.assertEqual("ConnectivityError", error.errorType)
-
         elif driver in ["dotnet"]:
             self.assertEqual("ServiceUnavailableError", error.errorType)
         else:
