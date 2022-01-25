@@ -193,15 +193,15 @@ class TestProtocolVersions(TestkitTestCase):
         ) as session:
             result = session.run("RETURN 1 AS n")
             summary = result.consume()
-            self.assertTrue(summary.server_info.address in
-                            [get_dns_resolved_server_address(self._server),
-                             self._server.address])
+            self.assertIn(summary.server_info.address,
+                          [get_dns_resolved_server_address(self._server),
+                           self._server.address])
         # result should cache summary and still be valid after the session's
         # and the driver's life-time
         summary = result.consume()
-        self.assertTrue(summary.server_info.address in
-                        [get_dns_resolved_server_address(self._server),
-                         self._server.address])
+        self.assertIn(summary.server_info.address,
+                      [get_dns_resolved_server_address(self._server),
+                       self._server.address])
 
     @driver_feature(types.Feature.BOLT_3_0)
     def test_should_reject_server_using_verify_connectivity_bolt_3x0(self):
