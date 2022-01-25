@@ -2815,7 +2815,8 @@ class RoutingV4x4(RoutingBase):
         with self.assertRaises(types.DriverError) as exc:
             session2.begin_transaction()
 
-        if get_driver_name() in ["java"]:
+        driver_name = get_driver_name()
+        if driver_name in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
                 exc.exception.errorType
@@ -2823,6 +2824,9 @@ class RoutingV4x4(RoutingBase):
             self.assertTrue("Unable to acquire connection from the "
                             "pool within configured maximum time of 10ms"
                             in exc.exception.msg)
+        elif driver_name in ["dotnet"]:
+            self.assertEqual("ClientError", exc.exception.errorType)
+            self.assertIn("task was canceled", exc.exception.msg)
 
         session2.close()
 
