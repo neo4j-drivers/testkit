@@ -91,8 +91,8 @@ class TestProtocolVersions(TestkitTestCase):
                         self.assertEqual(summary.server_info.agent,
                                          vars_["#SERVER_AGENT#"])
                     if check_server_address:
-                        self.assertTrue(
-                            summary.server_info.address in
+                        self.assertIn(
+                            summary.server_info.address,
                             [get_dns_resolved_server_address(self._server),
                              self._server.address]
                         )
