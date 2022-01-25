@@ -154,6 +154,17 @@ class CheckMultiDBSupport:
         self.driverId = driverId
 
 
+class CheckDriverIsEncrypted:
+    """
+    Perform a check if the driver is configured to enforce encryption.
+
+    Backend should respond with a DriverIsEncrypted response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
 class ResolverResolutionCompleted:
     """
     Results of a custom address resolution.

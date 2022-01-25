@@ -4,6 +4,9 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a method for driver objects to report if they were
+    # configured with a or without encryption.
+    API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"
@@ -92,6 +95,10 @@ class Feature(Enum):
     #       method ignores the configures fetch size. Your users will
     #       appreciate it <3.
     OPT_RESULT_LIST_FETCH_ALL = "Optimization:ResultListFetchAll"
+
+    # === IMPLEMENTATION DETAILS ===
+    # `Driver.IsEncrypted` can also be called on closed drivers.
+    DETAIL_CLOSED_DRIVER_IS_ENCRYPTED = "Detail:ClosedDriverIsEncrypted"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
