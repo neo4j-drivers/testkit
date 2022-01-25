@@ -95,6 +95,13 @@ class MultiDBSupport:
         self.available = available
 
 
+class DriverIsEncrypted:
+    """Whether the driver is configured to use encrypted connections."""
+
+    def __init__(self, encrypted):
+        self.encrypted = encrypted
+
+
 class Session:
     """Represents a session instance on the backend."""
 
