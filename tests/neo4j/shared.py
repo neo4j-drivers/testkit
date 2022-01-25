@@ -119,6 +119,7 @@ def get_server_info():
 
 
 def cluster_unsafe_test(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if len(args) >= 1 and isinstance(args[0], TestkitTestCase):
             if get_server_info().cluster:

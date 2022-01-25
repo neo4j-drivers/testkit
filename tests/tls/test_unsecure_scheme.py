@@ -2,17 +2,16 @@ import nutkit.protocol as types
 from tests.shared import (
     driver_feature,
     get_driver_name,
-    TestkitTestCase,
 )
 from tests.tls.shared import (
+    TestkitTlsTestCase,
     TlsServer,
-    try_connect,
 )
 
 schemes = ["neo4j", "bolt"]
 
 
-class TestUnsecureScheme(TestkitTestCase):
+class TestUnsecureScheme(TestkitTlsTestCase):
     # Tests URL scheme neo4j/bolt where TLS is not used. The fact that driver
     # can not connect to a TLS server with this configuration is less
     # interesting than the error handling when this happens, the driver backend
@@ -31,12 +30,18 @@ class TestUnsecureScheme(TestkitTestCase):
             self._server = None
         super().tearDown()
 
+    def test_driver_is_not_encrypted(self):
+        for scheme in schemes:
+            with self.subTest(scheme):
+                self._test_reports_encrypted(False, scheme)
+
     def test_secure_server(self):
         for scheme in schemes:
             with self.subTest(scheme):
                 self._server = TlsServer("trustedRoot_thehost")
-                self.assertFalse(try_connect(self._backend, self._server,
-                                             scheme, "thehost"))
+                self.assertFalse(self._try_connect(
+                    self._server, scheme, "thehost"
+                ))
             self._server.reset()
 
     @driver_feature(types.Feature.API_SSL_CONFIG)
@@ -44,7 +49,7 @@ class TestUnsecureScheme(TestkitTestCase):
         for scheme in schemes:
             with self.subTest(scheme):
                 self._server = TlsServer("trustedRoot_thehost")
-                self.assertFalse(try_connect(self._backend, self._server,
-                                             scheme, "thehost",
-                                             encrypted=False))
+                self.assertFalse(self._try_connect(
+                    self._server, scheme, "thehost", encrypted=False
+                ))
             self._server.reset()

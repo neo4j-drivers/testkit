@@ -192,17 +192,17 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
-        with self.assertRaises(types.DriverError) as exc:
+
+        # TODO: remove block when all drivers behave the same way
+        if get_driver_name() in ["javascript", "go"]:
             tx = session.begin_transaction()
-            # TODO: remove block when all drivers behave the same way
-            if get_driver_name() in ["javascript", "go"]:
+            with self.assertRaises(types.DriverError) as exc:
                 tx.run("cypher").next()
+        else:
+            # this is what all drivers should do
+            with self.assertRaises(types.DriverError) as exc:
+                session.begin_transaction()
         error_assertion(exc.exception)
-        if get_driver_name() in ["go"]:
-            with self.assertRaises(types.DriverError):
-                # session will throw upon closure if there is a pending tx
-                # tx will throw the last seen error upon closure
-                tx.close()
         session.close()
         driver.close()
 
@@ -244,11 +244,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                 result.consume()
 
         error_assertion(exc.exception)
-        if get_driver_name() in ["go"]:
-            # session will throw upon closure if there is a pending tx
-            # tx will throw the last seen error upon closure
-            with self.assertRaises(types.DriverError):
-                tx.close()
+        tx.rollback()
         session.close()
         driver.close()
 
@@ -283,11 +279,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 as n")
             result.next()
         error_assertion(exc.exception)
-        if get_driver_name() in ["go"]:
-            # session will throw upon closure if there is a pending tx
-            # tx will throw the last seen error upon closure
-            with self.assertRaises(types.DriverError):
-                tx.close()
+        tx.rollback()
         session.close()
         driver.close()
 
