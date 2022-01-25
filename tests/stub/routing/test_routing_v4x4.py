@@ -295,6 +295,8 @@ class RoutingV4x4(RoutingBase):
                     "Neo4j::Driver::Exceptions::SessionExpiredException",
                     e.errorType
                 )
+            elif get_driver_name() in ["dotnet"]:
+                self.assertEqual("SessionExpiredError", e.errorType)
             failed = True
         session.close()
         driver.close()
@@ -347,6 +349,11 @@ class RoutingV4x4(RoutingBase):
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::SessionExpiredException",
+                exc.exception.errorType
+            )
+        elif get_driver_name() in ["dotnet"]:
+            self.assertEqual(
+                "ServiceUnavailableError",
                 exc.exception.errorType
             )
         self._routingServer1.done()
@@ -2815,8 +2822,7 @@ class RoutingV4x4(RoutingBase):
         with self.assertRaises(types.DriverError) as exc:
             session2.begin_transaction()
 
-        driver_name = get_driver_name()
-        if driver_name in ["java"]:
+        if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
                 exc.exception.errorType
@@ -2824,9 +2830,12 @@ class RoutingV4x4(RoutingBase):
             self.assertTrue("Unable to acquire connection from the "
                             "pool within configured maximum time of 10ms"
                             in exc.exception.msg)
-        elif driver_name in ["dotnet"]:
-            self.assertEqual("ClientError", exc.exception.errorType)
-            self.assertIn("task was canceled", exc.exception.msg)
+        elif get_driver_name() in ["dotnet"]:
+            self.assertEqual("ClientException", exc.exception.errorType)
+            self.assertIn(
+                "Failed to obtain a connection from pool",
+                exc.exception.msg
+            )
 
         session2.close()
 
