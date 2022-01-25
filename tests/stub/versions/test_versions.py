@@ -91,9 +91,10 @@ class TestProtocolVersions(TestkitTestCase):
                         self.assertEqual(summary.server_info.agent,
                                          vars_["#SERVER_AGENT#"])
                     if check_server_address:
-                        self.assertEqual(
-                            summary.server_info.address,
-                            get_dns_resolved_server_address(self._server)
+                        self.assertTrue(
+                            summary.server_info.address in
+                            [get_dns_resolved_server_address(self._server),
+                             self._server.address]
                         )
                 else:
                     # Otherwise the script will not fail when the protocol is
@@ -160,11 +161,10 @@ class TestProtocolVersions(TestkitTestCase):
                     #               potentially more differences
                     continue
                 if reject and get_driver_name() in ["javascript", "go",
-                                                    "java", "ruby"]:
+                                                    "ruby"]:
                     # skip subtest: Does not reject server's agent string
                     continue
-                if agent == "Neo4j/Funky!" and get_driver_name() in ["java",
-                                                                     "ruby"]:
+                if agent == "Neo4j/Funky!" and get_driver_name() in ["ruby"]:
                     # skip subtest: Tries to parse the server agent
                     continue
                 if not self.driver_supports_bolt(version):
@@ -175,7 +175,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_address_in_summary(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+        if get_driver_name() in ["javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in ("4x3", "4x2", "4x1", "4x0", "3"):
             if not self.driver_supports_bolt(version):
@@ -185,7 +185,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_obtain_summary_twice(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
+        if get_driver_name() in ["javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         with self._get_session(
             self.script_path("v4x4_return_1.script"),
@@ -193,13 +193,15 @@ class TestProtocolVersions(TestkitTestCase):
         ) as session:
             result = session.run("RETURN 1 AS n")
             summary = result.consume()
-            self.assertEqual(summary.server_info.address,
-                             get_dns_resolved_server_address(self._server))
+            self.assertTrue(summary.server_info.address in
+                            [get_dns_resolved_server_address(self._server),
+                             self._server.address])
         # result should cache summary and still be valid after the session's
         # and the driver's life-time
         summary = result.consume()
-        self.assertEqual(summary.server_info.address,
-                         get_dns_resolved_server_address(self._server))
+        self.assertTrue(summary.server_info.address in
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address])
 
     @driver_feature(types.Feature.BOLT_3_0)
     def test_should_reject_server_using_verify_connectivity_bolt_3x0(self):
@@ -211,7 +213,7 @@ class TestProtocolVersions(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_0)
     def test_should_reject_server_using_verify_connectivity_bolt_4x0(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
             version="4.0"
@@ -220,7 +222,7 @@ class TestProtocolVersions(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_1)
     def test_should_reject_server_using_verify_connectivity_bolt_4x1(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
             version="4.1"
@@ -229,7 +231,7 @@ class TestProtocolVersions(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_2)
     def test_should_reject_server_using_verify_connectivity_bolt_4x2(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
             version="4.2"
@@ -238,7 +240,7 @@ class TestProtocolVersions(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_3)
     def test_should_reject_server_using_verify_connectivity_bolt_4x3(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
             version="4.3"
@@ -247,7 +249,7 @@ class TestProtocolVersions(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_should_reject_server_using_verify_connectivity_bolt_4x4(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["java", "dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
             version="4.4"
