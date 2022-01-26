@@ -59,9 +59,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_rollback_tx_on_session_close_unfinished_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Sends RESET instead of ROLLBACK.")
         self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
@@ -76,9 +73,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_rollback_tx_on_session_close_consumed_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
@@ -94,9 +88,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_rollback_tx_on_session_close_finished_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._create_direct_driver()
         self._server1.start(
             path=self.script_path("tx_pull_then_rollback.script")

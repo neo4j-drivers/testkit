@@ -41,9 +41,6 @@ class TestSessionRun(TestkitTestCase):
         self._server.done()
 
     def test_discard_on_session_close_unfinished_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
