@@ -26,6 +26,7 @@ import signal
 import sys
 import threading
 import time
+import traceback
 
 from . import BoltStubService
 from .parsing import (
@@ -107,6 +108,7 @@ def main():
             service.start()
         except Exception as e:
             log.error(" ".join(map(str, e.args)))
+            log.error(traceback.format_exc())
             log.error("\r\n")
             return exit_(99)
 

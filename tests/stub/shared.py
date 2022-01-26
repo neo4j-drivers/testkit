@@ -12,6 +12,7 @@ from queue import (
 )
 import re
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -89,6 +90,13 @@ class StubServer:
                 f.flush()
                 os.fsync(f)
             self._script_path = path
+
+        socket_check = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            if socket_check.connect_ex((self.host, self.port)) == 0:
+                raise OSError(f"port in use {self.host}:{self.port}")
+        finally:
+            socket_check.close()
 
         self._process = subprocess.Popen(
             [
