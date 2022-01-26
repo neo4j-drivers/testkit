@@ -20,6 +20,7 @@
 
 from copy import deepcopy
 from logging import getLogger
+import os
 from socketserver import (
     BaseRequestHandler,
     TCPServer,
@@ -160,7 +161,13 @@ class BoltStubService:
             self.server.server_close()
 
     def _close_socket(self):
-        self.server.socket.close()
+        if os.name == "nt":
+            try:
+                self.server.socket.detach()
+            except OSError as err:
+                pass
+        else:
+            self.server.socket.close()
 
     def _stop_server(self):
         if self.script.context.restarting or self.script.context.concurrent:

@@ -29,6 +29,7 @@ else:
     INTERRUPT_EXIT_CODE = -signal.SIGINT
     POPEN_EXTRA_KWARGS = {}
 
+clean_ports = set()
 
 class StubServerError(Exception):
     pass
@@ -91,12 +92,14 @@ class StubServer:
                 os.fsync(f)
             self._script_path = path
 
-        socket_check = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            if socket_check.connect_ex((self.host, self.port)) == 0:
-                raise OSError(f"port in use {self.host}:{self.port}")
-        finally:
-            socket_check.close()
+        if f"{self.host}:{self.port}" not in clean_ports:
+            socket_check = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                if socket_check.connect_ex((self.host, self.port)) == 0:
+                    raise OSError(f"port in use {self.host}:{self.port}")
+                clean_ports.add(f"{self.host}:{self.port}")
+            finally:
+                socket_check.close()
 
         self._process = subprocess.Popen(
             [
