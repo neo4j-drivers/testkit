@@ -44,29 +44,29 @@ class TestIterationSessionRun(TestkitTestCase):
         self.assertEqual(expected_error, got_error)
 
     # Last fetched batch is a full batch
-    @driver_feature(types.Feature.BOLT_4_0)
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_full_batch(self):
         self._run(2, "pull_2_end_full_batch.script",
                   ["1", "2", "3", "4", "5", "6"])
 
     # Last fetched batch is half full (or more important not full)
-    @driver_feature(types.Feature.BOLT_4_0)
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_half_batch(self):
         self._run(2, "pull_2_end_half_batch.script", ["1", "2", "3", "4", "5"])
 
     # Last fetched batch is empty
-    @driver_feature(types.Feature.BOLT_4_0)
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_empty_batch(self):
         self._run(2, "pull_2_end_empty_batch.script", ["1", "2", "3", "4"])
 
     # Last batch returns an error
-    @driver_feature(types.Feature.BOLT_4_0)
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_error(self):
         self._run(2, "pull_2_end_error.script", ["1", "2", "3", "4", "5"],
                   expected_error=True)
 
     # Support -1, not batched at all
-    @driver_feature(types.Feature.BOLT_4_0)
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_all(self):
         self._run(-1, "pull_all.script", ["1", "2", "3", "4", "5", "6"])
 

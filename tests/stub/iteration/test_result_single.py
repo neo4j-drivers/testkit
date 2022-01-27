@@ -9,7 +9,7 @@ from ._common import IterationTestBase
 
 class TestResultSingle(IterationTestBase):
 
-    required_features = types.Feature.BOLT_4_0,
+    required_features = types.Feature.BOLT_4_4,
 
     def _assert_not_exactly_one_record_error(self, error):
         self.assertIsInstance(error, types.DriverError)

@@ -117,10 +117,6 @@ class TestProtocolVersions(TestkitTestCase):
     def test_supports_bolt_3x0(self):
         self._run("3")
 
-    @driver_feature(types.Feature.BOLT_4_0)
-    def test_supports_bolt_4x0(self):
-        self._run("4x0")
-
     @driver_feature(types.Feature.BOLT_4_1)
     def test_supports_bolt_4x1(self):
         self._run("4x1")
@@ -142,14 +138,14 @@ class TestProtocolVersions(TestkitTestCase):
         self._run("5x0")
 
     def test_server_version(self):
-        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version):
                 self._run(version, check_version=True)
 
     def test_server_agent(self):
-        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "3"):
             for agent, reject in (
                 ("Neo4j/4.3.0", False),
                 ("Neo4j/4.1.0", False),
@@ -181,7 +177,7 @@ class TestProtocolVersions(TestkitTestCase):
         # TODO: remove block when all drivers support the address field
         if get_driver_name() in ["javascript", "go", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
-        for version in ("4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("4x4", "4x3", "4x2", "4x1", "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version):
@@ -213,15 +209,6 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(version="3")
-
-    @driver_feature(types.Feature.BOLT_4_0)
-    def test_should_reject_server_using_verify_connectivity_bolt_4x0(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="4.0"
-        )
 
     @driver_feature(types.Feature.BOLT_4_1)
     def test_should_reject_server_using_verify_connectivity_bolt_4x1(self):

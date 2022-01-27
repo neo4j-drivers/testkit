@@ -6,7 +6,7 @@ from ._common import IterationTestBase
 
 class TestResultList(IterationTestBase):
 
-    required_features = (types.Feature.BOLT_4_0,
+    required_features = (types.Feature.BOLT_4_4,
                          types.Feature.API_RESULT_LIST)
 
     def _assert_connection_error(self, error):
