@@ -2202,6 +2202,11 @@ class RoutingV4x4(RoutingBase):
                 "Neo4j::Driver::Exceptions::SecurityException",
                 exc.exception.errorType
             )
+        elif get_driver_name() in ["dotnet"]:
+            self.assertEqual(
+                "ClientError",
+                exc.exception.errorType
+            )
         self.assertEqual(
             "Neo.ClientError.Security.MadeUpSecurityError",
             exc.exception.code)
