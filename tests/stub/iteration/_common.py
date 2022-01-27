@@ -21,7 +21,7 @@ class IterationTestBase(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken(scheme="basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path("v4x0", script_fn),
+        self._server.start(path=self.script_path("v4x4", script_fn),
                            vars_=vars_)
         try:
             session = driver.session("w", fetch_size=fetch_size)

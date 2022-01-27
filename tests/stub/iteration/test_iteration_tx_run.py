@@ -19,7 +19,7 @@ class TestIterationTxRun(TestkitTestCase):
         super().tearDown()
 
     def _iterate(self, n, script_fn, expected_sequence, expected_error=False,
-                 protocol_version="v4x0"):
+                 protocol_version="v4x4"):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
@@ -80,7 +80,7 @@ class TestIterationTxRun(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path("v4x0",
+        self._server.start(path=self.script_path("v4x4",
                                                  "tx_pull_1_nested.script"))
         session = driver.session("w", fetch_size=1)
         tx = session.begin_transaction()

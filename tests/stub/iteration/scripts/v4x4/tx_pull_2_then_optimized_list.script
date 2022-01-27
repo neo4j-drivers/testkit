@@ -1,8 +1,9 @@
-!: BOLT 4
-
+!: BOLT 4.4
 A: HELLO {"{}": "*"}
 *: RESET
 
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["n"]}
 
@@ -30,7 +31,10 @@ S: RECORD [1]
        RECORD [4]
        RECORD [5]
 }}
-S: SUCCESS {"type": "w"}
+S: SUCCESS {}
+
+C: COMMIT
+S: SUCCESS {"bookmark": "bm"}
 
 *: RESET
 ?: GOODBYE

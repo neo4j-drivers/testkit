@@ -19,7 +19,7 @@ class TestIterationSessionRun(TestkitTestCase):
         super().tearDown()
 
     def _run(self, n, script_fn, expected_sequence, expected_error=False,
-             protocol_version="v4x0"):
+             protocol_version="v4x4"):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
@@ -96,7 +96,7 @@ class TestIterationSessionRun(TestkitTestCase):
                 self.assertEqual(self._server.count_requests("DISCARD"), 0)
                 session.close()
                 self._server.done()
-                if (version_ == "v4x0"
+                if (version_ == "v4x4"
                         and get_driver_name() not in ["java", "javascript",
                                                       "ruby"]):
                     # assert only JAVA and JS pulls results eagerly.
@@ -106,11 +106,11 @@ class TestIterationSessionRun(TestkitTestCase):
                 self._server.reset()
 
         for version, script in (("v3", "pull_all_any_mode.script"),
-                                ("v4x0", "pull_2_then_discard.script")):
+                                ("v4x4", "pull_2_then_discard.script")):
             if not self.driver_supports_bolt(version):
                 continue
             # TODO: remove this block once all drivers work
-            if version == "v4x0" and get_driver_name() in ["javascript"]:
+            if version == "v4x4" and get_driver_name() in ["javascript"]:
                 # driver would eagerly pull all available results in the
                 # background
                 continue
