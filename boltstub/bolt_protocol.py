@@ -17,7 +17,7 @@ def get_bolt_protocol(version):
         raise BoltMissingVersionError()
     for sub in recursive_subclasses(BoltProtocol):
         if (version == sub.protocol_version
-                or version in sub.version_aliases):
+            or version in sub.version_aliases):
             return sub
     raise BoltUnknownVersionError(
         "unsupported bolt version {}".format(version)
@@ -123,7 +123,6 @@ class BoltProtocol:
 
 
 class Bolt1Protocol(BoltProtocol):
-
     protocol_version = (1, 0)
     version_aliases = {(1,), (3, 0), (3, 1), (3, 2), (3, 3)}
     # allow the server to negotiate other bolt versions
@@ -167,7 +166,6 @@ class Bolt1Protocol(BoltProtocol):
 
 
 class Bolt2Protocol(Bolt1Protocol):
-
     protocol_version = (2, 0)
     version_aliases = {(2,), (3, 4)}
     # allow the server to negotiate other bolt versions
@@ -186,7 +184,6 @@ class Bolt2Protocol(Bolt1Protocol):
 
 
 class Bolt3Protocol(Bolt2Protocol):
-
     protocol_version = (3, 0)
     version_aliases = {(3,), (3, 5), (3, 6)}
     # allow the server to negotiate other bolt versions
@@ -226,7 +223,6 @@ class Bolt3Protocol(Bolt2Protocol):
 
 
 class Bolt4x0Protocol(Bolt3Protocol):
-
     protocol_version = (4, 0)
     version_aliases = {(4,)}
     # allow the server to negotiate other bolt versions
@@ -274,7 +270,6 @@ class Bolt4x0Protocol(Bolt3Protocol):
 
 
 class Bolt4x1Protocol(Bolt4x0Protocol):
-
     protocol_version = (4, 1)
     version_aliases = set()
     # allow the server to negotiate other bolt versions
@@ -315,7 +310,6 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
 
 
 class Bolt4x2Protocol(Bolt4x1Protocol):
-
     protocol_version = (4, 2)
     version_aliases = set()
     # allow the server to negotiate other bolt versions
@@ -325,7 +319,6 @@ class Bolt4x2Protocol(Bolt4x1Protocol):
 
 
 class Bolt4x3Protocol(Bolt4x2Protocol):
-
     protocol_version = (4, 3)
     version_aliases = set()
     # allow the server to negotiate other bolt versions
@@ -364,10 +357,18 @@ class Bolt4x3Protocol(Bolt4x2Protocol):
 
 
 class Bolt4x4Protocol(Bolt4x3Protocol):
-
     protocol_version = (4, 4)
     version_aliases = set()
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
     server_agent = "Neo4j/4.4.0"
+
+
+class Bolt5x0Protocol(Bolt4x4Protocol):
+    protocol_version = (5, 0)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    server_agent = "Neo4j/5.0.0"

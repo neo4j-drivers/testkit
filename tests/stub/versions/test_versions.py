@@ -137,15 +137,19 @@ class TestProtocolVersions(TestkitTestCase):
     def test_supports_bolt4x4(self):
         self._run("4x4")
 
+    @driver_feature(types.Feature.BOLT_5_0)
+    def test_supports_bolt5x0(self):
+        self._run("5x0")
+
     def test_server_version(self):
-        for version in ("4x4", "4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "4x0", "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version):
                 self._run(version, check_version=True)
 
     def test_server_agent(self):
-        for version in ("4x4", "4x3", "4x2", "4x1", "4x0", "3"):
+        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "4x0", "3"):
             for agent, reject in (
                 ("Neo4j/4.3.0", False),
                 ("Neo4j/4.1.0", False),

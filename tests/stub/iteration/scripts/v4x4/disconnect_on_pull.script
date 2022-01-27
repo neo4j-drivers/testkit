@@ -1,5 +1,4 @@
-!: BOLT 4
-
+!: BOLT 4.4
 A: HELLO {"{}": "*"}
 *: RESET
 C: RUN "RETURN 1 AS n" {} {}
