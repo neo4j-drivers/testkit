@@ -1,8 +1,8 @@
-!: BOLT 4.3
+!: BOLT 4.4
 !: ALLOW RESTART
 
 C: HELLO {"{}": "*"}
-S: SUCCESS {"server": "Neo4j/4.3.1", "hints": {"connection.recv_timeout_seconds": 1}, "connection_id": "bolt-2"}
+S: SUCCESS {"server": "Neo4j/4.4.1", "hints": {"connection.recv_timeout_seconds": 1}, "connection_id": "bolt-2"}
 ?: RESET
 C: BEGIN {}
 S: SUCCESS {}

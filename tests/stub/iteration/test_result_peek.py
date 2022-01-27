@@ -9,7 +9,7 @@ from ._common import IterationTestBase
 
 class TestResultPeek(IterationTestBase):
 
-    required_features = types.Feature.BOLT_4_0,
+    required_features = types.Feature.BOLT_4_4,
 
     def _assert_connection_error(self, error):
         self.assertIsInstance(error, types.DriverError)
