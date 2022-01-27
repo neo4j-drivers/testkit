@@ -31,6 +31,8 @@ class TestResultPeek(IterationTestBase):
             self.assertEqual("ConnectivityError", error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("ServiceUnavailableError", error.errorType)
+        elif driver in ["javascript"]:
+            self.assertEqual("ServiceUnavailable", error.code)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
