@@ -46,10 +46,14 @@ def get_ip_addresses(exclude_loopback=True):
 
     ips = []
     for adapter in ifaddr.get_adapters():
-        if exclude_loopback:
-            name = adapter.nice_name.lower()
-            if name == "lo" or "loopback" in name:
-                continue
+        name = adapter.nice_name.lower()
+        if ("virtual" in name
+                or "docker" in name
+                or name.startswith("br-")
+                or name.startswith("veth")):
+            continue
+        if exclude_loopback and name == "lo" or "loopback" in name:
+            continue
         address = pick_address(adapter)
         if address:
             ips.append(address)
