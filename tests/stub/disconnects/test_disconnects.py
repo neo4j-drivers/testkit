@@ -13,7 +13,7 @@ CUSTOM_USER_AGENT = "Modesty"
 
 class TestDisconnects(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_3,
+    required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
         super().setUp()
