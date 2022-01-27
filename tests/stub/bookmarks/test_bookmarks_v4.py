@@ -11,7 +11,7 @@ from tests.stub.shared import StubServer
 # Tests bookmarks from transaction
 class TestBookmarksV4(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_0,
+    required_features = types.Feature.BOLT_4_4,
 
     version_dir = "v4"
 

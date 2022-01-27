@@ -13,7 +13,7 @@ from tests.stub.shared import StubServer
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
     required_features = (
-        types.Feature.BOLT_4_3,
+        types.Feature.BOLT_4_4,
         types.Feature.CONF_HINT_CON_RECV_TIMEOUT
     )
 
