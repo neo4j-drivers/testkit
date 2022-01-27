@@ -1,5 +1,4 @@
-!: BOLT 4
-
+!: BOLT 4.4
 A: HELLO {"{}": "*"}
 *: RESET
 C: RUN "RETURN 1 AS n" {} {}
@@ -13,6 +12,8 @@ S: RECORD ["3"]
    RECORD ["4"]
    SUCCESS {"has_more": true}
 C: PULL { "n": 2 }
-S: SUCCESS {"type": "w"}
+S: RECORD ["5"]
+   RECORD ["6"]
+   SUCCESS {"type": "w"}
 *: RESET
 ?: GOODBYE

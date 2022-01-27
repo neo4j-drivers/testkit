@@ -1,5 +1,4 @@
-!: BOLT 4
-
+!: BOLT 4.4
 A: HELLO {"{}": "*"}
 *: RESET
 C: RUN "RETURN 1 AS n" {} {}
@@ -14,6 +13,6 @@ S: RECORD ["3"]
    SUCCESS {"has_more": true}
 C: PULL { "n": 2 }
 S: RECORD ["5"]
-   FAILURE {"code": "Neo.TransientError.Database.DatabaseUnavailable", "message": "<whatever>"}
+   SUCCESS {"type": "w"}
 *: RESET
 ?: GOODBYE
