@@ -1,0 +1,13 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"db": "adb"}
+S: FAILURE #FAILURE#
+{?
+    # Drivers might pipeline RUN and PULL
+    C: PULL {"n": 1000}
+    S: IGNORED
+?}
+*: RESET
+?: GOODBYE

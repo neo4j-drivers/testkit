@@ -1,0 +1,12 @@
+!: BOLT #VERSION#
+!: ALLOW RESTART
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+{+
+    C: ROUTE #ROUTINGCTX# [] {"db": "adb"}
+    S: SUCCESS {"rt": { "ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010", "#HOST#:9011"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]}}
+    *: RESET
++}
+?: GOODBYE

@@ -1,0 +1,5 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+*: RESET
+?: GOODBYE
