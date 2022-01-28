@@ -20,7 +20,6 @@
 
 from copy import deepcopy
 from logging import getLogger
-import os
 from socketserver import (
     BaseRequestHandler,
     TCPServer,
@@ -167,8 +166,7 @@ class BoltStubService:
         try:
             self.server.serve_forever()
         except OSError:
-            msg = ("caught OS Error in stub._server_forever" +
-                   "this may be expected")
+            msg = "caught OS Error in stub._server_forever"
             print(msg)
 
     def _stop_server(self):
