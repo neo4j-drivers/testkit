@@ -167,7 +167,9 @@ class BoltStubService:
         try:
             self.server.serve_forever()
         except OSError:
-            print("caught OS Error")
+            msg = ("caught OS Error in stub._server_forever" +
+                   "this may be expected")
+            print(msg)
 
     def _stop_server(self):
         if self.script.context.restarting or self.script.context.concurrent:
