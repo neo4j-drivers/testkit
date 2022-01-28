@@ -175,9 +175,9 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_address_in_summary(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["javascript", "go", "dotnet"]:
+        if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
-        for version in ("4x4", "4x3", "4x2", "4x1", "3"):
+        for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version):
@@ -185,7 +185,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_obtain_summary_twice(self):
         # TODO: remove block when all drivers support the address field
-        if get_driver_name() in ["javascript", "go", "dotnet"]:
+        if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         with self._get_session(
             self.script_path("v4x4_return_1.script"),
@@ -244,6 +244,15 @@ class TestProtocolVersions(TestkitTestCase):
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
             version="4.4"
+        )
+
+    @driver_feature(types.Feature.BOLT_5_0)
+    def test_should_reject_server_using_verify_connectivity_bolt_5x0(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="5.0"
         )
 
     def _test_should_reject_server_using_verify_connectivity(self, version):
