@@ -4,7 +4,6 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
-    get_server_info,
 )
 from tests.shared import (
     get_driver_name,
@@ -240,29 +239,3 @@ class TestBookmarks(TestkitTestCase):
 
         self.assertEqual(types.CypherInt(1), node_count1)
         self.assertEqual(types.CypherInt(2), node_count2)
-
-    def test_does_not_use_read_connection_for_write(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
-            self.skipTest("Requires address field in summary")
-        if not get_server_info().cluster:
-            self.skipTest("Not applicable to single node")
-
-        test_execution_id = uuid4().hex
-
-        def read(tx):
-            return tx.run("RETURN 1").consume()
-
-        def write(tx):
-            return tx.run(
-                "CREATE (t:RWConnectionTest {testId:$uuid})",
-                params={"uuid": types.CypherString(test_execution_id)}
-            ).consume()
-
-        self._session = self._driver.session("w")
-
-        read_summary = self._session.read_transaction(read)
-        create_summary = self._session.write_transaction(write)
-
-        self.assertNotEqual(read_summary.server_info.address,
-                            create_summary.server_info.address)
