@@ -155,19 +155,19 @@ class BoltStubService:
 
     def start(self):
         if self.script.context.restarting or self.script.context.concurrent:
-            self.server.serve_forever()
+            self._serve_forever()
         else:
             self.server.handle_request()
             self.server.server_close()
 
     def _close_socket(self):
-        if os.name == "nt":
-            try:
-                self.server.socket.detach()
-            except OSError as err:
-                pass
-        else:
-            self.server.socket.close()
+        self.server.socket.close()
+
+    def _serve_forever(self):
+        try:
+            self.server.serve_forever()
+        except OSError:
+            print("caught OS Error")
 
     def _stop_server(self):
         if self.script.context.restarting or self.script.context.concurrent:
