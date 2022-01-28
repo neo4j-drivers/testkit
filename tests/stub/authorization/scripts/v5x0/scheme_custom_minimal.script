@@ -1,0 +1,13 @@
+!: BOLT 4.3
+
+A: HELLO {"user_agent": "*", "scheme": "wild-scheme", "principal": "I See Something", "credentials": "You Don't See!", "realm": "And it's blue.", "parameters": {"sky?": "no", "my eyes": 0.1, "da be dee da be daa?": true}}
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE
