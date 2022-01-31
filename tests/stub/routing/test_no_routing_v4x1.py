@@ -28,8 +28,11 @@ class NoRoutingV4x1(TestkitTestCase):
     def get_vars(self):
         # TODO: "#ROUTING#": "" is the correct way to go
         #       (minimal data transmission)
+        optimized = self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
+
         routing = ""
-        if get_driver_name() in ["dotnet"]:
+        if get_driver_name() in ["dotnet"] and not optimized:
             routing = ', "routing": null'
         return {
             "#VERSION#": self.bolt_version,
