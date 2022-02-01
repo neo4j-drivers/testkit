@@ -293,7 +293,10 @@ class TestDisconnects(TestkitTestCase):
         }
 
     def get_extra_hello_props(self):
-        if self._driver_name == "dotnet":
+        optimized = self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
+
+        if self._driver_name == "dotnet" and not optimized:
             return ', "routing": null'
         else:
             return ""

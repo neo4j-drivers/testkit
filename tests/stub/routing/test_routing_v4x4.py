@@ -2855,3 +2855,34 @@ class RoutingV4x4(RoutingBase):
             if attempts == 10:
                 self.fail("Timeout out waiting for idle connections")
             time.sleep(.1)
+
+    def test_does_not_use_read_connection_for_write(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
+            self.skipTest("Requires address field in summary")
+
+        def read(tx):
+            result = tx.run("RETURN 1 as n")
+            list(result)  # exhaust the result
+            return result.consume()
+
+        def write(tx):
+            result = tx.run("RETURN 1 as n")
+            list(result)  # exhaust the result
+            return result.consume()
+
+        self.start_server(self._routingServer1,
+                          "router_adb_multi_no_bookmarks.script")
+        self.start_server(self._writeServer1, "writer_tx.script")
+        self.start_server(self._readServer1, "reader_tx.script")
+
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+
+        session = driver.session("w", database=self.adb)
+
+        read_summary = session.read_transaction(read)
+        write_summary = session.write_transaction(write)
+
+        self.assertNotEqual(read_summary.server_info.address,
+                            write_summary.server_info.address)
