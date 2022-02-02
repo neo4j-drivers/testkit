@@ -335,7 +335,11 @@ class SummaryQuery:
 
 
 class Bookmarks:
-    """Represents an array of bookmarks."""
+    """
+    Represents an array of bookmarks.
+
+    `bookmarks` is an array of bookmarks (str).
+    """
 
     def __init__(self, bookmarks):
         self.bookmarks = bookmarks
