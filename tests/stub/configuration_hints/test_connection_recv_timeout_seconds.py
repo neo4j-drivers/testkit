@@ -46,7 +46,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
                 e.errorType)
         elif get_driver_name() in ["go"]:
-            self.assertIn("i/o timeout", e.msg)
+            self.assertIn("timeout", e.msg.lower())
+            self.assertEqual("ConnectivityError", e.errorType)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ConnectionReadTimeoutException",
