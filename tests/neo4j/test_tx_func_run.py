@@ -1,4 +1,4 @@
-from nutkit.frontend.session import ApplicationCodeError
+from nutkit.frontend import ApplicationCodeError
 import nutkit.protocol as types
 from tests.neo4j.shared import (
     get_driver,
@@ -127,10 +127,6 @@ class TestTxFuncRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         expected_exc = types.FrontendError
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            expected_exc = types.DriverError
-        if get_driver_name() in ["dotnet"]:
-            expected_exc = types.BackendError
         with self.assertRaises(expected_exc):
             self._session1.write_transaction(run)
         bookmarks = self._session1.last_bookmarks()
@@ -161,8 +157,6 @@ class TestTxFuncRun(TestkitTestCase):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript"]:
             expected_exc = types.DriverError
-        if get_driver_name() in ["dotnet"]:
-            expected_exc = types.BackendError
         with self.assertRaises(expected_exc):
             self._session1.write_transaction(run)
 
