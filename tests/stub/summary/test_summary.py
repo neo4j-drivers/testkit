@@ -214,14 +214,14 @@ class TestSummary(TestkitTestCase):
                 "runtime": "PIPELINED",
                 "runtime-impl": "PIPELINED",
                 "version": "CYPHER 4.3",
-                "EstimatedRows": 1.0, "planner": "COST"
+                "EstimatedRows": 1.5, "planner": "COST"
             },
             "operatorType": "ProduceResults@neo4j",
             "children": [
                 {
                     "args": {
                         "Details": "(n)",
-                        "EstimatedRows": 1.0,
+                        "EstimatedRows": 1.5,
                         "PipelineInfo": "Fused in Pipeline 0"
                     },
                     "operatorType": "Create@neo4j",
@@ -251,7 +251,7 @@ class TestSummary(TestkitTestCase):
                 "PipelineInfo": "Fused in Pipeline 0",
                 "planner-version": "4.3",
                 "runtime-version": "4.3",
-                "EstimatedRows": 1.0,
+                "EstimatedRows": 1.1,
                 "planner": "COST",
                 "Rows": 1
             },
@@ -262,7 +262,7 @@ class TestSummary(TestkitTestCase):
                         "PipelineInfo": "Fused in Pipeline 0",
                         "Time": 0,
                         "PageCacheMisses": 0,
-                        "EstimatedRows": 1.0,
+                        "EstimatedRows": 1.1,
                         "DbHits": 1,
                         "Rows": 1,
                         "PageCacheHits": 0
@@ -274,7 +274,7 @@ class TestSummary(TestkitTestCase):
                     "operatorType": "Create@neo4j",
                     "time": 0,
                     "rows": 1,
-                    "pageCacheHitRatio": 0.0,
+                    "pageCacheHitRatio": 0.1,
                     "pageCacheHits": 0
                 }
             ],
