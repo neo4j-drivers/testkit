@@ -2809,8 +2809,13 @@ class RoutingV4x4(RoutingBase):
 
         session2 = driver.session("w", database=self.adb)
 
-        with self.assertRaises(types.DriverError) as exc:
-            session2.begin_transaction()
+        if self.driver_supports_features(types.Feature.OPT_EAGER_TX_BEGIN):
+            with self.assertRaises(types.DriverError) as exc:
+                session2.begin_transaction()
+        else:
+            with self.assertRaises(types.DriverError) as exc:
+                tx = session2.begin_transaction()
+                list(tx.run("RETURN 1 as n"))
 
         if get_driver_name() in ["java"]:
             self.assertEqual(
