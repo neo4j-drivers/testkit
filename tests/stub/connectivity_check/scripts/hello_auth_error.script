@@ -1,0 +1,6 @@
+!: BOLT 4.4
+!: AUTO RESET
+
+C: HELLO {"{}": "*"}
+S: FAILURE {"code": "Neo.ClientError.Security.Unauthorized", "message": "The client is unauthorized due to authentication failure."}
+   <EXIT>

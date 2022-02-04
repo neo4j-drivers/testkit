@@ -1,0 +1,5 @@
+!: BOLT 4.4
+!: AUTO RESET
+
+A: HELLO {"{}": "*"}
+?: GOODBYE

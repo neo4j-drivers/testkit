@@ -2,14 +2,14 @@ from .. import protocol
 
 
 class Result:
-    def __init__(self, backend, result):
-        self._backend = backend
+    def __init__(self, driver, result):
+        self._driver = driver
         self._result = result
 
     def next(self):
         """Move to next record in result."""
         req = protocol.ResultNext(self._result.id)
-        return self._backend.send_and_receive(req)
+        return self._driver.send_and_receive(req, allow_resolution=True)
 
     def single(self):
         """Return one record if there is exactly one.
@@ -17,22 +17,22 @@ class Result:
         Raises error otherwise.
         """
         req = protocol.ResultSingle(self._result.id)
-        return self._backend.send_and_receive(req)
+        return self._driver.send_and_receive(req, allow_resolution=True)
 
     def peek(self):
         """Return the next Record or NullRecord without consuming it."""
         req = protocol.ResultPeek(self._result.id)
-        return self._backend.send_and_receive(req)
+        return self._driver.send_and_receive(req, allow_resolution=True)
 
     def consume(self):
         """Discard all records in result and returns summary."""
         req = protocol.ResultConsume(self._result.id)
-        return self._backend.send_and_receive(req)
+        return self._driver.send_and_receive(req, allow_resolution=True)
 
     def list(self):
         """Retrieve the entire result stream."""
         req = protocol.ResultList(self._result.id)
-        res = self._backend.send_and_receive(req)
+        res = self._driver.send_and_receive(req, allow_resolution=True)
         assert isinstance(res, protocol.RecordList)
         return res.records
 

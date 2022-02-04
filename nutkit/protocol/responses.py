@@ -294,7 +294,10 @@ class Summary:
 
 
 class ServerInfo:
-    """Represents server info that is included in the Summary response."""
+    """Represents server info.
+
+    It can be part of a Summary response or a stand-alone response
+    """
 
     def __init__(self, address, agent, protocolVersion):
         self.address = address

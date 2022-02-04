@@ -8,50 +8,36 @@ class ApplicationCodeError(Exception):
 
 
 class Session:
-    def __init__(self, driver, backend, session):
+    def __init__(self, driver, session):
         self._driver = driver
-        self._backend = backend
         self._session = session
 
     def close(self, hooks=None):
         req = protocol.SessionClose(self._session.id)
-        res = self._backend.send_and_receive(req, hooks=hooks)
+        res = self._driver.send_and_receive(req, hooks=hooks,
+                                            allow_resolution=False)
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session but was: %s" % res)
 
     def run(self, cypher, params=None, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionRun(self._session.id, cypher, params,
                                   txMeta=tx_meta, **kwargs)
-        self._backend.send(req, hooks=hooks)
-        while True:
-            res = self._backend.receive(hooks=hooks)
-            if isinstance(res, protocol.ResolverResolutionRequired):
-                addresses = self._driver.resolve(res.address)
-                self._backend.send(
-                    protocol.ResolverResolutionCompleted(res.id, addresses),
-                    hooks=hooks
-                )
-            elif isinstance(res, protocol.DomainNameResolutionRequired):
-                addresses = self._driver.resolve_domain_name(res.name)
-                self._backend.send(
-                    protocol.DomainNameResolutionCompleted(res.id, addresses),
-                    hooks=hooks
-                )
-            elif isinstance(res, protocol.Result):
-                return Result(self._backend, res)
-            else:
-                raise Exception(
-                    "Should be Result or ResolverResolutionRequired "
-                    "but was: %s" % res
-                )
+        res = self._driver.send_and_receive(req, hooks=hooks,
+                                            allow_resolution=True)
+        if not isinstance(res, protocol.Result):
+            raise Exception(
+                "Should be Result or ResolverResolutionRequired "
+                "but was: %s" % res
+            )
+        return Result(self._driver, res)
 
     def process_transaction(self, req, fn, config=None, hooks=None):
-        self._backend.send(req, hooks=hooks)
+        self._driver.send(req, hooks=hooks)
         x = None
         while True:
-            res = self._backend.receive(hooks=hooks)
+            res = self._driver.receive(hooks=hooks, allow_resolution=True)
             if isinstance(res, protocol.RetryableTry):
-                tx = Transaction(self._backend, res.id)
+                tx = Transaction(self._driver, res.id)
                 try:
                     # Invoke the frontend test function until we succeed, note
                     # that the frontend test function makes calls to the
@@ -59,7 +45,7 @@ class Session:
                     x = fn(tx)
                     # The frontend test function were fine with the
                     # interaction, notify backend that we're happy to go.
-                    self._backend.send(
+                    self._driver.send(
                         protocol.RetryablePositive(self._session.id),
                         hooks=hooks
                     )
@@ -71,25 +57,17 @@ class Session:
                     error_id = ""
                     if isinstance(e, protocol.DriverError):
                         error_id = e.id
-                    self._backend.send(
+                    self._driver.send(
                         protocol.RetryableNegative(self._session.id,
                                                    errorId=error_id),
                         hooks=hooks
                     )
-            elif isinstance(res, protocol.ResolverResolutionRequired):
-                addresses = self._driver.resolve(res.address)
-                self._backend.send(
-                    protocol.ResolverResolutionCompleted(res.id, addresses),
-                    hooks=hooks
-                )
-            elif isinstance(res, protocol.DomainNameResolutionRequired):
-                addresses = self._driver.resolve_domain_name(res.name)
-                self._backend.send(
-                    protocol.DomainNameResolutionCompleted(res.id, addresses),
-                    hooks=hooks
-                )
             elif isinstance(res, protocol.RetryableDone):
                 return x
+            else:
+                raise Exception(
+                    "Should be RetryableTry or RetryableDone but was: %s" % res
+                )
 
     def read_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
@@ -109,14 +87,16 @@ class Session:
         req = protocol.SessionBeginTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )
-        res = self._backend.send_and_receive(req, hooks=hooks)
+        res = self._driver.send_and_receive(req, hooks=hooks,
+                                            allow_resolution=True)
         if not isinstance(res, protocol.Transaction):
             raise Exception("Should be Transaction but was: %s" % res)
-        return Transaction(self._backend, res.id)
+        return Transaction(self._driver, res.id)
 
     def last_bookmarks(self, hooks=None):
         req = protocol.SessionLastBookmarks(self._session.id)
-        res = self._backend.send_and_receive(req, hooks=hooks)
+        res = self._driver.send_and_receive(req, hooks=hooks,
+                                            allow_resolution=False)
         if not isinstance(res, protocol.Bookmarks):
             raise Exception("Should be Bookmarks but was: %s" % res)
         return res.bookmarks

@@ -12,7 +12,10 @@ from tests.stub.shared import StubServer
 
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_3,
+    required_features = (
+        types.Feature.BOLT_4_3,
+        types.Feature.CONF_HINT_CON_RECV_TIMEOUT
+    )
 
     def setUp(self):
         super().setUp()
@@ -234,6 +237,12 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
 
 class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
+
+    required_features = (
+        types.Feature.BACKEND_RT_FETCH,
+        *TestDirectConnectionRecvTimeout.required_features,
+    )
+
     def setUp(self):
         TestkitTestCase.setUp(self)
         self._server = StubServer(9010)
