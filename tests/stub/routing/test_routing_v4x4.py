@@ -23,6 +23,7 @@ class RoutingV4x4(RoutingBase):
     def route_call_count(self, server):
         return server.count_requests("ROUTE")
 
+    @driver_feature(types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_successfully_get_routing_table_with_context(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
@@ -31,11 +32,12 @@ class RoutingV4x4(RoutingBase):
                         self._userAgent)
         self.start_server(self._routingServer1,
                           "router_connectivity_db.script")
-        driver.verify_connectivity()
+        driver.update_routing_table()
         driver.close()
 
         self._routingServer1.done()
 
+    @driver_feature(types.Feature.BACKEND_RT_FETCH)
     def test_should_successfully_get_routing_table(self):
         # TODO: remove this block once all languages support routing table test
         #       API
@@ -44,8 +46,6 @@ class RoutingV4x4(RoutingBase):
         #       and all tests (ab)using verifyConnectivity to refresh the RT
         #       should be updated. Tests for verifyConnectivity should be
         #       added.
-        if get_driver_name() in ["go", "java", "dotnet"]:
-            self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         vars_ = self.get_vars()
@@ -1554,6 +1554,7 @@ class RoutingV4x4(RoutingBase):
             "writer_tx_with_unexpected_interruption_on_pull.script"
         )
 
+    @driver_feature(types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_use_initial_router_for_discovery_when_others_unavailable(
             self):
         # TODO add support and remove this block
@@ -1567,7 +1568,7 @@ class RoutingV4x4(RoutingBase):
         )
         self.start_server(self._readServer1, "reader_tx.script")
 
-        driver.verify_connectivity()
+        driver.update_routing_table()
         self._routingServer1.done()
         self.start_server(self._routingServer1, "router_adb.script")
         session = driver.session("r", database=self.adb)
@@ -1710,6 +1711,7 @@ class RoutingV4x4(RoutingBase):
         self.assertEqual([[1]], sequences)
         self.assertTrue(failed)
 
+    @driver_feature(types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_accept_routing_table_without_writers_and_then_rediscover(
             self):
         # TODO add support and remove this block
@@ -1724,13 +1726,13 @@ class RoutingV4x4(RoutingBase):
         self.start_server(self._readServer1, "reader_tx_with_bookmarks.script")
         self.start_server(self._writeServer1, "writer_with_bookmark.script")
 
-        driver.verify_connectivity()
+        driver.update_routing_table()
         session = driver.session("w", bookmarks=["OldBookmark"],
                                  database=self.adb)
         sequences = []
         self._routingServer1.done()
         try:
-            driver.verify_connectivity()
+            driver.update_routing_table()
         except types.DriverError:
             # make sure the driver noticed that its old connection to
             # _routingServer1 is dead
@@ -1751,6 +1753,8 @@ class RoutingV4x4(RoutingBase):
         self._writeServer1.done()
         self.assertEqual([[1]], sequences)
 
+    @driver_feature(types.Feature.BACKEND_RT_FETCH,
+                    types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_fail_on_routing_table_with_no_reader(self):
         if get_driver_name() in ["go", "java", "dotnet"]:
             self.skipTest("needs routing table API support")
@@ -2348,14 +2352,14 @@ class RoutingV4x4(RoutingBase):
             "router_yielding_authorization_expired_failure.script"
         )
 
+    @driver_feature(types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
         # TODO remove this block once all languages work
         if get_driver_name() in ["go"]:
             self.skipTest("needs verifyConnectivity support")
         ip_addresses = get_ip_addresses()
         if len(ip_addresses) < 2:
-            self.skipTest("at least 2 IP addresses are required for this test "
-                          "and only linux is supported at the moment")
+            self.skipTest("at least 2 IP addresses are required for this test")
 
         router_ip_address = ip_addresses[0]
 
@@ -2372,14 +2376,14 @@ class RoutingV4x4(RoutingBase):
             "router_yielding_reader1_and_exit.script"
         )
 
-        driver.verify_connectivity()
+        driver.update_routing_table()
         self._routingServer1.done()
         router_ip_address = ip_addresses[1]
         self.start_server(
             self._routingServer1,
             "router_yielding_reader1_and_exit.script"
         )
-        driver.verify_connectivity()
+        driver.update_routing_table()
         # we don't expect the second router to play the whole script
         self._routingServer1.reset()
         driver.close()

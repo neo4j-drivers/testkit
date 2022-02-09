@@ -1,0 +1,11 @@
+!: BOLT 4.4
+!: AUTO RESET
+
+A: HELLO {"{}": "*"}
+C: RUN {"U": "*"} {} {"[mode]": {"U": "*"}, "[db]": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

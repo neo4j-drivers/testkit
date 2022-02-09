@@ -136,8 +136,20 @@ class VerifyConnectivity:
     Backend should respond with a Driver response or an Error response.
     """
 
-    def __init__(self, driverId):
-        self.driverId = driverId
+    def __init__(self, driver_id):
+        self.driverId = driver_id
+
+
+class GetServerInfo:
+    """
+    Request to verify connectivity on the driver and get ServerInfo.
+
+    instance corresponding to the specified driver id.
+    Backend should respond with a ServerInfo response or an Error response.
+    """
+
+    def __init__(self, driver_id):
+        self.driverId = driver_id
 
 
 class CheckMultiDBSupport:
