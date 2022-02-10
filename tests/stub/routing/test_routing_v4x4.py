@@ -2799,9 +2799,10 @@ class RoutingV4x4(RoutingBase):
     @driver_feature(types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE,
                     types.Feature.TMP_CONNECTION_ACQUISITION_TIMEOUT)
     def test_should_enforce_pool_size_per_cluster_member(self):
+        acq_timeout_ms = 100
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, max_connection_pool_size=1,
-                        connection_acquisition_timeout_ms=10)
+                        connection_acquisition_timeout_ms=acq_timeout_ms)
         self.start_server(self._routingServer1,
                           "router_adb_multi_no_bookmarks.script")
         self.start_server(self._writeServer1, "writer_tx.script")
@@ -2830,7 +2831,8 @@ class RoutingV4x4(RoutingBase):
                 exc.exception.errorType
             )
             self.assertTrue("Unable to acquire connection from the "
-                            "pool within configured maximum time of 10ms"
+                            "pool within configured maximum time of "
+                            f"{acq_timeout_ms}ms"
                             in exc.exception.msg)
 
         session2.close()
