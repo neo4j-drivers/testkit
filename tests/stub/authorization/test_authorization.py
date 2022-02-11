@@ -193,8 +193,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
         session = driver.session("r", database=self.get_db())
 
-        # TODO: remove block when all drivers behave the same way
-        if get_driver_name() in ["javascript", "go"]:
+        if not self.driver_supports_features(types.Feature.OPT_EAGER_TX_BEGIN):
             tx = session.begin_transaction()
             with self.assertRaises(types.DriverError) as exc:
                 tx.run("cypher").next()

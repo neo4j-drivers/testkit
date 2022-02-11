@@ -4,9 +4,16 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a method for checking if a connection to the remote
+    # server of cluster can be established and retrieve the server info of the
+    # reached remote.
+    API_DRIVER_GET_SERVER_INFO = "Feature:API:Driver:GetServerInfo"
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver offers a method for checking if a connection to the remote
+    # server of cluster can be established.
+    API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"
@@ -99,6 +106,11 @@ class Feature(Enum):
     # === IMPLEMENTATION DETAILS ===
     # `Driver.IsEncrypted` can also be called on closed drivers.
     DETAIL_CLOSED_DRIVER_IS_ENCRYPTED = "Detail:ClosedDriverIsEncrypted"
+    # Security configuration options for encryption and certificates are
+    # compared based on their value and might still match the default
+    # configuration as long as values match.
+    DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
+        "Detail:DefaultSecurityConfigValueEquality"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
@@ -108,6 +120,16 @@ class Feature(Enum):
     # routing table and assume all other connections to the server are dead
     # as well.
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
+
+    # === BACKEND FEATURES FOR TESTING ===
+    # The backend understands the GetRoutingTable protocol message and provides
+    # a way for TestKit to request the routing table (for testing only, should
+    # not be exposed to the user).
+    BACKEND_RT_FETCH = "Backend:RTFetch"
+    # The backend understands the ForcedRoutingTableUpdate protocol message
+    # and provides a way to force a routing table update (for testing only,
+    # should not be exposed to the user).
+    BACKEND_RT_FORCE_UPDATE = "Backend:RTForceUpdate"
 
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the connection acquisition timeout config.

@@ -60,6 +60,7 @@ class TestDirectDriver(TestkitTestCase):
         self.assertEqual(summary.server_info.address, "%s:%d" % (host, port))
         self.assertEqual(resolved_addresses, ["*:7687"])
 
+    @driver_feature(types.Feature.API_DRIVER_VERIFY_CONNECTIVITY)
     def test_fail_nicely_when_using_http_port(self):
         # TODO add support and remove this block
         if get_driver_name() in ["go"]:

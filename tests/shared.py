@@ -125,7 +125,7 @@ def get_driver_features(backend):
             features.add(protocol.Feature(raw))
         # TODO: remove this block once all drivers list this feature
         #       they all support the functionality already
-        if get_driver_name() in ["go", "dotnet"]:
+        if get_driver_name() in ["go"]:
             assert protocol.Feature.API_SSL_SCHEMES not in features
             features.add(protocol.Feature.API_SSL_SCHEMES)
         print("features", features)
