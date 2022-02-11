@@ -93,6 +93,13 @@ class Feature(Enum):
     #       appreciate it <3.
     OPT_RESULT_LIST_FETCH_ALL = "Optimization:ResultListFetchAll"
 
+    # === IMPLEMENTATION DETAILS ===
+    # Security configuration options for encryption and certificates are
+    # compared based on their value and might still match the default
+    # configuration as long as values match.
+    DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
+        "Detail:DefaultSecurityConfigValueEquality"
+
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
     # connection.recv_timeout_seconds which tells it to close the connection
