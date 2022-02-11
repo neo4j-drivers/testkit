@@ -60,7 +60,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
                 if self._server is not None:
                     self._server.reset()
 
-    def test_trusted_ca_wrong_hostname(self):
+    def test_trusted_ca_wrong_hostname(self, should_connect=True):
         # A server certificate signed by a trusted CA but with wrong hostname
         # will still be accepted.
         # TLS server is setup to serve under the name 'thehost' but driver will
@@ -73,7 +73,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme + "-" + str(driver_config)):
                     self._server = TlsServer("trustedRoot_thehost")
-                    self.assertTrue(self._try_connect(
+                    self.assertEqual(should_connect, self._try_connect(
                         self._server, scheme, "thehostbutwrong",
                         **driver_config
                     ))
@@ -92,13 +92,13 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
                 if self._server is not None:
                     self._server.reset()
 
-    def test_untrusted_ca_wrong_hostname(self):
+    def test_untrusted_ca_wrong_hostname(self, should_connect=True):
         # Should connect
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
                 with self.subTest(scheme + "-" + str(driver_config)):
                     self._server = TlsServer("untrustedRoot_thehost")
-                    self.assertTrue(self._try_connect(
+                    self.assertEqual(should_connect, self._try_connect(
                         self._server, scheme, "thehostbutwrong",
                         **driver_config
                     ))
@@ -136,14 +136,14 @@ class TestTrustAllCertsConfig(TestSelfSignedScheme):
     def test_trusted_ca_expired_server_correct_hostname(self):
         super().test_trusted_ca_expired_server_correct_hostname()
 
-    def test_trusted_ca_wrong_hostname(self):
-        super().test_trusted_ca_wrong_hostname()
+    def test_trusted_ca_wrong_hostname(self, should_connect=False):
+        super().test_trusted_ca_wrong_hostname(should_connect)
 
     def test_untrusted_ca_correct_hostname(self):
         super().test_untrusted_ca_correct_hostname()
 
-    def test_untrusted_ca_wrong_hostname(self):
-        super().test_untrusted_ca_wrong_hostname()
+    def test_untrusted_ca_wrong_hostname(self, should_connect=False):
+        super().test_untrusted_ca_wrong_hostname(should_connect)
 
     def test_unencrypted(self):
         super().test_unencrypted()
