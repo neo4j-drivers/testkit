@@ -106,6 +106,11 @@ class Feature(Enum):
     # === IMPLEMENTATION DETAILS ===
     # `Driver.IsEncrypted` can also be called on closed drivers.
     DETAIL_CLOSED_DRIVER_IS_ENCRYPTED = "Detail:ClosedDriverIsEncrypted"
+    # Security configuration options for encryption and certificates are
+    # compared based on their value and might still match the default
+    # configuration as long as values match.
+    DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
+        "Detail:DefaultSecurityConfigValueEquality"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
