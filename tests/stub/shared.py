@@ -184,13 +184,13 @@ class StubServer:
         self._clean_up()
 
     def _poll(self, timeout):
-        polls = int(timeout * 10)
+        polls = int(timeout * 50)
         while True:
             self._process.poll()
             if self._process.returncode is None:
                 if polls > 0:
                     polls -= 1
-                    time.sleep(0.1)
+                    time.sleep(0.02)
                 else:
                     break
             else:
@@ -268,6 +268,8 @@ class StubServer:
         output.
         """
         if self._process:
+            # give it some time to fully shut down if there was an error
+            self._poll(0.1)
             # briefly try to get a shutdown that will dump script mismatches
             self._interrupt(.3)
             self._interrupt(0)
