@@ -22,6 +22,13 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
     If the SCT is set to 2 hours and CAT to 50ms,
     the connection acquisition should time out after 50ms,
     even if the connection is successfully created within the SCT period.
+
+    The CAT must NOT be replaced by the lowest of the two values (CAT and SCT).
+    Indeed, even if SCT is lower than CAT, there could be situations
+    where the pool takes longer to borrow an _idle_ connection than the SCT.
+    Such a scenario should work as long as the overall acquisition happens
+    within the CAT.
+    This is unfortunately hard to translate into a test.
     """
 
     required_features = (
