@@ -77,7 +77,7 @@ class Feature(Enum):
     # execution time, whether a new connection is created, an idle connection
     # is picked up instead or we need to wait until the full pool depletes.
     CONNECTION_ACQUISITION_TIMEOUT = \
-        "Feature:Configuruation:ConnectionAcquisitionTimeout"
+        "Feature:Configuration:ConnectionAcquisitionTimeout"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver

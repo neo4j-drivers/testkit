@@ -85,16 +85,16 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
     def test_should_encompass_the_handshake_time(self):
         """
-        Handshake tooks longer scenario.
+        Handshake takes longer scenario.
 
         This test scenario tests the case where:
 
         1. the connection acquisition timeout is smaller than
             the connection creation timeout
         2. the connection is successfully created and in due time
-        3. the handshake tooks longer than the connection acquisition timeout
+        3. the handshake takes longer than the connection acquisition timeout
 
-        Then the query could not be executed since the connection acquisition
+        Then the query is not executed since the connection acquisition
         timed out.
         """
         self._server.start(
@@ -121,11 +121,11 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         1. the connection acquisition timeout is smaller than
             the connection creation timeout
-        2. the connection is successfully tooks longer than the
+        2. the connection takes longer than the
             acquisition timeout to be created
 
-        Then the query could not be executed since the connection acquisition
-        timed out.
+        Then the query is not executed since the connection acquisition
+        times out.
         """
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
@@ -149,11 +149,11 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         1. the connection acquisition timeout is bigger than
             the connection creation timeout
-        2. the connection is successfully tooks longer than the
+        2. the connection is successfully takes longer than the
             connection timeout to be created
 
-        Then the query could not be executed since the connection creation
-        timed out.
+        Then the query is not executed since the connection creation
+        times out.
         """
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
@@ -185,8 +185,8 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         3. the connection pool doesn't have connections available in
             suitable time
 
-        Then the begin transaction could not be executed
-        since the connection acquisition timed out.
+        Then the begin transaction is not executed
+        since the connection acquisition times out.
         """
         self._server.start(
             self.script_path("tx_without_commit_or_rollback.script")
