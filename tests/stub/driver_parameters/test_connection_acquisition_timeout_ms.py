@@ -68,7 +68,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
                               connection_acquisition_timeout_ms=2000,
                               connection_timeout_ms=720000)
 
-        self._session = self._driver.session("w")
+        self._session = self._driver.session("r")
 
         with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 as n"))
@@ -83,7 +83,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
                               connection_acquisition_timeout_ms=72000,
                               connection_timeout_ms=2000)
 
-        self._session = self._driver.session("w")
+        self._session = self._driver.session("r")
 
         with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 as n"))
@@ -106,8 +106,8 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
                               max_connection_pool_size=1)
 
         self._sessions = [
-            self._driver.session("w"),
-            self._driver.session("w"),
+            self._driver.session("r"),
+            self._driver.session("r"),
         ]
 
         self._txs = [self._sessions[0].begin_transaction()]
