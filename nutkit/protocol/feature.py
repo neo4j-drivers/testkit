@@ -71,6 +71,13 @@ class Feature(Enum):
     # If this flag is missing, TestKit assumes that attempting to establish
     # such a connection fails.
     TLS_1_3 = "Feature:TLS:1.3"
+    # The driver configuration connection_acquisition_timeout_ms
+    # should be suported.
+    # The connection acquisition timeout must account for the whole acquisition
+    # execution time, whether a new connection is created, an idle connection
+    # is picked up instead or we need to wait until the full pool depletes.
+    CONNECTION_ACQUISITION_TIMEOUT = \
+        "Feature:Configuration:ConnectionAcquisitionTimeout"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver
