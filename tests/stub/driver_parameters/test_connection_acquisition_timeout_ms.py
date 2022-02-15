@@ -53,12 +53,12 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
                               connection_acquisition_timeout_ms=2000,
                               connection_timeout_ms=720000)
 
-        self._session = self._driver.session("w")
+        self._session = self._driver.session("r")
 
         with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 as n"))
 
-    def test_should_have_priotity_over_the_connection_timeout(self):
+    def test_should_fail_when_acquisition_timeout_is_reached_first(self):
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
 
@@ -73,7 +73,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 as n"))
 
-    def test_should_not_suppress_connection_timeout(self):
+    def test_should_fail_when_connection_timeout_is_reached_first(self):
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
 
