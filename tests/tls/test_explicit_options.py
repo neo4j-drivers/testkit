@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol import Feature
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -35,14 +36,20 @@ class TestExplicitSslOptions(TestkitTestCase):
                 Driver(self._backend, url, auth, encrypted=encrypted,
                        trusted_certificates=certs)
             if get_driver_name() in ["javascript", "java", "dotnet"]:
-                self.assertIs("encryption", exc.exception.msg.lower())
-                self.assertIs("trust", exc.exception.msg.lower())
+                self.assertIn("encryption", exc.exception.msg.lower())
+                self.assertIn("trust", exc.exception.msg.lower())
             else:
                 self.fail("Add expected error type for driver.")
 
+        supports_value_equality = self.driver_supports_features(
+            Feature.DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY
+        )
         self._server = TlsServer("trustedRoot_thehost")
         for scheme in ("neo4j+s", "neo4j+ssc", "bolt+s", "bolt+ssc"):
             for encrypted in (True, False):
-                for certs in ("None", [], ["customRoot.crt"]):
+                cert_options = [[], ["customRoot.crt"]]
+                if not supports_value_equality or encrypted:
+                    cert_options.append("None")
+                for certs in cert_options:
                     with self.subTest("%s-%s-%s" % (scheme, encrypted, certs)):
                         _test()

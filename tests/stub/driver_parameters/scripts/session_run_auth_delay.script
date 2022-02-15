@@ -1,0 +1,18 @@
+!: BOLT 4.4
+!: ALLOW CONCURRENT
+
+C: HELLO {"{}": "*"}
+S: <SLEEP> 2
+   <NOOP>
+   <SLEEP> 2
+   <NOOP>
+   <SLEEP> 2
+   SUCCESS {"server": "Neo4j/9.9.9", "connection_id": "bolt-123456789"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET

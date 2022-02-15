@@ -178,10 +178,8 @@ class TestDisconnects(TestkitTestCase):
 
         expected_step = "after begin"
         if not self.driver_supports_features(types.Feature.OPT_EAGER_TX_BEGIN):
-            if self._driver_name in ["go"]:
-                expected_step = "after run"
-            elif self._driver_name in ["javascript"]:
-                expected_step = "after first next"
+            expected_step = "after run"
+
         self.assertEqual(step, expected_step)
 
     def test_disconnect_on_tx_run(self):
