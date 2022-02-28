@@ -10,8 +10,8 @@ from .util import hex_repr
 class Channel:
     def __init__(self, wire, bolt_version, log_cb=None, handshake_data=None):
         self.wire = wire
-        self.stream = PackStream(wire)
         self.bolt_protocol = get_bolt_protocol(bolt_version)
+        self.stream = PackStream(wire, bolt_version)
         self.log = log_cb
         self.handshake_data = handshake_data
         self._buffered_msg = None

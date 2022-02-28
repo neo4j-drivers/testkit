@@ -23,6 +23,7 @@ from io import BytesIO
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 
+from .bolt_protocol import BoltProtocol
 from .simple_jolt import types as jolt_types
 
 PACKED_UINT_8 = [struct_pack(">B", value) for value in range(0x100)]
@@ -60,12 +61,17 @@ class StructTag:
     point_3d = b"\x59"
 
 
+
+
 class Structure:
 
-    def __init__(self, tag, *fields, verified=True):
+    def __init__(self, tag, *fields, verified=True,
+                 bolt_version=BoltProtocol()):
         self.tag = tag
         self.fields = list(fields)
         self._verified = verified
+        self.validate_v3 = bolt_version.protocol_version[0] < 5
+
         if verified:
             self._verify_fields()
 
@@ -76,38 +82,85 @@ class Structure:
     def _verify_fields(self):
         tag, fields = self.tag, self.fields
 
-        def verify_node():
-            if (len(fields) != 3
-                    or not isinstance(fields[0], int)
-                    or not isinstance(fields[1], list)
-                    or not all(isinstance(label, str) for label in fields[1])
-                    or not isinstance(fields[2], dict)
-                    or not all(isinstance(k, str) for k in fields[2].keys())):
-                raise ValueError("Invalid Node struct received %r" % self)
+        def validate_validations(validations, type_name):
+            for validation in validations:
+                if not validation(fields):
+                    raise ValueError("Invalid %dsn struct received %r" %
+                                     type_name, self)
 
-        def verify_relationship():
-            if (len(fields) != 5
-                    or not isinstance(fields[0], int)
-                    or not isinstance(fields[1], int)
-                    or not isinstance(fields[2], int)
-                    or not isinstance(fields[3], str)
-                    or not isinstance(fields[4], dict)
-                    or not all(isinstance(k, str) for k in fields[4].keys())):
-                raise ValueError(
-                    "Invalid Relationship struct received %r" % self
-                )
+        def verify_node_3_up():
+            validations = [
+                lambda f: len(f) == 3,
+                lambda f: isinstance(f[0], int),
+                lambda f: isinstance(f[1], list),
+                lambda f: all(isinstance(label, str) for label in f[1]),
+                lambda f: isinstance(f[2], dict),
+                lambda f: all(isinstance(k, str) for k in f[2].keys())
+            ]
+            validate_validations(validations, "V3_node")
 
-        def verify_unbound_relationship():
-            if (len(fields) != 3
-                    or not isinstance(fields[0], int)
-                    or not isinstance(fields[1], str)
-                    or not isinstance(fields[2], dict)
-                    or not all(isinstance(k, str) for k in fields[2].keys())):
-                raise ValueError(
-                    "Invalid UnboundRelationship struct received %r" % self
-                )
+        def verify_node_5_up():
+            validations = [
+                lambda f: len(f) == 4,
+                lambda f: isinstance(f[0], int) or f[0] is None,
+                lambda f: isinstance(f[1], list),
+                lambda f: all(isinstance(label, str) for label in f[1]),
+                lambda f: isinstance(f[2], dict),
+                lambda f: all(isinstance(k, str) for k in f[2].keys()),
+                lambda f: isinstance(f[3], str)
+            ]
+            validate_validations(validations, "V5_node")
+
+        def verify_unbound_relationship_3_up():
+            validations = [
+                lambda f: len(f) == 3,
+                lambda f: isinstance(f[0], int),
+                lambda f: isinstance(f[1], str),
+                lambda f: isinstance(f[2], dict),
+                lambda f: all(isinstance(k, str) for k in f[2].keys())
+            ]
+            validate_validations(validations, "V3_UnboundRelationship")
+
+        def verify_unbound_relationship_5_up():
+            validations = [
+                lambda f: len(f) == 4,
+                lambda f: isinstance(f[0], int) or f[0] is None,
+                lambda f: isinstance(f[1], str),
+                lambda f: isinstance(f[2], dict),
+                lambda f: all(isinstance(k, str) for k in f[2].keys()),
+                lambda f: isinstance(f[3], str)
+            ]
+            validate_validations(validations, "V5_UnboundRelationship")
+
+        def verify_relationship_3_up():
+            validations = [
+                lambda f: len(f) == 5,
+                lambda f: isinstance(f[0], int),
+                lambda f: isinstance(f[1], int),
+                lambda f: isinstance(f[2], int),
+                lambda f: isinstance(f[3], str),
+                lambda f: isinstance(f[4], dict),
+                lambda f: all(isinstance(k, str) for k in f[4].keys())
+            ]
+            validate_validations(validations, "V3_Relationship")
+
+        def verify_relationship_5_up():
+            validations = [
+                lambda f: len(f) == 8,
+                lambda f: (isinstance(f[0], int) or f[0] is None),
+                lambda f: (isinstance(f[1], int) or f[1] is None),
+                lambda f: (isinstance(f[2], int) or f[2] is None),
+                lambda f: isinstance(f[3], str),
+                lambda f: isinstance(f[4], dict),
+                lambda f: all(isinstance(k, str) for k in f[4].keys()),
+                lambda f: isinstance(f[5], str),
+                lambda f: isinstance(f[6], str),
+                lambda f: isinstance(f[7], str),
+            ]
+            validate_validations(validations, "V5_Relationship")
 
         def verify_path():
+
             if (len(fields) != 3
                     or not isinstance(fields[0], list)
                     or not all(isinstance(n, Structure)
@@ -142,11 +195,14 @@ class Structure:
 
         field_validator = {
             StructTag.node:
-                verify_node,
+                verify_node_3_up if self.validate_v3
+                else verify_node_5_up,
             StructTag.relationship:
-                verify_relationship,
+                verify_relationship_3_up if self.validate_v3
+                else verify_relationship_5_up,
             StructTag.unbound_relationship:
-                verify_unbound_relationship,
+                verify_unbound_relationship_3_up if self.validate_v3
+                else verify_unbound_relationship_5_up,
             StructTag.path:
                 verify_path,
             StructTag.date:
@@ -633,8 +689,9 @@ class Packer:
 
 class Unpacker:
 
-    def __init__(self, unpackable):
+    def __init__(self, unpackable, bolt_version):
         self.unpackable = unpackable
+        self.bolt_version = bolt_version
 
     def reset(self):
         self.unpackable.reset()
@@ -731,7 +788,8 @@ class Unpacker:
                 fields = [None] * size
                 for i in range(len(fields)):
                     fields[i] = self._unpack(verify_struct=True)
-                return Structure(tag, *fields, verified=verify_struct)
+                return Structure(tag, *fields, verified=verify_struct,
+                                 bolt_version=self.bolt_version)
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
@@ -888,8 +946,9 @@ class UnpackableBuffer:
 class PackStream:
     """Chunked message reader/writer for PackStream messaging."""
 
-    def __init__(self, wire):
+    def __init__(self, wire, bolt_version):
         self.wire = wire
+        self.bolt_version = bolt_version
         self.data_buffer = []
         self.next_chunk_size = None
 
@@ -911,7 +970,7 @@ class PackStream:
                 break
         buffer = UnpackableBuffer(b"".join(self.data_buffer))
         self.data_buffer = []
-        unpacker = Unpacker(buffer)
+        unpacker = Unpacker(buffer, self.bolt_version)
         return unpacker.unpack_message()
 
     def write_message(self, message):

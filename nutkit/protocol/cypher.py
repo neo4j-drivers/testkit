@@ -146,25 +146,27 @@ class CypherBytes:
 
 
 class Node:
-    def __init__(self, id, labels, props):
+    def __init__(self, id, labels, props, elementId):
         self.id = id
         self.labels = labels
         self.props = props
+        self.elementId = elementId
 
     def __str__(self):
-        return "Node(id={}, labels={}, props={})".format(
-            self.id, self.labels, self.props)
+        return "Node(id={}, labels={}, props={}, elementId={})".format(
+            self.id, self.labels, self.props, self.elementId)
 
     def __repr__(self):
-        return "<{}(id={}, labels={}, props={})>".format(
-            self.__class__.__name__, self.id, self.labels, self.props
+        return "<{}(id={}, labels={}, props={}, elementId={})>".format(
+            self.__class__.__name__, self.id, self.labels, self.props,
+            self.elementId
         )
 
     def __eq__(self, other):
         if not isinstance(other, Node):
             return False
         return all(getattr(self, attr) == getattr(other, attr)
-                   for attr in ("id", "labels", "props"))
+                   for attr in ("id", "labels", "props", "elementId"))
 
 
 # More in line with other naming
@@ -172,27 +174,43 @@ CypherNode = Node
 
 
 class Relationship:
-    def __init__(self, id, startNodeId, endNodeId, type, props):
+    def __init__(self, id, startNodeId, endNodeId, type, props,
+                 elementId, startNodeElementId, endNodeElementId):
         self.id = id
         self.startNodeId = startNodeId
         self.endNodeId = endNodeId
         self.type = type
         self.props = props
+        self.elementId = elementId
+        self.startNodeElementId = startNodeElementId
+        self.endNodeElementId = endNodeElementId
 
     def __str__(self):
         return (
-            "Relationship(id={}, startNodeId={}, endNodeId={}, type={}, "
-            "props={})".format(self.id, self.startNodeId, self.endNodeId,
-                               self.type, self.props)
+            "Relationship(id={}, startNodeId={}, endNodeId={}, type={}, " +
+            "props={}, elementId={}, startNodeElementId={}, " +
+            "endNodeElementId={})".format(self.id, self.startNodeId,
+                                          self.endNodeId,
+                                          self.type, self.props,
+                                          self.elementId,
+                                          self.startNodeElementId,
+                                          self.endNodeElementId)
         )
 
     def __repr__(self):
         return (
-            "<{}(id={}, startNodeId={}, endNodeId={}, type={}, "
-            "props={})>".format(self.__class__.__name__, self.id,
-                                self.startNodeId, self.endNodeId, self.type,
-                                self.props)
+            "<{}(id={}, startNodeId={}, endNodeId={}, type={}, " +
+            "props={}, elementId={}, startNodeElementId={}, " +
+            "endNodeElementId={})>".format(self.__class__.__name__,
+                                           self.id,
+                                           self.startNodeId, self.endNodeId,
+                                           self.type,
+                                           self.props,
+                                           self.elementId,
+                                           self.startNodeElementId,
+                                           self.endNodeElementId)
         )
+
 
     def __eq__(self, other):
         if not isinstance(other, Relationship):
@@ -200,7 +218,8 @@ class Relationship:
 
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("id", "startNodeId", "endNodeId", "type",
-                                "props"))
+                                "props", "elementId", "startNodeElementId",
+                                "endNodeElementId"))
 
 
 # More in line with other naming
