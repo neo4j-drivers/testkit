@@ -823,8 +823,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         driver.close()
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(# noqa: N802,E501
-        self):
+    def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(self):  # noqa: N802,E501
         self.start_server(
             self._server,
             "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
@@ -848,8 +847,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1.close()
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(# noqa: N802,E501
-        self):
+    def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(self):  # noqa: N802,E501
         self.start_server(
             self._server,
             "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
