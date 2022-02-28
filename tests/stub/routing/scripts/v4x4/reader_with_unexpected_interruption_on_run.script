@@ -1,6 +1,0 @@
-!: BOLT #VERSION#
-
-A: HELLO {"{}": "*"}
-*: RESET
-C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
-S: <EXIT>
