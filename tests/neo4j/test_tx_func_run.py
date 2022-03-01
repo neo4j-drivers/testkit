@@ -1,4 +1,4 @@
-from nutkit.frontend.session import ApplicationCodeError
+from nutkit.frontend import ApplicationCodeError
 import nutkit.protocol as types
 from tests.neo4j.shared import (
     get_driver,
@@ -115,9 +115,6 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertGreater(len(bookmarks[0]), 3)
 
     def test_does_not_update_last_bookmark_on_rollback(self):
-        if get_driver_name() in ["java"]:
-            self.skipTest("Client exceptions not properly handled in backend")
-
         # Verifies that last bookmarks still is empty when transactional
         # function rolls back transaction.
         def run(tx):
@@ -125,20 +122,12 @@ class TestTxFuncRun(TestkitTestCase):
             raise ApplicationCodeError("No thanks")
 
         self._session1 = self._driver.session("w")
-        expected_exc = types.FrontendError
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            expected_exc = types.DriverError
-        if get_driver_name() in ["dotnet"]:
-            expected_exc = types.BackendError
-        with self.assertRaises(expected_exc):
+        with self.assertRaises(types.FrontendError):
             self._session1.write_transaction(run)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
     def test_client_exception_rolls_back_change(self):
-        if get_driver_name() in ["java"]:
-            self.skipTest("Client exceptions not properly handled in backend")
         node_id = -1
 
         def run(tx):
@@ -158,11 +147,6 @@ class TestTxFuncRun(TestkitTestCase):
 
         self._session1 = self._driver.session("w")
         expected_exc = types.FrontendError
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            expected_exc = types.DriverError
-        if get_driver_name() in ["dotnet"]:
-            expected_exc = types.BackendError
         with self.assertRaises(expected_exc):
             self._session1.write_transaction(run)
 

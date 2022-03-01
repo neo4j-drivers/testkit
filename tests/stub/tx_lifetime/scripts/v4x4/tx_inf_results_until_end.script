@@ -1,0 +1,32 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+{*
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+       RECORD [2]
+       SUCCESS {"has_more": true}
+*}
+{{
+    C: DISCARD {"n": -1, "[qid]": -1}
+    S: SUCCESS {"type": "r"}
+    {?
+        {{
+            C: ROLLBACK
+        ----
+            C: COMMIT
+        ----
+            C: RESET
+        }}
+        S: SUCCESS {}
+    ?}
+----
+    A: RESET
+}}
+*: RESET
+?: GOODBYE
