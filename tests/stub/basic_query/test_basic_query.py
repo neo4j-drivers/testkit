@@ -26,7 +26,7 @@ class TestBasicQuery(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def test_something_simple(self):
+    def test_4x4_populates_element_id_with_id(self):
         self._server.start(
             path=self.script_path("4_4_protocol_one_node_query.script")
         )
@@ -43,7 +43,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
-    def test_something_less_simple(self):
+    def test_5x0_populates_element_id_with_string(self):
         self._server.start(
             path=self.script_path("5_0_protocol_one_node_query.script")
         )
@@ -60,7 +60,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
-    def test_freki_something_less_simple(self):
+    def test_5x0_populates_only_element_id(self):
         self._server.start(
             path=self.script_path("5_0_protocol_freki_one_node_query.script")
         )
