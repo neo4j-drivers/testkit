@@ -391,7 +391,7 @@ class JoltNodeTransformer(JoltTypeTransformer):
     @staticmethod
     def _decode_full(value, decode_cb):
         if not isinstance(value, list) or len(value) != 3:
-            raise JOLTValueError('Expecting list of length 3 after sigil "()"')
+            return JoltNodeTransformer._decode_full_element(value, decode_cb)
         id_, labels, properties = value
         if not isinstance(id_, int):
             raise JOLTValueError("Node id must be int")
@@ -406,15 +406,44 @@ class JoltNodeTransformer(JoltTypeTransformer):
         return JoltNode(id_, labels, properties)
 
     @staticmethod
+    def _decode_full_element(value, decode_cb):
+        if not isinstance(value, list) or len(value) != 4:
+            raise JOLTValueError('Expecting list of length 4 after sigil "()"')
+        id_, labels, properties, element_id = value
+        if not isinstance(id_, int) and id_ is not None:
+            raise JOLTValueError("Node id must be int or none")
+        if not isinstance(labels, list):
+            raise JOLTValueError("Node labels must be list")
+        if not all(map(lambda l: isinstance(l, str), labels)):
+            raise JOLTValueError("Node labels must be list of str")
+        if not isinstance(properties, dict):
+            raise JOLTValueError("Node properties must be dict")
+        if not isinstance(element_id, str):
+            raise JOLTValueError("Node element_id must be a str")
+
+        properties = {k: decode_cb(v) for k, v in properties.items()}
+        assert all(map(lambda e: isinstance(e, str), properties.keys()))
+        return JoltNode(id_, labels, properties, element_id)
+
+    @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
+        if value.element_id is None:
+            return {cls.sigil: [
+                value.id,
+                value.labels,
+                {k: encode_cb(v) for k, v in value.properties.items()}
+            ]}
+
         return {cls.sigil: [
-            value.id, value.labels,
-            {k: encode_cb(v) for k, v in value.properties.items()}
+            value.id,
+            value.labels,
+            {k: encode_cb(v) for k, v in value.properties.items()},
+            value.element_id
         ]}
 
 

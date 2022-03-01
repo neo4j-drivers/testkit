@@ -45,7 +45,8 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["javascript"]:
             self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._server.start(
-            path=self.script_path("session_discard_result.script")
+            path=self.script_path("session_discard_result.script"),
+            vars=[]
         )
         self._session = self._driver.session("r", fetch_size=2)
         result = self._session.run("RETURN 1 AS n")

@@ -423,20 +423,29 @@ class JoltPoint(_JoltParsedType):
 
 
 class JoltNode(JoltType):
-    def __init__(self, id_, labels, properties):
+    def __init__(self, id_, labels, properties, element_id=None):
         self.id = id_
         self.labels = labels
         self.properties = properties
+        self.element_id = element_id
 
     def __eq__(self, other):
         if not isinstance(other, JoltNode):
             return NotImplemented
+
+        if self.element_id is None:
+            return all(getattr(self, attr) == getattr(other, attr)
+                       for attr in ("id", "labels", "properties"))
         return all(getattr(self, attr) == getattr(other, attr)
-                   for attr in ("id", "labels", "properties"))
+                   for attr in ("id", "element_id", "labels", "properties"))
 
     def __repr__(self):
-        return "%s<%r, %r, %r>" % (self.__class__.__name__, self.id,
-                                   self.labels, self.properties)
+        if self.element_id is None:
+            return "%s<%r, %r, %r>" % (self.__class__.__name__, self.id,
+                                       self.labels, self.properties)
+        return "%s<%r, %r, %r, %r>" % (self.__class__.__name__, self.id,
+                                       self.labels, self.properties,
+                                       self.element_id)
 
 
 class JoltRelationship(JoltType):

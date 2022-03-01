@@ -23,7 +23,6 @@ from io import BytesIO
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 
-from .bolt_protocol import BoltProtocol
 from .simple_jolt import types as jolt_types
 
 PACKED_UINT_8 = [struct_pack(">B", value) for value in range(0x100)]
@@ -64,11 +63,11 @@ class StructTag:
 class Structure:
 
     def __init__(self, tag, *fields, verified=True,
-                 bolt_version=BoltProtocol()):
+                 bolt_version=False):
         self.tag = tag
         self.fields = list(fields)
         self._verified = verified
-        self.validate_v3 = bolt_version.protocol_version[0] < 5
+        self.validate_v3 = bolt_version is not False
 
         if verified:
             self._verify_fields()
@@ -318,6 +317,9 @@ class Structure:
                 return cls(StructTag.point_3d, jolt.srid, jolt.x, jolt.y,
                            jolt.z)
         if isinstance(jolt, jolt_types.JoltNode):
+            if jolt.element_id is not None:
+                return cls(StructTag.node, jolt.id, jolt.labels,
+                           jolt.properties, jolt.element_id)
             return cls(StructTag.node, jolt.id, jolt.labels, jolt.properties)
         if isinstance(jolt, jolt_types.JoltRelationship):
             return cls(StructTag.relationship, jolt.id, jolt.start_node_id,
