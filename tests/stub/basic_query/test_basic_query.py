@@ -26,12 +26,14 @@ class TestBasicQuery(TestkitTestCase):
         super().tearDown()
 
     def test_4x4_populates_node_element_id_with_id(self):
-        t_vars = {"#RESULT#":
-                  '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}'}
+        script_params = {
+            "#BOLT_PROTOCOL#": "4.4",
+            "#RESULT#": '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}'
+        }
 
         self._server.start(
-            path=self.script_path("4x4_single_result.script"),
-            vars_=t_vars
+            path=self.script_path("single_result.script"),
+            vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
@@ -46,11 +48,14 @@ class TestBasicQuery(TestkitTestCase):
         self._server.done()
 
     def test_5x0_populates_node_element_id_with_string(self):
-        t_vars = {"#RESULT#":
-                  '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'}
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'
+        }
         self._server.start(
-            path=self.script_path("5x0_single_result.script"),
-            vars_=t_vars
+            path=self.script_path("single_result.script"),
+            vars_=script_params
         )
 
         self._session = self._driver.session("r", fetch_size=1)
@@ -66,11 +71,15 @@ class TestBasicQuery(TestkitTestCase):
         self._server.done()
 
     def test_5x0_populates_node_only_element_id(self):
-        t_vars = {"#RESULT#":
-                  '{"()": [null, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'}
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"()": [null, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'
+        }
+
         self._server.start(
-            path=self.script_path("5x0_single_result.script"),
-            vars_=t_vars
+            path=self.script_path("single_result.script"),
+            vars_=script_params
         )
 
         self._session = self._driver.session("r", fetch_size=1)
@@ -86,11 +95,14 @@ class TestBasicQuery(TestkitTestCase):
         self._server.done()
 
     def test_4x4_populates_rel_element_id_with_id(self):
-        t_vars = {"#RESULT#":
-                  '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}]}'}
+        script_params = {
+            "#BOLT_PROTOCOL#": "4.4",
+            "#RESULT#": '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}]}'
+        }
+
         self._server.start(
-            path=self.script_path("4x4_single_result.script"),
-            vars_=t_vars
+            path=self.script_path("single_result.script"),
+            vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run("MATCH ()-[r:]-() RETURN r LIMIT 1")
@@ -109,12 +121,15 @@ class TestBasicQuery(TestkitTestCase):
         self._server.done()
 
     def test_5x0_populates_rel_element_id_with_string(self):
-        t_vars = {"#RESULT#":
-                  '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}, "r1-123", '
-                  '"n1-1", "n1-2"]}'}
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}, "r1-123", '
+                '"n1-1", "n1-2"]}'
+        }
         self._server.start(
-            path=self.script_path("5x0_single_result.script"),
-            vars_=t_vars
+            path=self.script_path("single_result.script"),
+            vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run("MATCH ()-[r:]-() RETURN r LIMIT 1")
@@ -134,12 +149,16 @@ class TestBasicQuery(TestkitTestCase):
         self._server.done()
 
     def test_5x0_populates_rel_only_element_id(self):
-        t_vars = {"#RESULT#":
-                      '{"->": [null, null, "f", null, {"a": {"Z": "42"}}, "r1-123", '
-                      '"n1-1", "n1-2"]}'}
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"->": [null, null, "f", null, {"a": {"Z": "42"}}, "r1-123", '
+                '"n1-1", "n1-2"]}'
+        }
+
         self._server.start(
-            path=self.script_path("5x0_single_result.script"),
-            vars_=t_vars
+            path=self.script_path("single_result.script"),
+            vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
