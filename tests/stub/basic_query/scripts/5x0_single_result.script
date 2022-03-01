@@ -6,7 +6,7 @@ C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
 {*
     C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-    S: RECORD [{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}]
+    S: RECORD [#RESULT#]
        SUCCESS {"type": "r", "has_more": false}
 *}
 *: RESET

@@ -1,4 +1,4 @@
-!: BOLT 5.0
+!: BOLT 4.4
 
 A: HELLO {"{}": "*"}
 *: RESET
@@ -6,7 +6,7 @@ C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
 {*
     C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-    S: RECORD [{"()": [null, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}]
+    S: RECORD [#RESULT#]
        SUCCESS {"type": "r", "has_more": false}
 *}
 *: RESET

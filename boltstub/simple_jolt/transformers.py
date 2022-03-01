@@ -457,9 +457,12 @@ class JoltRelationTransformer(JoltTypeTransformer):
 
     @classmethod
     def _decode_full(cls, value, decode_cb):
-        if not isinstance(value, list) or len(value) != 5:
-            raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
-                                 % cls.sigil)
+        if not isinstance(value, list):
+            raise JOLTValueError('Expecting list after sigil "%s"' % cls.sigil)
+        if len(value) != 5:
+            return JoltRelationTransformer._decode_full_element(value,
+                                                                decode_cb)
+
         id_, start_node_id, rel_type, end_node_id, properties = value
         if not isinstance(id_, int):
             raise JOLTValueError("Relationship id must be int")
@@ -477,6 +480,42 @@ class JoltRelationTransformer(JoltTypeTransformer):
         return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
                                 properties)
 
+    @classmethod
+    def _decode_full_element(cls, value, decode_cb):
+        if not isinstance(value, list):
+            raise JOLTValueError('Expecting list after sigil "%s"' % cls.sigil)
+        if len(value) != 8:
+            raise JOLTValueError('Expecting list of length 8 after sigil "%s"'
+                                 % cls.sigil)
+        id_, start_node_id, rel_type, end_node_id, properties, element_id,\
+            start_node_element_id, end_node_element_id = value
+
+        if not isinstance(id_, int) and id_ is not None:
+            raise JOLTValueError("Relationship id must be int or None")
+        if not isinstance(start_node_id, int) and start_node_id is not None:
+            raise JOLTValueError("Relationship's start id must be int or None")
+        if not isinstance(rel_type, str):
+            raise JOLTValueError("Relationship's type id must be str")
+        if not isinstance(end_node_id, int) and end_node_id is not None:
+            raise JOLTValueError("Relationship's end id must be int or None")
+        if not isinstance(properties, dict):
+            raise JOLTValueError("Relationship's properties  must be dict")
+        properties = {k: decode_cb(v) for k, v in properties.items()}
+        if not all(map(lambda e: isinstance(e, str), properties.keys())):
+            raise JOLTValueError("Relationship's properties keys must be str")
+        if not isinstance(element_id, str):
+            raise JOLTValueError("Relationship's element_id must be str")
+        if not isinstance(start_node_element_id, str):
+            raise JOLTValueError(
+                "Relationship's start_node_element_id must be str")
+        if not isinstance(end_node_element_id, str):
+            raise JOLTValueError(
+                "Relationship's end_node_element_id must be str")
+
+        return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
+                                properties, element_id, start_node_element_id,
+                                end_node_element_id)
+
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
@@ -484,9 +523,17 @@ class JoltRelationTransformer(JoltTypeTransformer):
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
+        if value.element_id is None:
+            return {cls.sigil: [
+                value.id, value.start_node_id, value.rel_type,
+                value.end_node_id,
+                {k: encode_cb(v) for k, v in value.properties.items()}
+            ]}
         return {cls.sigil: [
             value.id, value.start_node_id, value.rel_type, value.end_node_id,
-            {k: encode_cb(v) for k, v in value.properties.items()}
+            {k: encode_cb(v) for k, v in value.properties.items()},
+            value.element_id, value.start_node_element_id,
+            value.end_node_element_id
         ]}
 
 

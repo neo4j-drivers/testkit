@@ -12,7 +12,7 @@ class Channel:
         self.wire = wire
         self.bolt_protocol = get_bolt_protocol(bolt_version)
         self.stream = PackStream(wire,
-                                 self.bolt_protocol.protocol_version[0] >= 5)
+                                 self.bolt_protocol.protocol_version[0] < 5)
         self.log = log_cb
         self.handshake_data = handshake_data
         self._buffered_msg = None

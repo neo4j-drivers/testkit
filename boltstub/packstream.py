@@ -63,11 +63,13 @@ class StructTag:
 class Structure:
 
     def __init__(self, tag, *fields, verified=True,
-                 bolt_version=False):
+                 validate_old_id=None):
         self.tag = tag
         self.fields = list(fields)
         self._verified = verified
-        self.validate_v3 = bolt_version is not False
+        if validate_old_id is None:
+            self.validate_either = True
+        self.validate_v3 = validate_old_id
 
         if verified:
             self._verify_fields()
@@ -82,8 +84,8 @@ class Structure:
         def validate_validations(validations, type_name):
             for validation in validations:
                 if not validation(fields):
-                    raise ValueError("Invalid %dsn struct received %r" %
-                                     type_name, self)
+                    raise ValueError(
+                        f"Invalid {type_name} struct received {self}")
 
         def verify_node_3_up():
             validations = [
@@ -97,6 +99,13 @@ class Structure:
             validate_validations(validations, "V3_node")
 
         def verify_node_5_up():
+            if self.validate_either:
+                try:
+                    verify_node_3_up()
+                    return
+                except ValueError as _:
+                    pass
+
             validations = [
                 lambda f: len(f) == 4,
                 lambda f: isinstance(f[0], int) or f[0] is None,
@@ -119,6 +128,12 @@ class Structure:
             validate_validations(validations, "V3_UnboundRelationship")
 
         def verify_unbound_relationship_5_up():
+            if self.validate_either:
+                try:
+                    verify_unbound_relationship_3_up()
+                    return
+                except ValueError as _:
+                    pass
             validations = [
                 lambda f: len(f) == 4,
                 lambda f: isinstance(f[0], int) or f[0] is None,
@@ -142,6 +157,12 @@ class Structure:
             validate_validations(validations, "V3_Relationship")
 
         def verify_relationship_5_up():
+            if self.validate_either:
+                try:
+                    verify_relationship_3_up()
+                    return
+                except ValueError as _:
+                    pass
             validations = [
                 lambda f: len(f) == 8,
                 lambda f: (isinstance(f[0], int) or f[0] is None),
@@ -157,7 +178,6 @@ class Structure:
             validate_validations(validations, "V5_Relationship")
 
         def verify_path():
-
             if (len(fields) != 3
                     or not isinstance(fields[0], list)
                     or not all(isinstance(n, Structure)
@@ -322,21 +342,24 @@ class Structure:
                            jolt.properties, jolt.element_id)
             return cls(StructTag.node, jolt.id, jolt.labels, jolt.properties)
         if isinstance(jolt, jolt_types.JoltRelationship):
+            if jolt.element_id is None:
+                return cls(StructTag.relationship, jolt.id, jolt.start_node_id,
+                           jolt.end_node_id, jolt.rel_type, jolt.properties)
             return cls(StructTag.relationship, jolt.id, jolt.start_node_id,
-                       jolt.end_node_id, jolt.rel_type, jolt.properties)
+                       jolt.end_node_id, jolt.rel_type, jolt.properties,
+                       jolt.element_id, jolt.start_node_element_id,
+                       jolt.end_node_element_id)
         if isinstance(jolt, jolt_types.JoltPath):
             # Node structs
             nodes = []
             for node in jolt.path[::2]:
-                node = cls(StructTag.node, node.id, node.labels,
-                           node.properties)
+                node = cls.from_jolt_type(node)
                 if node not in nodes:
                     nodes.append(node)
             # UnboundRelationship structs
             rels = []
             for rel in jolt.path[1::2]:
-                rel = cls(StructTag.unbound_relationship, rel.id, rel.rel_type,
-                          rel.properties)
+                rel = cls.from_jolt_type(rel)
                 if rel not in rels:
                     rels.append(rel)
             ids = [e.id for e in jolt.path]
@@ -689,9 +712,9 @@ class Packer:
 
 class Unpacker:
 
-    def __init__(self, unpackable, bolt_version):
+    def __init__(self, unpackable, validate_old_id):
         self.unpackable = unpackable
-        self.bolt_version = bolt_version
+        self.validate_old_id = validate_old_id
 
     def reset(self):
         self.unpackable.reset()
@@ -789,7 +812,7 @@ class Unpacker:
                 for i in range(len(fields)):
                     fields[i] = self._unpack(verify_struct=True)
                 return Structure(tag, *fields, verified=verify_struct,
-                                 bolt_version=self.bolt_version)
+                                 validate_old_id=self.validate_old_id)
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
@@ -946,9 +969,9 @@ class UnpackableBuffer:
 class PackStream:
     """Chunked message reader/writer for PackStream messaging."""
 
-    def __init__(self, wire, bolt_version):
+    def __init__(self, wire, validate_old_id):
         self.wire = wire
-        self.bolt_version = bolt_version
+        self.validate_old_id = validate_old_id
         self.data_buffer = []
         self.next_chunk_size = None
 
@@ -970,7 +993,7 @@ class PackStream:
                 break
         buffer = UnpackableBuffer(b"".join(self.data_buffer))
         self.data_buffer = []
-        unpacker = Unpacker(buffer, self.bolt_version)
+        unpacker = Unpacker(buffer, self.validate_old_id)
         return unpacker.unpack_message()
 
     def write_message(self, message):

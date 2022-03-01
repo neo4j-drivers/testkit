@@ -2,14 +2,13 @@ from nutkit import protocol as types
 from nutkit.frontend import Driver
 from nutkit.protocol import CypherInt, CypherString
 from tests.shared import (
-    get_driver_name,
     TestkitTestCase
 )
 from tests.stub.shared import StubServer
 
 
 class TestBasicQuery(TestkitTestCase):
-    # required_features = types.Feature.BOLT_5_0
+    required_features = types.Feature.BOLT_5_0,
 
     def setUp(self):
         super().setUp()
@@ -26,11 +25,14 @@ class TestBasicQuery(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def test_4x4_populates_element_id_with_id(self):
-        self._server.start(
-            path=self.script_path("4_4_protocol_one_node_query.script")
-        )
+    def test_4x4_populates_node_element_id_with_id(self):
+        t_vars = {"#RESULT#":
+                  '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}'}
 
+        self._server.start(
+            path=self.script_path("4x4_single_result.script"),
+            vars_=t_vars
+        )
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
 
@@ -43,9 +45,12 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
-    def test_5x0_populates_element_id_with_string(self):
+    def test_5x0_populates_node_element_id_with_string(self):
+        t_vars = {"#RESULT#":
+                  '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'}
         self._server.start(
-            path=self.script_path("5_0_protocol_one_node_query.script")
+            path=self.script_path("5x0_single_result.script"),
+            vars_=t_vars
         )
 
         self._session = self._driver.session("r", fetch_size=1)
@@ -60,9 +65,12 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
-    def test_5x0_populates_only_element_id(self):
+    def test_5x0_populates_node_only_element_id(self):
+        t_vars = {"#RESULT#":
+                  '{"()": [null, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'}
         self._server.start(
-            path=self.script_path("5_0_protocol_freki_one_node_query.script")
+            path=self.script_path("5x0_single_result.script"),
+            vars_=t_vars
         )
 
         self._session = self._driver.session("r", fetch_size=1)
@@ -72,6 +80,79 @@ class TestBasicQuery(TestkitTestCase):
 
         self.assertEqual(CypherInt(-1), node.values[0].id)
         self.assertEqual(CypherString("n1-123"), node.values[0].elementId)
+
+        self._session.close()
+        self._session = None
+        self._server.done()
+
+    def test_4x4_populates_rel_element_id_with_id(self):
+        t_vars = {"#RESULT#":
+                  '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}]}'}
+        self._server.start(
+            path=self.script_path("4x4_single_result.script"),
+            vars_=t_vars
+        )
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run("MATCH ()-[r:]-() RETURN r LIMIT 1")
+
+        relationship = result_handle.next()
+
+        self.assertEqual(CypherInt(123), relationship.values[0].id)
+        self.assertEqual(CypherString("123"), relationship.values[0].elementId)
+        self.assertEqual(CypherString("1"),
+                         relationship.values[0].startNodeElementId)
+        self.assertEqual(CypherString("2"),
+                         relationship.values[0].endNodeElementId)
+
+        self._session.close()
+        self._session = None
+        self._server.done()
+
+    def test_5x0_populates_rel_element_id_with_string(self):
+        t_vars = {"#RESULT#":
+                  '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}, "r1-123", '
+                  '"n1-1", "n1-2"]}'}
+        self._server.start(
+            path=self.script_path("5x0_single_result.script"),
+            vars_=t_vars
+        )
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run("MATCH ()-[r:]-() RETURN r LIMIT 1")
+
+        relationship = result_handle.next()
+
+        self.assertEqual(CypherInt(123), relationship.values[0].id)
+        self.assertEqual(CypherString("r1-123"),
+                         relationship.values[0].elementId)
+        self.assertEqual(CypherString("n1-1"),
+                         relationship.values[0].startNodeElementId)
+        self.assertEqual(CypherString("n1-2"),
+                         relationship.values[0].endNodeElementId)
+
+        self._session.close()
+        self._session = None
+        self._server.done()
+
+    def test_5x0_populates_rel_only_element_id(self):
+        t_vars = {"#RESULT#":
+                      '{"->": [null, null, "f", null, {"a": {"Z": "42"}}, "r1-123", '
+                      '"n1-1", "n1-2"]}'}
+        self._server.start(
+            path=self.script_path("5x0_single_result.script"),
+            vars_=t_vars
+        )
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
+
+        relationship = result_handle.next()
+
+        self.assertEqual(CypherInt(-1), relationship.values[0].id)
+        self.assertEqual(CypherString("r1-123"),
+                         relationship.values[0].elementId)
+        self.assertEqual(CypherString("n1-1"),
+                         relationship.values[0].startNodeElementId)
+        self.assertEqual(CypherString("n1-2"),
+                         relationship.values[0].endNodeElementId)
 
         self._session.close()
         self._session = None

@@ -449,24 +449,42 @@ class JoltNode(JoltType):
 
 
 class JoltRelationship(JoltType):
-    def __init__(self, id_, start_node_id, rel_type, end_node_id, properties):
+    def __init__(self, id_, start_node_id, rel_type, end_node_id, properties,
+                 element_id=None, start_node_element_id=None,
+                 end_node_element_id=None):
         self.id = id_
         self.start_node_id = start_node_id
         self.rel_type = rel_type
         self.end_node_id = end_node_id
         self.properties = properties
+        self.element_id = element_id
+        self.start_node_element_id = start_node_element_id
+        self.end_node_element_id = end_node_element_id
 
     def __eq__(self, other):
         if not isinstance(other, JoltRelationship):
             return NotImplemented
+        if self.element_id is None:
+            return all(getattr(self, attr) == getattr(other, attr)
+                       for attr in ("id", "start_node_id", "rel_type",
+                                    "end_node_id", "properties"))
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("id", "start_node_id", "rel_type",
-                                "end_node_id", "properties"))
+                                "end_node_id", "properties", "element_id",
+                                "start_node_element_id",
+                                "end_node_element_id"))
 
     def __repr__(self):
-        return "%s<%r, %r, %r, %r, %r>" % (
+        if self.element_id is None:
+            return "%s<%r, %r, %r, %r, %r>" % (
+                self.__class__.__name__, self.id, self.start_node_id,
+                self.rel_type, self.end_node_id, self.properties
+            )
+        return "%s<%r, %r, %r, %r, %r, %r, %r, %r>" % (
             self.__class__.__name__, self.id, self.start_node_id,
-            self.rel_type, self.end_node_id, self.properties
+            self.rel_type, self.end_node_id, self.properties,
+            self.element_id, self.start_node_element_id,
+            self.end_node_element_id
         )
 
 
