@@ -176,3 +176,30 @@ class TestBasicQuery(TestkitTestCase):
         self._session.close()
         self._session = None
         self._server.done()
+
+    def test_4x4_populars_element_id_with_long(self):
+        script_params = {
+            "#BOLT_PROTOCOL#": "4.4",
+            "#RESULT#":
+                '{"..": ['
+                '{"()": [1, ["l"], {}]}, '
+                '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
+                '{"()": [3, ["l"], {}]}, '
+                '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
+                '{"()": [1, ["l"], {}]}'
+                ']}'
+        }
+
+        self._server.start(
+            path=self.script_path("single_result.script"),
+            vars_=script_params
+        )
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run('MATCH p = ()--()--() '
+                                          'RETURN p LIMIT 1')
+
+        path = result_handle.next()
+
+        self._session.close()
+        self._session = None
+        self._server.done()

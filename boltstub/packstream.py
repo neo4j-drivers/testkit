@@ -17,7 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+import inspect
 from codecs import decode
 from io import BytesIO
 from struct import pack as struct_pack
@@ -85,7 +85,9 @@ class Structure:
             for validation in validations:
                 if not validation(fields):
                     raise ValueError(
-                        f"Invalid {type_name} struct received {self}")
+                        f"Invalid {type_name} struct received.\n"
+                        f"validation failed: {inspect.getsource(validation)}"
+                        f" {self}")
 
         def verify_node_3_up():
             validations = [
@@ -163,6 +165,7 @@ class Structure:
                     return
                 except ValueError as _:
                     pass
+
             validations = [
                 lambda f: len(f) == 8,
                 lambda f: (isinstance(f[0], int) or f[0] is None),
@@ -178,26 +181,24 @@ class Structure:
             validate_validations(validations, "V5_Relationship")
 
         def verify_path():
-            if (len(fields) != 3
-                    or not isinstance(fields[0], list)
-                    or not all(isinstance(n, Structure)
-                               and n.tag == StructTag.node
-                               and n.fields[0] in fields[2]  # id is used
-                               for n in fields[0])
-                    or not isinstance(fields[1], list)
-                    or not all(isinstance(rel, Structure)
-                               and rel.tag == StructTag.unbound_relationship
-                               and rel.fields[0] in fields[2]  # id is used
-                               for rel in fields[1])
-                    or not isinstance(fields[2], list)
-                    or not all(isinstance(id_, int)
-                               # id exists in nodes or relationships
-                               and id_ in {s.fields[0]
-                                           for s in fields[0] + fields[1]}
-                               for id_ in fields[2])):
-                raise ValueError(
-                    "Invalid Path struct received %r" % self
-                )
+            validations = [
+                lambda f: len(f) == 3,
+                lambda f: all(isinstance(n, Structure)
+                              and n.tag == StructTag.node
+                              for n in f[0]),
+                lambda f: isinstance(f[1], list),
+                lambda f: all(isinstance(rel, Structure)
+                              and rel.tag == StructTag.unbound_relationship
+                              for rel in f[1]),
+                lambda f: isinstance(f[2], list),
+                # index is less than respective array length
+                # rels indexed from 1, nodes 0
+                lambda f: all(isinstance(id_, int)
+                              and abs(id_) <= len(f[1])
+                              if i % 2 == 0 else abs(id_) < len(f[0])
+                              for i, id_ in enumerate(f[2]))
+            ]
+            validate_validations(validations, "Path")
 
         def build_generic_verifier(types, name):
             def verify():
@@ -350,20 +351,55 @@ class Structure:
                        jolt.element_id, jolt.start_node_element_id,
                        jolt.end_node_element_id)
         if isinstance(jolt, jolt_types.JoltPath):
-            # Node structs
+            uniq_nodes = []
+            uniq_rels = []
+            ids = []
             nodes = []
-            for node in jolt.path[::2]:
-                node = cls.from_jolt_type(node)
-                if node not in nodes:
-                    nodes.append(node)
-            # UnboundRelationship structs
             rels = []
+            # Node structs
+            node_idxs = {}
+            node_idx = 0
+            for node in jolt.path[::2]:
+                nodes.append(node)
+                map_node = cls(StructTag.node, node.id, node.labels,
+                           node.properties)
+                if map_node not in uniq_nodes:
+                    node_idxs[str(node.id)] = node_idx
+                    node_idx = node_idx + 1
+                    # nodesDict[str(node.id)] = node
+                    uniq_nodes.append(map_node)
+
+            # UnboundRelationship structs
+
+            rel_idxs = {}
+            rel_idx = 1
             for rel in jolt.path[1::2]:
-                rel = cls.from_jolt_type(rel)
-                if rel not in rels:
-                    rels.append(rel)
-            ids = [e.id for e in jolt.path]
-            return cls(StructTag.path, nodes, rels, ids)
+                rels.append(rel)
+                ub_rel = cls(StructTag.unbound_relationship, rel.id,
+                             rel.rel_type,
+                             rel.properties)
+                if ub_rel not in uniq_rels:
+                    rel_idxs[str(rel.id)] = rel_idx
+                    rel_idx = rel_idx + 1
+                    # relsDict[rel.id_] = rel
+                    uniq_rels.append(ub_rel)
+
+            last_node = nodes[0]
+            for i in range(1, (len(rels)*2)+1):
+                if i % 2 == 0:
+                    last_node = nodes[int(i/2)]
+                    index = node_idxs[str(last_node.id)]
+                    ids.append(index)
+                else:
+                    rel = rels[int(i/2)]
+                    index = rel_idxs[str(rel.id)]
+                    # print(f"{rel}")
+                    if last_node.id == rel.start_node_id:
+                        ids.append(index)
+                    else:
+                        ids.append(-index)
+
+            return cls(StructTag.path, uniq_nodes, uniq_rels, ids)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     def to_jolt_type(self):
