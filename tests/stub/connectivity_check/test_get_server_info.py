@@ -181,7 +181,6 @@ class TestGetServerInfo(TestkitTestCase):
                 self.assertGreater(resets2, resets1)
         self._router.done()
         self._server1.done()
-        self._server1._dump()
 
     def test_routing_fetches_home_db(self):
         # driver should pick connection from the pool and send RESET
