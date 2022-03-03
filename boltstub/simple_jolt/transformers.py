@@ -67,6 +67,12 @@ class JoltTypeTransformer(abc.ABC):
         return cls._encode_full(value, encode_cb,
                                 human_readable=human_readable)
 
+    @staticmethod
+    def has_element_id_at_index(value_list, element_id_idx):
+        return (isinstance(value_list, list)
+                and len(value_list) > element_id_idx
+                and isinstance(value_list[element_id_idx], str))
+
 
 class JoltNullTransformer(JoltTypeTransformer):
     _supported_types = type(None),
@@ -390,8 +396,11 @@ class JoltNodeTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
+        if JoltTypeTransformer.has_element_id_at_index(value, 3):
+            return JoltNodeTransformer._decode_full_element(value,
+                                                            decode_cb)
         if not isinstance(value, list) or len(value) != 3:
-            return JoltNodeTransformer._decode_full_element(value, decode_cb)
+            raise JOLTValueError('Expecting list of length 3 after sigil "()"')
         id_, labels, properties = value
         if not isinstance(id_, int):
             raise JOLTValueError("Node id must be int")
@@ -455,13 +464,15 @@ class JoltRelationTransformer(JoltTypeTransformer):
     def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
+
     @classmethod
     def _decode_full(cls, value, decode_cb):
-        if not isinstance(value, list):
-            raise JOLTValueError('Expecting list after sigil "%s"' % cls.sigil)
-        if len(value) != 5:
+        if JoltTypeTransformer.has_element_id_at_index(value, 5):
             return JoltRelationTransformer._decode_full_element(value,
                                                                 decode_cb)
+        if not isinstance(value, list) or len(value) != 5:
+            raise JOLTValueError(
+                'Expecting list of length 5 after sigil"%s"' % cls.sigil)
 
         id_, start_node_id, rel_type, end_node_id, properties = value
         if not isinstance(id_, int):
