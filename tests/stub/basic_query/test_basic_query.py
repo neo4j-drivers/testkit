@@ -1,6 +1,6 @@
 from nutkit import protocol as types
 from nutkit.frontend import Driver
-from nutkit.protocol import CypherInt, CypherString
+from nutkit.protocol import CypherInt, CypherString, CypherPath, CypherList
 from tests.shared import (
     TestkitTestCase
 )
@@ -177,7 +177,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
-    def test_4x4_populars_element_id_with_long(self):
+    def test_4x4_populates_path_element_ids_with_long(self):
         script_params = {
             "#BOLT_PROTOCOL#": "4.4",
             "#RESULT#":
@@ -197,8 +197,115 @@ class TestBasicQuery(TestkitTestCase):
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run('MATCH p = ()--()--() '
                                           'RETURN p LIMIT 1')
+        result = result_handle.next()
+        self.assertIsInstance(result.values[0], CypherPath)
+        path = result.values[0]
+        self.assertIsInstance(path.nodes, CypherList)
+        self.assertIsInstance(path.relationships, CypherList)
+        nodes = path.nodes.value
+        rels = path.relationships.value
+        # node ids
+        self.assertEqual(CypherInt(1), nodes[0].id)
+        self.assertEqual(CypherString("1"), nodes[0].elementId)
+        # rel ids
+        self.assertEqual(CypherInt(2), rels[0].id)
+        self.assertEqual(CypherString("2"), rels[0].elementId)
+        # rel start/end ids
+        self.assertEqual(CypherInt(1), rels[0].startNodeId)
+        self.assertEqual(CypherInt(3), rels[0].endNodeId)
+        self.assertEqual(CypherString("1"), rels[0].startNodeElementId)
+        self.assertEqual(CypherString("3"), rels[0].endNodeElementId)
+        self._session.close()
+        self._session = None
+        self._server.done()
 
-        path = result_handle.next()
+    def test_5x0_populates_path_element_ids_with_string(self):
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"..": ['
+                '{"()": [1, ["l"], {}, "n1-1"]}, '
+                '{"->": [2, 1, "RELATES_TO", 3, {}, "r1-2", "n1-1", "n1-3"]}, '
+                '{"()": [3, ["l"], {}, "n1-3"]}, '
+                '{"->": [4, 3, "RELATES_TO", 1, {}, "r1-4", "n1-3", "n1-1"]}, '
+                '{"()": [1, ["l"], {}, "n1-1"]}'
+                ']}'
+        }
+
+        self._server.start(
+            path=self.script_path("single_result.script"),
+            vars_=script_params
+        )
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run('MATCH p = ()--()--() '
+                                          'RETURN p LIMIT 1')
+
+        result = result_handle.next()
+
+        self.assertIsInstance(result.values[0], CypherPath)
+        path = result.values[0]
+        self.assertIsInstance(path.nodes, CypherList)
+        self.assertIsInstance(path.relationships, CypherList)
+        nodes = path.nodes.value
+        rels = path.relationships.value
+        # node ids
+        self.assertEqual(CypherInt(1), nodes[0].id)
+        self.assertEqual(CypherString("n1-1"), nodes[0].elementId)
+        # rel ids
+        self.assertEqual(CypherInt(2), rels[0].id)
+        self.assertEqual(CypherString("r1-2"), rels[0].elementId)
+        # rel start/end ids
+        self.assertEqual(CypherInt(1), rels[0].startNodeId)
+        self.assertEqual(CypherInt(3), rels[0].endNodeId)
+        self.assertEqual(CypherString("n1-1"), rels[0].startNodeElementId)
+        self.assertEqual(CypherString("n1-3"), rels[0].endNodeElementId)
+
+        self._session.close()
+        self._session = None
+        self._server.done()
+
+    def test_5x0_populates_path_element_ids_with_only_string(self):
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"..": ['
+                '{"()": [null, ["l"], {}, "n1-1"]}, '
+                '{"->": [null, null, "RELATES_TO", null, {}, '
+                '"r1-2", "n1-1", "n1-3"]}, '
+                '{"()": [null, ["l"], {}, "n1-3"]}, '
+                '{"->": [null, null, "RELATES_TO", null, '
+                '{}, "r1-4", "n1-3", "n1-1"]}, '
+                '{"()": [null, ["l"], {}, "n1-1"]}'
+                ']}'
+        }
+
+        self._server.start(
+            path=self.script_path("single_result.script"),
+            vars_=script_params
+        )
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run('MATCH p = ()--()--() '
+                                          'RETURN p LIMIT 1')
+
+        result = result_handle.next()
+
+        self.assertIsInstance(result.values[0], CypherPath)
+        path = result.values[0]
+        self.assertIsInstance(path.nodes, CypherList)
+        self.assertIsInstance(path.relationships, CypherList)
+        nodes = path.nodes.value
+        rels = path.relationships.value
+        # node ids
+        self.assertEqual(CypherInt(-1), nodes[0].id)
+        self.assertEqual(CypherString("n1-1"), nodes[0].elementId)
+        # rel ids
+        self.assertEqual(CypherInt(-1), rels[0].id)
+        self.assertEqual(CypherString("r1-2"), rels[0].elementId)
+        # rel start/end ids
+        self.assertEqual(CypherInt(-1), rels[0].startNodeId)
+        self.assertEqual(CypherInt(-1), rels[0].endNodeId)
+        self.assertEqual(CypherString("n1-1"), rels[0].startNodeElementId)
+        self.assertEqual(CypherString("n1-3"), rels[0].endNodeElementId)
 
         self._session.close()
         self._session = None

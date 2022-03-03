@@ -362,9 +362,11 @@ class Structure:
             for node in jolt.path[::2]:
                 nodes.append(node)
                 map_node = cls(StructTag.node, node.id, node.labels,
-                           node.properties)
+                           node.properties, node.element_id)
                 if map_node not in uniq_nodes:
-                    node_idxs[str(node.id)] = node_idx
+                    node_idxs[str(node.id)
+                              if node.element_id is None
+                              else node.element_id] = node_idx
                     node_idx = node_idx + 1
                     # nodesDict[str(node.id)] = node
                     uniq_nodes.append(map_node)
@@ -377,9 +379,11 @@ class Structure:
                 rels.append(rel)
                 ub_rel = cls(StructTag.unbound_relationship, rel.id,
                              rel.rel_type,
-                             rel.properties)
+                             rel.properties, rel.element_id)
                 if ub_rel not in uniq_rels:
-                    rel_idxs[str(rel.id)] = rel_idx
+                    rel_idxs[str(rel.id)
+                             if rel.element_id is None
+                             else rel.element_id] = rel_idx
                     rel_idx = rel_idx + 1
                     # relsDict[rel.id_] = rel
                     uniq_rels.append(ub_rel)
@@ -388,11 +392,15 @@ class Structure:
             for i in range(1, (len(rels)*2)+1):
                 if i % 2 == 0:
                     last_node = nodes[int(i/2)]
-                    index = node_idxs[str(last_node.id)]
+                    index = node_idxs[str(last_node.id)
+                                      if last_node.element_id is None
+                                      else last_node.element_id]
                     ids.append(index)
                 else:
                     rel = rels[int(i/2)]
-                    index = rel_idxs[str(rel.id)]
+                    index = rel_idxs[str(rel.id)
+                                     if rel.element_id is None
+                                     else rel.element_id]
                     # print(f"{rel}")
                     if last_node.id == rel.start_node_id:
                         ids.append(index)
