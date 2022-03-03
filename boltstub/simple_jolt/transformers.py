@@ -471,8 +471,8 @@ class JoltRelationTransformer(JoltTypeTransformer):
             return JoltRelationTransformer._decode_full_element(value,
                                                                 decode_cb)
         if not isinstance(value, list) or len(value) != 5:
-            raise JOLTValueError(
-                'Expecting list of length 5 after sigil"%s"' % cls.sigil)
+            raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
+                                 % cls.sigil)
 
         id_, start_node_id, rel_type, end_node_id, properties = value
         if not isinstance(id_, int):
