@@ -397,8 +397,12 @@ class JoltNodeTransformer(JoltTypeTransformer):
     @staticmethod
     def _decode_full(value, decode_cb):
         if JoltTypeTransformer.has_element_id_at_index(value, 3):
-            return JoltNodeTransformer._decode_full_element(value,
-                                                            decode_cb)
+            return JoltNodeTransformer._decode_v2_node(value,
+                                                       decode_cb)
+        return JoltNodeTransformer._decode_v1_node(value, decode_cb)
+
+    @staticmethod
+    def _decode_v1_node(value, decode_cb):
         if not isinstance(value, list) or len(value) != 3:
             raise JOLTValueError('Expecting list of length 3 after sigil "()"')
         id_, labels, properties = value
@@ -415,7 +419,7 @@ class JoltNodeTransformer(JoltTypeTransformer):
         return JoltNode(id_, labels, properties)
 
     @staticmethod
-    def _decode_full_element(value, decode_cb):
+    def _decode_v2_node(value, decode_cb):
         if not isinstance(value, list) or len(value) != 4:
             raise JOLTValueError('Expecting list of length 4 after sigil "()"')
         id_, labels, properties, element_id = value
@@ -468,12 +472,16 @@ class JoltRelationTransformer(JoltTypeTransformer):
     @classmethod
     def _decode_full(cls, value, decode_cb):
         if JoltTypeTransformer.has_element_id_at_index(value, 5):
-            return JoltRelationTransformer._decode_full_element(value,
-                                                                decode_cb)
+            return JoltRelationTransformer._decode_v2_relationship(value,
+                                                                   decode_cb)
+        return JoltRelationTransformer._decode_v1_relationship(value,
+                                                               decode_cb)
+
+    @classmethod
+    def _decode_v1_relationship(cls, value, decode_cb):
         if not isinstance(value, list) or len(value) != 5:
             raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
                                  % cls.sigil)
-
         id_, start_node_id, rel_type, end_node_id, properties = value
         if not isinstance(id_, int):
             raise JOLTValueError("Relationship id must be int")
@@ -492,7 +500,7 @@ class JoltRelationTransformer(JoltTypeTransformer):
                                 properties)
 
     @classmethod
-    def _decode_full_element(cls, value, decode_cb):
+    def _decode_v2_relationship(cls, value, decode_cb):
         if not isinstance(value, list):
             raise JOLTValueError('Expecting list after sigil "%s"' % cls.sigil)
         if len(value) != 8:
