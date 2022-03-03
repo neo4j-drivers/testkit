@@ -361,8 +361,7 @@ class Structure:
             node_idx = 0
             for node in jolt.path[::2]:
                 nodes.append(node)
-                map_node = cls(StructTag.node, node.id, node.labels,
-                           node.properties, node.element_id)
+                map_node = Structure.from_jolt_type(node)
                 if map_node not in uniq_nodes:
                     node_idxs[str(node.id)
                               if node.element_id is None
@@ -377,9 +376,14 @@ class Structure:
             rel_idx = 1
             for rel in jolt.path[1::2]:
                 rels.append(rel)
-                ub_rel = cls(StructTag.unbound_relationship, rel.id,
-                             rel.rel_type,
-                             rel.properties, rel.element_id)
+
+                ub_rel = (cls(StructTag.unbound_relationship, rel.id,
+                              rel.rel_type,
+                              rel.properties, rel.element_id)
+                          if rel.element_id is not None else
+                          cls(StructTag.unbound_relationship, rel.id,
+                              rel.rel_type,
+                              rel.properties))
                 if ub_rel not in uniq_rels:
                     rel_idxs[str(rel.id)
                              if rel.element_id is None
