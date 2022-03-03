@@ -115,7 +115,7 @@ class TestTrustSystemCertsConfig(TestSecureScheme):
     schemes = "neo4j", "bolt"
     required_features = types.Feature.API_SSL_CONFIG,
     extra_driver_configs = (
-        {"encrypted": True, "trusted_certificates": None},
+        {"encrypted": True, "trusted_certificates": "None"},
         {"encrypted": True},
     )
 
