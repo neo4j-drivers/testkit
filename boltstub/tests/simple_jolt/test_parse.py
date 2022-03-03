@@ -123,7 +123,7 @@ from ...simple_jolt.types import (
     # node
     (
         JoltNode(123, ["l1", "l2"], {"a": 42}),
-        '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}',
+        '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}'
     ),
     (
         JoltNode(123, ["l1", "l2"], {"U": 42}),
@@ -133,11 +133,30 @@ from ...simple_jolt.types import (
         JoltNode(123, ["l1, l2"], {"a": 42}, "n1-123"),
         '{"()": [123, ["l1", "l2"], {"U": {"Z": "42"}}, "n1-123"]}'
     ),
-
+    (
+        JoltNode(None, ["l1, l2"], {"a": 42}, "n1-123"),
+        '{"()": [null, ["l1", "l2"], {"U": {"Z": "42"}}, "n1-123"]}'
+    ),
     # relationship
     (
         JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"}),
         '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}'
+    ),
+    (
+        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"}),
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}'
+    ),
+    (
+        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"},
+                         "r42", "n123", "n321"),
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}, '
+        '"r42", "n123", "n321"]}'
+    ),
+    (
+        JoltRelationship(None, None, "REVERTS_TO", None, {"prop": "value"},
+                         "r42", "n123", "n321"),
+        '{"->": [null, null, "REVERTS_TO", null, {"prop": {"U": "value"}}, '
+        '"r42", "n123", "n321"]}'
     ),
 
     # path
@@ -155,6 +174,40 @@ from ...simple_jolt.types import (
         '{"()": [3, ["l"], {}]}, '
         '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
         '{"()": [1, ["l"], {}]}'
+        ']}'  # noqa: Q000
+    ),
+    (
+        JoltPath(
+            JoltNode(1, ["l"], {}, "n1"),
+            JoltRelationship(2, 1, "RELATES_TO", 3, {}, "r2", "n1", "n3"),
+            JoltNode(3, ["l"], {}, "n3"),
+            JoltRelationship(4, 3, "RELATES_TO", 1, {}, "r4", "n3", "n1"),
+            JoltNode(1, ["l"], {}, "n1"),
+        ),
+        '{"..": ['
+        '{"()": [1, ["l"], {}, "n1"]}, '
+        '{"->": [2, 1, "RELATES_TO", 3, {}, "r2", "n1", "n3"]}, '
+        '{"()": [3, ["l"], {}, "n3"]}, '
+        '{"->": [4, 3, "RELATES_TO", 1, {}, "r4", "n3", "n1"]}, '
+        '{"()": [1, ["l"], {}, "n1"]}'
+        ']}'  # noqa: Q000
+    ),
+    (
+        JoltPath(
+            JoltNode(None, ["l"], {}, "n1"),
+            JoltRelationship(None, None, "RELATES_TO", None,
+                             {}, "r2", "n1", "n3"),
+            JoltNode(None, ["l"], {}, "n3"),
+            JoltRelationship(None, None, "RELATES_TO", None,
+                             {}, "r4", "n3", "n1"),
+            JoltNode(None, ["l"], {}, "n1"),
+        ),
+        '{"..": ['
+        '{"()": [null, ["l"], {}, "n1"]}, '
+        '{"->": [null, null, "RELATES_TO", null, {}, "r2", "n1", "n3"]}, '
+        '{"()": [null, ["l"], {}, "n3"]}, '
+        '{"->": [null, null, "RELATES_TO", null, {}, "r4", "n3", "n1"]}, '
+        '{"()": [null, ["l"], {}, "n1"]}'
         ']}'  # noqa: Q000
     ),
 ))
