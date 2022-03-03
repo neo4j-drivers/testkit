@@ -62,7 +62,6 @@ class TestBasicQuery(TestkitTestCase):
         result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
 
         node = result_handle.next()
-
         self.assertEqual(CypherInt(123), node.values[0].id)
         self.assertEqual(CypherString("n1-123"), node.values[0].elementId)
 
@@ -111,6 +110,9 @@ class TestBasicQuery(TestkitTestCase):
 
         self.assertEqual(CypherInt(123), relationship.values[0].id)
         self.assertEqual(CypherString("123"), relationship.values[0].elementId)
+
+        self.assertEqual(CypherInt(1), relationship.values[0].startNodeId)
+        self.assertEqual(CypherInt(2), relationship.values[0].endNodeId)
         self.assertEqual(CypherString("1"),
                          relationship.values[0].startNodeElementId)
         self.assertEqual(CypherString("2"),
@@ -139,6 +141,9 @@ class TestBasicQuery(TestkitTestCase):
         self.assertEqual(CypherInt(123), relationship.values[0].id)
         self.assertEqual(CypherString("r1-123"),
                          relationship.values[0].elementId)
+
+        self.assertEqual(CypherInt(1), relationship.values[0].startNodeId)
+        self.assertEqual(CypherInt(2), relationship.values[0].endNodeId)
         self.assertEqual(CypherString("n1-1"),
                          relationship.values[0].startNodeElementId)
         self.assertEqual(CypherString("n1-2"),
@@ -168,6 +173,9 @@ class TestBasicQuery(TestkitTestCase):
         self.assertEqual(CypherInt(-1), relationship.values[0].id)
         self.assertEqual(CypherString("r1-123"),
                          relationship.values[0].elementId)
+
+        self.assertEqual(CypherInt(-1), relationship.values[0].startNodeId)
+        self.assertEqual(CypherInt(-1), relationship.values[0].endNodeId)
         self.assertEqual(CypherString("n1-1"),
                          relationship.values[0].startNodeElementId)
         self.assertEqual(CypherString("n1-2"),
