@@ -1,10 +1,7 @@
 from .. import protocol
+from .exceptions import ApplicationCodeError
 from .result import Result
 from .transaction import Transaction
-
-
-class ApplicationCodeError(Exception):
-    pass
 
 
 class Session:
