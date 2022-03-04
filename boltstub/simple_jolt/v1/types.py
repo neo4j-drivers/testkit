@@ -1,34 +1,16 @@
-import abc
 import datetime
 import re
 
-from .errors import JOLTValueError
+from ..common.types import _JoltParsedType
+from ..common.types import JoltType as _JoltTypeCommon
+from ..common.types import JoltWildcard
 
 
-class JoltType:
+class JoltType(_JoltTypeCommon):  # version specific type base class
     pass
 
 
-class _JoltParsedType(JoltType, abc.ABC):
-    # to be overridden in subclasses (this re never matches)
-    _parse_re = re.compile(r"^(?= )$")
-
-    def __init__(self, value: str):
-        match = self._parse_re.match(value)
-        if not match:
-            raise JOLTValueError(
-                "{} didn't match the types format: {}".format(
-                    value, self._parse_re
-                )
-            )
-        self._str = value
-        self._groups = match.groups()
-
-    def __str__(self):
-        return self._str
-
-
-class JoltDate(_JoltParsedType):
+class JoltV1DateMixin(_JoltParsedType):
     _parse_re = re.compile(r"^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?$")
     # yes:
     # 2020-01-01
@@ -58,7 +40,7 @@ class JoltDate(_JoltParsedType):
         return cls(str(epoch + delta))
 
     def __eq__(self, other):
-        if not isinstance(other, JoltDate):
+        if not isinstance(other, JoltV1DateMixin):
             return NotImplemented
         return self.days == other.days
 
@@ -66,7 +48,11 @@ class JoltDate(_JoltParsedType):
         return "%s<%r>" % (self.__class__.__name__, self.days)
 
 
-class JoltTime(_JoltParsedType):
+class JoltDate(JoltV1DateMixin, JoltType):
+    pass
+
+
+class JoltV1TimeMixin(_JoltParsedType):
     _parse_re = re.compile(
         r"^(\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,9}))?"
         r"(Z|\+00|[+-]00(?::?[0-5][0-9]|60)|"
@@ -141,7 +127,7 @@ class JoltTime(_JoltParsedType):
         return cls(s)
 
     def __eq__(self, other):
-        if not isinstance(other, JoltTime):
+        if not isinstance(other, JoltV1TimeMixin):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("nanoseconds", "utc_offset"))
@@ -151,7 +137,11 @@ class JoltTime(_JoltParsedType):
                                self.nanoseconds, self.utc_offset)
 
 
-class JoltLocalTime(_JoltParsedType):
+class JoltTime(JoltV1TimeMixin, JoltType):
+    pass
+
+
+class JoltV1LocalTimeMixin(_JoltParsedType):
     _parse_re = re.compile(r"^(\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,9}))?")
     # yes:
     # 12:00:00.000000000
@@ -198,7 +188,7 @@ class JoltLocalTime(_JoltParsedType):
         return cls(s)
 
     def __eq__(self, other):
-        if not isinstance(other, JoltLocalTime):
+        if not isinstance(other, JoltV1LocalTimeMixin):
             return NotImplemented
         return self.nanoseconds == other.nanoseconds
 
@@ -206,26 +196,30 @@ class JoltLocalTime(_JoltParsedType):
         return "%s<%r>" % (self.__class__.__name__, self.nanoseconds)
 
 
-class JoltDateTime(_JoltParsedType):
+class JoltLocalTime(JoltV1LocalTimeMixin, JoltType):
+    pass
+
+
+class JoltV1DateTimeMixin(_JoltParsedType):
     _parse_re = re.compile(r"^("
-                           + JoltDate._parse_re.pattern[1:-1]
+                           + JoltV1DateMixin._parse_re.pattern[1:-1]
                            + ")T("
-                           + JoltTime._parse_re.pattern[1:-1]
+                           + JoltV1TimeMixin._parse_re.pattern[1:-1]
                            + r")$")
     # yes:
     # <date_re>T<time_re>
-    # where <date_re> is anything that works for JoltDate and <time_re> is
-    # anything that works for JoltTime
+    # where <date_re> is anything that works for JoltV1DateMixin and <time_re>
+    # is anything that works for JoltV1TimeMixin
 
     # no:
     # anything else
     def __init__(self, value: str):
         super().__init__(value)
-        self.date = JoltDate(self._groups[0])
-        self.time = JoltTime(self._groups[4])
+        self.date = JoltV1DateMixin(self._groups[0])
+        self.time = JoltV1TimeMixin(self._groups[4])
 
     def __eq__(self, other):
-        if not isinstance(other, JoltDateTime):
+        if not isinstance(other, JoltV1DateTimeMixin):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("date", "time"))
@@ -246,34 +240,40 @@ class JoltDateTime(_JoltParsedType):
         seconds += nanoseconds // 1000000000
         nanoseconds = nanoseconds % 1000000000
         days, seconds = divmod(seconds, 86400)
-        date = JoltDate.new(days=days)
-        time = JoltTime.new(nanoseconds=seconds * 1000000000 + nanoseconds,
-                            utc_offset_seconds=utc_offset_seconds)
+        date = JoltV1DateMixin.new(days=days)
+        time = JoltV1TimeMixin.new(
+            nanoseconds=seconds * 1000000000 + nanoseconds,
+            utc_offset_seconds=utc_offset_seconds
+        )
         return cls("%sT%s" % (date, time))
 
 
-class JoltLocalDateTime(_JoltParsedType):
+class JoltDateTime(JoltV1DateTimeMixin, JoltType):
+    pass
+
+
+class JoltV1LocalDateTimeMixin(_JoltParsedType):
     _parse_re = re.compile(r"^("
-                           + JoltDate._parse_re.pattern[1:-1]
+                           + JoltV1DateMixin._parse_re.pattern[1:-1]
                            + ")T("
-                           + JoltLocalTime._parse_re.pattern[1:-1]
+                           + JoltV1LocalTimeMixin._parse_re.pattern[1:-1]
                            + r")$")
     # yes:
     # <date_re>T<local_time_re>
-    # where <date_re> is anything that works for JoltDate and <local_time_re>
-    # is anything that works for JoltLocalTime
+    # where <date_re> is anything that works for JoltV1DateMixin and
+    # <local_time_re> is anything that works for JoltV1LocalTimeMixin
 
     # no:
     # anything else
     def __init__(self, value: str):
         super().__init__(value)
         print(self._groups)
-        self.date = JoltDate(self._groups[0])
-        self.time = JoltLocalTime(self._groups[4])
+        self.date = JoltV1DateMixin(self._groups[0])
+        self.time = JoltV1LocalTimeMixin(self._groups[4])
     pass
 
     def __eq__(self, other):
-        if not isinstance(other, JoltLocalDateTime):
+        if not isinstance(other, JoltV1LocalDateTimeMixin):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("date", "time"))
@@ -294,14 +294,18 @@ class JoltLocalDateTime(_JoltParsedType):
         seconds += nanoseconds // 1000000000
         nanoseconds = nanoseconds % 1000000000
         days, seconds = divmod(seconds, 86400)
-        date = JoltDate.new(days=days)
-        time = JoltLocalTime.new(
+        date = JoltV1DateMixin.new(days=days)
+        time = JoltV1LocalTimeMixin.new(
             nanoseconds=seconds * 1000000000 + nanoseconds
         )
         return cls("%sT%s" % (date, time))
 
 
-class JoltDuration(_JoltParsedType):
+class JoltLocalDateTime(JoltV1LocalDateTimeMixin, JoltType):
+    pass
+
+
+class JoltV1DurationMixin(_JoltParsedType):
     _parse_re = re.compile(
         r"^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)"
         r"(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)(?:\.(\d{1,9}))?S)?)?"
@@ -340,7 +344,7 @@ class JoltDuration(_JoltParsedType):
         self.nanoseconds = nanoseconds
 
     def __eq__(self, other):
-        if not isinstance(other, JoltDuration):
+        if not isinstance(other, JoltV1DurationMixin):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("months", "days", "seconds"))
@@ -369,7 +373,11 @@ class JoltDuration(_JoltParsedType):
                                        hours_str, minutes_str, seconds_str))
 
 
-class JoltPoint(_JoltParsedType):
+class JoltDuration(JoltV1DurationMixin, JoltType):
+    pass
+
+
+class JoltV1PointMixin(_JoltParsedType):
     _parse_re = re.compile(
         r"^(?:SRID=(\d+);)?\s*"
         r"POINT\s*\(((?:[+-]?\d+(?:\.\d+)? ){1,2}[+-]?\d+(?:\.\d+)?)\)$"
@@ -399,7 +407,7 @@ class JoltPoint(_JoltParsedType):
         self.z = float(coords[2]) if len(coords) == 3 else None
 
     def __eq__(self, other):
-        if not isinstance(other, JoltPoint):
+        if not isinstance(other, JoltV1PointMixin):
             return NotImplemented
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("srid", "x", "y", "z"))
@@ -422,78 +430,63 @@ class JoltPoint(_JoltParsedType):
         return cls(str_)
 
 
-class JoltNode(JoltType):
-    def __init__(self, id_, labels, properties, element_id=None):
+class JoltPoint(JoltV1PointMixin, JoltType):
+    pass
+
+
+class JoltV1NodeMixin(_JoltTypeCommon):
+    def __init__(self, id_, labels, properties):
         self.id = id_
         self.labels = labels
         self.properties = properties
-        self.element_id = element_id
 
     def __eq__(self, other):
-        if not isinstance(other, JoltNode):
+        if not isinstance(other, JoltV1NodeMixin):
             return NotImplemented
-
-        if self.element_id is None:
-            return all(getattr(self, attr) == getattr(other, attr)
-                       for attr in ("id", "labels", "properties"))
         return all(getattr(self, attr) == getattr(other, attr)
-                   for attr in ("id", "element_id", "labels", "properties"))
+                   for attr in ("id", "labels", "properties"))
 
     def __repr__(self):
-        if self.element_id is None:
-            return "%s<%r, %r, %r>" % (self.__class__.__name__, self.id,
-                                       self.labels, self.properties)
-        return "%s<%r, %r, %r, %r>" % (self.__class__.__name__, self.id,
-                                       self.labels, self.properties,
-                                       self.element_id)
+        return "%s<%r, %r, %r>" % (self.__class__.__name__, self.id,
+                                   self.labels, self.properties)
 
 
-class JoltRelationship(JoltType):
-    def __init__(self, id_, start_node_id, rel_type, end_node_id, properties,
-                 element_id=None, start_node_element_id=None,
-                 end_node_element_id=None):
+class JoltNode(JoltV1NodeMixin, JoltType):
+    pass
+
+
+class JoltV1RelationshipMixin(_JoltTypeCommon):
+    def __init__(self, id_, start_node_id, rel_type, end_node_id, properties):
         self.id = id_
         self.start_node_id = start_node_id
         self.rel_type = rel_type
         self.end_node_id = end_node_id
         self.properties = properties
-        self.element_id = element_id
-        self.start_node_element_id = start_node_element_id
-        self.end_node_element_id = end_node_element_id
 
     def __eq__(self, other):
-        if not isinstance(other, JoltRelationship):
+        if not isinstance(other, JoltV1RelationshipMixin):
             return NotImplemented
-        if self.element_id is None:
-            return all(getattr(self, attr) == getattr(other, attr)
-                       for attr in ("id", "start_node_id", "rel_type",
-                                    "end_node_id", "properties"))
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("id", "start_node_id", "rel_type",
-                                "end_node_id", "properties", "element_id",
-                                "start_node_element_id",
-                                "end_node_element_id"))
+                                "end_node_id", "properties"))
 
     def __repr__(self):
-        if self.element_id is None:
-            return "%s<%r, %r, %r, %r, %r>" % (
-                self.__class__.__name__, self.id, self.start_node_id,
-                self.rel_type, self.end_node_id, self.properties
-            )
-        return "%s<%r, %r, %r, %r, %r, %r, %r, %r>" % (
+        return "%s<%r, %r, %r, %r, %r>" % (
             self.__class__.__name__, self.id, self.start_node_id,
-            self.rel_type, self.end_node_id, self.properties,
-            self.element_id, self.start_node_element_id,
-            self.end_node_element_id
+            self.rel_type, self.end_node_id, self.properties
         )
 
 
-class JoltPath(JoltType):
+class JoltRelationship(JoltV1RelationshipMixin, JoltType):
+    pass
+
+
+class JoltV1PathMixin(_JoltTypeCommon):
     def __init__(self, *path):
         self.path = path
 
     def __eq__(self, other):
-        if not isinstance(other, JoltPath):
+        if not isinstance(other, JoltV1PathMixin):
             return NotImplemented
         return self.path == other.path
 
@@ -501,18 +494,12 @@ class JoltPath(JoltType):
         return "%s<%r>" % (self.__class__.__name__, self.path)
 
 
-class JoltWildcard(JoltType):
-    """
-    This is a stub-server specific JOLT type that marks a match-all object.
-
-    e.g. `{"Z": "*"}` represents any integer.
-    """
-
-    def __init__(self, types):
-        self.types = types
+class JoltPath(JoltV1PathMixin, JoltType):
+    pass
 
 
 __all__ = [
+    JoltType,
     JoltDate,
     JoltTime,
     JoltLocalTime,
@@ -523,4 +510,5 @@ __all__ = [
     JoltNode,
     JoltRelationship,
     JoltPath,
+    JoltWildcard,
 ]

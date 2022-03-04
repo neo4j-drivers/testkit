@@ -2,14 +2,14 @@ import inspect
 
 import pytest
 
-from .. import _common
-from ...simple_jolt import (
+from ... import _common
+from ....simple_jolt.common.errors import JOLTValueError
+from ....simple_jolt.v2 import (
     dumps_full,
     dumps_simple,
     loads,
 )
-from ...simple_jolt.errors import JOLTValueError
-from ...simple_jolt.types import (
+from ....simple_jolt.v2.types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,
@@ -122,92 +122,41 @@ from ...simple_jolt.types import (
 
     # node
     (
-        JoltNode(123, ["l1", "l2"], {"a": 42}),
-        '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}'
+        JoltNode(123, ["l1", "l2"], {"a": 42}, "123"),
+        '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "123"]}',
     ),
     (
-        JoltNode(123, ["l1", "l2"], {"U": 42}),
-        '{"()": [123, ["l1", "l2"], {"U": {"Z": "42"}}]}'
+        JoltNode(None, ["l1", "l2"], {"a": 42}, "123"),
+        '{"()": [null, ["l1", "l2"], {"a": {"Z": "42"}}, "123"]}',
     ),
     (
-        JoltNode(123, ["l1, l2"], {"a": 42}, "n1-123"),
-        '{"()": [123, ["l1", "l2"], {"U": {"Z": "42"}}, "n1-123"]}'
+        JoltNode(123, ["l1", "l2"], {"U": 42}, "123"),
+        '{"()": [123, ["l1", "l2"], {"U": {"Z": "42"}}, "123"]}'
     ),
-    (
-        JoltNode(None, ["l1, l2"], {"a": 42}, "n1-123"),
-        '{"()": [null, ["l1", "l2"], {"U": {"Z": "42"}}, "n1-123"]}'
-    ),
+
     # relationship
     (
-        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"}),
-        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}'
-    ),
-    (
-        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"}),
-        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}'
-    ),
-    (
         JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"},
-                         "r42", "n123", "n321"),
+                         "42", "123", "321"),
         '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}, '
-        '"r42", "n123", "n321"]}'
-    ),
-    (
-        JoltRelationship(None, None, "REVERTS_TO", None, {"prop": "value"},
-                         "r42", "n123", "n321"),
-        '{"->": [null, null, "REVERTS_TO", null, {"prop": {"U": "value"}}, '
-        '"r42", "n123", "n321"]}'
+        '"42", "123", "321"]}'
     ),
 
     # path
     (
         JoltPath(
-            JoltNode(1, ["l"], {}),
-            JoltRelationship(2, 1, "RELATES_TO", 3, {}),
-            JoltNode(3, ["l"], {}),
-            JoltRelationship(4, 3, "RELATES_TO", 1, {}),
-            JoltNode(1, ["l"], {}),
+            JoltNode(1, ["l"], {}, "1"),
+            JoltRelationship(2, 1, "RELATES_TO", 3, {}, "2", "1", "3"),
+            JoltNode(3, ["l"], {}, "3"),
+            JoltRelationship(4, 3, "RELATES_TO", 1, {}, "4", "3", "1"),
+            JoltNode(1, ["l"], {}, "1"),
         ),
         '{"..": ['
-        '{"()": [1, ["l"], {}]}, '
-        '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-        '{"()": [3, ["l"], {}]}, '
-        '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-        '{"()": [1, ["l"], {}]}'
-        ']}'  # noqa: Q000
-    ),
-    (
-        JoltPath(
-            JoltNode(1, ["l"], {}, "n1"),
-            JoltRelationship(2, 1, "RELATES_TO", 3, {}, "r2", "n1", "n3"),
-            JoltNode(3, ["l"], {}, "n3"),
-            JoltRelationship(4, 3, "RELATES_TO", 1, {}, "r4", "n3", "n1"),
-            JoltNode(1, ["l"], {}, "n1"),
-        ),
-        '{"..": ['
-        '{"()": [1, ["l"], {}, "n1"]}, '
-        '{"->": [2, 1, "RELATES_TO", 3, {}, "r2", "n1", "n3"]}, '
-        '{"()": [3, ["l"], {}, "n3"]}, '
-        '{"->": [4, 3, "RELATES_TO", 1, {}, "r4", "n3", "n1"]}, '
-        '{"()": [1, ["l"], {}, "n1"]}'
-        ']}'  # noqa: Q000
-    ),
-    (
-        JoltPath(
-            JoltNode(None, ["l"], {}, "n1"),
-            JoltRelationship(None, None, "RELATES_TO", None,
-                             {}, "r2", "n1", "n3"),
-            JoltNode(None, ["l"], {}, "n3"),
-            JoltRelationship(None, None, "RELATES_TO", None,
-                             {}, "r4", "n3", "n1"),
-            JoltNode(None, ["l"], {}, "n1"),
-        ),
-        '{"..": ['
-        '{"()": [null, ["l"], {}, "n1"]}, '
-        '{"->": [null, null, "RELATES_TO", null, {}, "r2", "n1", "n3"]}, '
-        '{"()": [null, ["l"], {}, "n3"]}, '
-        '{"->": [null, null, "RELATES_TO", null, {}, "r4", "n3", "n1"]}, '
-        '{"()": [null, ["l"], {}, "n1"]}'
+        '{"()": [1, ["l"], {}, "1"]}, '
+        '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+        '{"()": [3, ["l"], {}, "3"]}, '
+        '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+        '{"()": [1, ["l"], {}, "1"]}'
         ']}'  # noqa: Q000
     ),
 ))
@@ -323,39 +272,63 @@ def test_dumps_full(in_, out_, human_readable):
 
     # node
     (
-        JoltNode(123, ["l1", "l2"], {"a": 42}),
-        '{"()": [123, ["l1", "l2"], {"a": 42}]}'
+        JoltNode(123, ["l1", "l2"], {"a": 42}, "123"),
+        '{"()": [123, ["l1", "l2"], {"a": 42}, "123"]}'
     ),
     (
-        JoltNode(123, ["l1", "l2"], {"U": 42}),
-        '{"()": [123, ["l1", "l2"], {"U": 42}]}'
+        JoltNode(123, ["l1", "l2"], {"U": 42}, "123"),
+        '{"()": [123, ["l1", "l2"], {"U": 42}, "123"]}'
     ),
     (
-        JoltNode(123, ["l1", "l2"], {"U": 2147483648}),
-        '{"()": [123, ["l1", "l2"], {"U": {"Z": "2147483648"}}]}'
+        JoltNode(123, ["l1", "l2"], {"U": 2147483648}, "123"),
+        '{"()": [123, ["l1", "l2"], {"U": {"Z": "2147483648"}}, "123"]}'
+    ),
+    (
+        JoltNode(None, ["l1", "l2"], {"a": 42}, "123"),
+        '{"()": [null, ["l1", "l2"], {"a": 42}, "123"]}'
     ),
 
     # relationship
     (
-        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"}),
-        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": "value"}]}'
+        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"},
+                         "42", "123", "321"),
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": "value"}, '
+        '"42", "123", "321"]}'
     ),
 
     # path
     (
         JoltPath(
-            JoltNode(1, ["l"], {}),
-            JoltRelationship(2, 1, "RELATES_TO", 3, {}),
-            JoltNode(3, ["l"], {}),
-            JoltRelationship(4, 3, "RELATES_TO", 1, {}),
-            JoltNode(1, ["l"], {}),
+            JoltNode(1, ["l"], {}, "1"),
+            JoltRelationship(2, 1, "RELATES_TO", 3, {}, "2", "1", "3"),
+            JoltNode(3, ["l"], {}, "3"),
+            JoltRelationship(4, 3, "RELATES_TO", 1, {}, "4", "3", "1"),
+            JoltNode(1, ["l"], {}, "1"),
         ),
         '{"..": ['
-        '{"()": [1, ["l"], {}]}, '
-        '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-        '{"()": [3, ["l"], {}]}, '
-        '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-        '{"()": [1, ["l"], {}]}'
+        '{"()": [1, ["l"], {}, "1"]}, '
+        '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+        '{"()": [3, ["l"], {}, "3"]}, '
+        '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+        '{"()": [1, ["l"], {}, "1"]}'
+        ']}'  # noqa: Q000
+    ),
+    (
+        JoltPath(
+            JoltNode(None, ["l"], {}, "1"),
+            JoltRelationship(None, None, "RELATES_TO", None, {},
+                             "2", "1", "3"),
+            JoltNode(None, ["l"], {}, "3"),
+            JoltRelationship(None, None, "RELATES_TO", None, {},
+                             "4", "3", "1"),
+            JoltNode(None, ["l"], {}, "1"),
+        ),
+        '{"..": ['
+        '{"()": [null, ["l"], {}, "1"]}, '
+        '{"->": [null, null, "RELATES_TO", null, {}, "2", "1", "3"]}, '
+        '{"()": [null, ["l"], {}, "3"]}, '
+        '{"->": [null, null, "RELATES_TO", null, {}, "4", "3", "1"]}, '
+        '{"()": [null, ["l"], {}, "1"]}'
         ']}'  # noqa: Q000
     ),
 ))
@@ -504,51 +477,87 @@ def test_dumps_simple(in_, out_, human_readable):
 
     # node
     (
-        '{"()": [123, ["l1", "l2"], {"a": 42}]}',
-        JoltNode(123, ["l1", "l2"], {"a": 42})
+        '{"()": [123, ["l1", "l2"], {"a": 42}, "123"]}',
+        JoltNode(123, ["l1", "l2"], {"a": 42}, "123")
     ),
     (
-        '{"()": [123, ["l1", "l2"], {"U": 42}]}',
-        JoltNode(123, ["l1", "l2"], {"U": 42})
+        '{"()": [123, ["l1", "l2"], {"U": 42}, "123"]}',
+        JoltNode(123, ["l1", "l2"], {"U": 42}, "123")
     ),
     (
-        '{"()": [123, ["l1", "l2"], {"U": {"Z": "2147483648"}}]}',
-        JoltNode(123, ["l1", "l2"], {"U": 2147483648})
+        '{"()": [123, ["l1", "l2"], {"U": {"Z": "2147483648"}}, "123"]}',
+        JoltNode(123, ["l1", "l2"], {"U": 2147483648}, "123")
     ),
     (
-        '{"()": [123, ["l1", "l2"], {"U": {"Z": "2147483648"}}, "n1-123"]}',
-        JoltNode(123, ["l1", "l2"], {"U": 2147483648}, "n1-123")
+        '{"()": [null, ["l1", "l2"], {"U": {"Z": "2147483648"}}, "123"]}',
+        JoltNode(None, ["l1", "l2"], {"U": 2147483648}, "123")
     ),
 
     # relationship
     (
-        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": "value"}]}',
-        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"})
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": "value"}, '
+        '"42", "123", "321"]}',
+        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"},
+                         "42", "123", "321")
     ),
     (
-        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}',
-        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"})
+        '{"->": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}, '
+        '"42", "123", "321"]}',
+        JoltRelationship(42, 123, "REVERTS_TO", 321, {"prop": "value"},
+                         "42", "123", "321")
     ),
     (
-        '{"<-": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}]}',
-        JoltRelationship(42, 321, "REVERTS_TO", 123, {"prop": "value"})
+        '{"<-": [42, 123, "REVERTS_TO", 321, {"prop": {"U": "value"}}, '
+        '"42", "123", "321"]}',
+        JoltRelationship(42, 321, "REVERTS_TO", 123, {"prop": "value"},
+                         "42", "321", "123")
+    ),
+    (
+        '{"->": [null, null, "REVERTS_TO", null, {"prop": {"U": "value"}}, '
+        '"42", "123", "321"]}',
+        JoltRelationship(None, None, "REVERTS_TO", None, {"prop": "value"},
+                         "42", "123", "321")
+    ),
+    (
+        '{"<-": [null, null, "REVERTS_TO", null, {"prop": {"U": "value"}}, '
+        '"42", "123", "321"]}',
+        JoltRelationship(None, None, "REVERTS_TO", None, {"prop": "value"},
+                         "42", "321", "123")
     ),
 
     # path
     (
         '{"..": ['
-        '{"()": [1, ["l"], {}]}, '
-        '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-        '{"()": [3, ["l"], {}]}, '
-        '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-        '{"()": [1, ["l"], {}]}'
+        '{"()": [1, ["l"], {}, "1"]}, '
+        '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+        '{"()": [3, ["l"], {}, "3"]}, '
+        '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+        '{"()": [1, ["l"], {}, "1"]}'
         ']}',  # noqa: Q000
         JoltPath(
-            JoltNode(1, ["l"], {}),
-            JoltRelationship(2, 1, "RELATES_TO", 3, {}),
-            JoltNode(3, ["l"], {}),
-            JoltRelationship(4, 3, "RELATES_TO", 1, {}),
-            JoltNode(1, ["l"], {}),
+            JoltNode(1, ["l"], {}, "1"),
+            JoltRelationship(2, 1, "RELATES_TO", 3, {}, "2", "1", "3"),
+            JoltNode(3, ["l"], {}, "3"),
+            JoltRelationship(4, 3, "RELATES_TO", 1, {}, "4", "3", "1"),
+            JoltNode(1, ["l"], {}, "1"),
+        )
+    ),
+    (
+        '{"..": ['
+        '{"()": [null, ["l"], {}, "1"]}, '
+        '{"->": [null, null, "RELATES_TO", null, {}, "2", "1", "3"]}, '
+        '{"()": [null, ["l"], {}, "3"]}, '
+        '{"->": [null, null, "RELATES_TO", null, {}, "4", "3", "1"]}, '
+        '{"()": [null, ["l"], {}, "1"]}'
+        ']}',  # noqa: Q000
+        JoltPath(
+            JoltNode(None, ["l"], {}, "1"),
+            JoltRelationship(None, None, "RELATES_TO", None, {},
+                             "2", "1", "3"),
+            JoltNode(None, ["l"], {}, "3"),
+            JoltRelationship(None, None, "RELATES_TO", None, {},
+                             "4", "3", "1"),
+            JoltNode(None, ["l"], {}, "1"),
         )
     ),
 ))
@@ -721,13 +730,21 @@ def test_verifies_point(in_):
 
 @pytest.mark.parametrize("in_", (
     # str id
-    '{"()": ["1", ["l"], {}]}',
+    '{"()": ["1", ["l"], {}, "1"]}',
+    # int element id
+    '{"()": [1, ["l"], {}, 1]}',
+    # null element id
+    '{"()": [1, ["l"], {}, null]}',
+    # id element id mismatch
+    '{"()": [1, ["l"], {}, "2"]}',
     # int label
-    '{"()": [1, [1], {}]}',
+    '{"()": [1, [1], {}, "1"]}',
     # str label
-    '{"()": [1, "[]", {}]}',
+    '{"()": [1, "[]", {}, "1"]}',
     # list property
-    '{"()": [1, ["l"], ["a", "b"]]}',
+    '{"()": [1, ["l"], ["a", "b"], "1"]}',
+    # jolt v1 format
+    '{"()": [123, ["l1", "l2"], {"a": 42}]}',
 ))
 def test_verifies_node(in_):
     with pytest.raises(JOLTValueError):
@@ -736,17 +753,37 @@ def test_verifies_node(in_):
 
 @pytest.mark.parametrize("in_", (
     # dict id
-    '{"->": [{"U": "2"}, 1, "RELATES_TO", 3, {}]}',
-    # str dict
-    '{"->": ["2", 1, "RELATES_TO", 3, {}]}',
+    '{"->": [{"U": "2"}, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}',
+    # str id
+    '{"->": ["2", 1, "RELATES_TO", 3, {}, "2", "1", "3"]}',
+    # int element id
+    '{"->": [2, 1, "RELATES_TO", 3, {}, 2, "1", "3"]}',
+    # null element id
+    '{"->": [2, 1, "RELATES_TO", 3, {}, null, "1", "3"]}',
     # str start id
-    '{"->": [2, "1", "RELATES_TO", 3, {}]}',
+    '{"->": [2, "1", "RELATES_TO", 3, {}, "2", "1", "3"]}',
+    # int start element id
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", 1, "3"]}',
+    # null start element id
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", null, "3"]}',
     # int label
-    '{"->": [2, 1, 1337, 3, {}]}',
+    '{"->": [2, 1, 1337, 3, {}, "2", "1", "3"]}',
     # str end id
-    '{"->": [2, 1, "RELATES_TO", "3", {}]}',
+    '{"->": [2, 1, "RELATES_TO", "3", {}, "2", "1", "3"]}',
+    # int end element id
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", 3]}',
+    # null end element id
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", null]}',
+    # id element id mismatch
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "4", "1", "3"]}',
+    # start id start element id mismatch
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "4", "3"]}',
+    # end id end element id mismatch
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "4"]}',
     # list properties
-    '{"->": [2, 1, "RELATES_TO", "3", ["a", "b"]]}',
+    '{"->": [2, 1, "RELATES_TO", "3", ["a", "b"], "2", "1", "3"]}',
+    # jolt v1 format
+    '{"->": [2, 1, "RELATES_TO", 3, {}]}',
 ))
 @pytest.mark.parametrize("flip", [True, False])
 def test_verifies_relationship(in_, flip):
@@ -760,97 +797,106 @@ def test_verifies_relationship(in_, flip):
 @pytest.mark.parametrize("in_", (
     # Link to non-existent node
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 4, {}]}, '
-    '{"()": [3, ["l"], {}]}, '
-    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-    '{"()": [1, ["l"], {}]}'
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 1, "RELATES_TO", 4, {}, "2", "1", "4"]}, '
+    '{"()": [3, ["l"], {}, "3"]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+    '{"()": [1, ["l"], {}, "1"]}'
     ']}',  # noqa: Q000
 
     # Link from non-existent node
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [2, 4, "RELATES_TO", 3, {}]}, '
-    '{"()": [3, ["l"], {}]}, '
-    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-    '{"()": [1, ["l"], {}]}'
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 4, "RELATES_TO", 3, {}, "2", "4", "3"]}, '
+    '{"()": [3, ["l"], {}, "3"]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+    '{"()": [1, ["l"], {}, "1"]}'
     ']}',  # noqa: Q000
 
     # double link
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"->": [4, 1, "RELATES_TO", 3, {}]}, '
-    '{"()": [3, ["l"], {}]}'
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"->": [4, 1, "RELATES_TO", 3, {}, "4", "1", "3"]}, '
+    '{"()": [3, ["l"], {}, "3"]}'
     ']}',  # noqa: Q000
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"->": [4, 1, "RELATES_TO", 3, {}]}, '
-    '{"->": [5, 1, "RELATES_TO", 3, {}]}, '
-    '{"()": [3, ["l"], {}]}'
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"->": [4, 1, "RELATES_TO", 3, {}, "4", "1", "3"]}, '
+    '{"->": [5, 1, "RELATES_TO", 3, {}, "5", "1", "3"]}, '
+    '{"()": [3, ["l"], {}, "3"]}'
     ']}',  # noqa: Q000
 
     # double node
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"()": [4, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"()": [4, ["l"], {}]} '
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"()": [4, ["l"], {}, "4"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"()": [4, ["l"], {}, "4"]} '
     ']}',  # noqa: Q000
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"()": [4, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"()": [5, ["l"], {}]}, '
-    '{"()": [4, ["l"], {}]} '
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"()": [4, ["l"], {}, "4"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"()": [5, ["l"], {}, "5"]}, '
+    '{"()": [4, ["l"], {}, "4"]} '
     ']}',  # noqa: Q000
 
     # only nodes
     '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"()": [4, ["l"], {}]}, '
-    '{"()": [2, ["l"], {}]}'
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"()": [4, ["l"], {}, "4"]}, '
+    '{"()": [2, ["l"], {}, "2"]}'
     ']}',  # noqa: Q000
 
     # only relationships
     '{"..": ['
-    '{"->": [1, 1, "RELATES_TO", 3, {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"->": [3, 1, "RELATES_TO", 3, {}]}'
+    '{"->": [1, 1, "RELATES_TO", 3, {}, "1", "1", "3"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"->": [3, 1, "RELATES_TO", 3, {}, "3", "1", "3"]}'
     ']}',  # noqa: Q000
 
     # start with relationship
     '{"..": ['
-    '{"->": [5, 1, "RELATES_TO", 1, {}]}, '
+    '{"->": [5, 1, "RELATES_TO", 1, {}, "5", "1", "1"]}, '
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"()": [3, ["l"], {}]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+    '{"()": [1, ["l"], {}, "1"]}'
+    ']}',  # noqa: Q000
+
+    # ending with relationship
+    '{"..": ['
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"()": [3, ["l"], {}, "3"]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [5, 1, "RELATES_TO", 1, {}, "5", "1", "1"]}'
+    ']}',  # noqa: Q000
+    '{"..": ['
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+    '{"()": [3, ["l"], {}, "3"]}, '
+    '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+    '{"()": [1, ["l"], {}, "1"]}, '
+    '{"->": [6, 1, "RELATES_TO", 1, {}, "6", "1", "1"]}, '
+    '{"->": [6, 1, "RELATES_TO", 1, {}, "6", "1", "1"]}'
+    ']}',  # noqa: Q000
+
+    # total bogus
+    '{"..": {"Z": "1234"}}',
+
+    # jolt v1 format
+    '{"..": ['
     '{"()": [1, ["l"], {}]}, '
     '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
     '{"()": [3, ["l"], {}]}, '
     '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
     '{"()": [1, ["l"], {}]}'
     ']}',  # noqa: Q000
-
-    # ending with relationship
-    '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"()": [3, ["l"], {}]}, '
-    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [5, 1, "RELATES_TO", 1, {}]}'
-    ']}',  # noqa: Q000
-    '{"..": ['
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [2, 1, "RELATES_TO", 3, {}]}, '
-    '{"()": [3, ["l"], {}]}, '
-    '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
-    '{"()": [1, ["l"], {}]}, '
-    '{"->": [6, 1, "RELATES_TO", 1, {}]}, '
-    '{"->": [6, 1, "RELATES_TO", 1, {}]}'
-    ']}',  # noqa: Q000
-
-    # total bogus
-    '{"..": {"Z": "1234"}}'
 ))
 def test_verifies_path(in_):
     with pytest.raises(JOLTValueError):

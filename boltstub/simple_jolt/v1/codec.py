@@ -3,7 +3,7 @@ import inspect
 import re
 import sys
 
-from .errors import (
+from ..common.errors import (
     JOLTValueError,
     NoFullRepresentation,
     NoSimpleRepresentation,
@@ -66,12 +66,6 @@ class JoltTypeTransformer(abc.ABC):
     def encode_full(cls, value, encode_cb, human_readable=False):
         return cls._encode_full(value, encode_cb,
                                 human_readable=human_readable)
-
-    @staticmethod
-    def has_element_id_at_index(value_list, element_id_idx):
-        return (isinstance(value_list, list)
-                and len(value_list) > element_id_idx
-                and isinstance(value_list[element_id_idx], str))
 
 
 class JoltNullTransformer(JoltTypeTransformer):
@@ -396,13 +390,6 @@ class JoltNodeTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        if JoltTypeTransformer.has_element_id_at_index(value, 3):
-            return JoltNodeTransformer._decode_v2_node(value,
-                                                       decode_cb)
-        return JoltNodeTransformer._decode_v1_node(value, decode_cb)
-
-    @staticmethod
-    def _decode_v1_node(value, decode_cb):
         if not isinstance(value, list) or len(value) != 3:
             raise JOLTValueError('Expecting list of length 3 after sigil "()"')
         id_, labels, properties = value
@@ -419,44 +406,15 @@ class JoltNodeTransformer(JoltTypeTransformer):
         return JoltNode(id_, labels, properties)
 
     @staticmethod
-    def _decode_v2_node(value, decode_cb):
-        if not isinstance(value, list) or len(value) != 4:
-            raise JOLTValueError('Expecting list of length 4 after sigil "()"')
-        id_, labels, properties, element_id = value
-        if not isinstance(id_, int) and id_ is not None:
-            raise JOLTValueError("Node id must be int or none")
-        if not isinstance(labels, list):
-            raise JOLTValueError("Node labels must be list")
-        if not all(map(lambda l: isinstance(l, str), labels)):
-            raise JOLTValueError("Node labels must be list of str")
-        if not isinstance(properties, dict):
-            raise JOLTValueError("Node properties must be dict")
-        if not isinstance(element_id, str):
-            raise JOLTValueError("Node element_id must be a str")
-
-        properties = {k: decode_cb(v) for k, v in properties.items()}
-        assert all(map(lambda e: isinstance(e, str), properties.keys()))
-        return JoltNode(id_, labels, properties, element_id)
-
-    @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
-        if value.element_id is None:
-            return {cls.sigil: [
-                value.id,
-                value.labels,
-                {k: encode_cb(v) for k, v in value.properties.items()}
-            ]}
-
         return {cls.sigil: [
-            value.id,
-            value.labels,
-            {k: encode_cb(v) for k, v in value.properties.items()},
-            value.element_id
+            value.id, value.labels,
+            {k: encode_cb(v) for k, v in value.properties.items()}
         ]}
 
 
@@ -468,17 +426,8 @@ class JoltRelationTransformer(JoltTypeTransformer):
     def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
-
     @classmethod
     def _decode_full(cls, value, decode_cb):
-        if JoltTypeTransformer.has_element_id_at_index(value, 5):
-            return JoltRelationTransformer._decode_v2_relationship(value,
-                                                                   decode_cb)
-        return JoltRelationTransformer._decode_v1_relationship(value,
-                                                               decode_cb)
-
-    @classmethod
-    def _decode_v1_relationship(cls, value, decode_cb):
         if not isinstance(value, list) or len(value) != 5:
             raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
                                  % cls.sigil)
@@ -499,42 +448,6 @@ class JoltRelationTransformer(JoltTypeTransformer):
         return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
                                 properties)
 
-    @classmethod
-    def _decode_v2_relationship(cls, value, decode_cb):
-        if not isinstance(value, list):
-            raise JOLTValueError('Expecting list after sigil "%s"' % cls.sigil)
-        if len(value) != 8:
-            raise JOLTValueError('Expecting list of length 8 after sigil "%s"'
-                                 % cls.sigil)
-        id_, start_node_id, rel_type, end_node_id, properties, element_id,\
-            start_node_element_id, end_node_element_id = value
-
-        if not isinstance(id_, int) and id_ is not None:
-            raise JOLTValueError("Relationship id must be int or None")
-        if not isinstance(start_node_id, int) and start_node_id is not None:
-            raise JOLTValueError("Relationship's start id must be int or None")
-        if not isinstance(rel_type, str):
-            raise JOLTValueError("Relationship's type id must be str")
-        if not isinstance(end_node_id, int) and end_node_id is not None:
-            raise JOLTValueError("Relationship's end id must be int or None")
-        if not isinstance(properties, dict):
-            raise JOLTValueError("Relationship's properties  must be dict")
-        properties = {k: decode_cb(v) for k, v in properties.items()}
-        if not all(map(lambda e: isinstance(e, str), properties.keys())):
-            raise JOLTValueError("Relationship's properties keys must be str")
-        if not isinstance(element_id, str):
-            raise JOLTValueError("Relationship's element_id must be str")
-        if not isinstance(start_node_element_id, str):
-            raise JOLTValueError(
-                "Relationship's start_node_element_id must be str")
-        if not isinstance(end_node_element_id, str):
-            raise JOLTValueError(
-                "Relationship's end_node_element_id must be str")
-
-        return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
-                                properties, element_id, start_node_element_id,
-                                end_node_element_id)
-
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
         raise NoSimpleRepresentation()
@@ -542,17 +455,9 @@ class JoltRelationTransformer(JoltTypeTransformer):
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
         assert isinstance(value, cls._supported_types)
-        if value.element_id is None:
-            return {cls.sigil: [
-                value.id, value.start_node_id, value.rel_type,
-                value.end_node_id,
-                {k: encode_cb(v) for k, v in value.properties.items()}
-            ]}
         return {cls.sigil: [
             value.id, value.start_node_id, value.rel_type, value.end_node_id,
-            {k: encode_cb(v) for k, v in value.properties.items()},
-            value.element_id, value.start_node_element_id,
-            value.end_node_element_id
+            {k: encode_cb(v) for k, v in value.properties.items()}
         ]}
 
 
@@ -563,8 +468,11 @@ class JoltReverseRelationTransformer(JoltTypeTransformer):
     def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
-    @staticmethod
-    def _decode_full(value, decode_cb):
+    @classmethod
+    def _decode_full(cls, value, decode_cb):
+        if not isinstance(value, list) or len(value) != 5:
+            raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
+                                 % cls.sigil)
         value = [value[idx] for idx in (0, 3, 2, 1, 4)]
         return JoltRelationTransformer.decode_full(value, decode_cb)
 
@@ -634,68 +542,79 @@ class JoltPathTransformer(JoltTypeTransformer):
         return {cls.sigil: list(map(encode_cb, value.path))}
 
 
-sigil_to_type = {
-    cls.sigil: cls
-    for cls in globals().values()
-    if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
-        and cls.sigil is not None)
-}
-native_to_type = {
-    type_: cls
-    for cls in globals().values()
-    if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
-        and cls._supported_types)
-    for type_ in cls._supported_types
-}
+class Codec:
+    sigil_to_type = {
+        cls.sigil: cls
+        for cls in globals().values()
+        if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
+            and cls.sigil is not None)
+    }
+    native_to_type = {
+        type_: cls
+        for cls in globals().values()
+        if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
+            and cls._supported_types)
+        for type_ in cls._supported_types
+    }
 
-
-def decode(value):
-    def transform(value_):
-        if isinstance(value_, dict) and len(value_) == 1:
-            sigil = next(iter(value_))
-            transformer = sigil_to_type.get(sigil)
+    @classmethod
+    def decode(cls, value):
+        def transform(value_):
+            if isinstance(value_, dict) and len(value_) == 1:
+                sigil = next(iter(value_))
+                transformer = cls.sigil_to_type.get(sigil)
+                if transformer:
+                    return transformer.decode_full(value_[sigil], transform)
+            transformer = cls.native_to_type.get(type(value_))
             if transformer:
-                return transformer.decode_full(value_[sigil], transform)
-        transformer = native_to_type.get(type(value_))
-        if transformer:
-            try:
-                return transformer.decode_simple(value_, transform)
-            except NoSimpleRepresentation:
-                pass
-        return value_
-    return transform(value)
+                try:
+                    return transformer.decode_simple(value_, transform)
+                except NoSimpleRepresentation:
+                    pass
+            return value_
+        return transform(value)
+
+    @classmethod
+    def encode_simple(cls, value, human_readable=False):
+        def transform(value_):
+            transformer = cls.native_to_type.get(type(value_))
+            if transformer:
+                try:
+                    return transformer.encode_simple(
+                        value_, transform, human_readable=human_readable
+                    )
+                except NoSimpleRepresentation:
+                    return transformer.encode_full(
+                        value_, transform, human_readable=human_readable
+                    )
+            return value_
+        return transform(value)
+
+    @classmethod
+    def encode_full(cls, value, human_readable=False):
+        def transform(value_):
+            transformer = cls.native_to_type.get(type(value_))
+            if transformer:
+                try:
+                    return transformer.encode_full(
+                        value_, transform, human_readable=human_readable
+                    )
+                except NoFullRepresentation:
+                    return transformer.encode_simple(
+                        value_, transform, human_readable=human_readable
+                    )
+            return value_
+        return transform(value)
 
 
-def encode_simple(value, human_readable=False):
-    def transform(value_):
-        transformer = native_to_type.get(type(value_))
-        if transformer:
-            try:
-                return transformer.encode_simple(value_, transform,
-                                                 human_readable=human_readable)
-            except NoSimpleRepresentation:
-                return transformer.encode_full(value_, transform,
-                                               human_readable=human_readable)
-        return value_
-    return transform(value)
-
-
-def encode_full(value, human_readable=False):
-    def transform(value_):
-        transformer = native_to_type.get(type(value_))
-        if transformer:
-            try:
-                return transformer.encode_full(value_, transform,
-                                               human_readable=human_readable)
-            except NoFullRepresentation:
-                return transformer.encode_simple(value_, transform,
-                                                 human_readable=human_readable)
-        return value_
-    return transform(value)
+decode = Codec.decode
+encode_simple = Codec.encode_simple
+encode_full = Codec.encode_full
 
 
 __all__ = [
+    Codec,
     decode,
-    encode_full,
     encode_simple,
+    encode_full,
 ]

@@ -1,9 +1,12 @@
 from nutkit import protocol as types
 from nutkit.frontend import Driver
-from nutkit.protocol import CypherInt, CypherString, CypherPath, CypherList
-from tests.shared import (
-    TestkitTestCase
+from nutkit.protocol import (
+    CypherInt,
+    CypherList,
+    CypherPath,
+    CypherString,
 )
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
@@ -51,7 +54,7 @@ class TestBasicQuery(TestkitTestCase):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
             "#RESULT#":
-                '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'
+                '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}, "123"]}'
         }
         self._server.start(
             path=self.script_path("single_result.script"),
@@ -62,8 +65,9 @@ class TestBasicQuery(TestkitTestCase):
         result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
 
         node = result_handle.next()
+
         self.assertEqual(CypherInt(123), node.values[0].id)
-        self.assertEqual(CypherString("n1-123"), node.values[0].elementId)
+        self.assertEqual(CypherString("123"), node.values[0].elementId)
 
         self._session.close()
         self._session = None
@@ -110,7 +114,6 @@ class TestBasicQuery(TestkitTestCase):
 
         self.assertEqual(CypherInt(123), relationship.values[0].id)
         self.assertEqual(CypherString("123"), relationship.values[0].elementId)
-
         self.assertEqual(CypherInt(1), relationship.values[0].startNodeId)
         self.assertEqual(CypherInt(2), relationship.values[0].endNodeId)
         self.assertEqual(CypherString("1"),
@@ -126,8 +129,8 @@ class TestBasicQuery(TestkitTestCase):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
             "#RESULT#":
-                '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}, "r1-123", '
-                '"n1-1", "n1-2"]}'
+                '{"->": [123, 1, "f", 2, {"a": {"Z": "42"}}, "123", '
+                '"1", "2"]}'
         }
         self._server.start(
             path=self.script_path("single_result.script"),
@@ -139,14 +142,13 @@ class TestBasicQuery(TestkitTestCase):
         relationship = result_handle.next()
 
         self.assertEqual(CypherInt(123), relationship.values[0].id)
-        self.assertEqual(CypherString("r1-123"),
+        self.assertEqual(CypherString("123"),
                          relationship.values[0].elementId)
-
         self.assertEqual(CypherInt(1), relationship.values[0].startNodeId)
         self.assertEqual(CypherInt(2), relationship.values[0].endNodeId)
-        self.assertEqual(CypherString("n1-1"),
+        self.assertEqual(CypherString("1"),
                          relationship.values[0].startNodeElementId)
-        self.assertEqual(CypherString("n1-2"),
+        self.assertEqual(CypherString("2"),
                          relationship.values[0].endNodeElementId)
 
         self._session.close()
@@ -195,7 +197,7 @@ class TestBasicQuery(TestkitTestCase):
                 '{"()": [3, ["l"], {}]}, '
                 '{"->": [4, 3, "RELATES_TO", 1, {}]}, '
                 '{"()": [1, ["l"], {}]}'
-                ']}'
+                ']}'  # noqa: Q000
         }
 
         self._server.start(
@@ -203,8 +205,8 @@ class TestBasicQuery(TestkitTestCase):
             vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
-        result_handle = self._session.run('MATCH p = ()--()--() '
-                                          'RETURN p LIMIT 1')
+        result_handle = self._session.run("MATCH p = ()--()--() "
+                                          "RETURN p LIMIT 1")
         result = result_handle.next()
         self.assertIsInstance(result.values[0], CypherPath)
         path = result.values[0]
@@ -233,11 +235,11 @@ class TestBasicQuery(TestkitTestCase):
             "#RESULT#":
                 '{"..": ['
                 '{"()": [1, ["l"], {}, "n1-1"]}, '
-                '{"->": [2, 1, "RELATES_TO", 3, {}, "r1-2", "n1-1", "n1-3"]}, '
-                '{"()": [3, ["l"], {}, "n1-3"]}, '
-                '{"->": [4, 3, "RELATES_TO", 1, {}, "r1-4", "n1-3", "n1-1"]}, '
-                '{"()": [1, ["l"], {}, "n1-1"]}'
-                ']}'
+                '{"->": [2, 1, "RELATES_TO", 3, {}, "2", "1", "3"]}, '
+                '{"()": [3, ["l"], {}, "3"]}, '
+                '{"->": [4, 3, "RELATES_TO", 1, {}, "4", "3", "1"]}, '
+                '{"()": [1, ["l"], {}, "1"]}'
+                ']}'  # noqa: Q000
         }
 
         self._server.start(
@@ -245,8 +247,8 @@ class TestBasicQuery(TestkitTestCase):
             vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
-        result_handle = self._session.run('MATCH p = ()--()--() '
-                                          'RETURN p LIMIT 1')
+        result_handle = self._session.run("MATCH p = ()--()--() "
+                                          "RETURN p LIMIT 1")
 
         result = result_handle.next()
 
@@ -258,15 +260,15 @@ class TestBasicQuery(TestkitTestCase):
         rels = path.relationships.value
         # node ids
         self.assertEqual(CypherInt(1), nodes[0].id)
-        self.assertEqual(CypherString("n1-1"), nodes[0].elementId)
+        self.assertEqual(CypherString("1"), nodes[0].elementId)
         # rel ids
         self.assertEqual(CypherInt(2), rels[0].id)
-        self.assertEqual(CypherString("r1-2"), rels[0].elementId)
+        self.assertEqual(CypherString("2"), rels[0].elementId)
         # rel start/end ids
         self.assertEqual(CypherInt(1), rels[0].startNodeId)
         self.assertEqual(CypherInt(3), rels[0].endNodeId)
-        self.assertEqual(CypherString("n1-1"), rels[0].startNodeElementId)
-        self.assertEqual(CypherString("n1-3"), rels[0].endNodeElementId)
+        self.assertEqual(CypherString("1"), rels[0].startNodeElementId)
+        self.assertEqual(CypherString("3"), rels[0].endNodeElementId)
 
         self._session.close()
         self._session = None
@@ -284,7 +286,7 @@ class TestBasicQuery(TestkitTestCase):
                 '{"->": [null, null, "RELATES_TO", null, '
                 '{}, "r1-4", "n1-3", "n1-1"]}, '
                 '{"()": [null, ["l"], {}, "n1-1"]}'
-                ']}'
+                ']}'  # noqa: Q000
         }
 
         self._server.start(
@@ -292,8 +294,8 @@ class TestBasicQuery(TestkitTestCase):
             vars_=script_params
         )
         self._session = self._driver.session("r", fetch_size=1)
-        result_handle = self._session.run('MATCH p = ()--()--() '
-                                          'RETURN p LIMIT 1')
+        result_handle = self._session.run("MATCH p = ()--()--() "
+                                          "RETURN p LIMIT 1")
 
         result = result_handle.next()
 
