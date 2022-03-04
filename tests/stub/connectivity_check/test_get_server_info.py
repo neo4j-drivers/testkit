@@ -230,11 +230,17 @@ class TestGetServerInfo(TestkitTestCase):
             self._server4: "hello_only.script"
         }) as driver:
             self._test_call(driver)
-        self._server3.done()
 
-        with self.assertRaises(StubScriptNotFinishedError):
-            # driver should not try to contact the forth reader
+        # Should connect to one of the reader,
+        # but not both
+        try:
+            self._server3.done()
+        except StubScriptNotFinishedError:
             self._server4.done()
+        else:
+            with self.assertRaises(StubScriptNotFinishedError):
+                self._server4.done()
+
         self._router.done()
 
     def test_routing_fail_when_no_reader_are_available(self):
