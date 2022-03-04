@@ -110,6 +110,8 @@ class TestGetServerInfo(TestkitTestCase):
             self._test_call(driver,
                             self._build_result_check_cb(self._server1.port))
         self._server1.done()
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self.assertEqual(0, self._server1.count_requests("RESET"))
 
     def test_direct_from_pool(self):
         # driver should pick connection from the pool and send RESET
@@ -152,8 +154,11 @@ class TestGetServerInfo(TestkitTestCase):
         }) as driver:
             self._test_call(driver,
                             self._build_result_check_cb(self._server1.port))
+
         self._router.done()
         self._server1.done()
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self.assertEqual(0, self._server1.count_requests("RESET"))
 
     def test_routing_from_pool(self):
         # driver should pick connection from the pool and send RESET
