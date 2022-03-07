@@ -222,3 +222,37 @@ class TestGetServerInfo(TestkitTestCase):
             # driver should not try to contact the writer
             self._server6.done()
         self._router.done()
+
+    def test_routing_should_resolve_if_at_least_one_reader_is_up(self):
+        with self._routing_driver({
+            self._router: "router_5_readers.script",
+            self._server3: "hello_only.script",
+            self._server4: "hello_only.script"
+        }) as driver:
+            self._test_call(driver)
+
+        # Should connect to one of the reader,
+        # but not both
+        try:
+            self._server3.done()
+        except StubScriptNotFinishedError:
+            self._server4.done()
+        else:
+            with self.assertRaises(StubScriptNotFinishedError):
+                self._server4.done()
+
+        self._router.done()
+
+    def test_routing_fail_when_no_reader_are_available(self):
+        with self._routing_driver({
+            self._router: "router_no_readers.script",
+            self._server2: "hello_only.script",  # the writer
+        }) as driver:
+            # no readers are up
+            with self.assertRaises(types.DriverError):
+                self._test_call(driver)
+
+        with self.assertRaises(StubScriptNotFinishedError):
+            # driver should not try to contact the writer
+            self._server2.done()
+        self._router.done()
