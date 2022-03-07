@@ -1,4 +1,4 @@
-!: BOLT 4.3
+!: BOLT 5.0
 
 # Server versions pre 4.4 require empty principal field. So for backwards compatibility, we expect the driver to send it.
 A: HELLO {"user_agent": "*", "scheme": "minimal-scheme", "principal": ""}
