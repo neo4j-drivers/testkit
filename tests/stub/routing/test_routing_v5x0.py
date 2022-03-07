@@ -1567,7 +1567,7 @@ class RoutingV5x0(RoutingBase):
         )
         self.start_server(self._readServer1, "reader_tx.script")
 
-        driver.verify_connectivity()
+        driver.update_routing_table()
         self._routingServer1.done()
         self.start_server(self._routingServer1, "router_adb.script")
         session = driver.session("r", database=self.adb)
