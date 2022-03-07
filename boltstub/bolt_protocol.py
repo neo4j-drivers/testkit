@@ -16,8 +16,7 @@ def get_bolt_protocol(version):
     if version is None:
         raise BoltMissingVersionError()
     for sub in recursive_subclasses(BoltProtocol):
-        if (version == sub.protocol_version
-                or version in sub.version_aliases):
+        if version == sub.protocol_version or version in sub.version_aliases:
             return sub
     raise BoltUnknownVersionError(
         "unsupported bolt version {}".format(version)
@@ -371,3 +370,13 @@ class Bolt4x4Protocol(Bolt4x3Protocol):
     equivalent_versions = set()
 
     server_agent = "Neo4j/4.4.0"
+
+
+class Bolt5x0Protocol(Bolt4x4Protocol):
+
+    protocol_version = (5, 0)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    server_agent = "Neo4j/5.0.0"

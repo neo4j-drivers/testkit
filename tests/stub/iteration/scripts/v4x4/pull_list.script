@@ -1,0 +1,21 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 2}
+S: RECORD [1]
+   RECORD [2]
+   SUCCESS {"has_more": true}
+C: PULL {"n": 2}
+S: RECORD [3]
+   RECORD [4]
+   SUCCESS {"has_more": true}
+C: PULL {"n": 2}
+S: RECORD [5]
+S: SUCCESS {"type": "w"}
+
+*: RESET
+?: GOODBYE

@@ -47,8 +47,6 @@ class Feature(Enum):
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
     # The driver supports Bolt protocol version 3
     BOLT_3_0 = "Feature:Bolt:3.0"
-    # The driver supports Bolt protocol version 4.0
-    BOLT_4_0 = "Feature:Bolt:4.0"
     # The driver supports Bolt protocol version 4.1
     BOLT_4_1 = "Feature:Bolt:4.1"
     # The driver supports Bolt protocol version 4.2
@@ -57,6 +55,8 @@ class Feature(Enum):
     BOLT_4_3 = "Feature:Bolt:4.3"
     # The driver supports Bolt protocol version 4.4
     BOLT_4_4 = "Feature:Bolt:4.4"
+    # The driver supports Bolt protocol version 5.0
+    BOLT_5_0 = "Feature:Bolt:5.0"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.

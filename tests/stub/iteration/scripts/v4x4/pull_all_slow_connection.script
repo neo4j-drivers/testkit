@@ -1,0 +1,17 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN "RETURN 1 AS n" {} {}
+S: SUCCESS {"fields": ["n.name"]}
+C: PULL { "n": -1 }
+S: <SLEEP> 1
+   RECORD ["1"]
+   RECORD ["2"]
+   RECORD ["3"]
+   RECORD ["4"]
+   RECORD ["5"]
+   RECORD ["6"]
+   SUCCESS {"type": "w"}
+*: RESET
+?: GOODBYE

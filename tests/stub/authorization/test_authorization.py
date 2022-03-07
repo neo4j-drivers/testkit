@@ -518,10 +518,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work, hooks={
                 "on_send_RetryableNegative": lambda _:
-                    self.switch_unused_servers(
-                        (self._read_server1, self._read_server2),
-                        "reader_tx.script"
-                    )
+                self.switch_unused_servers(
+                    (self._read_server1, self._read_server2),
+                    "reader_tx.script"
+                )
             })
         self.assert_is_token_error(exc.exception)
         session.close()
@@ -607,10 +607,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work, hooks={
                 "on_send_RetryableNegative": lambda _:
-                    self.switch_unused_servers(
-                        (self._read_server1, self._read_server2),
-                        "reader_tx.script"
-                    )
+                self.switch_unused_servers(
+                    (self._read_server1, self._read_server2),
+                    "reader_tx.script"
+                )
             })
         self.assert_is_token_error(exc.exception)
         session.close()
@@ -697,10 +697,10 @@ class TestAuthorizationV4x3(AuthorizationBase):
         with self.assertRaises(types.DriverError) as exc:
             session.read_transaction(work, hooks={
                 "on_send_RetryableNegative": lambda _:
-                    self.switch_unused_servers(
-                        (self._read_server1, self._read_server2),
-                        "reader_tx.script"
-                    )
+                self.switch_unused_servers(
+                    (self._read_server1, self._read_server2),
+                    "reader_tx.script"
+                )
             })
         self.assert_is_token_error(exc.exception)
         session.close()
@@ -723,7 +723,6 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
 
 class TestAuthorizationV4x1(TestAuthorizationV4x3):
-
     required_features = types.Feature.BOLT_4_1,
 
     def get_vars(self, host=None):
@@ -731,6 +730,21 @@ class TestAuthorizationV4x1(TestAuthorizationV4x3):
             host = self._routing_server1.host
         return {
             "#VERSION#": "4.1",
+            "#HOST#": host,
+            "#ROUTINGMODE#": '"mode": "r", ',
+            "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
+        }
+
+
+class TestAuthorizationV5x0(TestAuthorizationV4x3):
+
+    required_features = types.Feature.BOLT_5_0,
+
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routing_server1.host
+        return {
+            "#VERSION#": "5.0",
             "#HOST#": host,
             "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
@@ -755,7 +769,7 @@ class TestAuthorizationV3(TestAuthorizationV4x3):
 
 class TestNoRoutingAuthorization(AuthorizationBase):
 
-    required_features = types.Feature.BOLT_4_0,
+    required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
         super().setUp()
@@ -772,7 +786,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
 
     def get_vars(self):
         return {
-            "#VERSION#": "4.0"
+            "#VERSION#": "4.4"
         }
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
@@ -812,8 +826,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         driver.close()
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(  # noqa: N802,E501
-            self):
+    def test_should_be_able_to_use_current_sessions_after_AuthorizationExpired(self):  # noqa: N802,E501
         self.start_server(
             self._server,
             "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
@@ -837,8 +850,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         session1.close()
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
-    def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(  # noqa: N802,E501
-            self):
+    def test_should_be_able_to_use_current_tx_after_AuthorizationExpired(self):  # noqa: N802,E501
         self.start_server(
             self._server,
             "reader_return_1_failure_return_2_3_4_and_5_succeed.script"
