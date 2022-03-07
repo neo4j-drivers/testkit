@@ -2796,7 +2796,7 @@ class RoutingV4x4(RoutingBase):
     @driver_feature(types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE,
                     types.Feature.TMP_CONNECTION_ACQUISITION_TIMEOUT)
     def test_should_enforce_pool_size_per_cluster_member(self):
-        acq_timeout_ms = 100
+        acq_timeout_ms = 2000
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, max_connection_pool_size=1,
                         connection_acquisition_timeout_ms=acq_timeout_ms)
@@ -2850,6 +2850,7 @@ class RoutingV4x4(RoutingBase):
 
         self._routingServer1.done()
         self._writeServer1.done()
+        self._writeServer2.done()
         self._readServer1.done()
 
     def _wait_for_idle_connections(self, driver, expected_idle_connections):
