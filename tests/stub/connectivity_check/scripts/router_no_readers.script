@@ -1,0 +1,12 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+{{
+    C: ROUTE {"{}": "*"} null {"[db]": null, "[imp_user]": null}
+----
+    C: ROUTE {"{}": "*"} [] {"[db]": null, "[imp_user]": null}
+}}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "homedb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": [], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+*: RESET
+?: GOODBYE
