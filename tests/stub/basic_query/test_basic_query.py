@@ -11,7 +11,7 @@ from tests.stub.shared import StubServer
 
 
 class TestBasicQuery(TestkitTestCase):
-    required_features = types.Feature.API_DRIVER_ELEMENT_ID,
+    required_features = types.Feature.API_GRAPH_TYPES_ELEMENT_ID,
 
     def setUp(self):
         super().setUp()

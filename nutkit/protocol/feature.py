@@ -14,9 +14,9 @@ class Feature(Enum):
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
-    # The Driver offers a string element id for nodes and relationships
-    # deprecates 64bit integer id from nodes and relationships.
-    API_DRIVER_ELEMENT_ID = "Feature:API:Driver.ElementId"
+    # The Driver offers a string element id for nodes and both relationship
+    # types, and when new storage engine is enabled removes 64bit integer id.
+    API_GRAPH_TYPES_ELEMENT_ID = "Feature:API:GraphTypes.ElementId"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"
