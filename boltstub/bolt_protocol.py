@@ -22,7 +22,8 @@ def get_bolt_protocol(version):
     if version is None:
         raise BoltMissingVersionError()
     for sub in recursive_subclasses(BoltProtocol):
-        if version == sub.protocol_version or version in sub.version_aliases:
+        if (version == sub.protocol_version
+                or version in sub.version_aliases):
             return sub
     raise BoltUnknownVersionError(
         "unsupported bolt version {}".format(version)
