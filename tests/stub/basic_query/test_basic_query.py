@@ -3,6 +3,7 @@ from nutkit.frontend import Driver
 from nutkit.protocol import (
     CypherInt,
     CypherList,
+    CypherNull,
     CypherPath,
     CypherString,
 )
@@ -28,6 +29,14 @@ class TestBasicQuery(TestkitTestCase):
             self._session.close()
         self._server.reset()
         super().tearDown()
+
+    def _assert_is_unset_id(self, id_):
+        if self.driver_supports_features(
+            types.Feature.DETAIL_NULL_ON_MISSING_ID
+        ):
+            self.assertEqual(CypherNull(), id_)
+        else:
+            self.assertEqual(CypherInt(-1), id_)
 
     @driver_feature(types.Feature.BOLT_4_4)
     def test_4x4_populates_node_element_id_with_id(self):
@@ -94,7 +103,7 @@ class TestBasicQuery(TestkitTestCase):
 
         node = result_handle.next()
 
-        self.assertEqual(CypherInt(-1), node.values[0].id)
+        self._assert_is_unset_id(node.values[0].id)
         self.assertEqual(CypherString("n1-123"), node.values[0].elementId)
 
         self._session.close()
@@ -179,12 +188,12 @@ class TestBasicQuery(TestkitTestCase):
 
         relationship = result_handle.next()
 
-        self.assertEqual(CypherInt(-1), relationship.values[0].id)
+        self._assert_is_unset_id(relationship.values[0].id)
         self.assertEqual(CypherString("r1-123"),
                          relationship.values[0].elementId)
 
-        self.assertEqual(CypherInt(-1), relationship.values[0].startNodeId)
-        self.assertEqual(CypherInt(-1), relationship.values[0].endNodeId)
+        self._assert_is_unset_id(relationship.values[0].startNodeId)
+        self._assert_is_unset_id(relationship.values[0].endNodeId)
         self.assertEqual(CypherString("n1-1"),
                          relationship.values[0].startNodeElementId)
         self.assertEqual(CypherString("n1-2"),
@@ -316,14 +325,14 @@ class TestBasicQuery(TestkitTestCase):
         nodes = path.nodes.value
         rels = path.relationships.value
         # node ids
-        self.assertEqual(CypherInt(-1), nodes[0].id)
+        self._assert_is_unset_id(nodes[0].id)
         self.assertEqual(CypherString("n1-1"), nodes[0].elementId)
         # rel ids
-        self.assertEqual(CypherInt(-1), rels[0].id)
+        self._assert_is_unset_id(rels[0].id)
         self.assertEqual(CypherString("r1-2"), rels[0].elementId)
         # rel start/end ids
-        self.assertEqual(CypherInt(-1), rels[0].startNodeId)
-        self.assertEqual(CypherInt(-1), rels[0].endNodeId)
+        self._assert_is_unset_id(rels[0].startNodeId)
+        self._assert_is_unset_id(rels[0].endNodeId)
         self.assertEqual(CypherString("n1-1"), rels[0].startNodeElementId)
         self.assertEqual(CypherString("n1-3"), rels[0].endNodeElementId)
 
