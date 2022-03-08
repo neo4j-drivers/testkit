@@ -56,6 +56,9 @@ class TestTxLifetime(TestkitTestCase):
             self.assertIn("managed", exc.msg.lower())
         elif driver in ["go"]:
             self.assertIn("retryable transaction", exc.msg.lower())
+        elif driver in ["javascript"]:
+            self.assertIn("is not supported in managed transactions.",
+                          exc.msg.lower())
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
