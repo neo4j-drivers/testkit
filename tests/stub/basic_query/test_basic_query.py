@@ -6,12 +6,12 @@ from nutkit.protocol import (
     CypherPath,
     CypherString,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import TestkitTestCase, driver_feature
 from tests.stub.shared import StubServer
 
 
 class TestBasicQuery(TestkitTestCase):
-    required_features = types.Feature.BOLT_5_0,
+    required_features = types.Feature.API_DRIVER_ELEMENT_ID,
 
     def setUp(self):
         super().setUp()
@@ -28,6 +28,7 @@ class TestBasicQuery(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_4x4_populates_node_element_id_with_id(self):
         script_params = {
             "#BOLT_PROTOCOL#": "4.4",
@@ -50,6 +51,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_5_0)
     def test_5x0_populates_node_element_id_with_string(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
@@ -73,6 +75,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_5_0)
     def test_5x0_populates_node_only_element_id(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
@@ -97,6 +100,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_4x4_populates_rel_element_id_with_id(self):
         script_params = {
             "#BOLT_PROTOCOL#": "4.4",
@@ -125,6 +129,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_5_0)
     def test_5x0_populates_rel_element_id_with_string(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
@@ -155,6 +160,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_5_0)
     def test_5x0_populates_rel_only_element_id(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
@@ -187,6 +193,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_4_4)
     def test_4x4_populates_path_element_ids_with_long(self):
         script_params = {
             "#BOLT_PROTOCOL#": "4.4",
@@ -229,6 +236,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_5_0)
     def test_5x0_populates_path_element_ids_with_string(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
@@ -274,6 +282,7 @@ class TestBasicQuery(TestkitTestCase):
         self._session = None
         self._server.done()
 
+    @driver_feature(types.Feature.BOLT_5_0)
     def test_5x0_populates_path_element_ids_with_only_string(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
