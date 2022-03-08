@@ -146,7 +146,13 @@ class CypherBytes:
 
 
 class Node:
-    def __init__(self, id, labels, props, elementId):
+    def __init__(self, id, labels, props, elementId=None):
+        # TODO: remove once all backends support new style relationships
+        if elementId is None:
+            import warnings
+            warnings.warn(
+                "Backend needs to support new style IDs for nodes"
+            )
         self.id = id
         self.labels = labels
         self.props = props
@@ -175,7 +181,14 @@ CypherNode = Node
 
 class Relationship:
     def __init__(self, id, startNodeId, endNodeId, type, props,
-                 elementId, startNodeElementId, endNodeElementId):
+                 elementId=None, startNodeElementId=None,
+                 endNodeElementId=None):
+        # TODO: remove once all backends support new style relationships
+        if None in (elementId, startNodeElementId, endNodeElementId):
+            import warnings
+            warnings.warn(
+                "Backend needs to support new style IDs for relationships"
+            )
         self.id = id
         self.startNodeId = startNodeId
         self.endNodeId = endNodeId

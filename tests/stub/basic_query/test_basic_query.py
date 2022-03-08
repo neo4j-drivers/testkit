@@ -38,6 +38,14 @@ class TestBasicQuery(TestkitTestCase):
         else:
             self.assertEqual(CypherInt(-1), id_)
 
+    def _assert_element_id(self, expected, actual):
+        # TODO: can be removed once all official drivers support new
+        #       TestKit protocol
+        if self.driver_supports_features(
+            types.Feature.BOLT_5_0
+        ):
+            self.assertEqual(expected, actual)
+
     @driver_feature(types.Feature.BOLT_4_4)
     def test_4x4_populates_node_element_id_with_id(self):
         script_params = {
@@ -55,7 +63,7 @@ class TestBasicQuery(TestkitTestCase):
         node = result_handle.next()
 
         self.assertEqual(CypherInt(123), node.values[0].id)
-        self.assertEqual(CypherString("123"), node.values[0].elementId)
+        self._assert_element_id(CypherString("123"), node.values[0].elementId)
 
         self._session.close()
         self._session = None
@@ -127,13 +135,14 @@ class TestBasicQuery(TestkitTestCase):
         relationship = result_handle.next()
 
         self.assertEqual(CypherInt(123), relationship.values[0].id)
-        self.assertEqual(CypherString("123"), relationship.values[0].elementId)
+        self._assert_element_id(CypherString("123"),
+                                relationship.values[0].elementId)
         self.assertEqual(CypherInt(1), relationship.values[0].startNodeId)
         self.assertEqual(CypherInt(2), relationship.values[0].endNodeId)
-        self.assertEqual(CypherString("1"),
-                         relationship.values[0].startNodeElementId)
-        self.assertEqual(CypherString("2"),
-                         relationship.values[0].endNodeElementId)
+        self._assert_element_id(CypherString("1"),
+                                relationship.values[0].startNodeElementId)
+        self._assert_element_id(CypherString("2"),
+                                relationship.values[0].endNodeElementId)
 
         self._session.close()
         self._session = None
@@ -233,15 +242,15 @@ class TestBasicQuery(TestkitTestCase):
         rels = path.relationships.value
         # node ids
         self.assertEqual(CypherInt(1), nodes[0].id)
-        self.assertEqual(CypherString("1"), nodes[0].elementId)
+        self._assert_element_id(CypherString("1"), nodes[0].elementId)
         # rel ids
         self.assertEqual(CypherInt(2), rels[0].id)
-        self.assertEqual(CypherString("2"), rels[0].elementId)
+        self._assert_element_id(CypherString("2"), rels[0].elementId)
         # rel start/end ids
         self.assertEqual(CypherInt(1), rels[0].startNodeId)
         self.assertEqual(CypherInt(3), rels[0].endNodeId)
-        self.assertEqual(CypherString("1"), rels[0].startNodeElementId)
-        self.assertEqual(CypherString("3"), rels[0].endNodeElementId)
+        self._assert_element_id(CypherString("1"), rels[0].startNodeElementId)
+        self._assert_element_id(CypherString("3"), rels[0].endNodeElementId)
         self._session.close()
         self._session = None
         self._server.done()
