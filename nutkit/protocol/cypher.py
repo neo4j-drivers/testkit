@@ -187,8 +187,8 @@ class Relationship:
 
     def __str__(self):
         return (
-            "Relationship(id={}, startNodeId={}, endNodeId={}, type={}, " +
-            "props={}, elementId={}, startNodeElementId={}, " +
+            "Relationship(id={}, startNodeId={}, endNodeId={}, type={}, "
+            "props={}, elementId={}, startNodeElementId={}, "
             "endNodeElementId={})".format(self.id, self.startNodeId,
                                           self.endNodeId,
                                           self.type, self.props,
@@ -199,8 +199,8 @@ class Relationship:
 
     def __repr__(self):
         return (
-            "<{}(id={}, startNodeId={}, endNodeId={}, type={}, " +
-            "props={}, elementId={}, startNodeElementId={}, " +
+            "<{}(id={}, startNodeId={}, endNodeId={}, type={}, "
+            "props={}, elementId={}, startNodeElementId={}, "
             "endNodeElementId={})>".format(self.__class__.__name__,
                                            self.id,
                                            self.startNodeId, self.endNodeId,
@@ -210,7 +210,6 @@ class Relationship:
                                            self.startNodeElementId,
                                            self.endNodeElementId)
         )
-
 
     def __eq__(self, other):
         if not isinstance(other, Relationship):
