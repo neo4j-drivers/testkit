@@ -1064,7 +1064,8 @@ class Unpacker:
                 for i in range(len(fields)):
                     fields[i] = self._unpack(verify_struct=True)
                 return Structure(tag, *fields,
-                                 packstream_version=self.packstream_version)
+                                 packstream_version=self.packstream_version,
+                                 verified=verify_struct)
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
