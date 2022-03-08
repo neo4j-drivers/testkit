@@ -14,8 +14,6 @@ from tests.stub.shared import StubServer
 
 
 class TestBasicQuery(TestkitTestCase):
-    required_features = types.Feature.API_GRAPH_TYPES_ELEMENT_ID,
-
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
@@ -37,11 +35,11 @@ class TestBasicQuery(TestkitTestCase):
             "#BOLT_PROTOCOL#": "4.4",
             "#RESULT#": '{"()": [123, ["l1", "l2"], {"a": {"Z": "42"}}]}'
         }
-
         self._server.start(
             path=self.script_path("single_result.script"),
             vars_=script_params
         )
+
         self._session = self._driver.session("r", fetch_size=1)
         result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
 
