@@ -33,7 +33,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
     required_features = (
         types.Feature.BOLT_4_4,
-        types.Feature.CONNECTION_ACQUISITION_TIMEOUT
+        types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
     )
 
     def setUp(self):
