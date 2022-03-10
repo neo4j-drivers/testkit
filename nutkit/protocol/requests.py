@@ -80,12 +80,7 @@ class NewDriver:
         assert hasattr(Feature, "TMP_DRIVER_MAX_CONNECTION_POOL_SIZE")
         if max_connection_pool_size is not None:
             self.maxConnectionPoolSize = max_connection_pool_size
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped connection acquisition timeout config
-        assert hasattr(Feature, "TMP_CONNECTION_ACQUISITION_TIMEOUT")
-        if connection_acquisition_timeout_ms is not None:
-            self.connectionAcquisitionTimeoutMs = \
-                connection_acquisition_timeout_ms
+        self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
