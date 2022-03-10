@@ -2794,7 +2794,7 @@ class RoutingV5x0(RoutingBase):
         self._writeServer1.done()
 
     @driver_feature(types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE,
-                    types.Feature.TMP_CONNECTION_ACQUISITION_TIMEOUT)
+                    types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT)
     def test_should_enforce_pool_size_per_cluster_member(self):
         acq_timeout_ms = 100
         driver = Driver(self._backend, self._uri_with_context, self._auth,

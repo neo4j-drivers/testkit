@@ -44,7 +44,7 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
         assert self._driver is None
         kwargs = {}
         if self.driver_supports_features(
-            types.Feature.TMP_CONNECTION_ACQUISITION_TIMEOUT
+            types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
         ):
             kwargs["connection_acquisition_timeout_ms"] = 500
         if max_pool_size is not None:
@@ -57,7 +57,7 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
     @contextmanager
     def _backend_timeout_adjustment(self):
         if self.driver_supports_features(
-            types.Feature.TMP_CONNECTION_ACQUISITION_TIMEOUT
+            types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
         ):
             yield
         else:
