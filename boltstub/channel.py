@@ -8,10 +8,13 @@ from .util import hex_repr
 
 
 class Channel:
+    # This class is the glue between a stub script, the socket, and the bolt
+    # protocol.
+
     def __init__(self, wire, bolt_version, log_cb=None, handshake_data=None):
         self.wire = wire
-        self.stream = PackStream(wire)
         self.bolt_protocol = get_bolt_protocol(bolt_version)
+        self.stream = PackStream(wire, self.bolt_protocol.packstream_version)
         self.log = log_cb
         self.handshake_data = handshake_data
         self._buffered_msg = None
@@ -68,6 +71,9 @@ class Channel:
         self.wire.write(response)
         self.wire.send()
         self._log("S: <HANDSHAKE> %s", hex_repr(response))
+
+    def match_client_line(self, client_line, msg):
+        return client_line.match_message(msg.name, msg.fields)
 
     def send_raw(self, b):
         self.log("%s", hex_repr(b))

@@ -2356,7 +2356,8 @@ class RoutingV5x0(RoutingBase):
             self.skipTest("needs verifyConnectivity support")
         ip_addresses = get_ip_addresses()
         if len(ip_addresses) < 2:
-            self.skipTest("at least 2 IP addresses are required for this test")
+            self.skipTest("at least 2 IP addresses are required for this test "
+                          "and only linux is supported at the moment")
 
         router_ip_address = ip_addresses[0]
 
