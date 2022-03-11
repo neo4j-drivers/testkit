@@ -4,6 +4,13 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a configuration option to limit time it spend at most,
+    # trying to acquire a connection from the pool.
+    # The connection acquisition timeout must account for the whole acquisition
+    # execution time, whether a new connection is created, an idle connection
+    # is picked up instead or we need to wait until the full pool depletes.
+    API_CONNECTION_ACQUISITION_TIMEOUT = \
+        "Feature:API:ConnectionAcquisitionTimeout"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established and retrieve the server info of the
     # reached remote.
@@ -22,7 +29,7 @@ class Feature(Enum):
     # records)
     API_RESULT_PEEK = "Feature:API:Result.Peek"
     # The driver offers a method for the result to retrieve exactly one record.
-    # This methods asserts that exactly one record in left in the result
+    # This method asserts that exactly one record in left in the result
     # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
     # The driver supports connection liveness check.
@@ -71,13 +78,6 @@ class Feature(Enum):
     # If this flag is missing, TestKit assumes that attempting to establish
     # such a connection fails.
     TLS_1_3 = "Feature:TLS:1.3"
-    # The driver configuration connection_acquisition_timeout_ms
-    # should be suported.
-    # The connection acquisition timeout must account for the whole acquisition
-    # execution time, whether a new connection is created, an idle connection
-    # is picked up instead or we need to wait until the full pool depletes.
-    CONNECTION_ACQUISITION_TIMEOUT = \
-        "Feature:Configuration:ConnectionAcquisitionTimeout"
 
     # === OPTIMIZATIONS ===
     # On receiving Neo.ClientError.Security.AuthorizationExpired, the driver
@@ -142,10 +142,6 @@ class Feature(Enum):
     # should not be exposed to the user).
     BACKEND_RT_FORCE_UPDATE = "Backend:RTForceUpdate"
 
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the connection acquisition timeout config.
-    TMP_CONNECTION_ACQUISITION_TIMEOUT = \
-        "Temporary:ConnectionAcquisitionTimeout"
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented path and relationship types
     TMP_CYPHER_PATH_AND_RELATIONSHIP = "Temporary:CypherPathAndRelationship"
