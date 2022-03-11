@@ -7,6 +7,19 @@ _API_ROOT = f"{_ROOT}/app/rest"
 _BUILD_LOCATOR = "buildType:DriversTestkitNeo4jDockers"
 
 
+class _AuthHandler(request.BaseHandler):
+    def http_request(self, req):
+        req.remove_header("Authorization")
+        if (not req.has_header("Authorization")
+                and req.full_url.startswith(_ROOT)):
+            api_token = getenv("TEAMCITY_API_TOKEN")
+            req.add_header("Authorization", f"Bearer {api_token}")
+
+        return req
+
+    https_request = http_request
+
+
 class _JsonHandler(request.BaseHandler):
     def http_request(self, req):
         if not req.has_header("Accept"):
@@ -36,15 +49,9 @@ class _JsonHandler(request.BaseHandler):
 
 def _get_opener(json_=False):
     handlers = []
-
     if json_:
         handlers.append(_JsonHandler())
-
-    password_manager = request.HTTPPasswordMgrWithDefaultRealm()
-    password_manager.add_password(
-        None, _ROOT, getenv("TEAMCITY_USER"), getenv("TEAMCITY_PASSWORD")
-    )
-    handlers.append(request.HTTPBasicAuthHandler(password_manager))
+    handlers += [_AuthHandler(), request.HTTPRedirectHandler()]
     return request.build_opener(*handlers)
 
 
@@ -68,7 +75,7 @@ def _download_artifact(path):
     @returns: http response
     """
     path = _ROOT + path
-    return _get_opener().open(path)
+    return _get_opener(json_=False).open(path)
 
 
 class DockerImage:
