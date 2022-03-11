@@ -3,14 +3,12 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     get_driver,
     get_server_info,
+    TestkitNeo4jTestCase,
 )
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import get_driver_name
 
 
-class TestTxFuncRun(TestkitTestCase):
+class TestTxFuncRun(TestkitNeo4jTestCase):
     def setUp(self):
         super().setUp()
         self._driver = get_driver(self._backend)

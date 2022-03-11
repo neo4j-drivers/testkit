@@ -1,12 +1,12 @@
 import nutkit.protocol as types
-from tests.neo4j.shared import get_driver
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
+from tests.neo4j.shared import (
+    get_driver,
+    TestkitNeo4jTestCase,
 )
+from tests.shared import get_driver_name
 
 
-class TestDataTypes(TestkitTestCase):
+class TestDataTypes(TestkitNeo4jTestCase):
     def setUp(self):
         super().setUp()
         self._session = None

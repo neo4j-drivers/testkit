@@ -19,10 +19,12 @@ import os
 from warnings import warn
 
 from nutkit import protocol
+from nutkit.backend import Backend
 from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
     dns_resolve_single,
+    get_backend_host_and_port,
     TestkitTestCase,
 )
 
@@ -177,3 +179,11 @@ def requires_min_bolt_version(min_version):
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
+
+
+class TestkitNeo4jTestCase(TestkitTestCase):
+    @classmethod
+    def _new_backend(cls):
+        """Return connection to backend, caller is responsible for closing."""
+        host, port = get_backend_host_and_port()
+        return Backend(host, port, default_timeout=15)

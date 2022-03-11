@@ -2,15 +2,15 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
+    TestkitNeo4jTestCase,
 )
 from tests.shared import (
     driver_feature,
     get_driver_name,
-    TestkitTestCase,
 )
 
 
-class TestSessionRun(TestkitTestCase):
+class TestSessionRun(TestkitNeo4jTestCase):
     def setUp(self):
         super().setUp()
         self._driver = get_driver(self._backend)

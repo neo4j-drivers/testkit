@@ -5,14 +5,12 @@ from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_server_info,
+    TestkitNeo4jTestCase,
 )
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import get_driver_name
 
 
-class TestTxRun(TestkitTestCase):
+class TestTxRun(TestkitNeo4jTestCase):
     def setUp(self):
         super().setUp()
         self._driver = get_driver(self._backend)

@@ -28,12 +28,6 @@ def get_backend_host_and_port():
     return host, port
 
 
-def new_backend():
-    """Return connection to backend, caller is responsible for closing."""
-    host, port = get_backend_host_and_port()
-    return Backend(host, port)
-
-
 def get_ip_addresses(exclude_loopback=True):
     def pick_address(adapter_):
         ip6 = None
@@ -143,10 +137,16 @@ class TestkitTestCase(unittest.TestCase):
 
     required_features = None
 
+    @classmethod
+    def _new_backend(cls):
+        """Return connection to backend, caller is responsible for closing."""
+        host, port = get_backend_host_and_port()
+        return Backend(host, port)
+
     def setUp(self):
         super().setUp()
         id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
-        self._backend = new_backend()
+        self._backend = self._new_backend()
         self.addCleanup(self._backend.close)
         self._driver_features = get_driver_features(self._backend)
 

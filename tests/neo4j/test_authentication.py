@@ -7,14 +7,12 @@ from tests.neo4j.shared import (
     env_neo4j_user,
     get_authorization,
     get_driver,
+    TestkitNeo4jTestCase,
 )
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import get_driver_name
 
 
-class TestAuthenticationBasic(TestkitTestCase):
+class TestAuthenticationBasic(TestkitNeo4jTestCase):
     def setUp(self):
         super().setUp()
         self._driver = None

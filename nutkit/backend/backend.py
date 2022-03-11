@@ -44,7 +44,7 @@ DEFAULT_TIMEOUT = None if DEBUG_TIMEOUT else 10
 
 
 class Backend:
-    def __init__(self, address, port):
+    def __init__(self, address, port, default_timeout=DEFAULT_TIMEOUT):
         self._socket = socket.socket(socket.AF_INET)
         try:
             self._socket.connect((address, port))
@@ -60,7 +60,7 @@ class Backend:
         self._encoder = Encoder()
         self._reader = self._socket.makefile(mode="r", encoding="utf-8")
         self._writer = self._socket.makefile(mode="w", encoding="utf-8")
-        self.default_timeout = DEFAULT_TIMEOUT
+        self.default_timeout = default_timeout
 
     def close(self):
         self._reader.close()
