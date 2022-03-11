@@ -15,6 +15,9 @@ from .. import (
     parsing,
     Script,
 )
+from ..bolt_protocol import Bolt1Protocol
+from ..simple_jolt import v1 as jolt_v1
+from ..simple_jolt import v2 as jolt_v2
 from ._common import (
     ALL_REQUESTS_PER_VERSION,
     ALL_RESPONSES_PER_VERSION,
@@ -24,7 +27,11 @@ from ._common import (
 
 @pytest.fixture()
 def unverified_script(monkeypatch):
-    monkeypatch.setattr(Script, "_verify_script", lambda *args, **kwargs: None)
+    def _set_bolt_protocol(self, *_, **__):
+        self._bolt_protocol = Bolt1Protocol
+
+    monkeypatch.setattr(Script, "_set_bolt_protocol", _set_bolt_protocol)
+    monkeypatch.setattr(Script, "_verify_script", lambda *_, **__: None)
 
 
 def assert_client_block(block, lines=None):
@@ -225,9 +232,11 @@ bad_fields = (
     *(([bf, gf], True) for gf in good_fields for bf in bad_fields),
     *(([gf, gf], False) for gf in good_fields),
 ))
-@pytest.mark.parametrize("line_type", ("C:", "S:", "A:", "?:", "*:", "+:"))
+@pytest.mark.parametrize("line_type", ("C:", "S:", "A:", "?:", "*:", "+:")[:1])
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, None, {0, 1, 2}))
-def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
+@pytest.mark.parametrize("jolt_package", (jolt_v1, jolt_v2))
+def test_message_fields(line_type, fields, fail, extra_ws, unverified_script,
+                        jolt_package):
     if len(fields) == 1:
         script = "%s" + line_type + " MSG %s" + fields[0] + "%s"
     elif len(fields) == 2:
@@ -237,9 +246,9 @@ def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
     script = script % extra_ws
     if fail:
         with pytest.raises(parsing.LineError):
-            parsing.parse(script)
+            script_parsed = parsing.parse(script)
     else:
-        script = parsing.parse(script)
+        script_parsed = parsing.parse(script)
         block_assert_fns = {"C:": assert_client_block_block_list,
                             "S:": assert_server_block_block_list,
                             "A:": assert_auto_block_block_list,
@@ -250,7 +259,7 @@ def test_message_fields(line_type, fields, fail, extra_ws, unverified_script):
             canonical_line_type = "A:"
         else:
             canonical_line_type = line_type
-        block_assert_fns[line_type](script.block_list, [
+        block_assert_fns[line_type](script_parsed.block_list, [
             "%s MSG %s" % (canonical_line_type, " ".join(fields))
         ])
 
