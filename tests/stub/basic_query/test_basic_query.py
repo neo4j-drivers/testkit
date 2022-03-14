@@ -197,7 +197,7 @@ class TestBasicQuery(TestkitTestCase):
 
         relationship = result_handle.next()
 
-        self.assertEqual(CypherInt(-1), relationship.values[0].id)
+        self._assert_is_unset_id(relationship.values[0].id)
         self.assertEqual(CypherString("r1-123"),
                          relationship.values[0].elementId)
 
