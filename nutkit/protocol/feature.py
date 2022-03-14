@@ -118,6 +118,10 @@ class Feature(Enum):
     # configuration as long as values match.
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
+    # The driver sets the id of nodes and relationships to Null if the server
+    # doesn't provide them. If the driver does not report this feature flag,
+    # TestKit will assert the value to be -1 instead.
+    DETAIL_NULL_ON_MISSING_ID = "Detail:NullOnMissingId"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
