@@ -210,9 +210,15 @@ class TestDataTypes(TestkitTestCase):
         self.assertIsInstance(a, types.CypherNode)
         self.assertIsInstance(b, types.CypherNode)
         self.assertIsInstance(r, types.CypherRelationship)
+
+        # TODO: will need to test elementId instead, once all drivers and
+        #       backends support it.
         self.assertNotEqual(a.id, b.id)
+
         self.assertEqual(a.id, r.startNodeId)
         self.assertEqual(b.id, r.endNodeId)
+        self.assertEqual(a.elementId, r.startNodeElementId)
+        self.assertEqual(b.elementId, r.endNodeElementId)
         self.assertEqual(r.type, types.CypherString("KNOWS"))
         self.assertEqual(r.props, types.CypherMap(
             {"since": types.CypherInt(1999)}
@@ -241,14 +247,19 @@ class TestDataTypes(TestkitTestCase):
         self.assertIsInstance(bc, types.CypherRelationship)
         self.assertIsInstance(p, types.CypherPath)
 
+        # TODO: will need to test elementId instead, once all drivers and
+        #       backends support it.
         self.assertNotEqual(a.id, b.id)
         self.assertNotEqual(a.id, c.id)
         self.assertNotEqual(b.id, c.id)
+
         self.assertEqual(ab, types.CypherRelationship(
-            ab.id, a.id, b.id, types.CypherString("X"), types.CypherMap({})
+            ab.id, a.id, b.id, types.CypherString("X"), types.CypherMap({}),
+            ab.elementId, a.elementId, b.elementId
         ))
         self.assertEqual(bc, types.CypherRelationship(
-            bc.id, b.id, c.id, types.CypherString("X"), types.CypherMap({})
+            bc.id, b.id, c.id, types.CypherString("X"), types.CypherMap({}),
+            bc.elementId, b.elementId, c.elementId
         ))
 
         self.assertEqual(p, types.CypherPath(types.CypherList([a, b, c]),
