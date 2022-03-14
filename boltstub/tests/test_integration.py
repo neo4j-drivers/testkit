@@ -102,12 +102,14 @@ def server_factory():
         server.start()
         return server
 
-    yield factory
-    if server is not None:
-        server.stop()
-        server.join()
-        for exc in server.service.exceptions:
-            traceback.format_exception(type(exc), exc, None)
+    try:
+        yield factory
+    finally:
+        if server is not None:
+            server.stop()
+            server.join()
+            for exc in server.service.exceptions:
+                traceback.format_exception(type(exc), exc, None)
 
 
 @pytest.fixture()
@@ -509,7 +511,7 @@ def test_lists_alternatives_on_unexpected_message(msg, restarting, concurrent,
 
 
 @pytest.mark.parametrize("block_marker", ("?", "*", "+"))
-@pytest.mark.parametrize("msg", (b"\xb0\x11", b"\xb0\x13"))
+@pytest.mark.parametrize("msg", (b"\xb0\x11", b"\xb0\x13"))  # BEGIN, ROLLBACK
 def test_lists_alternatives_on_unexpected_message_with_non_det_block(
         msg, server_factory, connection_factory, block_marker):
     script = """
