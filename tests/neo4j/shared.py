@@ -61,7 +61,7 @@ def get_neo4j_host_and_http_port():
     host = os.environ.get(env_neo4j_host)
     if not host:
         raise Exception("Missing Neo4j hostname, set %s" % env_neo4j_host)
-    port = os.environ.get(env_neo4j_http_port, 17401)
+    port = int(os.environ.get(env_neo4j_http_port, 17401))
     return host, port
 
 

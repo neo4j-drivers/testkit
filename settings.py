@@ -17,7 +17,7 @@ Settings = collections.namedtuple("Settings", [
 def build(testkit_path):
     """Build. the context based environment variables."""
     in_teamcity = (os.environ.get("TEST_IN_TEAMCITY", "").upper()
-                   in ("TRUE", "1"))
+                   in ("TRUE", "1", "Y", "YES", "ON"))
 
     # Retrieve path to driver git repository
     driver_repo = os.environ.get("TEST_DRIVER_REPO")
