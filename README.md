@@ -10,10 +10,10 @@ Environment variables:
   * `TEST_DRIVER_NAME`  
     Set to the name of the driver in lowercase. This is currently used for
     adjusting the set of skipped tests and the expected outcome of some tests.  
-    Currently known drivers are `dotnet`, `go`, `java`, `javascript`, and
-    `python`.
+    Currently known drivers are `dotnet`, `go`, `java`, `javascript`, `python`,
+    and `ruby`.
   * `TEST_DRIVER_REPO`  
-    Path to driver repository
+    Path to driver repository.
   * `TEST_BRANCH`  
     Name of testkit branch. When running locally, this defaults to 'local'.
   * `TEST_BUILD_CACHE_ENABLED`  
@@ -32,6 +32,13 @@ Environment variables:
     docker will remove the image and all intermediate parent images.
   * `ARTIFACTS_DIR`  
     Name of the directory into which logs and similar debug output is placed.
+  * `TEST_IN_TEAMCITY`  
+    Set to `true` to enable additional logging and output for TeamCity as well
+    as integration tests against nightly builds pulled from the CI. To download
+    those builds (only when trying to run the respective integration tests),
+    you also need to set:
+  * `TEAMCITY_API_TOKEN`  
+    The API token to access nightly builds on TeamCity.
 
 ```console
 export TEST_DRIVER_NAME=go
@@ -51,13 +58,30 @@ Environment variables used to control how tests are executed:
   * `TEST_NEO4J_PASS`  
     Password used to connect to Neo4j server.
     Defaults to 'pass'
+  * `TEST_NEO4J_SCHEME`  
+    Scheme to build the URI when contacting the Neo4j server, default "bolt".
+  * `TEST_NEO4J_HTTP_PORT`  
+    The port on which the Neo4j server is listening for HTTP requests. This is
+    just used to make sure the driver does not try to speak bolt over this port.
+  * `TEST_NEO4J_VERSION`  
+    Version of the Neo4j server, default "4.4"
+  * `TEST_NEO4J_EDITION`  
+    Edition ("enterprise", "community", or "aura") of the Neo4j server,
+    default "enterprise"
+  * `TEST_NEO4J_CLUSTER`  
+    Whether the Neo4j server is a cluster, default "False"
   * `TEST_NEO4J_PORT`  
     Defaults to Bolt port 7687, normally not needed.
   * `TEST_BACKEND_HOST`  
     Defaults to localhost, normally not needed.
   * `TEST_BACKEND_PORT`  
     Defaults to 9876, normally not needed.
-All of these variables are normally set by the main runner.
+
+All of these variables are normally set by the main runner (`main.py`). You only
+ever need to adjust them when running tests separately (e.g., from an IDE) or
+when running `main.py --external-integration` (in which case you should use
+`main.py --help` to see what environment variables are needed).
+
 
 ## Running a subset of tests or configurations
 
@@ -190,9 +214,10 @@ Environment variables:
 python3 run_all.py
 ```
 
-This test runs the `main.py` overriding the enviroment variables
+This test runs the `main.py` overriding the environment variables
 `TEST_DRIVER_NAME` and `TEST_DRIVER_REPO` with correct values for each driver.
-The others enviroment variables will be used by `main.py` as usual.
+The other environment variables will be passed on to `main.py` as usual.
+
 
 ## Running stress test suite against a running Neo4j instance
 
@@ -202,7 +227,7 @@ environment and invoke the driver native stress test suite.
 Environment variables:
   * `TEST_NEO4J_URI`  
     Full URI for connecting to running Neo4j instance, for example:
-      neo4j+s://somewhere.com:7687
+    neo4j+s://somewhere.com:7687
   * `TEST_NEO4J_USER`  
     Username used to connect, defaults to neo4j
   * `TEST_NEO4J_PASS`  
