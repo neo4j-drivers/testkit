@@ -16,6 +16,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 import traceback
 
 import docker
@@ -415,6 +416,12 @@ def main(settings, configurations):
             print("Waiting for neo4j service at %s to be available"
                   % (address,))
             driver_container.poll_host_and_port_until_available(*address)
+            # Wait some more seconds for server to be ready.
+            # Especially starting with 5.0, the server starts the bolt server
+            # before it starts the databases. This will mean the port will be
+            # available before queries can be executed for clusters and for
+            # the enterprise edition in stand-alone mode.
+            time.sleep(10)
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:
