@@ -36,6 +36,11 @@ class Result:
         assert isinstance(res, protocol.RecordList)
         return res.records
 
+    def read_cypher_type_field(self, record_key, type_name, field_id):
+        req = protocol.CypherTypeField(self._result.id, record_key, type_name,
+                                       field_id)
+        return self._driver.send_and_receive(req, allow_resolution=True)
+
     def keys(self):
         return self._result.keys
 

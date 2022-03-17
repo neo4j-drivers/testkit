@@ -9,6 +9,7 @@ from nutkit.protocol import (
 )
 from tests.shared import (
     driver_feature,
+    get_driver_name,
     TestkitTestCase,
 )
 from tests.stub.shared import StubServer
@@ -31,6 +32,10 @@ class TestBasicQuery(TestkitTestCase):
         super().tearDown()
 
     def _assert_is_unset_id(self, id_):
+        if self.driver_supports_features(
+            types.Feature.DETAIL_THROW_ON_MISSING_ID
+        ):
+            return
         if self.driver_supports_features(
             types.Feature.DETAIL_NULL_ON_MISSING_ID
         ):
@@ -113,6 +118,34 @@ class TestBasicQuery(TestkitTestCase):
 
         self._assert_is_unset_id(node.values[0].id)
         self.assertEqual(CypherString("n1-123"), node.values[0].elementId)
+
+        self._session.close()
+        self._session = None
+        self._server.done()
+
+    @driver_feature(types.Feature.BOLT_5_0,
+                    types.Feature.DETAIL_THROW_ON_MISSING_ID)
+    def test_5x0_throws_on_node_access_id(self):
+        script_params = {
+            "#BOLT_PROTOCOL#": "5.0",
+            "#RESULT#":
+                '{"()": [null, ["l1", "l2"], {"a": {"Z": "42"}}, "n1-123"]}'
+        }
+
+        self._server.start(
+            path=self.script_path("single_result.script"),
+            vars_=script_params
+        )
+
+        self._session = self._driver.session("r", fetch_size=1)
+        result_handle = self._session.run("MATCH (n) RETURN n LIMIT 1")
+
+        with self.assertRaises(types.DriverError) as exc:
+            result_handle.read_cypher_type_field("n", "node", "id")
+
+        if get_driver_name() in ["dotnet"]:
+            self.assertEqual("InvalidOperationException",
+                             exc.exception.errorType)
 
         self._session.close()
         self._session = None

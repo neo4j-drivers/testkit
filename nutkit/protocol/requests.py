@@ -504,3 +504,18 @@ class GetConnectionPoolMetrics:
     def __init__(self, driverId, address):
         self.driverId = driverId
         self.address = address
+
+
+class CypherTypeField:
+    """
+    Request to retrieve the next record on a result then extract field.
+
+    Backend should respond with a Field if there is field on a record,
+    an Error if error occurred while retrieving next record or reading field.
+    """
+
+    def __init__(self, result_id, record_key, type_name, field_id):
+        self.resultId = result_id
+        self.recordKey = record_key
+        self.type = type_name
+        self.field = field_id
