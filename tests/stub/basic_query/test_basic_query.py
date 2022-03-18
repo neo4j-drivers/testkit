@@ -226,8 +226,8 @@ class TestBasicQuery(TestkitTestCase):
                 '{"->": [null, null, "f", null, {"a": {"Z": "42"}}, "r1-123", '
                 '"n1-1", "n1-2"]}'
         }
-        for field in ["id", "startnodeid", "endnodeid"]:
-            with self.subTest(f"field:{field}"):
+        for field in ["id", "startNodeId", "endNodeId"]:
+            with self.subTest(field=field):
                 with self._get_session("single_result.script",
                                        script_params) as session:
                     result_handle = session.run("MATCH (n) RETURN n LIMIT 1")
@@ -366,7 +366,7 @@ class TestBasicQuery(TestkitTestCase):
 
     @driver_feature(types.Feature.BOLT_5_0,
                     types.Feature.DETAIL_THROW_ON_MISSING_ID)
-    def test_5x0_throws_on_reading_ids(self):
+    def test_5x0_path_throws_on_access_id_fields(self):
         script_params = {
             "#BOLT_PROTOCOL#": "5.0",
             "#RESULT#":
@@ -381,13 +381,13 @@ class TestBasicQuery(TestkitTestCase):
                 ']}'  # noqa: Q000
         }
         cases = [
-            "n.0.id",
-            "r.0.id",
-            "r.0.startnodeid",
-            "r.0.endnodeid"
+            "nodes.0.id",
+            "relationships.0.id",
+            "relationships.0.startNodeId",
+            "relationships.0.endNodeId"
         ]
         for field in cases:
-            with self.subTest(f"field:{field}"):
+            with self.subTest(field=field):
                 with self._get_session("single_result.script",
                                        script_params) as session:
 
