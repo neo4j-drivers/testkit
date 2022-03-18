@@ -126,7 +126,7 @@ class Feature(Enum):
     # if the server doesn't provide them. If the driver does not report this
     # feature flag,TestKit will assert the value to be -1/null instead.
     DETAIL_THROW_ON_MISSING_ID = "Detail:ThrowOnMissingId"
-    
+
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
     # connection.recv_timeout_seconds which tells it to close the connection
