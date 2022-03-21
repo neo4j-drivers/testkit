@@ -33,7 +33,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
     required_features = (
         types.Feature.BOLT_4_4,
-        types.Feature.CONNECTION_ACQUISITION_TIMEOUT
+        types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
     )
 
     def setUp(self):
@@ -63,7 +63,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         return super().tearDown()
 
-    def test_should_works_when_every_step_is_done_in_time(self):
+    def test_should_work_when_every_step_is_done_in_time(self):
         """
         Everything in time scenario.
 
@@ -180,7 +180,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE,
         types.Feature.OPT_EAGER_TX_BEGIN
     )
-    def test_should_regulates_the_time_for_acquiring_connections(self):
+    def test_should_regulate_the_time_for_acquiring_connections(self):
         """
         No connection available scenario.
 

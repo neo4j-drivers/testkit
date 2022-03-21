@@ -1,0 +1,30 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+{{
+    # No PULL pipelining
+    C: PULL {"n": -1}
+    S: RECORD [1]
+       RECORD [2]
+       RECORD [3]
+       RECORD [4]
+       RECORD [5]
+----
+    # Pipelining one PULL
+    C: PULL {"n": 2}
+    S: RECORD [1]
+       RECORD [2]
+       SUCCESS {"has_more": true}
+    C: PULL {"n": -1}
+    S: RECORD [3]
+       RECORD [4]
+       RECORD [5]
+}}
+S: SUCCESS {"type": "w"}
+
+*: RESET
+?: GOODBYE

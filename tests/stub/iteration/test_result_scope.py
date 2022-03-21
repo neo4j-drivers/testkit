@@ -46,6 +46,8 @@ class TestResultScope(TestkitTestCase):
             )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
+        elif driver in ["javascript"]:
+            self.assertEqual(exc.msg, "Result is already consumed")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -62,6 +64,8 @@ class TestResultScope(TestkitTestCase):
             )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
+        elif driver in ["javascript"]:
+            self.assertEqual(exc.msg, "Result is already consumed")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

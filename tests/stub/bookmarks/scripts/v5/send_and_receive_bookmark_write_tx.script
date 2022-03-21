@@ -1,0 +1,14 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"bookmarks{}": #BOOKMARKS# }
+S: SUCCESS {}
+C: RUN "MATCH (n) RETURN n.name AS name" {} {}
+S: SUCCESS {"fields": ["name"]}
+C: PULL {"n": 1000}
+S: SUCCESS {}
+C: COMMIT
+S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx4242"}
+*: RESET
+?: GOODBYE

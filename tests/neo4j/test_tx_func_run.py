@@ -202,9 +202,16 @@ class TestTxFuncRun(TestkitTestCase):
             nonlocal exc
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
-            exc = e
-            # transaction has failed and we don't want the driver to retry it
-            raise ApplicationCodeError
+            exc = e.exception
+            if (exc.code
+                    != "Neo.TransientError.Transaction.LockClientStopped"):
+                # This is not the error we are looking for. Maybe there was  a
+                # leader election or so. Give the driver the chance to retry.
+                raise exc
+            else:
+                # The error we are looking for. Raise ApplicationError instead
+                # to make the driver stop retrying.
+                raise ApplicationCodeError("Stop, hammer time!")
 
         exc = None
 
@@ -214,9 +221,9 @@ class TestTxFuncRun(TestkitTestCase):
             "w", bookmarks=self._session1.last_bookmarks(), database=db
         )
         self._session1.write_transaction(update1)
-        self.assertIsNotNone(exc)
-        self.assertEqual(exc.exception.code,
+        self.assertIsInstance(exc, types.DriverError)
+        self.assertEqual(exc.code,
                          "Neo.TransientError.Transaction.LockClientStopped")
         if get_driver_name() in ["python"]:
-            self.assertEqual(exc.exception.errorType,
+            self.assertEqual(exc.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")

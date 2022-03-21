@@ -61,7 +61,7 @@ def get_neo4j_host_and_http_port():
     host = os.environ.get(env_neo4j_host)
     if not host:
         raise Exception("Missing Neo4j hostname, set %s" % env_neo4j_host)
-    port = os.environ.get(env_neo4j_http_port, 17401)
+    port = int(os.environ.get(env_neo4j_http_port, 17401))
     return host, port
 
 
@@ -140,7 +140,7 @@ def requires_multi_db_support(func):
         return args[0]
 
     @wraps(func)
-    @requires_min_bolt_version(protocol.Feature.BOLT_4_0)
+    @requires_min_bolt_version("4.0")
     def wrapper(*args, **kwargs):
         test_case = get_valid_test_case(*args, **kwargs)
         if not get_server_info().supports_multi_db:
@@ -149,13 +149,7 @@ def requires_multi_db_support(func):
     return wrapper
 
 
-def requires_min_bolt_version(feature):
-    if not isinstance(feature, protocol.Feature):
-        raise TypeError("The arguments must be instances of Feature")
-    if not feature.name.startswith("BOLT_"):
-        raise ValueError("Bolt version feature expected")
-
-    min_version = feature.value.split(":")[-1]
+def requires_min_bolt_version(min_version):
     server_max_version = get_server_info().max_protocol_version
     all_viable_versions = [
         f for f in protocol.Feature
