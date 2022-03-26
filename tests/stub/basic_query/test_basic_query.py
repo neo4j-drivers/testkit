@@ -9,6 +9,7 @@ from nutkit.protocol import (
     CypherPath,
     CypherString,
 )
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -52,7 +53,7 @@ class TestBasicQuery(TestkitTestCase):
             self.assertEqual("InvalidOperationException",
                              exc.exception.errorType)
         if get_driver_name() in ["java"]:
-            self.assertEqual("java.lang.IllegalStateException",
+            self.assertEqual(ErrorType.ILLEGAL_STATE_ERROR.value,
                              exc.exception.errorType)
 
     @contextmanager

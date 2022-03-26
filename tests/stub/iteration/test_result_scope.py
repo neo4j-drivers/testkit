@@ -2,6 +2,7 @@ from contextlib import contextmanager
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -40,10 +41,8 @@ class TestResultScope(TestkitTestCase):
             self.assertIn("closed", exc.msg.lower())
             self.assertIn("transaction", exc.msg.lower())
         elif driver in ["java"]:
-            self.assertEqual(
-                exc.errorType,
-                "org.neo4j.driver.exceptions.ResultConsumedException"
-            )
+            self.assertEqual(ErrorType.RESULT_CONSUMED_ERROR.value,
+                             exc.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
@@ -58,10 +57,8 @@ class TestResultScope(TestkitTestCase):
                              "<class 'neo4j.exceptions.ResultConsumedError'>")
             self.assertIn("consume", exc.msg.lower())
         elif driver in ["java"]:
-            self.assertEqual(
-                exc.errorType,
-                "org.neo4j.driver.exceptions.ResultConsumedException"
-            )
+            self.assertEqual(ErrorType.RESULT_CONSUMED_ERROR.value,
+                             exc.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:

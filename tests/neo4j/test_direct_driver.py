@@ -1,4 +1,5 @@
 from nutkit import protocol as types
+from nutkit.protocol.error_type import ErrorType
 
 from ..shared import (
     dns_resolve_single,
@@ -75,6 +76,9 @@ class TestDirectDriver(TestkitTestCase):
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
+                             e.exception.errorType)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_supports_multi_db(self):
@@ -109,6 +113,9 @@ class TestDirectDriver(TestkitTestCase):
         if get_driver_name() in ["python"]:
             self.assertEqual(exc.errorType,
                              "<class 'neo4j.exceptions.ClientError'>")
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(ErrorType.FATAL_DISCOVERY_ERROR.value,
+                             exc.errorType)
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     @requires_multi_db_support
@@ -146,6 +153,9 @@ class TestDirectDriver(TestkitTestCase):
                     "database is not supported in Bolt Protocol Version(3, 0)",
                     e.exception.msg
                 )
+            elif get_driver_name() in ["java"]:
+                self.assertEqual(ErrorType.CLIENT_ERROR.value,
+                                 e.exception.errorType)
 
     @requires_multi_db_support
     @cluster_unsafe_test

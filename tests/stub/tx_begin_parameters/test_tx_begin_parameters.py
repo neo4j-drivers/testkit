@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -221,10 +222,8 @@ class TestTxBeginParameters(TestkitTestCase):
                     )
                     self.assertIn("that-other-dude", exc.exception.msg)
                 elif self._driver_name in ["java"]:
-                    self.assertEqual(
-                        exc.exception.errorType,
-                        "org.neo4j.driver.exceptions.ClientException"
-                    )
+                    self.assertEqual(ErrorType.CLIENT_ERROR.value,
+                                     exc.exception.errorType)
                 elif self._driver_name in ["go"]:
                     self.assertIn("impersonation", exc.exception.msg)
                 elif self._driver_name in ["ruby"]:

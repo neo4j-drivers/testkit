@@ -1,4 +1,5 @@
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -18,10 +19,8 @@ class TestResultPeek(IterationTestBase):
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              error.errorType)
         elif driver in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.ServiceUnavailableException",
-                error.errorType
-            )
+            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
+                             error.errorType)
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ServiceUnavailableException",

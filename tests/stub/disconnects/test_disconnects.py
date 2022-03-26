@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -251,6 +252,9 @@ class TestDisconnects(TestkitTestCase):
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
                 self._last_exc.errorType
             )
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
+                             self._last_exc.errorType)
 
     # FIXME: This test doesn't really fit here. It tests FAILURE handling, not
     #        handling sudden loss of connectivity.

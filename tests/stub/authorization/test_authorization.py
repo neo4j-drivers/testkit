@@ -3,6 +3,7 @@ import os
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -20,9 +21,8 @@ class AuthorizationBase(TestkitTestCase):
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
         if driver in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.AuthorizationExpiredException",
-                error.errorType)
+            self.assertEqual(ErrorType.AUTH_EXPIRED_ERROR.value,
+                             error.errorType)
         elif driver in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.TransientError'>", error.errorType
@@ -52,9 +52,8 @@ class AuthorizationBase(TestkitTestCase):
                 "Token expired", error.msg
             )
         elif driver == "java":
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.TokenExpiredException",
-                error.errorType)
+            self.assertEqual(ErrorType.TOKEN_EXPIRED_ERROR.value,
+                             error.errorType)
             self.assertIn("Token expired", error.msg)
         elif driver == "ruby":
             self.assertEqual(

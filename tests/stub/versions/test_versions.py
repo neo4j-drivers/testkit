@@ -2,6 +2,7 @@ from contextlib import contextmanager
 
 from nutkit import protocol as types
 from nutkit.frontend import Driver
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
@@ -276,9 +277,8 @@ class TestProtocolVersions(TestkitTestCase):
 
     def _assert_is_untrusted_server_exception(self, e):
         if get_driver_name() in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.UntrustedServerException",
-                e.errorType)
+            self.assertEqual(ErrorType.UNTRUSTED_SERVER_ERROR.value,
+                             e.errorType)
         if get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::UntrustedServerException",

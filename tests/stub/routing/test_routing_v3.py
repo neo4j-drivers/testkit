@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 
 from ...shared import get_driver_name
 from .test_routing_v4x4 import RoutingV4x4
@@ -71,7 +72,12 @@ class RoutingV3(RoutingV4x4):
             session.run("RETURN 1 AS x").consume()
         except types.DriverError as e:
             failed = True
-            if get_driver_name() in ["python"]:
+            if get_driver_name() in ["java"]:
+                self.assertEqual(
+                    ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
+                    e.errorType
+                )
+            elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     e.errorType,
                     "<class 'neo4j.exceptions.ServiceUnavailable'>"
