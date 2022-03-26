@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -54,7 +55,7 @@ class TestServerSideRouting(TestkitTestCase):
         with self.assertRaises(types.DriverError) as exc:
             driver = Driver(self._backend, uri, self._auth, self._userAgent)
         if get_driver_name() in ["java"]:
-            self.assertEqual("java.lang.IllegalArgumentException",
+            self.assertEqual(ErrorType.ILLEGAL_ARGUMENT_ERROR.value,
                              exc.exception.errorType)
             self.assertIn(uri, exc.exception.msg)
         elif get_driver_name() in ["ruby"]:

@@ -2,6 +2,7 @@ from contextlib import contextmanager
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -44,8 +45,7 @@ class TestTxLifetime(TestkitTestCase):
         elif driver in ["javascript", "go", "dotnet"]:
             self.assertIn("transaction", exc.msg.lower())
         elif driver in ["java"]:
-            self.assertEqual(exc.errorType,
-                             "org.neo4j.driver.exceptions.ClientException")
+            self.assertEqual(ErrorType.CLIENT_ERROR.value, exc.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

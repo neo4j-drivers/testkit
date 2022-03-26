@@ -1,4 +1,5 @@
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -25,6 +26,8 @@ class TestResultSingle(IterationTestBase):
                 error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("InvalidOperationException", error.errorType)
+        elif driver in ["java"]:
+            self.assertEqual(ErrorType.NOT_SINGLE_ERROR.value, error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -40,6 +43,9 @@ class TestResultSingle(IterationTestBase):
                 error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("ServiceUnavailableError", error.errorType)
+        elif driver in ["java"]:
+            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR,
+                             error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
@@ -570,8 +571,7 @@ class NoRoutingV4x1(TestkitTestCase):
     def _assert_is_transient_rollback_exception(
             self, e, expected_msg="Unable to rollback"):
         if get_driver_name() in ["java"]:
-            self.assertEqual("org.neo4j.driver.exceptions.TransientException",
-                             e.errorType)
+            self.assertEqual(ErrorType.TRANSIENT_ERROR.value, e.errorType)
             self.assertEqual(expected_msg, e.msg)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual("Neo4j::Driver::Exceptions::TransientException",
@@ -584,8 +584,7 @@ class NoRoutingV4x1(TestkitTestCase):
     def _assert_is_transient_commit_exception(
             self, e, expected_msg="Unable to commit"):
         if get_driver_name() in ["java"]:
-            self.assertEqual("org.neo4j.driver.exceptions.TransientException",
-                             e.errorType)
+            self.assertEqual(ErrorType.TRANSIENT_ERROR.value, e.errorType)
             self.assertEqual(expected_msg, e.msg)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual("Neo4j::Driver::Exceptions::TransientException",

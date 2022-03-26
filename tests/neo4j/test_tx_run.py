@@ -1,6 +1,7 @@
 import uuid
 
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
@@ -327,6 +328,9 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(ErrorType.TRANSIENT_ERROR.value,
+                             e.exception.errorType)
 
     @cluster_unsafe_test
     def test_consume_after_commit(self):

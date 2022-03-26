@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
@@ -86,7 +87,7 @@ class TestBookmarks(TestkitTestCase):
             result.next()
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
@@ -120,7 +121,7 @@ class TestBookmarks(TestkitTestCase):
             self._session.read_transaction(work)
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:

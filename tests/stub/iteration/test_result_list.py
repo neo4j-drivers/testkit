@@ -1,4 +1,5 @@
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import get_driver_name
 
 from ._common import IterationTestBase
@@ -17,7 +18,7 @@ class TestResultList(IterationTestBase):
                              error.errorType)
         elif driver in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                 error.errorType
             )
         elif driver in ["javascript"]:

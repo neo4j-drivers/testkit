@@ -1,5 +1,6 @@
 from nutkit import protocol as types
 from nutkit.frontend import Driver
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -186,6 +187,9 @@ class TestTxRun(TestkitTestCase):
         exc = self._eager_tx_run("tx_disconnect_on_begin.script")
         if get_driver_name() in ["python"]:
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
+                             exc.errorType)
+        elif get_driver_name() in ["java"]:
+            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              exc.errorType)
 
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)

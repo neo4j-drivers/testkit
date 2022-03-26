@@ -3,6 +3,7 @@ import time
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
@@ -237,7 +238,7 @@ class RoutingV5x0(RoutingBase):
             except types.DriverError as e:
                 if get_driver_name() in ["java"]:
                     self.assertEqual(
-                        "org.neo4j.driver.exceptions.SessionExpiredException",
+                        ErrorType.SESSION_EXPIRED_ERROR.value,
                         e.errorType)
                 elif get_driver_name() in ["ruby"]:
                     self.assertEqual(
@@ -287,7 +288,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["ruby"]:
@@ -341,7 +342,7 @@ class RoutingV5x0(RoutingBase):
 
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.SessionExpiredException",
+                ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["ruby"]:
@@ -396,7 +397,7 @@ class RoutingV5x0(RoutingBase):
 
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.SessionExpiredException",
+                ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["ruby"]:
@@ -655,7 +656,7 @@ class RoutingV5x0(RoutingBase):
             except types.DriverError as e:
                 if get_driver_name() in ["java"]:
                     self.assertEqual(
-                        "org.neo4j.driver.exceptions.SessionExpiredException",
+                        ErrorType.SESSION_EXPIRED_ERROR.value,
                         e.errorType
                     )
                 elif get_driver_name() in ["python"]:
@@ -725,7 +726,7 @@ class RoutingV5x0(RoutingBase):
 
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.SessionExpiredException",
+                ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
             )
         session.close()
@@ -777,7 +778,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                    ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -813,7 +814,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                    ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["ruby"]:
@@ -852,7 +853,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -906,7 +907,10 @@ class RoutingV5x0(RoutingBase):
         try:
             session.run("RETURN 1 as n").consume()
         except types.DriverError as e:
-            if get_driver_name() in ["python"]:
+            if get_driver_name() in ["java"]:
+                self.assertEqual(ErrorType.SESSION_EXPIRED_ERROR.value,
+                                 e.errorType)
+            elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.ForbiddenOnReadOnlyDatabase'>",
                     e.errorType
@@ -952,7 +956,9 @@ class RoutingV5x0(RoutingBase):
         try:
             session.run("RETURN 1 as n").consume()
         except types.DriverError as e:
-            if get_driver_name() in ["python"]:
+            if get_driver_name() in ["java"]:
+                self.assertEqual(ErrorType.CLIENT_ERROR.value, e.errorType)
+            elif get_driver_name() in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.ClientError'>",
                     e.errorType
@@ -1011,7 +1017,7 @@ class RoutingV5x0(RoutingBase):
             except types.DriverError as e:
                 if get_driver_name() in ["java"]:
                     self.assertEqual(
-                        "org.neo4j.driver.exceptions.SessionExpiredException",
+                        ErrorType.SESSION_EXPIRED_ERROR.value,
                         e.errorType
                     )
                 elif get_driver_name() in ["python"]:
@@ -1063,7 +1069,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -1120,7 +1126,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -1693,7 +1699,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["ruby"]:
@@ -2064,7 +2070,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.FatalDiscoveryException",
+                    ErrorType.FATAL_DISCOVERY_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -2112,7 +2118,7 @@ class RoutingV5x0(RoutingBase):
         )
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
@@ -2136,7 +2142,7 @@ class RoutingV5x0(RoutingBase):
         )
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
@@ -2161,7 +2167,7 @@ class RoutingV5x0(RoutingBase):
         )
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.SecurityException",
+                ErrorType.SECURITY_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
@@ -2186,7 +2192,7 @@ class RoutingV5x0(RoutingBase):
         )
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.SecurityException",
+                ErrorType.SECURITY_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
@@ -2224,7 +2230,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                    ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["ruby"]:
@@ -2450,7 +2456,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "java.lang.IllegalStateException",
+                    ErrorType.ILLEGAL_STATE_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["ruby"]:
@@ -2485,7 +2491,7 @@ class RoutingV5x0(RoutingBase):
         except types.DriverError as e:
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -2537,7 +2543,7 @@ class RoutingV5x0(RoutingBase):
                 result.next()
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.exception.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -2609,7 +2615,7 @@ class RoutingV5x0(RoutingBase):
 
             if get_driver_name() in ["java"]:
                 self.assertEqual(
-                    "org.neo4j.driver.exceptions.SessionExpiredException",
+                    ErrorType.SESSION_EXPIRED_ERROR.value,
                     exc.exception.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -2683,7 +2689,7 @@ class RoutingV5x0(RoutingBase):
 
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.SessionExpiredException",
+                ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
             )
         elif get_driver_name() in ["python"]:
@@ -2825,7 +2831,7 @@ class RoutingV5x0(RoutingBase):
 
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
             )
             self.assertTrue("Unable to acquire connection from the "

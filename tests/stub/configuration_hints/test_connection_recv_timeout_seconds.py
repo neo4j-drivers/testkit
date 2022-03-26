@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     dns_resolve_single,
     driver_feature,
@@ -45,9 +46,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              e.errorType)
         elif get_driver_name() in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
-                e.errorType)
+            self.assertEqual(ErrorType.CONNECTION_READ_TIMEOUT_ERROR.value,
+                             e.errorType)
         elif get_driver_name() in ["go"]:
             # remove second assertion once the context API PR is merged
             self.assertTrue("context deadline exceeded" in e.msg
@@ -62,9 +62,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
-                e.errorType)
+            self.assertEqual(ErrorType.CLIENT_ERROR.value, e.errorType)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ClientException",
@@ -276,10 +274,8 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
             self.assertEqual("<class 'neo4j.exceptions.SessionExpired'>",
                              e.errorType)
         elif get_driver_name() in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.SessionExpiredException",
-                e.errorType
-            )
+            self.assertEqual(ErrorType.SESSION_EXPIRED_ERROR.value,
+                             e.errorType)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::SessionExpiredException",
