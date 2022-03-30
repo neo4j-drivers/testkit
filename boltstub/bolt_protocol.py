@@ -90,8 +90,8 @@ class BoltProtocol:
         assert isinstance(b, (bytes, bytearray))
         assert len(b) == 16
         for spec in (b[i:(i + 4)] for i in range(0, 16, 4)):
-            _, range_, minor, major = spec
-            for minor in range(minor, minor - range_ - 1, -1):
+            _, range_, spec_minor, major = spec
+            for minor in range(spec_minor, spec_minor - range_ - 1, -1):
                 yield major, minor
 
     @classmethod
