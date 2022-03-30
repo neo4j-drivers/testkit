@@ -115,7 +115,6 @@ class TestSummary(TestkitTestCase):
                 with self.assertRaises(types.DriverError) as e:
                     result = session.run("RETURN 1 AS n",
                                          params={"foo": types.CypherInt(123)})
-                    # list(result)
                     result.consume()
             if get_driver_name() == "python":
                 self.assertEqual(
