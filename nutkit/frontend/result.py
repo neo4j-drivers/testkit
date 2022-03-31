@@ -19,6 +19,16 @@ class Result:
         req = protocol.ResultSingle(self._result.id)
         return self._driver.send_and_receive(req, allow_resolution=True)
 
+    def single_optional(self):
+        """Try leniently to fetch exactly one record.
+
+        Return None, if there is no record.
+        Return the record, if there is at least one.
+        Warn, if there are more than one.
+        """
+        req = protocol.ResultSingleOptional(self._result.id)
+        return self._driver.send_and_receive(req, allow_resolution=True)
+
     def peek(self):
         """Return the next Record or NullRecord without consuming it."""
         req = protocol.ResultPeek(self._result.id)

@@ -215,6 +215,24 @@ class RecordList:
         self.records = record_list
 
 
+class RecordOptional:
+    """
+    Represents an optional record.
+
+    Possible response to the ResultOptionalSingle request.
+
+    Fields:
+        record: Record values or None (see Record response)
+        warnings: List of warnings (str) (potentially empty)
+    """
+
+    def __init__(self, record, warnings):
+        self.record = None
+        if record is not None:
+            self.record = Record(values=record["values"])
+        self.warnings = warnings
+
+
 class Summary:
     """Represents summary returned from a ResultConsume request."""
 

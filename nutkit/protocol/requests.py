@@ -394,6 +394,20 @@ class ResultSingle:
         self.resultId = resultId
 
 
+class ResultSingleOptional:
+    """
+    Request to expect and return exactly one record in the result stream.
+
+    Furthermore, the method is supposed to fully exhaust the result stream.
+
+    The backend should respond with a RecordOptional or, if any error occurs
+    while retrieving the records, an Error response should be returned.
+    """
+
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
 class ResultPeek:
     """
     Request to return the next result in the Stream without consuming it.
