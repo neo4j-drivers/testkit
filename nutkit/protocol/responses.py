@@ -169,6 +169,24 @@ class Record:
         return self.__str__()
 
 
+class Field:
+    """A field received from reading a Result's Record."""
+
+    def __init__(self, value=None):
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, Field):
+            return False
+        return other.value == self.value
+
+    def __str__(self):
+        return "Field, value {}".format(self.value)
+
+    def __repr__(self):
+        return self.__str__()
+
+
 class NullRecord:
     """Represents end of records when iterating through records with Next."""
 

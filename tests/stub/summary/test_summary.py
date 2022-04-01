@@ -121,6 +121,11 @@ class TestSummary(TestkitTestCase):
                     e.exception.errorType,
                     "<class 'neo4j._exceptions.BoltProtocolError'>"
                 )
+            elif get_driver_name() == "java":
+                self.assertEqual(
+                    e.exception.errorType,
+                    "org.neo4j.driver.exceptions.ProtocolException"
+                )
 
         for query_type in ("wr",):
             with self.subTest(query_type):
