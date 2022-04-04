@@ -95,28 +95,3 @@ class TestTxLifetime(TestkitTestCase):
                                   second_action=second_action):
                     self._test_unmanaged_tx(first_action, second_action)
                 self._server.reset()
-
-    def _test_managed_tx(self, close_action):
-        def work(tx_):
-            res_ = tx_.run("Query")
-            res_.consume()
-            with self.assertRaises(types.DriverError) as exc_:
-                getattr(tx_, close_action)()
-            self._asserts_tx_managed_error(exc_.exception)
-            raise exc_.exception
-
-        script = "tx_inf_results_until_end.script"
-        with self._start_session(script) as session:
-            with self.assertRaises(types.DriverError):
-                session.read_transaction(work)
-
-        self._server.done()
-        self._server._dump()
-        self.assertEqual(self._server.count_requests("ROLLBACK"), 1)
-        self.assertEqual(self._server.count_requests("COMMIT"), 0)
-
-    def test_managed_tx_raises_tx_managed_exec(self):
-        for close_action in ("commit", "rollback", "close"):
-            with self.subTest(close_action=close_action):
-                self._test_managed_tx(close_action)
-            self._server.reset()
