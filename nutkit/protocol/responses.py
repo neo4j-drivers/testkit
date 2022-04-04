@@ -37,6 +37,18 @@ class FeatureList:
         self.features = features
 
 
+class SystemSupport:
+    """
+    Response to CheckSystemSupport.
+
+    Indicates whether the system (os/language/ecosystem) of the driver
+    supports a certain feature.
+    """
+
+    def __init__(self, supported: bool):
+        self.supported = supported
+
+
 class SkipTest:
     """Response to StartTest indicating that the test should be skipped."""
 

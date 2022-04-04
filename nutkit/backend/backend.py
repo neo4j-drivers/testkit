@@ -136,6 +136,24 @@ class Backend:
         self.send(req, hooks=hooks)
         return self.receive(timeout, hooks=hooks)
 
+    def _check_system_support(self, type_, meta):
+        if not isinstance(type_, protocol.SystemSupportType):
+            raise TypeError("type_ must be a SystemSupportType, got %s" %
+                            type(type_))
+        res = self.send_and_receive(
+            protocol.CheckSystemSupport(type_.value, meta)
+        )
+        if not isinstance(res, protocol.SystemSupport):
+            raise Exception("Response is not instance of SystemSupport. "
+                            "Received %s" % type(res))
+        return res.supported
+
+    def check_timezone_supported(self, timezone):
+        return self._check_system_support(
+            protocol.SystemSupportType.TIMEZONE,
+            {"timezone": timezone}
+        )
+
 
 @contextmanager
 def backend_timeout_adjustment(backend, timeout):

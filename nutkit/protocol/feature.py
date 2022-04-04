@@ -191,3 +191,10 @@ class Feature(Enum):
     # Temporary driver feature that will be removed when all official driver
     # backends have implemented the TransactionClose request
     TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"
+
+
+class SystemSupportType(Enum):
+    # The timezones the underlying system supports.
+    # request meta:
+    #   - name (str): the timezone name (ID) in question
+    TIMEZONE = "Timezone"

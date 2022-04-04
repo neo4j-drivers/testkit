@@ -251,3 +251,6 @@ class TestkitTestCase(unittest.TestCase):
     def script_path(self, *path):
         base_path = os.path.dirname(inspect.getfile(self.__class__))
         return os.path.join(base_path, "scripts", *path)
+
+    def check_timezone_supported(self, timezone):
+        return self._backend.check_timezone_supported(timezone)

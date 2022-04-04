@@ -38,6 +38,23 @@ class GetFeatures:
     """
 
 
+class CheckSystemSupport:
+    """
+    Request from the backend wheater the system support a certain feature.
+
+    The backend should respond with SystemSupport.
+
+    type (str): one of `nutkit.protocol.features.SystemSupportType`
+    meta (dict): metadata as described for the type in question.
+    """
+
+    def __init__(self, type_, meta=None):
+        self.type = type_
+        if meta is None:
+            meta = {}
+        self.meta = meta
+
+
 class NewDriver:
     """
     Request to create a new driver instance on the backend.
