@@ -7,6 +7,11 @@ from nutkit.frontend import Driver
 from nutkit.protocol import (
     AuthorizationToken,
     DriverError,
+    Feature,
+)
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
 )
 
 # Retrieve path to the repository containing this script.
@@ -91,16 +96,32 @@ class TlsServer:
             self._kill()
 
 
-def try_connect(backend, server, scheme, host, **driver_config):
-    url = "%s://%s:%d" % (scheme, host, 6666)
-    # Doesn't really matter
-    auth = AuthorizationToken("basic", principal="neo4j", credentials="pass")
-    driver = Driver(backend, url, auth, **driver_config)
-    session = driver.session("r")
-    try:
-        session.run("RETURN 1 as n")
-    except DriverError:
-        pass
-    session.close()
-    driver.close()
-    return server.connected()
+class TestkitTlsTestCase(TestkitTestCase):
+    def _try_connect(self, server, scheme, host, **driver_config):
+        url = "%s://%s:6666" % (scheme, host)
+        # Doesn't really matter
+        auth = AuthorizationToken("basic", principal="neo4j",
+                                  credentials="pass")
+        driver = Driver(self._backend, url, auth, **driver_config)
+        session = driver.session("r")
+        try:
+            session.run("RETURN 1 as n")
+        except DriverError:
+            pass
+        session.close()
+        driver.close()
+        return server.connected()
+
+    @driver_feature(Feature.API_DRIVER_IS_ENCRYPTED)
+    def _test_reports_encrypted(self, expected, scheme, **driver_config):
+        supports_when_closed = self.driver_supports_features(
+            Feature.DETAIL_CLOSED_DRIVER_IS_ENCRYPTED
+        )
+        url = "%s://example.com:6666" % scheme
+        auth = AuthorizationToken("basic", principal="neo4j",
+                                  credentials="pass")
+        driver = Driver(self._backend, url, auth, **driver_config)
+        self.assertEqual(driver.is_encrypted(), expected)
+        driver.close()
+        if supports_when_closed:
+            self.assertEqual(driver.is_encrypted(), expected)

@@ -54,6 +54,13 @@ class Driver:
             raise Exception("Should be MultiDBSupport")
         return res.available
 
+    def is_encrypted(self):
+        req = protocol.CheckDriverIsEncrypted(self._driver.id)
+        res = self._backend.send_and_receive(req)
+        if not isinstance(res, protocol.DriverIsEncrypted):
+            raise Exception("Should be DriverIsEncrypted")
+        return res.encrypted
+
     def close(self):
         req = protocol.DriverClose(self._driver.id)
         res = self._backend.send_and_receive(req)
