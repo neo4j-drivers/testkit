@@ -708,12 +708,9 @@ class RoutingV5x0(RoutingBase):
 
         session = driver.session("w", database=self.adb)
         tx = session.begin_transaction()
-        pipelining_driver = self.driver_supports_features(
-            types.Feature.OPT_PULL_PIPELINING
-        )
         # TODO: It will be removed as soon as JS Driver
         #       has async iterator api
-        if get_driver_name() in ["javascript"] or not pipelining_driver:
+        if get_driver_name() in ["javascript"]:
             fails_on_next = True
         if fails_on_next:
             result = tx.run("RETURN 1 as n")

@@ -83,11 +83,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             if get_driver_name() in ["javascript", "dotnet"]:
                 result.next()
 
-        result = self._session.run("in time")
-        # TODO It will be removed as soon as JS Driver
-        # has async iterator api
-        if get_driver_name() in ["javascript"]:
-            result.next()
+        list(self._session.run("in time"))
 
         self._server.done()
         self._assert_is_timeout_exception(exc.exception)
