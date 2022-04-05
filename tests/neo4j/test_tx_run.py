@@ -155,8 +155,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_be_able_to_rollback_a_failure(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Could not rollback transaction")
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         with self.assertRaises(types.responses.DriverError):
@@ -174,8 +172,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_not_rollback_a_rollbacked_tx(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         tx.run("CREATE (:TXNode1)").consume()
@@ -185,8 +181,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_not_rollback_a_commited_tx(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         tx.run("CREATE (:TXNode1)").consume()
@@ -196,8 +190,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_not_commit_a_commited_tx(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Does not raise exception")
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         tx.run("CREATE (:TXNode1)").consume()
@@ -207,8 +199,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_not_allow_run_on_a_commited_tx(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         tx.run("CREATE (:TXNode1)").consume()
@@ -221,8 +211,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_not_allow_run_on_a_rollbacked_tx(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Does not raise the exception")
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         tx.run("CREATE (:TXNode1)").consume()
@@ -235,9 +223,6 @@ class TestTxRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_should_not_run_valid_query_in_invalid_tx(self):
-        if get_driver_name() in ["go"]:
-            self.skipTest("Neither accepts tx.rollback nor session.close")
-
         self._session1 = self._driver.session("w")
         tx = self._session1.begin_transaction()
         with self.assertRaises(types.responses.DriverError):
@@ -293,7 +278,7 @@ class TestTxRun(TestkitTestCase):
             if get_driver_name() in ["javascript"]:
                 result.next()
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["java", "ruby", "go"]:
+        if get_driver_name() in ["java", "ruby"]:
             # requires explicit rollback on a failed transaction
             tx.rollback()
         tx = self._session1.begin_transaction()
