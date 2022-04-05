@@ -206,15 +206,7 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as exc:
             tx.run("RETURN 1 AS n")
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
-        # TODO: remove whole try/catch once all drivers allow to rollback a
-        #       failed transaction silently.
-        try:
-            tx.rollback()
-        except types.DriverError as exc:
-            if get_driver_name() in ["go"]:
-                self.assertEqual(exc.code, "Neo.ClientError.MadeUp.Code")
-            else:
-                raise
+        tx.rollback()
 
     def test_raises_error_on_tx_func_run(self):
         # TODO: remove this block once all languages work
@@ -262,13 +254,7 @@ class TestTxRun(TestkitTestCase):
         self._driver = None
 
     def test_failed_tx_run_allows_rollback(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("Driver re-raises error on tx.rollback()")
         self._test_failed_tx_run(rollback=True)
 
     def test_failed_tx_run_allows_skipping_rollback(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("Driver requires tx.rollback()")
         self._test_failed_tx_run(rollback=False)
