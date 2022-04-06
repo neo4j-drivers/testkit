@@ -39,13 +39,12 @@ class TestTxLifetime(TestkitTestCase):
         driver = get_driver_name()
         assert isinstance(exc, types.DriverError)
         if driver in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.TransactionError'>")
+            self.assertEqual(ErrorType.TRANSACTION_ERROR.value, exc.errorType)
             self.assertIn("closed", exc.msg.lower())
-        elif driver in ["javascript", "go", "dotnet"]:
-            self.assertIn("transaction", exc.msg.lower())
         elif driver in ["java"]:
             self.assertEqual(ErrorType.CLIENT_ERROR.value, exc.errorType)
+        elif driver in ["javascript", "go", "dotnet"]:
+            self.assertIn("transaction", exc.msg.lower())
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

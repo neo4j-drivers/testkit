@@ -185,10 +185,7 @@ class TestTxRun(TestkitTestCase):
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
     def test_eager_begin_on_tx_run_with_disconnect_on_begin(self):
         exc = self._eager_tx_run("tx_disconnect_on_begin.script")
-        if get_driver_name() in ["python"]:
-            self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
-                             exc.errorType)
-        elif get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              exc.errorType)
 

@@ -276,10 +276,14 @@ class TestProtocolVersions(TestkitTestCase):
         driver.close()
 
     def _assert_is_untrusted_server_exception(self, e):
-        if get_driver_name() in ["java"]:
+        driver = get_driver_name()
+        if driver in ["java", "python"]:
             self.assertEqual(ErrorType.UNTRUSTED_SERVER_ERROR.value,
                              e.errorType)
-        if get_driver_name() in ["ruby"]:
+        elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::UntrustedServerException",
-                e.errorType)
+                e.errorType
+            )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)

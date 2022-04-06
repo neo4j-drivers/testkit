@@ -43,7 +43,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
     def _assert_is_timeout_exception(self, e):
         if get_driver_name() in ["python"]:
-            self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
+            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              e.errorType)
         elif get_driver_name() in ["java"]:
             self.assertEqual(ErrorType.CONNECTION_READ_TIMEOUT_ERROR.value,
@@ -63,6 +63,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ["java"]:
             self.assertEqual(ErrorType.CLIENT_ERROR.value, e.errorType)
+        elif get_driver_name() in ["python"]:
+            self.assertEqual(ErrorType.TRANSACTION_ERROR.value, e.errorType)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ClientException",
@@ -270,10 +272,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         TestkitTestCase.tearDown(self)
 
     def _assert_is_timeout_exception(self, e):
-        if get_driver_name() in ["python"]:
-            self.assertEqual("<class 'neo4j.exceptions.SessionExpired'>",
-                             e.errorType)
-        elif get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.SESSION_EXPIRED_ERROR.value,
                              e.errorType)
         elif get_driver_name() in ["ruby"]:

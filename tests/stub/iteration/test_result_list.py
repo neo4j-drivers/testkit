@@ -13,10 +13,7 @@ class TestResultList(IterationTestBase):
     def _assert_connection_error(self, error):
         self.assertIsInstance(error, types.DriverError)
         driver = get_driver_name()
-        if driver in ["python"]:
-            self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
-                             error.errorType)
-        elif driver in ["java"]:
+        if driver in ["java", "python"]:
             self.assertEqual(
                 ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                 error.errorType

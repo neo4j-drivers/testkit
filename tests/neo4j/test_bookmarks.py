@@ -85,14 +85,9 @@ class TestBookmarks(TestkitTestCase):
             tx = self._session.begin_transaction()
             result = tx.run("RETURN 1")
             result.next()
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
-                exc.exception.errorType
-            )
-        elif get_driver_name() in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.ClientError'>",
                 exc.exception.errorType
             )
         elif get_driver_name() in ["ruby"]:
@@ -119,14 +114,9 @@ class TestBookmarks(TestkitTestCase):
 
         with self.assertRaises(types.DriverError) as exc:
             self._session.read_transaction(work)
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
-                exc.exception.errorType
-            )
-        elif get_driver_name() in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.ClientError'>",
                 exc.exception.errorType
             )
         elif get_driver_name() in ["ruby"]:

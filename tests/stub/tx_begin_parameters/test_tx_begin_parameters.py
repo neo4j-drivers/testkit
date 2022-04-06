@@ -216,10 +216,8 @@ class TestTxBeginParameters(TestkitTestCase):
                                   "impersonated_user": "that-other-dude"
                               })
                 if self._driver_name in ["python"]:
-                    self.assertEqual(
-                        exc.exception.errorType,
-                        "<class 'neo4j.exceptions.ConfigurationError'>"
-                    )
+                    self.assertEqual(ErrorType.INVALID_CONF_ERROR.value,
+                                     exc.exception.errorType)
                     self.assertIn("that-other-dude", exc.exception.msg)
                 elif self._driver_name in ["java"]:
                     self.assertEqual(ErrorType.CLIENT_ERROR.value,

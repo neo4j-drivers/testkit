@@ -20,13 +20,9 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
-        if driver in ["java"]:
+        if driver in ["java", "python"]:
             self.assertEqual(ErrorType.AUTH_EXPIRED_ERROR.value,
                              error.errorType)
-        elif driver in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.TransientError'>", error.errorType
-            )
         elif driver in ["javascript"]:
             # only test for code
             pass
@@ -43,15 +39,11 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.TokenExpired",
                          error.code)
-        if driver in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
-            )
-        elif driver in ["go", "javascript"]:
+        if driver in ["go", "javascript"]:
             self.assertIn(
                 "Token expired", error.msg
             )
-        elif driver == "java":
+        elif driver in ["java", "python"]:
             self.assertEqual(ErrorType.TOKEN_EXPIRED_ERROR.value,
                              error.errorType)
             self.assertIn("Token expired", error.msg)

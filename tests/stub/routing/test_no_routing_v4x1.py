@@ -570,7 +570,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
     def _assert_is_transient_rollback_exception(
             self, e, expected_msg="Unable to rollback"):
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.TRANSIENT_ERROR.value, e.errorType)
             self.assertEqual(expected_msg, e.msg)
         elif get_driver_name() in ["ruby"]:
@@ -583,7 +583,7 @@ class NoRoutingV4x1(TestkitTestCase):
 
     def _assert_is_transient_commit_exception(
             self, e, expected_msg="Unable to commit"):
-        if get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.TRANSIENT_ERROR.value, e.errorType)
             self.assertEqual(expected_msg, e.msg)
         elif get_driver_name() in ["ruby"]:

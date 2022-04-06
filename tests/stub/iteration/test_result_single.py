@@ -15,37 +15,31 @@ class TestResultSingle(IterationTestBase):
     def _assert_not_exactly_one_record_error(self, error):
         self.assertIsInstance(error, types.DriverError)
         driver = get_driver_name()
-        if driver in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.ResultNotSingleError'>",
-                error.errorType
-            )
+        if driver in ["java", "python"]:
+            self.assertEqual(ErrorType.NOT_SINGLE_ERROR.value, error.errorType)
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::NoSuchRecordException",
                 error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("InvalidOperationException", error.errorType)
-        elif driver in ["java"]:
-            self.assertEqual(ErrorType.NOT_SINGLE_ERROR.value, error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
     def _assert_connection_error(self, error):
         self.assertIsInstance(error, types.DriverError)
         driver = get_driver_name()
-        if driver in ["python"]:
-            self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
-                             error.errorType)
+        if driver in ["java", "python"]:
+            self.assertEqual(
+                ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
+                error.errorType
+            )
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ServiceUnavailableException",
                 error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("ServiceUnavailableError", error.errorType)
-        elif driver in ["java"]:
-            self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR,
-                             error.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

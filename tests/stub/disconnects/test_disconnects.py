@@ -248,10 +248,8 @@ class TestDisconnects(TestkitTestCase):
         expected_step = "after commit"
         self.assertEqual(step, expected_step)
         if get_driver_name() in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.IncompleteCommit'>",
-                self._last_exc.errorType
-            )
+            self.assertEqual(ErrorType.INCOMPLETE_COMMIT_ERROR.value,
+                             self._last_exc.errorType)
         elif get_driver_name() in ["java"]:
             self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              self._last_exc.errorType)

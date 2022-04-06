@@ -73,10 +73,7 @@ class TestDirectDriver(TestkitTestCase):
                                   connection_timeout_ms=500)
         with self.assertRaises(types.DriverError) as e:
             self._driver.verify_connectivity()
-        if get_driver_name() in ["python"]:
-            self.assertEqual(e.exception.errorType,
-                             "<class 'neo4j.exceptions.ServiceUnavailable'>")
-        elif get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              e.exception.errorType)
 
@@ -110,10 +107,7 @@ class TestDirectDriver(TestkitTestCase):
                          "Neo.ClientError.Database.DatabaseNotFound")
         self.assertIn("test-database", exc.msg)
         self.assertIn("exist", exc.msg)
-        if get_driver_name() in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.ClientError'>")
-        elif get_driver_name() in ["java"]:
+        if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.FATAL_DISCOVERY_ERROR.value,
                              exc.errorType)
 
@@ -146,7 +140,7 @@ class TestDirectDriver(TestkitTestCase):
                 self._session.run("RETURN 1").consume()
             if get_driver_name() in ["python"]:
                 self.assertEqual(
-                    "<class 'neo4j.exceptions.ConfigurationError'>",
+                    ErrorType.INVALID_CONF_ERROR.value,
                     e.exception.errorType
                 )
                 self.assertIn(

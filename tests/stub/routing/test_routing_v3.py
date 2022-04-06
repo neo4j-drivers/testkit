@@ -72,16 +72,12 @@ class RoutingV3(RoutingV4x4):
             session.run("RETURN 1 AS x").consume()
         except types.DriverError as e:
             failed = True
-            if get_driver_name() in ["java"]:
+            if get_driver_name() in ["java", "python"]:
                 self.assertEqual(
                     ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
                 )
-            elif get_driver_name() in ["python"]:
-                self.assertEqual(
-                    e.errorType,
-                    "<class 'neo4j.exceptions.ServiceUnavailable'>"
-                )
-                self.assertIn("routing", e.msg)
+                if get_driver_name() in ["python"]:
+                    self.assertIn("routing", e.msg)
 
         self.assertTrue(failed)

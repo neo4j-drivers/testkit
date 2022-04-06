@@ -3,6 +3,7 @@ import json
 
 from nutkit import protocol as types
 from nutkit.frontend import Driver
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
@@ -116,15 +117,10 @@ class TestSummary(TestkitTestCase):
                     result = session.run("RETURN 1 AS n",
                                          params={"foo": types.CypherInt(123)})
                     result.consume()
-            if get_driver_name() == "python":
+            if get_driver_name() in ["java", "python"]:
                 self.assertEqual(
-                    e.exception.errorType,
-                    "<class 'neo4j._exceptions.BoltProtocolError'>"
-                )
-            elif get_driver_name() == "java":
-                self.assertEqual(
-                    e.exception.errorType,
-                    "org.neo4j.driver.exceptions.ProtocolException"
+                    ErrorType.PROTOCOL_ERROR.value,
+                    e.exception.errorType
                 )
 
         for query_type in ("wr",):

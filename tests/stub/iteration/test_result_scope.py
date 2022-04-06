@@ -35,14 +35,14 @@ class TestResultScope(TestkitTestCase):
 
     def _assert_result_out_of_scope_exception(self, exc):
         driver = get_driver_name()
-        if driver in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.ResultConsumedError'>")
-            self.assertIn("closed", exc.msg.lower())
-            self.assertIn("transaction", exc.msg.lower())
-        elif driver in ["java"]:
-            self.assertEqual(ErrorType.RESULT_CONSUMED_ERROR.value,
-                             exc.errorType)
+        if driver in ["java", "python"]:
+            self.assertEqual(
+                ErrorType.RESULT_CONSUMED_ERROR.value,
+                exc.errorType
+            )
+            if driver in ["python"]:
+                self.assertIn("closed", exc.msg.lower())
+                self.assertIn("transaction", exc.msg.lower())
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
@@ -52,13 +52,11 @@ class TestResultScope(TestkitTestCase):
 
     def _assert_result_consumed_exception(self, exc):
         driver = get_driver_name()
-        if driver in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.ResultConsumedError'>")
-            self.assertIn("consume", exc.msg.lower())
-        elif driver in ["java"]:
-            self.assertEqual(ErrorType.RESULT_CONSUMED_ERROR.value,
-                             exc.errorType)
+        if driver in ["java", "python"]:
+            self.assertEqual(
+                ErrorType.RESULT_CONSUMED_ERROR.value,
+                exc.errorType
+            )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:

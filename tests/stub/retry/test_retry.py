@@ -1,5 +1,6 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.protocol.error_type import ErrorType
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -124,7 +125,7 @@ class TestRetry(TestkitTestCase):
             session.write_transaction(once)
         if get_driver_name() in ["python"]:
             self.assertEqual(
-                "<class 'neo4j.exceptions.IncompleteCommit'>",
+                ErrorType.INCOMPLETE_COMMIT_ERROR.value,
                 e.exception.errorType
             )
 
