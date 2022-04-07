@@ -176,7 +176,8 @@ class TestTxFuncRun(TestkitTestCase):
         def run(tx):
             values = []
             result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
-            if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
+            if get_driver_name() not in ["dotnet"]:
+                # missing former types.Feature.TMP_RESULT_KEYS
                 self.assertEqual(result.keys(), ["x"])
             for record in result:
                 values.append(record.values[0])
