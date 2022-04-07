@@ -51,7 +51,7 @@ class TestOptimizations(TestkitTestCase):
 
         for mode in ("read", "write"):
             for use_tx in (True, False):
-                with self.subTest(mode + ("_tx" if use_tx else "")):
+                with self.subTest(mode=mode, use_tx=use_tx):
                     test()
                 self._server.reset()
 
@@ -138,11 +138,8 @@ class TestOptimizations(TestkitTestCase):
                 for use_tx in (None, "commit", "rollback"):
                     for new_session in (True, False):
                         with self.subTest(
-                            mode
-                            + (("_tx_" + use_tx) if use_tx else "")
-                            + ("_one_shot_session"
-                               if new_session else "_reuse_session")
-                            + ("_routing" if routing else "_direct")
+                            routing=routing, mode=mode, use_tx=use_tx,
+                            new_session=new_session
                         ):
                             self.double_read(
                                 mode, new_session, use_tx, routing,
@@ -165,14 +162,8 @@ class TestOptimizations(TestkitTestCase):
                     continue
                 for use_tx in (None, "commit", "rollback"):
                     for new_session in (True, False):
-                        with self.subTest(mode
-                                          + "_" + version
-                                          + (("_tx_" + use_tx) if use_tx
-                                             else "")
-                                          + ("_one_shot_session" if new_session
-                                             else"_reuse_session")
-                                          + ("_discard" if consume
-                                             else "_pull")):
+                        with self.subTest(version=version, consume=consume,
+                                          use_tx=use_tx):
                             self.double_read(mode, new_session, use_tx, False,
                                              version=version, consume=consume,
                                              check_no_reset=True)
@@ -226,12 +217,8 @@ class TestOptimizations(TestkitTestCase):
                     for fail_on in ("pull", "run", "begin"):
                         if fail_on == "begin" and not use_tx:
                             continue
-                        with self.subTest(
-                            version
-                            + ("_tx" if use_tx else "_autocommit")
-                            + "_{}".format(fail_on)
-                            + ("_routing" if routing else "_no_routing")
-                        ):
+                        with self.subTest(version=version, use_tx=use_tx,
+                                          routing=routing, fail_on=fail_on):
                             test()
                         self._server.reset()
                         self._router.reset()
@@ -289,11 +276,8 @@ class TestOptimizations(TestkitTestCase):
             for use_tx in (True, False):
                 for consume in (True, False):
                     for routing in (True, False):
-                        with self.subTest(
-                            ("tx" if use_tx else "auto_commit")
-                            + ("_discard" if consume else "_pull")
-                            + ("_routing" if routing else "_no_routing")
-                        ):
+                        with self.subTest(version=version, use_tx=use_tx,
+                                          consume=consume, routing=routing):
                             test()
                         self._server.reset()
                         self._router.reset()
@@ -331,11 +315,8 @@ class TestOptimizations(TestkitTestCase):
         for version in ("v4x3", "v4x4"):
             for consume1 in (True, False):
                 for consume2 in (True, False):
-                    with self.subTest(
-                        version
-                        + ("_discard1" if consume1 else "_pull1")
-                        + ("_discard2" if consume2 else "_pull2")
-                    ):
+                    with self.subTest(version=version, consume1=consume1,
+                                      consume2=consume2):
                         test()
                     self._server.reset()
                     self._router.reset()
@@ -375,8 +356,7 @@ class TestOptimizations(TestkitTestCase):
                 continue
             for consume1 in (True, False):
                 for consume2 in (True, False):
-                    with self.subTest(("discard1" if consume1 else "pull1")
-                                      + ("_discard2"
-                                         if consume2 else "_pull2")):
+                    with self.subTest(version=version, consume1=consume1,
+                                      consume2=consume2):
                         test()
                     self._server.reset()

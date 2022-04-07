@@ -101,7 +101,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_access_mode_read(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("access_mode_read", routing, session_args=("r",))
                 self._server.done()
 
@@ -109,8 +109,8 @@ class TestTxBeginParameters(TestkitTestCase):
     def test_tx_func_access_mode_read(self):
         for routing in (True, False):
             for session_access_mode in ("r", "w"):
-                with self.subTest("session_mode_" + session_access_mode
-                                  + "_routing" if routing else "_direct"):
+                with self.subTest(routing=routing,
+                                  session_access_mode=session_access_mode):
                     self._run("access_mode_read", routing,
                               session_args=(session_access_mode[0],),
                               tx_func_access_mode="r")
@@ -118,7 +118,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_access_mode_write(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("access_mode_write", routing,
                           session_args=("w",))
                 self._server.done()
@@ -127,7 +127,8 @@ class TestTxBeginParameters(TestkitTestCase):
     def test_tx_func_access_mode(self):
         for routing in (True, False):
             for session_access_mode in ("r", "w"):
-                with self.subTest("session_mode_" + session_access_mode):
+                with self.subTest(routing=routing,
+                                  session_access_mode=session_access_mode):
                     self._run("access_mode_write", routing,
                               session_args=(session_access_mode[0],),
                               tx_func_access_mode="w")
@@ -135,7 +136,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_parameters(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("parameters", routing,
                           session_args=("w",),
                           run_kwargs={"params": {"p": types.CypherInt(1)}})
@@ -143,7 +144,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_bookmarks(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("bookmarks", routing,
                           session_args=("w",),
                           session_kwargs={"bookmarks": ["b1", "b2"]})
@@ -151,7 +152,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_tx_meta(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("tx_meta", routing,
                           session_args=("w",),
                           tx_kwargs={"tx_meta": {"akey": "aval"}})
@@ -159,7 +160,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_timeout(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("timeout_17", routing,
                           session_args=("w",), tx_kwargs={"timeout": 17})
 
@@ -187,7 +188,7 @@ class TestTxBeginParameters(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_4_4)
     def test_database(self):
         for routing in (True, False)[1:]:
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("adb", routing,
                           session_args=("w",),
                           session_kwargs={"database": "adb"})
@@ -196,7 +197,7 @@ class TestTxBeginParameters(TestkitTestCase):
                     types.Feature.BOLT_4_4)
     def test_impersonation(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("imp_user", routing,
                           session_args=("w",),
                           session_kwargs={
@@ -207,7 +208,7 @@ class TestTxBeginParameters(TestkitTestCase):
                     types.Feature.BOLT_4_3)
     def test_impersonation_fails_on_v4x3(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 with self.assertRaises(types.DriverError) as exc:
                     self._run("imp_user_v4x3", routing,
                               session_args=("w",),
@@ -241,7 +242,7 @@ class TestTxBeginParameters(TestkitTestCase):
                     types.Feature.BOLT_4_4)
     def test_combined(self):
         for routing in (True, False):
-            with self.subTest("routing" if routing else "direct"):
+            with self.subTest(routing=routing):
                 self._run("combined", routing,
                           session_args=("r",),
                           run_kwargs={"params": {"p": types.CypherInt(1)}},

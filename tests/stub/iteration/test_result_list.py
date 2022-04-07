@@ -63,7 +63,7 @@ class TestResultList(IterationTestBase):
                 ])
 
         for fetch_size in (1, 2):
-            with self.subTest("fetch_size-%i" % fetch_size):
+            with self.subTest(fetch_size=fetch_size):
                 _test()
 
     def test_result_list_with_disconnect(self):

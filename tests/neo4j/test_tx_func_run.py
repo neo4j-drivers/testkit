@@ -44,7 +44,7 @@ class TestTxFuncRun(TestkitTestCase):
             self._session1 = None
 
         for consume in (True, False):
-            with self.subTest("consume" if consume else "iterate"):
+            with self.subTest(consume=consume):
                 _test()
 
     def test_iteration_nested(self):

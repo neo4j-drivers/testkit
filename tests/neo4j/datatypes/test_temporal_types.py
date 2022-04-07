@@ -196,9 +196,6 @@ class TestDataTypes(_TestTypesBase):
             if not self._timezone_server_support(tz_id):
                 continue
             with self.subTest(tz_id=tz_id):
-                if not self.check_timezone_supported(tz_id):
-                    self.skipTest("timezone %s not supported by driver"
-                                  % tz_id)
                 dt, y, mo, d, h, m, s, ns, offset, tz = \
                     self._session.read_transaction(work)
                 self.assertEqual(dt.year, y)

@@ -36,7 +36,7 @@ class TestBookmarksV5(TestkitTestCase):
             # TODO: decide what we expect to happen when multiple bookmarks are
             #       passed in: return all or only the last one?
             for bm_count in (0, 1):
-                with self.subTest(mode + "_%i_bookmarks" % bm_count):
+                with self.subTest(mode=mode, bm_count=bm_count):
                     test()
 
     # Tests that a committed transaction can return the last bookmark

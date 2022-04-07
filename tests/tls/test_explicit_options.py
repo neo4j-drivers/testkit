@@ -51,5 +51,6 @@ class TestExplicitSslOptions(TestkitTestCase):
                 if not supports_value_equality or encrypted:
                     cert_options.append("None")
                 for certs in cert_options:
-                    with self.subTest("%s-%s-%s" % (scheme, encrypted, certs)):
+                    with self.subTest(scheme=scheme, encrypted=encrypted,
+                                      certs=certs):
                         _test()

@@ -20,10 +20,6 @@ For example response to NewDriver request should be sent from backend as:
 """
 
 
-class RunTest:
-    """Response to StartTest indicating that the test can be started."""
-
-
 class FeatureList:
     """
     Response to GetFeatures.
@@ -37,16 +33,12 @@ class FeatureList:
         self.features = features
 
 
-class SystemSupport:
-    """
-    Response to CheckSystemSupport.
+class RunTest:
+    """Response to StartTest indicating that the test can be started."""
 
-    Indicates whether the system (os/language/ecosystem) of the driver
-    supports a certain feature.
-    """
 
-    def __init__(self, supported: bool):
-        self.supported = supported
+class RunSubTests:
+    """Response to StartTest requesting to decide for each subtest."""
 
 
 class SkipTest:

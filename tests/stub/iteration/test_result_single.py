@@ -64,7 +64,7 @@ class TestResultSingle(IterationTestBase):
                 self._assert_not_exactly_one_record_error(exc.exception)
 
         for fetch_size in (1, 2):
-            with self.subTest("fetch_size-%i" % fetch_size):
+            with self.subTest(fetch_size=fetch_size):
                 _test()
 
     def test_result_single_with_disconnect(self):

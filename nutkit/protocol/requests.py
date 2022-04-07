@@ -22,12 +22,32 @@ class StartTest:
     """
     Request the backend to confirm to run a specific test.
 
-    The backend should respond with RunTest if the backend wants the test to be
-    skipped it must respond with SkipTest.
+    The backend should respond with RunTest unless it wants the test to be
+    skipped, in that case it must respond with SkipTest.
+
+    The backend might also respond with RunSubTests. In this case, TestKit will
+     - run the test, if it does not have subtests
+     - ask for each subtest whether it should be run, if it has subtests
+       StartSubTest will be sent to the backend, for each subtest
     """
 
     def __init__(self, test_name):
         self.testName = test_name
+
+
+class StartSubTest:
+    """
+    Request the backend to confirm to run a specific subtest.
+
+    See StartTest for when TestKit might emmit this message.
+
+    The backend should respond with RunTest unless it wants the subtest to be
+    skipped, in that case it must respond with SkipTest.
+    """
+
+    def __init__(self, test_name, subtest_arguments: dict):
+        self.testName = test_name
+        self.subtestArguments = subtest_arguments
 
 
 class GetFeatures:
@@ -36,23 +56,6 @@ class GetFeatures:
 
     The backend should respond with FeatureList.
     """
-
-
-class CheckSystemSupport:
-    """
-    Request from the backend wheater the system support a certain feature.
-
-    The backend should respond with SystemSupport.
-
-    type (str): one of `nutkit.protocol.features.SystemSupportType`
-    meta (dict): metadata as described for the type in question.
-    """
-
-    def __init__(self, type_, meta=None):
-        self.type = type_
-        if meta is None:
-            meta = {}
-        self.meta = meta
 
 
 class NewDriver:

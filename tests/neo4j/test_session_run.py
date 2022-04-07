@@ -260,7 +260,7 @@ class TestSessionRun(TestkitTestCase):
             self._session1 = None
 
         for consume in (True, False):
-            with self.subTest("consume" if consume else "iterate"):
+            with self.subTest(consume=consume):
                 _test()
 
     @cluster_unsafe_test
@@ -280,7 +280,7 @@ class TestSessionRun(TestkitTestCase):
             self._session1 = None
 
         for consume in (True, False):
-            with self.subTest("consume" if consume else "no consume"):
+            with self.subTest(consume=consume):
                 _test()
 
     @cluster_unsafe_test

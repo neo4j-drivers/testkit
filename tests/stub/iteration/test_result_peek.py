@@ -77,7 +77,7 @@ class TestResultPeek(IterationTestBase):
                 self.assertIsInstance(record, types.NullRecord)
 
         for fetch_size in (1, 2):
-            with self.subTest("fetch_size-%i" % fetch_size):
+            with self.subTest(fetch_size=fetch_size):
                 _test()
 
     @driver_feature(types.Feature.API_RESULT_PEEK)

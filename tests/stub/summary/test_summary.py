@@ -104,7 +104,7 @@ class TestSummary(TestkitTestCase):
             self.assertEqual(summary.query_type, query_type)
 
         for query_type in ("r", "w", "rw", "s", None):
-            with self.subTest(query_type):
+            with self.subTest(query_type=query_type):
                 _test()
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)
@@ -128,7 +128,7 @@ class TestSummary(TestkitTestCase):
                 )
 
         for query_type in ("wr",):
-            with self.subTest(query_type):
+            with self.subTest(query_type=query_type):
                 _test()
 
     @driver_feature(types.Feature.TMP_FULL_SUMMARY)

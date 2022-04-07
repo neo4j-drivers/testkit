@@ -82,7 +82,7 @@ class TestDataTypes(_TestTypesBase):
             ("point({longitude:3, latitude:4})", ("wgs84", 3, 4)),
             ("point({longitude:3, latitude:4, height:5})", ("wgs84", 3, 4, 5)),
         ):
-            with self.subTest(s):
+            with self.subTest(s=s):
                 self._create_driver_and_session()
                 values = self._read_query_values(f"RETURN {s}")
                 self.assertEqual(values, [types.CypherPoint(*p)])
