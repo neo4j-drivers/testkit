@@ -62,24 +62,10 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped fetch-size config
-        from .feature import Feature
-        assert hasattr(Feature, "TMP_DRIVER_FETCH_SIZE")
-        if fetchSize is not None:
-            self.fetchSize = fetchSize
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped fetch-size config
-        assert hasattr(Feature, "TMP_DRIVER_MAX_TX_RETRY_TIME")
-        if maxTxRetryTimeMs is not None:
-            self.maxTxRetryTimeMs = maxTxRetryTimeMs
-        if liveness_check_timeout_ms is not None:
-            self.livenessCheckTimeoutMs = liveness_check_timeout_ms
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped max connection pool size config
-        assert hasattr(Feature, "TMP_DRIVER_MAX_CONNECTION_POOL_SIZE")
-        if max_connection_pool_size is not None:
-            self.maxConnectionPoolSize = max_connection_pool_size
+        self.fetchSize = fetchSize
+        self.maxTxRetryTimeMs = maxTxRetryTimeMs
+        self.livenessCheckTimeoutMs = liveness_check_timeout_ms
+        self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)

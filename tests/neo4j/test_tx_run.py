@@ -295,8 +295,7 @@ class TestTxRun(TestkitTestCase):
         )
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
         values = []
-        if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-            self.assertEqual(result.keys(), ["x"])
+        self.assertEqual(result.keys(), ["x"])
         for record in result:
             values.append(record.values[0])
         if get_server_info().version >= "4":
@@ -333,8 +332,7 @@ class TestTxRun(TestkitTestCase):
         self._session1 = self._driver.session("w", fetch_size=2)
         tx = self._session1.begin_transaction()
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
-        if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-            self.assertEqual(result.keys(), ["x"])
+        self.assertEqual(result.keys(), ["x"])
         values = []
         for _ in range(2):
             record = result.next()
@@ -355,9 +353,8 @@ class TestTxRun(TestkitTestCase):
             tx = self._session1.begin_transaction()
             result1 = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
             result2 = tx.run("UNWIND [5,6,7,8] AS x RETURN x")
-            if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-                self.assertEqual(result1.keys(), ["x"])
-                self.assertEqual(result2.keys(), ["x"])
+            self.assertEqual(result1.keys(), ["x"])
+            self.assertEqual(result2.keys(), ["x"])
             if invert_fetching:
                 values2 = list(map(lambda rec: rec.values[0], result2))
                 values1 = list(map(lambda rec: rec.values[0], result1))
@@ -384,14 +381,12 @@ class TestTxRun(TestkitTestCase):
             if run_q2_before_q1_fetch:
                 result2 = tx.run("UNWIND [5,6,7,8] AS y RETURN y")
 
-            if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-                self.assertEqual(result1.keys(), ["x"])
+            self.assertEqual(result1.keys(), ["x"])
             values1 = [result1.next().values[0]]
 
             if not run_q2_before_q1_fetch:
                 result2 = tx.run("UNWIND [5,6,7,8] AS y RETURN y")
-            if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-                self.assertEqual(result2.keys(), ["y"])
+            self.assertEqual(result2.keys(), ["y"])
             values2 = list(map(lambda rec: rec.values[0], result2))
 
             self.assertEqual(values2, list(map(types.CypherInt, (5, 6, 7, 8))))

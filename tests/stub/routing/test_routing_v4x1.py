@@ -2,8 +2,7 @@ import json
 
 from nutkit import protocol as types
 from nutkit.frontend import Driver
-
-from .test_routing_v4x4 import RoutingV4x4
+from tests.stub.routing.test_routing_v4x4 import RoutingV4x4
 
 
 class RoutingV4x1(RoutingV4x4):
