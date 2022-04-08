@@ -52,7 +52,7 @@ class TestBasicQuery(TestkitTestCase):
         if get_driver_name() in ["dotnet"]:
             self.assertEqual("InvalidOperationException",
                              exc.exception.errorType)
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.ILLEGAL_STATE_ERROR.value,
                              exc.exception.errorType)
 

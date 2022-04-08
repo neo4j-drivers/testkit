@@ -35,7 +35,7 @@ class TestResultScope(TestkitTestCase):
 
     def _assert_result_out_of_scope_exception(self, exc):
         driver = get_driver_name()
-        if driver in ["java", "python"]:
+        if driver in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.RESULT_CONSUMED_ERROR.value,
                 exc.errorType
@@ -52,7 +52,7 @@ class TestResultScope(TestkitTestCase):
 
     def _assert_result_consumed_exception(self, exc):
         driver = get_driver_name()
-        if driver in ["java", "python"]:
+        if driver in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.RESULT_CONSUMED_ERROR.value,
                 exc.errorType

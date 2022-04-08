@@ -85,7 +85,7 @@ class TestBookmarks(TestkitTestCase):
             tx = self._session.begin_transaction()
             result = tx.run("RETURN 1")
             result.next()
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
@@ -114,7 +114,7 @@ class TestBookmarks(TestkitTestCase):
 
         with self.assertRaises(types.DriverError) as exc:
             self._session.read_transaction(work)
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType

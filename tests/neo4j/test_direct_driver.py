@@ -73,7 +73,7 @@ class TestDirectDriver(TestkitTestCase):
                                   connection_timeout_ms=500)
         with self.assertRaises(types.DriverError) as e:
             self._driver.verify_connectivity()
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              e.exception.errorType)
 
@@ -107,7 +107,7 @@ class TestDirectDriver(TestkitTestCase):
                          "Neo.ClientError.Database.DatabaseNotFound")
         self.assertIn("test-database", exc.msg)
         self.assertIn("exist", exc.msg)
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.FATAL_DISCOVERY_ERROR.value,
                              exc.errorType)
 

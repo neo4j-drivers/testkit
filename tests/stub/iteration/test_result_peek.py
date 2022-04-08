@@ -15,7 +15,7 @@ class TestResultPeek(IterationTestBase):
     def _assert_connection_error(self, error):
         self.assertIsInstance(error, types.DriverError)
         driver = get_driver_name()
-        if driver in ["java", "python"]:
+        if driver in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                 error.errorType

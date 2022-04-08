@@ -54,7 +54,7 @@ class TestServerSideRouting(TestkitTestCase):
         self._start_server()
         with self.assertRaises(types.DriverError) as exc:
             driver = Driver(self._backend, uri, self._auth, self._userAgent)
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.ILLEGAL_ARGUMENT_ERROR.value,
                              exc.exception.errorType)
             self.assertIn(uri, exc.exception.msg)

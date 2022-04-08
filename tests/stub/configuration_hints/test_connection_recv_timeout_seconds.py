@@ -42,7 +42,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         self._server.start(path=self.script_path(script))
 
     def _assert_is_timeout_exception(self, e):
-        if get_driver_name() in ["python"]:
+        if get_driver_name() in ["python", "javascript"]:
             self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              e.errorType)
         elif get_driver_name() in ["java"]:
@@ -272,7 +272,7 @@ class TestRoutingConnectionRecvTimeout(TestDirectConnectionRecvTimeout):
         TestkitTestCase.tearDown(self)
 
     def _assert_is_timeout_exception(self, e):
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.SESSION_EXPIRED_ERROR.value,
                              e.errorType)
         elif get_driver_name() in ["ruby"]:

@@ -185,7 +185,7 @@ class TestTxRun(TestkitTestCase):
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
     def test_eager_begin_on_tx_run_with_disconnect_on_begin(self):
         exc = self._eager_tx_run("tx_disconnect_on_begin.script")
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                              exc.errorType)
 

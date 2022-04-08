@@ -235,7 +235,7 @@ class RoutingV5x0(RoutingBase):
                 # else they should fail here
                 session.close()
             except types.DriverError as e:
-                if get_driver_name() in ["java", "python"]:
+                if get_driver_name() in ["java", "python", "javascript"]:
                     self.assertEqual(
                         ErrorType.SESSION_EXPIRED_ERROR.value,
                         e.errorType
@@ -286,7 +286,7 @@ class RoutingV5x0(RoutingBase):
             # else they should fail here
             tx.commit()
         except types.DriverError as e:
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
@@ -340,7 +340,7 @@ class RoutingV5x0(RoutingBase):
         session.close()
         driver.close()
 
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
@@ -395,7 +395,7 @@ class RoutingV5x0(RoutingBase):
         session.close()
         driver.close()
 
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
@@ -654,7 +654,7 @@ class RoutingV5x0(RoutingBase):
                 # else they should fail here
                 session.close()
             except types.DriverError as e:
-                if get_driver_name() in ["java", "python"]:
+                if get_driver_name() in ["java", "python", "javascript"]:
                     self.assertEqual(
                         ErrorType.SESSION_EXPIRED_ERROR.value,
                         e.errorType
@@ -719,7 +719,7 @@ class RoutingV5x0(RoutingBase):
             with self.assertRaises(types.DriverError) as exc:
                 tx.run("RETURN 1 as n")
 
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
@@ -771,7 +771,7 @@ class RoutingV5x0(RoutingBase):
         try:
             driver.verify_connectivity()
         except types.DriverError as e:
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
@@ -802,7 +802,7 @@ class RoutingV5x0(RoutingBase):
         try:
             driver.verify_connectivity()
         except types.DriverError as e:
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
@@ -948,7 +948,7 @@ class RoutingV5x0(RoutingBase):
         try:
             session.run("RETURN 1 as n").consume()
         except types.DriverError as e:
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(ErrorType.CLIENT_ERROR.value, e.errorType)
                 if get_driver_name() in ["python"]:
                     self.assertEqual(
@@ -2096,7 +2096,7 @@ class RoutingV5x0(RoutingBase):
         exc = self._test_fast_fail_discover(
             "router_yielding_invalid_bookmark_failure.script",
         )
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
@@ -2115,7 +2115,7 @@ class RoutingV5x0(RoutingBase):
         exc = self._test_fast_fail_discover(
             "router_yielding_invalid_bookmark_mixture_failure.script",
         )
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType
@@ -2135,7 +2135,7 @@ class RoutingV5x0(RoutingBase):
         exc = self._test_fast_fail_discover(
             "router_yielding_forbidden_failure.script",
         )
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SECURITY_ERROR.value,
                 exc.exception.errorType
@@ -2155,7 +2155,7 @@ class RoutingV5x0(RoutingBase):
         exc = self._test_fast_fail_discover(
             "router_yielding_any_security_failure.script",
         )
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SECURITY_ERROR.value,
                 exc.exception.errorType
@@ -2188,7 +2188,7 @@ class RoutingV5x0(RoutingBase):
             result = session.run("RETURN 1 as n")
             self.collect_records(result)
         except types.DriverError as e:
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType
@@ -2417,7 +2417,7 @@ class RoutingV5x0(RoutingBase):
         with self.assertRaises(types.DriverError) as exc:
             session.run("RETURN 1 as n")
 
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.ILLEGAL_STATE_ERROR.value,
                 exc.exception.errorType
@@ -2450,7 +2450,7 @@ class RoutingV5x0(RoutingBase):
             # drivers doing lazy loading should fail here
             result.next()
         except types.DriverError as e:
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SESSION_EXPIRED_ERROR.value,
                     e.errorType
@@ -2569,7 +2569,7 @@ class RoutingV5x0(RoutingBase):
                 # drivers doing lazy loading should fail here
                 result.next()
 
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SESSION_EXPIRED_ERROR.value,
                     exc.exception.errorType
@@ -2638,7 +2638,7 @@ class RoutingV5x0(RoutingBase):
             # drivers doing lazy loading should fail here
             result.next()
 
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.SESSION_EXPIRED_ERROR.value,
                 exc.exception.errorType
@@ -2775,7 +2775,7 @@ class RoutingV5x0(RoutingBase):
                 tx = session2.begin_transaction()
                 list(tx.run("RETURN 1 as n"))
 
-        if get_driver_name() in ["java", "python"]:
+        if get_driver_name() in ["java", "python", "javascript"]:
             self.assertEqual(
                 ErrorType.CLIENT_ERROR.value,
                 exc.exception.errorType

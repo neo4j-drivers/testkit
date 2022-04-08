@@ -117,7 +117,7 @@ class TestSummary(TestkitTestCase):
                     result = session.run("RETURN 1 AS n",
                                          params={"foo": types.CypherInt(123)})
                     result.consume()
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.PROTOCOL_ERROR.value,
                     e.exception.errorType

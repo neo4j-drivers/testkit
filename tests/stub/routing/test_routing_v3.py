@@ -72,7 +72,7 @@ class RoutingV3(RoutingV4x4):
             session.run("RETURN 1 AS x").consume()
         except types.DriverError as e:
             failed = True
-            if get_driver_name() in ["java", "python"]:
+            if get_driver_name() in ["java", "python", "javascript"]:
                 self.assertEqual(
                     ErrorType.SERVICE_UNAVAILABLE_ERROR.value,
                     e.errorType

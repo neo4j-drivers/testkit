@@ -328,6 +328,12 @@ class TestTxRun(TestkitTestCase):
         if get_driver_name() in ["java", "python"]:
             self.assertEqual(ErrorType.TRANSIENT_ERROR.value,
                              e.exception.errorType)
+        # "Neo.TransientError.Transaction.LockClientStopped"
+        # will be moved to client-error since it is not retriable.
+        # Shall we categorized it as a client error?
+        if get_driver_name() in ["javascript"]:
+            self.assertEqual(ErrorType.CLIENT_ERROR.value,
+                             e.exception.errorType)
 
     @cluster_unsafe_test
     def test_consume_after_commit(self):

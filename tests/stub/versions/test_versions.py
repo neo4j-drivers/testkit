@@ -277,7 +277,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def _assert_is_untrusted_server_exception(self, e):
         driver = get_driver_name()
-        if driver in ["java", "python"]:
+        if driver in ["java", "python", "javascript"]:
             self.assertEqual(ErrorType.UNTRUSTED_SERVER_ERROR.value,
                              e.errorType)
         elif driver in ["ruby"]:
