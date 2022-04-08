@@ -125,13 +125,6 @@ class TestDataTypes(_TestTypesBase):
                 continue
             for time in times:
                 with self.subTest(tz_id=tz_id, time=time):
-                    # TODO: fire cypher query to check if timezone is supported
-                    # TODO: add timezones to Java blacklist
-                    # +33078908-07-16T03:42:09.322689764+13:00[Pacific/Kanton]
-                    # +278812530-07-26T22:36:01.559972143-02:00[America/Nuuk]
-                    if not self.check_timezone_supported(tz_id):
-                        self.skipTest("timezone %s not supported by driver"
-                                      % tz_id)
                     # FIXME: while there is a bug in the bolt protocol that
                     #        makes it incapable of representing datetimes with
                     #        timezone ids when there is ambiguity, we will
