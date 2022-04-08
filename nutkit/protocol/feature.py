@@ -21,6 +21,8 @@ class Feature(Enum):
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
+    # The driver supports connection liveness check.
+    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"
@@ -32,8 +34,12 @@ class Feature(Enum):
     # This method asserts that exactly one record in left in the result
     # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
-    # The driver supports connection liveness check.
-    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
+    # The driver offers a method for the result to retrieve the next record in
+    # the result stream. If there are no more records left in the result, the
+    # driver will indicate so by returning None/null/nil/any other empty value.
+    # If there are more than records, the driver emits a warning.
+    # This method is supposed to always exhaust the result stream.
+    API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -43,6 +49,10 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The driver supports sending and receiving geospatial data types.
+    API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
+    # The driver supports sending and receiving temporal data types.
+    API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"

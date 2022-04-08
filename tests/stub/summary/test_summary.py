@@ -100,7 +100,7 @@ class TestSummary(TestkitTestCase):
             self.assertEqual(summary.query_type, query_type)
 
         for query_type in ("r", "w", "rw", "s", None):
-            with self.subTest(query_type):
+            with self.subTest(query_type=query_type):
                 _test()
 
     def test_invalid_query_type(self):
@@ -123,7 +123,7 @@ class TestSummary(TestkitTestCase):
                 )
 
         for query_type in ("wr",):
-            with self.subTest(query_type):
+            with self.subTest(query_type=query_type):
                 _test()
 
     def test_times(self):

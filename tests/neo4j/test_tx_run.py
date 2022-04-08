@@ -50,8 +50,7 @@ class TestTxRun(TestkitTestCase):
 
         for consume in (True, False):
             for rollback in (True, False):
-                with self.subTest("consume" if consume else "iterate"
-                                  + "_rollback" if rollback else "_commit"):
+                with self.subTest(consume=consume, rollback=rollback):
                     _test()
 
     @cluster_unsafe_test
@@ -368,7 +367,7 @@ class TestTxRun(TestkitTestCase):
             self._session1 = None
 
         for invert_fetching in (True, False):
-            with self.subTest("inverted" if invert_fetching else "in_order"):
+            with self.subTest(invert_fetching=invert_fetching):
                 _test()
 
     @cluster_unsafe_test
@@ -413,8 +412,7 @@ class TestTxRun(TestkitTestCase):
             self._session1 = None
 
         for run_q2_before_q1_fetch in (True, False):
-            with self.subTest("run_q2_before_q1_fetch-%s"
-                              % run_q2_before_q1_fetch):
+            with self.subTest(run_q2_before_q1_fetch=run_q2_before_q1_fetch):
                 _test()
 
     @cluster_unsafe_test
@@ -443,5 +441,5 @@ class TestTxRun(TestkitTestCase):
             self.assertEqual(len(list(res)), commit)
 
         for commit in (True, False):
-            with self.subTest("commit" if commit else "rollback"):
+            with self.subTest(commit=commit):
                 _test()

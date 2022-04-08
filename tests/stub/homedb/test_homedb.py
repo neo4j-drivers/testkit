@@ -60,8 +60,7 @@ class TestHomeDb(TestkitTestCase):
             self._reader1.done()
 
         for parallel_sessions in (True, False):
-            with self.subTest("parallel-sessions" if parallel_sessions
-                              else "sequential-sessions"):
+            with self.subTest(parallel_sessions=parallel_sessions):
                 _test()
             self._router.reset()
             self._reader1.reset()
@@ -104,8 +103,7 @@ class TestHomeDb(TestkitTestCase):
             self._reader1.done()
 
         for parallel_sessions in (True, False):
-            with self.subTest("parallel-sessions" if parallel_sessions
-                              else "sequential-sessions"):
+            with self.subTest(parallel_sessions=parallel_sessions):
                 _test()
             self._router.reset()
             self._reader1.reset()
@@ -148,8 +146,7 @@ class TestHomeDb(TestkitTestCase):
             self._reader1.done()
 
         for parallel_sessions in (True, False):
-            with self.subTest("parallel-sessions" if parallel_sessions
-                              else "sequential-sessions"):
+            with self.subTest(parallel_sessions=parallel_sessions):
                 _test()
             self._router.reset()
             self._reader1.reset()

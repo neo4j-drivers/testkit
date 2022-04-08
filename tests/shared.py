@@ -9,6 +9,8 @@ TEST_BACKEND_HOST  Hostname of backend, default is localhost
 TEST_BACKEND_PORT  Port on backend host, default is 9876
 """
 
+
+from contextlib import contextmanager
 import inspect
 import os
 import re
@@ -145,7 +147,10 @@ class TestkitTestCase(unittest.TestCase):
 
     def setUp(self):
         super().setUp()
-        id_ = re.sub(r"^([^\.]+\.)*?tests\.", "", self.id())
+        self._testkit_test_name = id_ = re.sub(
+            r"^([^\.]+\.)*?tests\.", "", self.id()
+        )
+        self._check_subtests = False
         self._backend = new_backend()
         self.addCleanup(self._backend.close)
         self._driver_features = get_driver_features(self._backend)
@@ -198,9 +203,10 @@ class TestkitTestCase(unittest.TestCase):
         response = self._backend.send_and_receive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
-
+        elif isinstance(response, protocol.RunSubTests):
+            self._check_subtests = True
         elif not isinstance(response, protocol.RunTest):
-            raise Exception("Should be SkipTest or RunTest, "
+            raise Exception("Should be SkipTest, RunSubTests, or RunTest, "
                             "received {}: {}".format(type(response),
                                                      response))
 
@@ -251,3 +257,27 @@ class TestkitTestCase(unittest.TestCase):
     def script_path(self, *path):
         base_path = os.path.dirname(inspect.getfile(self.__class__))
         return os.path.join(base_path, "scripts", *path)
+
+    @contextmanager
+    def subTest(self, **params):  # noqa: N802
+        assert "msg" not in params
+        subtest_context = super().subTest(**params)
+        with subtest_context:
+            if not self._check_subtests:
+                yield
+                return
+            response = self._backend.send_and_receive(
+                protocol.StartSubTest(self._testkit_test_name, params)
+            )
+            # we have to run the subtest, but we don't care for the result
+            # if we want to throw or skip (in fact also a throw)
+            try:
+                yield
+            finally:
+                if isinstance(response, protocol.SkipTest):
+                    # skipping after the fact :/
+                    self.skipTest(response.reason)
+                elif not isinstance(response, protocol.RunTest):
+                    raise Exception("Should be SkipTest, or RunTest, "
+                                    "received {}: {}".format(type(response),
+                                                             response))

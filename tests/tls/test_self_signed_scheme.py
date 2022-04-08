@@ -30,7 +30,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
     def test_driver_is_encrypted(self):
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._test_reports_encrypted(True, scheme, **driver_config)
 
     def test_trusted_ca_correct_hostname(self):
@@ -38,7 +38,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
         # when configured for self signed.
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("trustedRoot_thehost")
                     self.assertTrue(self._try_connect(
                         self._server, scheme, "thehost", **driver_config
@@ -52,7 +52,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
         # enabled, same for all drivers ?
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("trustedRoot_thehost_expired")
                     self.assertTrue(self._try_connect(
                         self._server, scheme, "thehost", **driver_config
@@ -71,7 +71,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
         # all.
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("trustedRoot_thehost")
                     self.assertTrue(self._try_connect(
                         self._server, scheme, "thehostbutwrong",
@@ -84,7 +84,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
         # Should connect
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("untrustedRoot_thehost")
                     self.assertTrue(self._try_connect(
                         self._server, scheme, "thehost", **driver_config
@@ -96,7 +96,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
         # Should connect
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("untrustedRoot_thehost")
                     self.assertTrue(self._try_connect(
                         self._server, scheme, "thehostbutwrong",
@@ -110,7 +110,7 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
         # TLS connections but the server doesn't speak TLS
         for driver_config in self.extra_driver_configs:
             for scheme in self.schemes:
-                with self.subTest(scheme + "-" + str(driver_config)):
+                with self.subTest(scheme=scheme, driver_config=driver_config):
                     # The server cert doesn't really matter but set it to the
                     # one that would work if TLS happens to be on.
                     self._server = TlsServer("untrustedRoot_thehost",

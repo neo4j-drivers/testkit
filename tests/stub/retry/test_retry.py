@@ -171,6 +171,6 @@ class TestRetry(TestkitTestCase):
             self._server.done()
 
         for mode in ("read", "write"):
-            with self.subTest(mode):
+            with self.subTest(mode=mode):
                 _test()
             self._server.reset()

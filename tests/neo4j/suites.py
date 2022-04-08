@@ -1,18 +1,9 @@
 """Defines suites of test to run in different setups."""
 
+import os
 import sys
 import unittest
 
-from tests.neo4j import (
-    test_authentication,
-    test_bookmarks,
-    test_datatypes,
-    test_direct_driver,
-    test_session_run,
-    test_summary,
-    test_tx_func_run,
-    test_tx_run,
-)
 from tests.neo4j.shared import env_neo4j_version
 from tests.testenv import (
     begin_test_suite,
@@ -20,20 +11,19 @@ from tests.testenv import (
     get_test_result_class,
 )
 
-loader = unittest.TestLoader()
-
 #######################
 # Suite for Neo4j 4.2 #
 #######################
+loader = unittest.TestLoader()
+
 suite_4x2 = unittest.TestSuite()
-suite_4x2.addTests(loader.loadTestsFromModule(test_authentication))
-suite_4x2.addTests(loader.loadTestsFromModule(test_bookmarks))
-suite_4x2.addTests(loader.loadTestsFromModule(test_datatypes))
-suite_4x2.addTests(loader.loadTestsFromModule(test_direct_driver))
-suite_4x2.addTests(loader.loadTestsFromModule(test_session_run))
-suite_4x2.addTests(loader.loadTestsFromModule(test_summary))
-suite_4x2.addTests(loader.loadTestsFromModule(test_tx_func_run))
-suite_4x2.addTests(loader.loadTestsFromModule(test_tx_run))
+
+suite_4x2.addTest(loader.discover(
+    "tests.neo4j",
+    top_level_dir=os.path.abspath(os.path.join(
+        os.path.dirname(__file__), "..", ".."
+    ))
+))
 
 #######################
 # Suite for Neo4j 4.3 #
