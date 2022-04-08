@@ -141,7 +141,7 @@ class TestProtocolVersions(TestkitTestCase):
         for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "3"):
             if not self.driver_supports_bolt(version):
                 continue
-            with self.subTest(version):
+            with self.subTest(version=version):
                 self._run(version, check_version=True)
 
     def test_server_agent(self):
@@ -169,7 +169,7 @@ class TestProtocolVersions(TestkitTestCase):
                     continue
                 if not self.driver_supports_bolt(version):
                     continue
-                with self.subTest(version + "-" + agent.replace(".", "x")):
+                with self.subTest(version=version, agent=agent):
                     self._run(version, server_agent=agent,
                               rejected_agent=reject)
 
@@ -180,7 +180,7 @@ class TestProtocolVersions(TestkitTestCase):
         for version in ("5x0", "4x4", "4x3", "4x2", "4x1", "3"):
             if not self.driver_supports_bolt(version):
                 continue
-            with self.subTest(version):
+            with self.subTest(version=version):
                 self._run(version, check_server_address=True)
 
     def test_obtain_summary_twice(self):

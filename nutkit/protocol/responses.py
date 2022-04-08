@@ -20,10 +20,6 @@ For example response to NewDriver request should be sent from backend as:
 """
 
 
-class RunTest:
-    """Response to StartTest indicating that the test can be started."""
-
-
 class FeatureList:
     """
     Response to GetFeatures.
@@ -35,6 +31,14 @@ class FeatureList:
         if features is None:
             features = []
         self.features = features
+
+
+class RunTest:
+    """Response to StartTest indicating that the test can be started."""
+
+
+class RunSubTests:
+    """Response to StartTest requesting to decide for each subtest."""
 
 
 class SkipTest:
@@ -213,6 +217,24 @@ class RecordList:
                 record_list.append(Record(values=record["values"]))
 
         self.records = record_list
+
+
+class RecordOptional:
+    """
+    Represents an optional record.
+
+    Possible response to the ResultOptionalSingle request.
+
+    Fields:
+        record: Record values or None (see Record response)
+        warnings: List of warnings (str) (potentially empty)
+    """
+
+    def __init__(self, record, warnings):
+        self.record = None
+        if record is not None:
+            self.record = Record(values=record["values"])
+        self.warnings = warnings
 
 
 class Summary:

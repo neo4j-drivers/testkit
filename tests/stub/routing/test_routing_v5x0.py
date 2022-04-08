@@ -9,8 +9,7 @@ from tests.shared import (
     get_driver_name,
     get_ip_addresses,
 )
-
-from ._routing import RoutingBase
+from tests.stub.routing._routing import RoutingBase
 
 
 class RoutingV5x0(RoutingBase):
@@ -353,15 +352,13 @@ class RoutingV5x0(RoutingBase):
         self._readServer1.done()
         self._readServer2.done()
 
-    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME,
-                    types.Feature.OPT_PULL_PIPELINING)
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
     def test_should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(  # noqa: E501
             self):
         self._should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(  # noqa: E501
             "reader_tx_with_unexpected_interruption_on_pipelined_pull.script"
         )
 
-    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME)
     def test_should_fail_when_reading_from_unexpectedly_interrupting_readers_on_run_using_tx_function(  # noqa: E501
             self):
         # TODO remove this block once all languages work
@@ -408,15 +405,13 @@ class RoutingV5x0(RoutingBase):
         self._writeServer1.done()
         self._writeServer2.done()
 
-    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME,
-                    types.Feature.OPT_PULL_PIPELINING)
+    @driver_feature(types.Feature.OPT_PULL_PIPELINING)
     def test_should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(  # noqa: E501
             self):
         self._should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(  # noqa: E501
             "writer_tx_with_unexpected_interruption_on_pipelined_pull.script"
         )
 
-    @driver_feature(types.Feature.TMP_DRIVER_MAX_TX_RETRY_TIME)
     def test_should_fail_when_writing_to_unexpectedly_interrupting_writers_on_run_using_tx_function(  # noqa: E501
             self):
         self._should_fail_when_writing_to_unexpectedly_interrupting_writers_using_tx_function(  # noqa: E501
@@ -2104,7 +2099,6 @@ class RoutingV5x0(RoutingBase):
 
         return exc
 
-    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_invalid_bookmark_discovery_failure(  # noqa: E501
             self):
         exc = self._test_fast_fail_discover(
@@ -2128,7 +2122,6 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmark",
                          exc.exception.code)
 
-    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_invalid_bookmark_mixture_discovery_failure(  # noqa: E501
             self):
         exc = self._test_fast_fail_discover(
@@ -2153,7 +2146,6 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmarkMixture",
                          exc.exception.code)
 
-    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_forbidden_discovery_failure(
             self):
         exc = self._test_fast_fail_discover(
@@ -2178,7 +2170,6 @@ class RoutingV5x0(RoutingBase):
             "Neo.ClientError.Security.Forbidden",
             exc.exception.code)
 
-    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_fail_with_routing_failure_on_any_security_discovery_failure(  # noqa: E501
             self):
         exc = self._test_fast_fail_discover(
@@ -2335,14 +2326,12 @@ class RoutingV5x0(RoutingBase):
                                 {self._routingServer1.address: 1}.items())
         self.assertTrue(all(count == 1 for count in resolver_calls.values()))
 
-    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_request_rt_from_all_initial_routers_until_successful_on_unknown_failure(  # noqa: E501
             self):
         self._test_should_request_rt_from_all_initial_routers_until_successful(
             "router_yielding_unknown_failure.script"
         )
 
-    @driver_feature(types.Feature.TMP_FAST_FAILING_DISCOVERY)
     def test_should_request_rt_from_all_initial_routers_until_successful_on_authorization_expired(  # noqa: E501
             self):
         self._test_should_request_rt_from_all_initial_routers_until_successful(
@@ -2755,8 +2744,7 @@ class RoutingV5x0(RoutingBase):
         self._routingServer1.done()
         self.assertEqual([types.Record(values=[types.CypherInt(1)])], records)
 
-    @driver_feature(types.Feature.API_LIVENESS_CHECK,
-                    types.Feature.TMP_GET_CONNECTION_POOL_METRICS)
+    @driver_feature(types.Feature.API_LIVENESS_CHECK)
     def test_should_drop_connections_failing_liveness_check(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, liveness_check_timeout_ms=0)
@@ -2794,8 +2782,7 @@ class RoutingV5x0(RoutingBase):
         self._routingServer1.done()
         self._writeServer1.done()
 
-    @driver_feature(types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE,
-                    types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT)
+    @driver_feature(types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT)
     def test_should_enforce_pool_size_per_cluster_member(self):
         acq_timeout_ms = 2000
         driver = Driver(self._backend, self._uri_with_context, self._auth,

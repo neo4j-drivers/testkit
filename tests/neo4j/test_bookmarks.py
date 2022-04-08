@@ -52,8 +52,7 @@ class TestBookmarks(TestkitTestCase):
         tx = self._session.begin_transaction()
         result = tx.run("MATCH (a:Thing {uuid:$uuid}) RETURN a",
                         params={"uuid": types.CypherString(unique_id)})
-        if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-            self.assertEqual(result.keys(), ["a"])
+        self.assertEqual(result.keys(), ["a"])
         records = [rec.values[0] for rec in result]
         tx.commit()
         self.assertEqual(len(records), 1)

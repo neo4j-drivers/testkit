@@ -952,7 +952,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
             self._server.done()
 
         for realm in (None, "", "foobar"):
-            with self.subTest("realm-%s" % realm):
+            with self.subTest(realm=realm):
                 test()
             self._server.reset()
 

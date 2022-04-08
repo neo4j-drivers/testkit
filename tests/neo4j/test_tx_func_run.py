@@ -44,7 +44,7 @@ class TestTxFuncRun(TestkitTestCase):
             self._session1 = None
 
         for consume in (True, False):
-            with self.subTest("consume" if consume else "iterate"):
+            with self.subTest(consume=consume):
                 _test()
 
     def test_iteration_nested(self):
@@ -160,8 +160,7 @@ class TestTxFuncRun(TestkitTestCase):
         def run(tx):
             values = []
             result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
-            if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-                self.assertEqual(result.keys(), ["x"])
+            self.assertEqual(result.keys(), ["x"])
             for record in result:
                 values.append(record.values[0])
             if get_server_info().version >= "4":

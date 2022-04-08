@@ -115,5 +115,5 @@ class TestIterationSessionRun(TestkitTestCase):
                 # background
                 continue
             for mode in ("write", "read"):
-                with self.subTest(version + "-" + mode):
+                with self.subTest(version=version, mode=mode):
                     test(version, script)

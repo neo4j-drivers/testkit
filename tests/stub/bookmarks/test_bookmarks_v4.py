@@ -70,7 +70,7 @@ class TestBookmarksV4(TestkitTestCase):
 
         for mode in ("read", "write"):
             for bm_count in (0, 1, 2):
-                with self.subTest(mode + "_%i_bookmarks" % bm_count):
+                with self.subTest(mode=mode, bm_count=bm_count):
                     test(mode, bm_count)
 
     def test_bookmarks_session_run(self):
@@ -96,12 +96,11 @@ class TestBookmarksV4(TestkitTestCase):
                     # TODO: make a decision if consume should be triggered
                     #       implicitly or not.
                     for consume in (False, True)[1:]:
-                        with self.subTest(mode + "_%i_bookmarks%s%s" % (
-                            bm_count,
-                            "_check_bms_pre_query" if check_bms_pre_query
-                            else "",
-                            "_consume" if consume else "_no_consume"
-                        )):
+                        with self.subTest(
+                            mode=mode, bm_count=bm_count,
+                            check_bms_pre_query=check_bms_pre_query,
+                            consume=consume
+                        ):
                             test(mode, bm_count, check_bms_pre_query, consume)
 
     def test_bookmarks_tx_run(self):
@@ -130,12 +129,11 @@ class TestBookmarksV4(TestkitTestCase):
             for bm_count in (0, 1, 2):
                 for check_bms_pre_query in (False, True):
                     for consume in (False, True):
-                        with self.subTest(mode + "_%i_bookmarks%s%s" % (
-                            bm_count,
-                            "_check_bms_pre_query" if check_bms_pre_query
-                            else "",
-                            "_consume" if consume else "_no_consume"
-                        )):
+                        with self.subTest(
+                            mode=mode, bm_count=bm_count,
+                            check_bms_pre_query=check_bms_pre_query,
+                            consume=consume
+                        ):
                             test(mode, bm_count, check_bms_pre_query, consume)
 
     def test_bookmarks_tx_func(self):
@@ -168,12 +166,11 @@ class TestBookmarksV4(TestkitTestCase):
             for bm_count in (0, 1, 2):
                 for check_bms_pre_query in (False, True):
                     for consume in (False, True):
-                        with self.subTest(mode + "_%i_bookmarks%s%s" % (
-                            bm_count,
-                            "_check_bms_pre_query" if check_bms_pre_query
-                            else "",
-                            "_consume" if consume else "_no_consume"
-                        )):
+                        with self.subTest(
+                            mode=mode, bm_count=bm_count,
+                            check_bms_pre_query=check_bms_pre_query,
+                            consume=consume
+                        ):
                             test(mode, bm_count, check_bms_pre_query, consume)
 
     def test_sequence_of_writing_and_reading_tx(self):

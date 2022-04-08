@@ -1,38 +1,9 @@
 import nutkit.protocol as types
-from tests.neo4j.shared import get_driver
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.neo4j.datatypes._base import _TestTypesBase
+from tests.shared import get_driver_name
 
 
-class TestDataTypes(TestkitTestCase):
-    def setUp(self):
-        super().setUp()
-        self._session = None
-        self._driver = None
-
-    def tearDown(self):
-        if self._session:
-            self._session.close()
-        if self._driver:
-            self._driver.close()
-        super().tearDown()
-
-    def create_driver_and_session(self):
-        self._driver = get_driver(self._backend)
-        self._session = self._driver.session("w")
-
-    def verify_can_echo(self, val):
-        def work(tx):
-            result = tx.run("RETURN $x as y", params={"x": val})
-            record_ = result.next()
-            assert isinstance(result.next(), types.NullRecord)
-            return record_
-
-        record = self._session.read_transaction(work)
-        self.assertEqual(record, types.Record(values=[val]))
-
+class TestDataTypes(_TestTypesBase):
     def test_should_echo_back(self):
         vals = [
             types.CypherBool(True),
@@ -80,7 +51,7 @@ class TestDataTypes(TestkitTestCase):
             types.CypherBytes(bytearray([0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF])),
         ]
 
-        self.create_driver_and_session()
+        self._create_driver_and_session()
         for val in vals:
             # TODO: remove this block once all languages work
             if get_driver_name() in ["javascript", "dotnet"]:
@@ -100,7 +71,7 @@ class TestDataTypes(TestkitTestCase):
                 if isinstance(val, types.CypherBytes):
                     continue
 
-            self.verify_can_echo(val)
+            self._verify_can_echo(val)
 
     def test_should_echo_very_long_list(self):
         vals = [
@@ -111,18 +82,18 @@ class TestDataTypes(TestkitTestCase):
             types.CypherBool(True),
         ]
 
-        self.create_driver_and_session()
+        self._create_driver_and_session()
 
         for val in vals:
             long_list = []
             for _ in range(1000):
                 long_list.append(val)
-            self.verify_can_echo(types.CypherList(long_list))
+            self._verify_can_echo(types.CypherList(long_list))
 
     def test_should_echo_very_long_string(self):
-        self.create_driver_and_session()
+        self._create_driver_and_session()
         long_string = "*" * 10000
-        self.verify_can_echo(types.CypherString(long_string))
+        self._verify_can_echo(types.CypherString(long_string))
 
     def test_should_echo_nested_lists(self):
         test_lists = [
@@ -161,8 +132,8 @@ class TestDataTypes(TestkitTestCase):
             ])
         ]
 
-        self.create_driver_and_session()
-        self.verify_can_echo(types.CypherList(test_lists))
+        self._create_driver_and_session()
+        self._verify_can_echo(types.CypherList(test_lists))
 
     def test_should_echo_node(self):
         def work(tx):
@@ -173,7 +144,7 @@ class TestDataTypes(TestkitTestCase):
             assert isinstance(result.next(), types.NullRecord)
             return record_
 
-        self.create_driver_and_session()
+        self._create_driver_and_session()
 
         record = self._session.write_transaction(work)
         self.assertIsInstance(record, types.Record)
@@ -200,7 +171,7 @@ class TestDataTypes(TestkitTestCase):
             assert isinstance(result.next(), types.NullRecord)
             return record_
 
-        self.create_driver_and_session()
+        self._create_driver_and_session()
 
         record = self._session.write_transaction(work)
         self.assertIsInstance(record, types.Record)
@@ -232,7 +203,7 @@ class TestDataTypes(TestkitTestCase):
             assert isinstance(result.next(), types.NullRecord)
             return record_
 
-        self.create_driver_and_session()
+        self._create_driver_and_session()
 
         record = self._session.write_transaction(work)
         self.assertIsInstance(record, types.Record)
@@ -273,14 +244,14 @@ class TestDataTypes(TestkitTestCase):
                      types.CypherString("Hello World"),
                      types.CypherBool(True)]
 
-        self.create_driver_and_session()
+        self._create_driver_and_session()
 
         long_map = {}
         for cypher_type in test_list:
             long_map.clear()
             for i in range(1000):
                 long_map[str(i)] = cypher_type
-            self.verify_can_echo(types.CypherMap(long_map))
+            self._verify_can_echo(types.CypherMap(long_map))
 
     def test_should_echo_nested_map(self):
         test_maps = {
@@ -306,8 +277,8 @@ class TestDataTypes(TestkitTestCase):
 
         }
 
-        self.create_driver_and_session()
-        self.verify_can_echo(types.CypherMap(test_maps))
+        self._create_driver_and_session()
+        self._verify_can_echo(types.CypherMap(test_maps))
 
     def test_should_echo_list_of_maps(self):
         test_list = [
@@ -320,13 +291,13 @@ class TestDataTypes(TestkitTestCase):
                 "d": types.CypherInt(4)
             })
         ]
-        self.create_driver_and_session()
-        self.verify_can_echo(types.CypherList(test_list))
+        self._create_driver_and_session()
+        self._verify_can_echo(types.CypherList(test_list))
 
     def test_should_echo_map_of_lists(self):
         test_map = {
             "a": types.CypherList([types.CypherInt(1)]),
             "b": types.CypherList([types.CypherInt(2)])
         }
-        self.create_driver_and_session()
-        self.verify_can_echo(types.CypherMap(test_map))
+        self._create_driver_and_session()
+        self._verify_can_echo(types.CypherMap(test_map))

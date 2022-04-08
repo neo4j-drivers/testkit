@@ -32,12 +32,12 @@ class TestUnsecureScheme(TestkitTlsTestCase):
 
     def test_driver_is_not_encrypted(self):
         for scheme in schemes:
-            with self.subTest(scheme):
+            with self.subTest(scheme=scheme):
                 self._test_reports_encrypted(False, scheme)
 
     def test_secure_server(self):
         for scheme in schemes:
-            with self.subTest(scheme):
+            with self.subTest(scheme=scheme):
                 self._server = TlsServer("trustedRoot_thehost")
                 self.assertFalse(self._try_connect(
                     self._server, scheme, "thehost"
@@ -47,7 +47,7 @@ class TestUnsecureScheme(TestkitTlsTestCase):
     @driver_feature(types.Feature.API_SSL_CONFIG)
     def test_secure_server_explicitly_disabled_encryption(self):
         for scheme in schemes:
-            with self.subTest(scheme):
+            with self.subTest(scheme=scheme):
                 self._server = TlsServer("trustedRoot_thehost")
                 self.assertFalse(self._try_connect(
                     self._server, scheme, "thehost", encrypted=False

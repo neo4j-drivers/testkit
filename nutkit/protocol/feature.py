@@ -21,6 +21,8 @@ class Feature(Enum):
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
+    # The driver supports connection liveness check.
+    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"
@@ -32,8 +34,12 @@ class Feature(Enum):
     # This method asserts that exactly one record in left in the result
     # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
-    # The driver supports connection liveness check.
-    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
+    # The driver offers a method for the result to retrieve the next record in
+    # the result stream. If there are no more records left in the result, the
+    # driver will indicate so by returning None/null/nil/any other empty value.
+    # If there are more than records, the driver emits a warning.
+    # This method is supposed to always exhaust the result stream.
+    API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -43,6 +49,10 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The driver supports sending and receiving geospatial data types.
+    API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
+    # The driver supports sending and receiving temporal data types.
+    API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -145,39 +155,3 @@ class Feature(Enum):
     # and provides a way to force a routing table update (for testing only,
     # should not be exposed to the user).
     BACKEND_RT_FORCE_UPDATE = "Backend:RTForceUpdate"
-
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented path and relationship types
-    TMP_CYPHER_PATH_AND_RELATIONSHIP = "Temporary:CypherPathAndRelationship"
-    # TODO Update this once the decision has been made.
-    # Temporary driver feature. There is a pending decision on whether it
-    # should be supported in all drivers or be removed from all of them.
-    TMP_DRIVER_FETCH_SIZE = "Temporary:DriverFetchSize"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the max connection pool size config.
-    TMP_DRIVER_MAX_CONNECTION_POOL_SIZE = \
-        "Temporary:DriverMaxConnectionPoolSize"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented it.
-    TMP_DRIVER_MAX_TX_RETRY_TIME = "Temporary:DriverMaxTxRetryTime"
-    # Temporary driver feature that will be removed when all official driver
-    # implemented failing fast and surfacing on certain error codes during
-    # discovery (initial fetching of a RT).
-    TMP_FAST_FAILING_DISCOVERY = "Temporary:FastFailingDiscovery"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented all summary response fields.
-    TMP_FULL_SUMMARY = "Temporary:FullSummary"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the GetConnectionPoolMetrics request.
-    TMP_GET_CONNECTION_POOL_METRICS = \
-        "Temporary:GetConnectionPoolMetrics"
-    # Temporary driver feature that will be removed when all official drivers
-    # have been unified in their behaviour of when they return a Result object.
-    # We aim for drivers to not providing a Result until the server replied
-    # with SUCCESS so that the result keys are already known and attached to
-    # the Result object without further waiting or communication with the
-    # server.
-    TMP_RESULT_KEYS = "Temporary:ResultKeys"
-    # Temporary driver feature that will be removed when all official driver
-    # backends have implemented the TransactionClose request
-    TMP_TRANSACTION_CLOSE = "Temporary:TransactionClose"

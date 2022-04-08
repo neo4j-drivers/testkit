@@ -1,7 +1,6 @@
 import nutkit.protocol as types
 from tests.shared import driver_feature
-
-from .test_routing_v5x0 import RoutingV5x0
+from tests.stub.routing.test_routing_v5x0 import RoutingV5x0
 
 
 class RoutingV4x4(RoutingV5x0):

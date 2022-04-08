@@ -3,10 +3,7 @@ from contextlib import contextmanager
 from nutkit.backend.backend import backend_timeout_adjustment
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.shared import (
-    driver_feature,
-    TestkitTestCase,
-)
+from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
@@ -81,7 +78,6 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
         self.assertEqual(self._server.count_responses("<HANGUP>"), 0)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 100)
 
-    @driver_feature(types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE)
     def test_connection_pool_custom_max_size(self):
         self._open_driver(2)
         self._open_connections(2)

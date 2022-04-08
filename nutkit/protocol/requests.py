@@ -22,12 +22,32 @@ class StartTest:
     """
     Request the backend to confirm to run a specific test.
 
-    The backend should respond with RunTest if the backend wants the test to be
-    skipped it must respond with SkipTest.
+    The backend should respond with RunTest unless it wants the test to be
+    skipped, in that case it must respond with SkipTest.
+
+    The backend might also respond with RunSubTests. In this case, TestKit will
+     - run the test, if it does not have subtests
+     - ask for each subtest whether it should be run, if it has subtests
+       StartSubTest will be sent to the backend, for each subtest
     """
 
     def __init__(self, test_name):
         self.testName = test_name
+
+
+class StartSubTest:
+    """
+    Request the backend to confirm to run a specific subtest.
+
+    See StartTest for when TestKit might emmit this message.
+
+    The backend should respond with RunTest unless it wants the subtest to be
+    skipped, in that case it must respond with SkipTest.
+    """
+
+    def __init__(self, test_name, subtest_arguments: dict):
+        self.testName = test_name
+        self.subtestArguments = subtest_arguments
 
 
 class GetFeatures:
@@ -62,24 +82,10 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped fetch-size config
-        from .feature import Feature
-        assert hasattr(Feature, "TMP_DRIVER_FETCH_SIZE")
-        if fetchSize is not None:
-            self.fetchSize = fetchSize
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped fetch-size config
-        assert hasattr(Feature, "TMP_DRIVER_MAX_TX_RETRY_TIME")
-        if maxTxRetryTimeMs is not None:
-            self.maxTxRetryTimeMs = maxTxRetryTimeMs
-        if liveness_check_timeout_ms is not None:
-            self.livenessCheckTimeoutMs = liveness_check_timeout_ms
-        # TODO: remove assertion and condition as soon as all drivers support
-        #       driver-scoped max connection pool size config
-        assert hasattr(Feature, "TMP_DRIVER_MAX_CONNECTION_POOL_SIZE")
-        if max_connection_pool_size is not None:
-            self.maxConnectionPoolSize = max_connection_pool_size
+        self.fetchSize = fetchSize
+        self.maxTxRetryTimeMs = maxTxRetryTimeMs
+        self.livenessCheckTimeoutMs = liveness_check_timeout_ms
+        self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
@@ -388,6 +394,20 @@ class ResultSingle:
     If more or fewer records are left in the result stream, or if any other
     error occurs while retrieving the records, an Error response should be
     returned.
+    """
+
+    def __init__(self, resultId):
+        self.resultId = resultId
+
+
+class ResultSingleOptional:
+    """
+    Request to expect and return exactly one record in the result stream.
+
+    Furthermore, the method is supposed to fully exhaust the result stream.
+
+    The backend should respond with a RecordOptional or, if any error occurs
+    while retrieving the records, an Error response should be returned.
     """
 
     def __init__(self, resultId):
