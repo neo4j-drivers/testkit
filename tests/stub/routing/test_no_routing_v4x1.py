@@ -188,7 +188,6 @@ class NoRoutingV4x1(TestkitTestCase):
                          self._server.address])
         self._server.done()
 
-    @driver_feature(types.Feature.TMP_TRANSACTION_CLOSE)
     def test_should_error_on_rollback_failure_using_tx_close(self):
         uri = "bolt://%s" % self._server.address
         self._server.start(
@@ -255,7 +254,6 @@ class NoRoutingV4x1(TestkitTestCase):
                          self._server.address])
         self._server.done()
 
-    @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
     def test_should_accept_custom_fetch_size_using_driver_configuration(
             self):
         uri = "bolt://%s" % self._server.address
@@ -341,7 +339,6 @@ class NoRoutingV4x1(TestkitTestCase):
                                    for i in (1, 3, 5, 7, 9)])
         self._server.done()
 
-    @driver_feature(types.Feature.TMP_DRIVER_FETCH_SIZE)
     def test_should_pull_all_when_fetch_is_minus_one_using_driver_configuration(  # noqa: E501
             self):
         uri = "bolt://%s" % self._server.address

@@ -1,8 +1,7 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-
-from ...shared import get_driver_name
-from .test_routing_v4x4 import RoutingV4x4
+from tests.shared import get_driver_name
+from tests.stub.routing.test_routing_v4x4 import RoutingV4x4
 
 
 class RoutingV3(RoutingV4x4):

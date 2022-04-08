@@ -4,7 +4,6 @@ import json
 from nutkit import protocol as types
 from nutkit.frontend import Driver
 from tests.shared import (
-    driver_feature,
     get_dns_resolved_server_address,
     get_driver_name,
     TestkitTestCase,
@@ -67,7 +66,6 @@ class TestSummary(TestkitTestCase):
             result = session.run("RETURN 1 AS n")
             return result.consume()
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_server_info(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.server_info.address,
@@ -82,12 +80,10 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.server_info.protocol_version,
                          expected_version)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_database(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.database, "apple")
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_query(self):
         def _test():
             if query_type is not None:
@@ -107,7 +103,6 @@ class TestSummary(TestkitTestCase):
             with self.subTest(query_type):
                 _test()
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_invalid_query_type(self):
         def _test():
             script_name = "empty_summary_type_%s.script" % query_type
@@ -131,24 +126,20 @@ class TestSummary(TestkitTestCase):
             with self.subTest(query_type):
                 _test()
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_times(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.result_available_after, 2001)
         self.assertEqual(summary.result_consumed_after, 2002)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_times(self):
         summary = self._get_summary("no_summary.script")
         self.assertEqual(summary.result_available_after, None)
         self.assertEqual(summary.result_consumed_after, None)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.notifications, None)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_empty_notifications(self):
         notifications = []
         summary = self._get_summary(
@@ -159,7 +150,6 @@ class TestSummary(TestkitTestCase):
         )
         self.assertEqual(summary.notifications, notifications)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_full_notification(self):
         notifications = [{
             "severity": "WARNING",
@@ -177,7 +167,6 @@ class TestSummary(TestkitTestCase):
         )
         self.assertEqual(summary.notifications, notifications)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_notifications_without_position(self):
         notifications = [{
             "severity": "ANYTHING",
@@ -192,7 +181,6 @@ class TestSummary(TestkitTestCase):
         )
         self.assertEqual(summary.notifications, notifications)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_multiple_notifications(self):
         notifications = [{
             "severity": "WARNING",
@@ -207,7 +195,6 @@ class TestSummary(TestkitTestCase):
         )
         self.assertEqual(summary.notifications, notifications)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_plan(self):
         plan = {
             "args": {
@@ -242,7 +229,6 @@ class TestSummary(TestkitTestCase):
         )
         self.assertEqual(summary.plan, plan)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_profile(self):
         profile = {
             "args": {
@@ -294,12 +280,10 @@ class TestSummary(TestkitTestCase):
         )
         self.assertEqual(summary.profile, profile)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_empty_summary(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self._assert_counters(summary)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_full_summary_no_flags(self):
         summary = self._get_summary("full_summary.script")
         self._assert_counters(
@@ -313,19 +297,16 @@ class TestSummary(TestkitTestCase):
             contains_updates=True, contains_system_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_summary(self):
         summary = self._get_summary("no_summary.script")
         self._assert_counters(summary)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_constraints_added(self):
         summary = self._get_summary("partial_summary_constraints_added.script")
         self._assert_counters(
             summary, constraints_added=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_constraints_removed(self):
         summary = self._get_summary(
             "partial_summary_constraints_removed.script")
@@ -333,19 +314,16 @@ class TestSummary(TestkitTestCase):
             summary, constraints_removed=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_contains_system_updates(self):
         summary = self._get_summary(
             "partial_summary_contains_system_updates.script"
         )
         self._assert_counters(summary, contains_system_updates=True)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_contains_updates(self):
         summary = self._get_summary("partial_summary_contains_updates.script")
         self._assert_counters(summary, contains_updates=True)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_not_contains_system_updates(self):
         summary = self._get_summary(
             "partial_summary_not_contains_system_updates.script"
@@ -354,7 +332,6 @@ class TestSummary(TestkitTestCase):
             summary, system_updates=1234, contains_system_updates=False
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_not_contains_updates(self):
         summary = self._get_summary(
             "partial_summary_not_contains_updates.script"
@@ -363,56 +340,48 @@ class TestSummary(TestkitTestCase):
             summary, constraints_added=1234, contains_updates=False
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_indexes_added(self):
         summary = self._get_summary("partial_summary_indexes_added.script")
         self._assert_counters(
             summary, indexes_added=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_indexes_removed(self):
         summary = self._get_summary("partial_summary_indexes_removed.script")
         self._assert_counters(
             summary, indexes_removed=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_labels_added(self):
         summary = self._get_summary("partial_summary_labels_added.script")
         self._assert_counters(
             summary, labels_added=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_labels_removed(self):
         summary = self._get_summary("partial_summary_labels_removed.script")
         self._assert_counters(
             summary, labels_removed=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_nodes_created(self):
         summary = self._get_summary("partial_summary_nodes_created.script")
         self._assert_counters(
             summary, nodes_created=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_nodes_deleted(self):
         summary = self._get_summary("partial_summary_nodes_deleted.script")
         self._assert_counters(
             summary, nodes_deleted=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_properties_set(self):
         summary = self._get_summary("partial_summary_properties_set.script")
         self._assert_counters(
             summary, properties_set=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_relationships_created(self):
         summary = self._get_summary(
             "partial_summary_relationships_created.script"
@@ -421,7 +390,6 @@ class TestSummary(TestkitTestCase):
             summary, relationships_created=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_relationships_deleted(self):
         summary = self._get_summary(
             "partial_summary_relationships_deleted.script"
@@ -430,7 +398,6 @@ class TestSummary(TestkitTestCase):
             summary, relationships_deleted=1234, contains_updates=True
         )
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_partial_summary_system_updates(self):
         summary = self._get_summary("partial_summary_system_updates.script")
         self._assert_counters(

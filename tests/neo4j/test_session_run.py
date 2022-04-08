@@ -4,7 +4,6 @@ from tests.neo4j.shared import (
     get_driver,
 )
 from tests.shared import (
-    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -40,8 +39,7 @@ class TestSessionRun(TestkitTestCase):
             types.NullRecord(),
             types.NullRecord()
         ]
-        if self.driver_supports_features(types.Feature.TMP_RESULT_KEYS):
-            assert result.keys() == ["x"]
+        self.assertEqual(result.keys(), ["x"])
         for exp in expects:
             rec = result.next()
             self.assertEqual(rec, exp)
@@ -68,7 +66,6 @@ class TestSessionRun(TestkitTestCase):
         self.assertIsInstance(result.next(), types.NullRecord)
         isinstance(result.next(), types.NullRecord)
 
-    @driver_feature(types.Feature.TMP_CYPHER_PATH_AND_RELATIONSHIP)
     @cluster_unsafe_test
     def test_can_return_relationship(self):
         self._session1 = self._driver.session("w")
@@ -87,7 +84,6 @@ class TestSessionRun(TestkitTestCase):
         self.assertIsInstance(result.next(), types.NullRecord)
         isinstance(result.next(), types.NullRecord)
 
-    @driver_feature(types.Feature.TMP_CYPHER_PATH_AND_RELATIONSHIP)
     @cluster_unsafe_test
     def test_can_return_path(self):
         self._session1 = self._driver.session("w")

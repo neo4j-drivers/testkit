@@ -176,10 +176,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 as n"))
 
-    @driver_feature(
-        types.Feature.TMP_DRIVER_MAX_CONNECTION_POOL_SIZE,
-        types.Feature.OPT_EAGER_TX_BEGIN
-    )
+    @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
     def test_should_regulate_the_time_for_acquiring_connections(self):
         """
         No connection available scenario.
