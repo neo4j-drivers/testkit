@@ -2,7 +2,6 @@ from nutkit import protocol as types
 
 from ..shared import (
     dns_resolve_single,
-    driver_feature,
     get_driver_name,
     TestkitTestCase,
 )
@@ -75,7 +74,6 @@ class TestDirectDriver(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_supports_multi_db(self):
         def work(tx):
             return tx.run("RETURN 1 as n").consume()
@@ -116,7 +114,6 @@ class TestDirectDriver(TestkitTestCase):
             self.assertEqual(exc.errorType,
                              "<class 'neo4j.exceptions.ClientError'>")
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_multi_db(self):
@@ -161,8 +158,8 @@ class TestDirectDriver(TestkitTestCase):
             for record in result_:
                 if node:
                     self.assertEqual(len(record.values), 1)
-                    if self.driver_supports_features(
-                            types.Feature.TMP_RESULT_KEYS):
+                    if get_driver_name() not in ["dotnet"]:
+                        # missing former types.Feature.TMP_RESULT_KEYS
                         self.assertEqual(result_.keys(), ["p"])
                     p = record.values[0]
                     self.assertIsInstance(p, types.CypherNode)
@@ -170,8 +167,8 @@ class TestDirectDriver(TestkitTestCase):
                     name = p.props.value.get("name")
                 else:
                     idx = 0
-                    if self.driver_supports_features(
-                            types.Feature.TMP_RESULT_KEYS):
+                    if get_driver_name() not in ["dotnet"]:
+                        # missing former types.Feature.TMP_RESULT_KEYS
                         keys = result_.keys()
                         self.assertIn("name", keys)
                         idx = keys.index("name")
