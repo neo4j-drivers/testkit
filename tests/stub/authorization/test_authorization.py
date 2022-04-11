@@ -39,7 +39,7 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.TokenExpired",
                          error.code)
-        if driver in ["go", "javascript"]:
+        if driver in ["go"]:
             self.assertIn(
                 "Token expired", error.msg
             )
