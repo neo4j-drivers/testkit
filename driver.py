@@ -4,6 +4,8 @@ import shutil
 import docker
 import neo4j
 
+BUILD_ARG_PREFIX = "TESTKIT_DRIVER_BUILD_ARG_"
+
 
 def _get_glue(this_path, driver_name, driver_repo):
     """Locate where driver has it's docker image and Python "glue" scripts.
@@ -25,7 +27,7 @@ def _get_glue(this_path, driver_name, driver_repo):
 
 
 def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
-                  artifacts_path):
+                  artifacts_path, build_args):
     """Ensure that an up to date Docker image exists for the driver."""
     # Construct Docker image name from driver name (i.e drivers-go) and
     # branch name (i.e 4.2, go-1.14-image)
@@ -47,9 +49,15 @@ def _ensure_image(testkit_path, docker_image_path, branch_name, driver_name,
 
     # This will use the driver folder as build context.
     docker.build_and_tag(image_name, docker_image_path,
-                         log_path=artifacts_path)
+                         log_path=artifacts_path, args=build_args)
 
     return image_name
+
+
+def _get_build_args():
+    return {k[len(BUILD_ARG_PREFIX):]: v
+            for (k, v) in os.environ.items()
+            if k.startswith(BUILD_ARG_PREFIX)}
 
 
 def start_container(testkit_path, branch_name, driver_name, driver_path,
@@ -59,7 +67,8 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
     host_glue_path, driver_glue_path = _get_glue(testkit_path, driver_name,
                                                  driver_path)
     image = _ensure_image(testkit_path, host_glue_path,
-                          branch_name, driver_name, artifacts_path_build)
+                          branch_name, driver_name, artifacts_path_build,
+                          build_args=_get_build_args())
     container_name = "driver"
     # Configure volume map for the driver container
     mount_map = {
