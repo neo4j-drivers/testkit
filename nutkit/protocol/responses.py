@@ -208,7 +208,26 @@ class NullRecord:
 
 
 class RecordList:
-    """Represents list of records returned from ResultList request."""
+    """Represents list of records returned from ResultList request.
+
+    Fields:
+        records:
+            None or a (plain json) list of json objects with a "values" key
+            that contains the same as the `values` field of a  Record response.
+            Example:
+                [
+                    {
+                        "values": [
+                            {"name": "CypherNull", data: {}},
+                            {"name": "CypherInt", data: {value: 1}},
+                        ]
+                    },
+                    {
+                        "values": [...]
+                    },
+                    ...
+                ]
+    """
 
     def __init__(self, records=None):
         record_list = []
