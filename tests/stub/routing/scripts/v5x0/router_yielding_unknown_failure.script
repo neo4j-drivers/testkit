@@ -5,5 +5,4 @@ C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent":
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 C: ROUTE #ROUTINGCTX# [] {"[db]": {"U": "*"}}
 S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
-   IGNORED
    <EXIT>

@@ -10,5 +10,4 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 }}
 C: PULL {"n": -1}
 S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
-   IGNORED
    <EXIT>

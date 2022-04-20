@@ -12,5 +12,4 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 }}
 C: PULL {"n": -1}
 S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
-   IGNORED
    <EXIT>
