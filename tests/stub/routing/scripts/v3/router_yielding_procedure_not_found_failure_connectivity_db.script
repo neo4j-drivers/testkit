@@ -6,5 +6,4 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 C: RUN "CALL dbms.cluster.routing.getRoutingTable($context)" {"context": #ROUTINGCTX#} {"[mode]": "r"}
    PULL_ALL
 S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
-   IGNORED
    <EXIT>
