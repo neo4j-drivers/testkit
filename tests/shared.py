@@ -161,48 +161,6 @@ class TestkitTestCase(unittest.TestCase):
         response = self._backend.send_and_receive(protocol.StartTest(id_))
         if isinstance(response, protocol.SkipTest):
             self.skipTest(response.reason)
-
-        # TODO: remove this compatibility layer when all drivers are adapted
-        if get_driver_name() in ("java", "javascript", "go", "dotnet"):
-            for exp, sub in (
-                (r"^stub\.bookmarks\.test_bookmarks\.TestBookmarks",
-                 "stub.bookmark.Tx"),
-                (r"^stub\.disconnects\.test_disconnects\.TestDisconnects.",
-                 "stub.disconnected.SessionRunDisconnected."),
-                (r"^stub\.iteration\.[^.]+\.TestIterationSessionRun",
-                 "stub.iteration.SessionRun"),
-                (r"^stub\.iteration\.[^.]+\.TestIterationTxRun",
-                 "stub.iteration.TxRun"),
-                (r"^stub\.retry\.[^.]+\.", "stub.retry."),
-                (r"^stub\.routing\.[^.]+\.", "stub.routing."),
-                (r"^stub\.routing\.RoutingV4x1\.", "stub.routing.RoutingV4."),
-                (r"^stub\.routing\.RoutingV4x3\.", "stub.routing.Routing."),
-                (r"^stub\.session_run_parameters\."
-                 r"[^.]+\.TestSessionRunParameters\.",
-                 "stub.sessionparameters.SessionRunParameters."),
-                (r"^stub\.tx_begin_parameters\.[^.]+\.TestTxBeginParameters\.",
-                 "stub.txparameters.TxBeginParameters."),
-                (r"^stub\.versions\.[^.]+\.TestProtocolVersions",
-                 "stub.versions.ProtocolVersions"),
-                (r"^stub\.transport\.[^.]+\.TestTransport\.",
-                 "stub.transport.Transport."),
-                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV4x3\.",
-                 "stub.authorization.AuthorizationTests."),
-                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV4x1\.",
-                 "stub.authorization.AuthorizationTestsV4."),
-                (r"^stub\.authorization\.[^.]+\.TestAuthorizationV3\.",
-                 "stub.authorization.AuthorizationTestsV3."),
-                (r"^stub\.authorization\.[^.]+\.TestNoRoutingAuthorization\.",
-                 "stub.authorization.NoRoutingAuthorizationTests."),
-                (r"^stub\.server_side_routing\.test_server_side_routing\."
-                 r"TestServerSideRouting\.",
-                 "stub.serversiderouting.ServerSideRouting."),
-                (r"^neo4j\.test_session_run\.", "neo4j.sessionrun."),
-            ):
-                id_ = re.sub(exp, sub, id_)
-        response = self._backend.send_and_receive(protocol.StartTest(id_))
-        if isinstance(response, protocol.SkipTest):
-            self.skipTest(response.reason)
         elif isinstance(response, protocol.RunSubTests):
             self._check_subtests = True
         elif not isinstance(response, protocol.RunTest):
