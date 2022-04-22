@@ -22,6 +22,11 @@ class TestResultSingle(IterationTestBase):
                 error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("InvalidOperationException", error.errorType)
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.NoSuchRecordException",
+                error.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -37,6 +42,11 @@ class TestResultSingle(IterationTestBase):
                 error.errorType)
         elif driver in ["dotnet"]:
             self.assertEqual("ServiceUnavailableError", error.errorType)
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ServiceUnavailableException",
+                error.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
