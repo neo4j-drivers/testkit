@@ -1,12 +1,5 @@
 from nutkit import protocol as types
-
-from ..shared import (
-    dns_resolve_single,
-    driver_feature,
-    get_driver_name,
-    TestkitTestCase,
-)
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_http_port,
@@ -14,6 +7,12 @@ from .shared import (
     get_neo4j_scheme,
     get_server_info,
     requires_multi_db_support,
+)
+from tests.shared import (
+    dns_resolve_single,
+    driver_feature,
+    get_driver_name,
+    TestkitTestCase,
 )
 
 

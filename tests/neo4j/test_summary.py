@@ -1,7 +1,5 @@
 from nutkit import protocol as types
-
-from ..shared import TestkitTestCase
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_port,
@@ -9,6 +7,7 @@ from .shared import (
     get_server_info,
     requires_multi_db_support,
 )
+from tests.shared import TestkitTestCase
 
 
 class TestSummary(TestkitTestCase):
