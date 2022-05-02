@@ -157,7 +157,7 @@ class TestDirectDriver(TestkitTestCase):
             for record in result_:
                 if node:
                     self.assertEqual(len(record.values), 1)
-                    if get_driver_name() not in ["dotnet"]:
+                    if get_driver_name() not in ["dotnet", "javascript"]:
                         # missing former types.Feature.TMP_RESULT_KEYS
                         self.assertEqual(result_.keys(), ["p"])
                     p = record.values[0]
@@ -166,7 +166,7 @@ class TestDirectDriver(TestkitTestCase):
                     name = p.props.value.get("name")
                 else:
                     idx = 0
-                    if get_driver_name() not in ["dotnet"]:
+                    if get_driver_name() not in ["dotnet", "javascript"]:
                         # missing former types.Feature.TMP_RESULT_KEYS
                         keys = result_.keys()
                         self.assertIn("name", keys)
