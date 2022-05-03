@@ -95,6 +95,10 @@ class TestDirectDriver(TestkitTestCase):
         if not get_server_info().supports_multi_db:
             self.skipTest("Needs multi DB support")
         self._driver = get_driver(self._backend)
+        self._session = self._driver.session("w", database="system")
+        self._session.run("DROP DATABASE `test-database` IF EXISTS").consume()
+        self._session.close()
+
         self._session = self._driver.session("r", database="test-database")
         with self.assertRaises(types.DriverError) as e:
             result = self._session.run("RETURN 1")
