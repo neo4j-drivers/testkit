@@ -123,6 +123,8 @@ class TestDirectDriver(TestkitTestCase):
 
             self._session = self._driver.session("r", database="test-database")
             result = self._session.run("RETURN 1")
+            # server bug on 4.4-: does not report db on DISCARD before PULL
+            result.next()
             summary = result.consume()
             self.assertEqual(summary.database, "test-database")
 
