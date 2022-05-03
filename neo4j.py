@@ -1,6 +1,7 @@
 """Neo4j instance test configuration (no runtime properties)."""
 
 from dataclasses import dataclass
+import os
 from os.path import join
 from typing import Optional
 
@@ -134,10 +135,21 @@ class Core:
             "NEO4J_AUTH":
                 "%s/%s" % (username, password),
         }
+        for key in list(env_map.keys()):
+            # Config options renamed in 5.0 (old versions are deprecated and
+            # still working; at lest they should be ;) )
+            if key.startswith("NEO4J_causal__clustering_"):
+                new_key = key.replace("NEO4J_causal__clustering_",
+                                      "NEO4J_cluster_")
+                env_map[new_key] = env_map[key]
         logs_path = join(self._artifacts_path, "logs")
-        self._container = docker.run(image, self.name,
-                                     env_map=env_map, network=network,
-                                     mount_map={logs_path: "/logs"})
+        os.makedirs(logs_path, exist_ok=True)
+
+        self._container = docker.run(
+            image, self.name,
+            env_map=env_map, network=network, mount_map={logs_path: "/logs"},
+            log_path=self._artifacts_path, background=True
+        )
 
     def stop(self):
         self._container.rm()
