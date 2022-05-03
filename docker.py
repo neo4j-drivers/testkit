@@ -18,6 +18,34 @@ def _docker_path(path):
     return str(path.as_posix())
 
 
+def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
+    def run():
+        if not log_path:
+            print(cmd)
+            subprocess.run(cmd, *args, stdout=None, stderr=None, **kwargs)
+        else:
+            out_path = os.path.join(log_path, "out.log")
+            err_path = os.path.join(log_path, "err.log")
+            with open(out_path, "a") as out_fd:
+                with open(err_path, "a") as err_fd:
+                    out_fd.write(str(cmd) + "\n")
+                    out_fd.flush()
+                    err_fd.write(str(cmd) + "\n")
+                    err_fd.flush()
+                    print(cmd)
+                    subprocess.run(cmd, *args,
+                                   stdout=out_fd, stderr=err_fd, **kwargs)
+                    out_fd.write("\n")
+                    out_fd.flush()
+                    err_fd.write("\n")
+                    err_fd.flush()
+
+    if not background:
+        run()
+    else:
+        Thread(target=run, daemon=True).start()
+
+
 class Container:
     def __init__(self, name):
         self.name = name
@@ -30,48 +58,22 @@ class Container:
                 cmd.extend(["-e", "%s=%s" % (k, env_map[k])])
 
     def _exec(self, command, workdir=None, env_map=None, log_path=None,
-              check=True):
+              background=False):
         cmd = ["docker", "exec"]
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
         cmd.extend(command)
-        if not log_path:
-            print(cmd)
-            subprocess.run(cmd, check=True)
-        else:
-            out_path = os.path.join(log_path, "out.log")
-            err_path = os.path.join(log_path, "err.log")
-            with open(out_path, "a") as out_fd:
-                with open(err_path, "a") as err_fd:
-                    out_fd.write(str(cmd) + "\n")
-                    out_fd.flush()
-                    err_fd.write(str(cmd) + "\n")
-                    err_fd.flush()
-                    print(cmd)
-                    subprocess.run(cmd, check=check,
-                                   stdout=out_fd, stderr=err_fd)
-                    out_fd.write("\n")
-                    out_fd.flush()
-                    err_fd.write("\n")
-                    err_fd.flush()
+        _subprocess_run(cmd, log_path=log_path, background=background,
+                        check=True)
 
     def exec(self, command, workdir=None, env_map=None, log_path=None):
         self._exec(command, workdir=workdir, env_map=env_map,
-                   log_path=log_path, check=True)
+                   log_path=log_path)
 
-    def exec_detached(self, command, workdir=None, env_map=None,
-                      log_path=None):
-        Thread(
-            target=self._exec,
-            args=(command,),
-            kwargs={
-                "workdir": workdir,
-                "env_map": env_map,
-                "log_path": log_path,
-                "check": False,
-            },
-            daemon=True
-        ).start()
+    def exec_background(self, command, workdir=None, env_map=None,
+                        log_path=None):
+        self._exec(command, workdir=workdir, env_map=env_map,
+                   log_path=log_path, background=True)
 
     def rm(self):
         cmd = ["docker", "rm", "-f", "-v", self.name]
@@ -127,11 +129,13 @@ def start(name):
 
 def run(image, name, command=None, mount_map=None, host_map=None,
         port_map=None, env_map=None, working_folder=None, network=None,
-        aliases=None):
+        aliases=None, log_path=None, extra_args=None, background=False):
     # Bootstrap the driver docker image by running a bootstrap script in
     # the image. The driver docker image only contains the tools needed to
     # build, not the built driver.
-    cmd = ["docker", "run", "--name", name, "--rm", "--detach"]
+    cmd = ["docker", "run", "--name", name, "--rm"]
+    if not background:
+        cmd.append("--detach")
     if mount_map is not None:
         for k in mount_map:
             cmd.extend(["-v", "%s:%s" % (_docker_path(k), mount_map[k])])
@@ -153,11 +157,12 @@ def run(image, name, command=None, mount_map=None, host_map=None,
             cmd.append("--network-alias=" + a)
     if "TEST_DOCKER_USER" in os.environ:
         cmd.extend(["-u", os.environ["TEST_DOCKER_USER"]])
+    if extra_args:
+        cmd.extend(extra_args)
     cmd.append(image)
     if command:
         cmd.extend(command)
-    print(cmd)
-    subprocess.run(cmd, check=True)
+    _subprocess_run(cmd, check=True, log_path=log_path, background=background)
     container = Container(name)
     _running[name] = container
     return container
