@@ -9,9 +9,19 @@ A: HELLO {"{}": "*"}
     C: PULL {"n": 1}
     S: RECORD ["1_1"]
        SUCCESS {"has_more": true}
-    C: PULL {"n": 1}
-    S: RECORD ["1_2"]
-       SUCCESS {}
+    {{
+        C: PULL {"n": 1}
+        S: RECORD ["1_2"]
+           SUCCESS {"has_more": true}
+        C: PULL {"n": -1}
+        S: RECORD ["1_3"]
+           SUCCESS {}
+    ----
+        C: PULL {"n": -1}
+        S: RECORD ["1_2"]
+           RECORD ["1_3"]
+           SUCCESS {}
+    }}
 ?}
 *: RESET
 {?
@@ -30,6 +40,14 @@ A: HELLO {"{}": "*"}
     S: SUCCESS {"fields": ["x"]}
     C: PULL {"n": 1}
     S: RECORD ["3_1"]
+       SUCCESS {}
+?}
+*: RESET
+{?
+    C: RUN "CYPHER NESTED 2" {} {}
+    S: SUCCESS {"fields": ["x"]}
+    C: PULL {"n": 1}
+    S: RECORD ["4_1"]
        SUCCESS {}
 ?}
 *: RESET
