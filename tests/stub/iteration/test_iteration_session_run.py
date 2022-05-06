@@ -136,13 +136,8 @@ class TestIterationSessionRun(TestkitTestCase):
             if isinstance(rec1, types.NullRecord):
                 break
             seq.append(rec1.values[0].value)
-            seq2 = []
             res2 = session.run("CYPHER NESTED %d" % i)
-            while True:
-                rec2 = res2.next()
-                if isinstance(rec2, types.NullRecord):
-                    break
-                seq2.append(rec2.values[0].value)
+            seq2 = [rec.values[0].value for rec in res2]
             seqs.append(seq2)
             i += 1
 
