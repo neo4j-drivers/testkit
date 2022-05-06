@@ -52,7 +52,12 @@ S: RECORD ["1_1"]
     S: RECORD ["3_1"]
        SUCCESS {}
     C: PULL {"n": 1, "qid": 1}
-    S: RECORD ["1_2"]
+    S: RECORD ["1_3"]
+       SUCCESS {}
+    C: RUN "CYPHER NESTED" {} {}
+    S: SUCCESS {"fields": ["x"], "qid": 4}
+    C: PULL {"n": 1, "[qid]": 4}
+    S: RECORD ["4_1"]
        SUCCESS {}
 }}
 C: COMMIT

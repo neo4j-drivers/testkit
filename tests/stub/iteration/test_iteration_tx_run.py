@@ -126,5 +126,6 @@ class TestIterationTxRun(TestkitTestCase):
         tx.commit()
         driver.close()
         self._server.done()
-        self.assertEqual(["1_1", "1_2"], seq)
-        self.assertEqual([["2_1", "2_2"], ["3_1", "3_2"]], seqs)
+        self.assertEqual(["1_1", "1_2", "1_3"], seq)
+        self.assertEqual(
+            [["2_1", "2_2"], ["3_1", "3_2"], ["4_1", "4_2"]], seqs)
