@@ -1,11 +1,5 @@
 from nutkit import protocol as types
-
-from ..shared import (
-    dns_resolve_single,
-    get_driver_name,
-    TestkitTestCase,
-)
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_http_port,
@@ -13,6 +7,11 @@ from .shared import (
     get_neo4j_scheme,
     get_server_info,
     requires_multi_db_support,
+)
+from tests.shared import (
+    dns_resolve_single,
+    get_driver_name,
+    TestkitTestCase,
 )
 
 
@@ -129,6 +128,8 @@ class TestDirectDriver(TestkitTestCase):
 
             self._session = self._driver.session("r", database="test-database")
             result = self._session.run("RETURN 1")
+            # server bug on 4.4-: does not report db on DISCARD before PULL
+            result.next()
             summary = result.consume()
             self.assertEqual(summary.database, "test-database")
 
@@ -158,7 +159,7 @@ class TestDirectDriver(TestkitTestCase):
             for record in result_:
                 if node:
                     self.assertEqual(len(record.values), 1)
-                    if get_driver_name() not in ["dotnet"]:
+                    if get_driver_name() not in ["dotnet", "javascript"]:
                         # missing former types.Feature.TMP_RESULT_KEYS
                         self.assertEqual(result_.keys(), ["p"])
                     p = record.values[0]
@@ -167,7 +168,7 @@ class TestDirectDriver(TestkitTestCase):
                     name = p.props.value.get("name")
                 else:
                     idx = 0
-                    if get_driver_name() not in ["dotnet"]:
+                    if get_driver_name() not in ["dotnet", "javascript"]:
                         # missing former types.Feature.TMP_RESULT_KEYS
                         keys = result_.keys()
                         self.assertIn("name", keys)
