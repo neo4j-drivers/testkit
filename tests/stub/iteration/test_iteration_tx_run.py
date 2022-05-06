@@ -119,8 +119,8 @@ class TestIterationTxRun(TestkitTestCase):
             if isinstance(rec1, types.NullRecord):
                 break
             seq.append(rec1.values[0].value)
-            res2 = session.run("CYPHER NESTED")
-            seq2 = [rec.values[0].value for rec in res2]
+            seq2 = [rec.values[0].value for rec
+                    in tx.run("CYPHER NESTED").list()]
             seqs.append(seq2)
 
         tx.commit()
