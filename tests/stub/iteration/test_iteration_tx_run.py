@@ -97,8 +97,8 @@ class TestIterationTxRun(TestkitTestCase):
         tx.commit()
         driver.close()
         self._server.done()
-        self.assertEqual(["1_1", "1_2"], seq)
-        self.assertEqual([["2_1", "2_2"], ["3_1"]], seqs)
+        self.assertEqual(["1_1", "1_2", "1_3"], seq)
+        self.assertEqual([["2_1", "2_2"], ["3_1"], ["4_1"]], seqs)
 
     @driver_feature(types.Feature.BOLT_4_4, types.Feature.API_RESULT_LIST,
                     types.Feature.OPT_RESULT_LIST_FETCH_ALL)
