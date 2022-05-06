@@ -1,7 +1,5 @@
 from nutkit import protocol as types
-
-from ..shared import TestkitTestCase
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_port,
@@ -9,6 +7,7 @@ from .shared import (
     get_server_info,
     requires_multi_db_support,
 )
+from tests.shared import TestkitTestCase
 
 
 class TestSummary(TestkitTestCase):
@@ -152,6 +151,10 @@ class TestSummary(TestkitTestCase):
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
+        version = get_server_info().version
+        new_index_syntax = version >= "4"
+        new_constraint_syntax = version >= "4.4"
+
         self._session = self._driver.session("w", database="system")
 
         self._session.run("DROP DATABASE test IF EXISTS").consume()
@@ -234,27 +237,44 @@ class TestSummary(TestkitTestCase):
                               contains_updates=True)
         self._session.close()
 
+        if new_index_syntax:  # 4.0+
+            query = "CREATE INDEX test_label_prop FOR (n:ALabel) ON (n.prop)"
+        else:  # 3.5-
+            query = "CREATE INDEX ON :ALabel (prop)"
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("CREATE INDEX ON :ALabel(prop)").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary, indexes_added=1, contains_updates=True)
         self._session.close()
 
+        if new_index_syntax:  # 4.0+
+            query = "DROP INDEX test_label_prop"
+        else:  # 3.5-
+            query = "DROP INDEX ON :ALabel(prop)"
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("DROP INDEX ON :ALabel(prop)").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary, indexes_removed=1,
                               contains_updates=True)
         self._session.close()
 
+        if new_constraint_syntax:  # 4.4+
+            query = ("CREATE CONSTRAINT test_book_isbn FOR (book:Book) "
+                     "REQUIRE book.isbn IS UNIQUE")
+        else:  # 4.3-
+            query = ("CREATE CONSTRAINT ON (book:Book) "
+                     "ASSERT book.isbn IS UNIQUE")
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("CREATE CONSTRAINT ON (book:Book) "
-                                    "ASSERT book.isbn IS UNIQUE").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary,
                               constraints_added=1, contains_updates=True)
         self._session.close()
 
+        if new_constraint_syntax:  # 4.4+
+            query = "DROP CONSTRAINT test_book_isbn"
+        else:  # 4.3-
+            query = ("DROP CONSTRAINT ON (book:Book) "
+                     "ASSERT book.isbn IS UNIQUE")
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("DROP CONSTRAINT ON (book:Book) "
-                                    "ASSERT book.isbn IS UNIQUE").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary,
                               constraints_removed=1, contains_updates=True)
         self._session.close()

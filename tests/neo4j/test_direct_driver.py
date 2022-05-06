@@ -1,12 +1,5 @@
 from nutkit import protocol as types
-
-from ..shared import (
-    dns_resolve_single,
-    driver_feature,
-    get_driver_name,
-    TestkitTestCase,
-)
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_http_port,
@@ -14,6 +7,12 @@ from .shared import (
     get_neo4j_scheme,
     get_server_info,
     requires_multi_db_support,
+)
+from tests.shared import (
+    dns_resolve_single,
+    driver_feature,
+    get_driver_name,
+    TestkitTestCase,
 )
 
 
@@ -96,6 +95,10 @@ class TestDirectDriver(TestkitTestCase):
         if not get_server_info().supports_multi_db:
             self.skipTest("Needs multi DB support")
         self._driver = get_driver(self._backend)
+        self._session = self._driver.session("w", database="system")
+        self._session.run("DROP DATABASE `test-database` IF EXISTS").consume()
+        self._session.close()
+
         self._session = self._driver.session("r", database="test-database")
         with self.assertRaises(types.DriverError) as e:
             result = self._session.run("RETURN 1")
@@ -124,6 +127,8 @@ class TestDirectDriver(TestkitTestCase):
 
             self._session = self._driver.session("r", database="test-database")
             result = self._session.run("RETURN 1")
+            # server bug on 4.4-: does not report db on DISCARD before PULL
+            result.next()
             summary = result.consume()
             self.assertEqual(summary.database, "test-database")
 
