@@ -89,7 +89,7 @@ class TestOptimizations(TestkitTestCase):
                     res.consume()
                 else:
                     results.append(
-                        list(map(lambda r: r.value, res.next().values))
+                        list(map(lambda r: r.values[0].value, res))
                     )
                 if use_tx == "commit":
                     tx.commit()
@@ -101,7 +101,7 @@ class TestOptimizations(TestkitTestCase):
                     res.consume()
                 else:
                     results.append(
-                        list(map(lambda r: r.value, res.next().values))
+                        list(map(lambda r: r.values[0].value, res))
                     )
 
         session.close()
