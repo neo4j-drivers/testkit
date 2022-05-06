@@ -117,3 +117,66 @@ class TestIterationSessionRun(TestkitTestCase):
             for mode in ("write", "read"):
                 with self.subTest(version=version, mode=mode):
                     test(version, script)
+
+    @driver_feature(types.Feature.BOLT_4_4)
+    def test_nested(self):
+        uri = "bolt://%s" % self._server.address
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken("basic", principal="",
+                                                 credentials=""))
+        self._server.start(path=self.script_path("v4x4",
+                                                 "pull_1_nested.script"))
+        session = driver.session("w", fetch_size=1)
+        res1 = session.run("CYPHER")
+        seq = []
+        seqs = []
+        i = 0
+        while True:
+            rec1 = res1.next()
+            if isinstance(rec1, types.NullRecord):
+                break
+            seq.append(rec1.values[0].value)
+            seq2 = []
+            res2 = session.run("CYPHER NESTED %d" % i)
+            while True:
+                rec2 = res2.next()
+                if isinstance(rec2, types.NullRecord):
+                    break
+                seq2.append(rec2.values[0].value)
+            seqs.append(seq2)
+            i += 1
+
+        driver.close()
+        self._server.done()
+        self.assertEqual(["1_1", "1_2"], seq)
+        self.assertEqual([["2_1", "2_2"], ["3_1"]], seqs)
+
+    @driver_feature(types.Feature.BOLT_4_4, types.Feature.API_RESULT_LIST,
+                    types.Feature.OPT_RESULT_LIST_FETCH_ALL)
+    def test_nested_using_list(self):
+        uri = "bolt://%s" % self._server.address
+        driver = Driver(self._backend, uri,
+                        types.AuthorizationToken("basic", principal="",
+                                                 credentials=""))
+        self._server.start(path=self.script_path(
+            "v4x4", "pull_1_nested_list.script"))
+        session = driver.session("w", fetch_size=1)
+        res1 = session.run("CYPHER")
+        seq = []
+        seqs = []
+        i = 0
+        while True:
+            rec1 = res1.next()
+            if isinstance(rec1, types.NullRecord):
+                break
+            seq.append(rec1.values[0].value)
+            seq2 = []
+            for rec2 in session.run("CYPHER NESTED %d" % i).list():
+                seq2.append(rec2.values[0].value)
+            seqs.append(seq2)
+            i += 1
+
+        driver.close()
+        self._server.done()
+        self.assertEqual(["1_1", "1_2"], seq)
+        self.assertEqual([["2_1", "2_2"], ["3_1", "3_2"]], seqs)

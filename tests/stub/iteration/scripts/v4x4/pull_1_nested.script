@@ -1,0 +1,36 @@
+!: BOLT 4.4
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+*: RESET
+{?
+    C: RUN "CYPHER" {} {}
+    S: SUCCESS {"fields": ["x"]}
+    C: PULL {"n": 1}
+    S: RECORD ["1_1"]
+       SUCCESS {"has_more": true}
+    C: PULL {"n": 1}
+    S: RECORD ["1_2"]
+       SUCCESS {}
+?}
+*: RESET
+{?
+    C: RUN "CYPHER NESTED 0" {} {}
+    S: SUCCESS {"fields": ["x"]}
+    C: PULL {"n": 1}
+    S: RECORD ["2_1"]
+       SUCCESS {"has_more": true}
+    C: PULL {"n": 1}
+    S: RECORD ["2_2"]
+       SUCCESS {}
+?}
+*: RESET
+{?
+    C: RUN "CYPHER NESTED 1" {} {}
+    S: SUCCESS {"fields": ["x"]}
+    C: PULL {"n": 1}
+    S: RECORD ["3_1"]
+       SUCCESS {}
+?}
+*: RESET
+?: GOODBYE
