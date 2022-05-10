@@ -1,5 +1,6 @@
 from nutkit import protocol as types
 from nutkit.frontend import Driver
+from nutkit.protocol import Feature
 from tests.shared import (
     driver_feature,
     TestkitTestCase,
@@ -8,6 +9,8 @@ from tests.stub.shared import StubServer
 
 
 class TestErrors(TestkitTestCase):
+    required_features = Feature.DETAIL_MAPS_ERROR_CODE,
+
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)

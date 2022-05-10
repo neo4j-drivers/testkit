@@ -128,6 +128,11 @@ class Feature(Enum):
     # configuration as long as values match.
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
+    # The driver will map previously named Transient Error codes to Client
+    # when using 5.0 protocol for errors:
+    # - Neo.TransientError.Transaction.Terminated
+    # - Neo.TransientError.Transaction.LockClientStopped
+    DETAIL_MAPS_ERROR_CODE = "Detail:MapsErrorCode"
     # The driver sets the id of nodes and relationships to Null if the server
     # doesn't provide them. If the driver does not report this feature flag,
     # TestKit will assert the value to be -1 instead.
