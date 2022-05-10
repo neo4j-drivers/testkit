@@ -1,4 +1,4 @@
-!: BOLT 4.4
+!: BOLT #BOLT_PROTOCOL#
 
 A: HELLO {"{}": "*"}
 *: RESET

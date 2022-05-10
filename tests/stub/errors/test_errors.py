@@ -20,9 +20,10 @@ class TestErrors(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    def _test(self, script, throw_code, expected_code):
+    def _test(self, script, protocol, throw_code, expected_code):
         params = {
-            "#ERROR_CODE#": throw_code
+            "#ERROR_CODE#": throw_code,
+            "#BOLT_PROTOCOL#": protocol
         }
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
@@ -46,24 +47,24 @@ class TestErrors(TestkitTestCase):
 
     @driver_feature(types.Feature.BOLT_4_4)
     def test_terminated_4x4_throws_as_client_error(self):
-        self._test("test_error.script",
+        self._test("test_error.script", "4.4",
                    "Neo.TransientError.Transaction.Terminated",
                    "Neo.ClientError.Transaction.Terminated")
 
     @driver_feature(types.Feature.BOLT_5_0)
     def test_terminated_5x0_throws_as_client_error(self):
-        self._test("test_error.script",
+        self._test("test_error.script", "5.0",
                    "Neo.ClientError.Transaction.Terminated",
                    "Neo.ClientError.Transaction.Terminated")
 
     @driver_feature(types.Feature.BOLT_4_4)
     def test_lock_client_stopped_4x4_throws_as_client_error(self):
-        self._test("test_error.script",
+        self._test("test_error.script", "4.4",
                    "Neo.TransientError.Transaction.LockClientStopped",
                    "Neo.ClientError.Transaction.LockClientStopped")
 
     @driver_feature(types.Feature.BOLT_5_0)
     def test_lock_client_stopped_5x0_throws_as_client_error(self):
-        self._test("test_error.script",
+        self._test("test_error.script", "5.0",
                    "Neo.ClientError.Transaction.LockClientStopped",
                    "Neo.ClientError.Transaction.LockClientStopped")
