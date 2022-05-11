@@ -1,4 +1,5 @@
 import nutkit.protocol as types
+from nutkit.protocol import Feature
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
@@ -155,8 +156,12 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-        self.assertEqual(e.exception.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
+
+        expected_code = "Neo.TransientError.Transaction.LockClientStopped"
+        if self.driver_supports_features(Feature.DETAIL_MAPS_ERROR_CODE):
+            expected_code = "Neo.ClientError.Transaction.LockClientStopped"
+        self.assertEqual(e.exception.code, expected_code)
+
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")

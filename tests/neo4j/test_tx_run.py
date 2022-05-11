@@ -1,6 +1,7 @@
 import uuid
 
 import nutkit.protocol as types
+from nutkit.protocol import Feature
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
@@ -320,8 +321,11 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as e:
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
-        self.assertEqual(e.exception.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
+
+            expected_code = "Neo.TransientError.Transaction.LockClientStopped"
+            if self.driver_supports_features(Feature.DETAIL_MAPS_ERROR_CODE):
+                expected_code = "Neo.ClientError.Transaction.LockClientStopped"
+            self.assertEqual(e.exception.code, expected_code)
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")
