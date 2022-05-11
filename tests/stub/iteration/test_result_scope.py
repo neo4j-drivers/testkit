@@ -48,6 +48,8 @@ class TestResultScope(TestkitTestCase):
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
             self.assertEqual(exc.msg, "Result is already consumed")
+        elif driver in ["go"]:
+            self.assertEqual(exc.msg, "result cursor is not available anymore")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -66,6 +68,8 @@ class TestResultScope(TestkitTestCase):
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
             self.assertEqual(exc.msg, "Result is already consumed")
+        elif driver in ["go"]:
+            self.assertEqual(exc.msg, "result cursor is not available anymore")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
