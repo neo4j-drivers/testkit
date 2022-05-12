@@ -129,7 +129,7 @@ class Feature(Enum):
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
     # The driver will map previously named Transient Error codes to Client
-    # when using 5.0 protocol for errors:
+    # when using a protocol < 5.0 for errors:
     # - Neo.TransientError.Transaction.Terminated
     # - Neo.TransientError.Transaction.LockClientStopped
     DETAIL_MAPS_ERROR_CODE = "Detail:MapsErrorCode"
