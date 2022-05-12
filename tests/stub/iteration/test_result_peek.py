@@ -3,8 +3,7 @@ from tests.shared import (
     driver_feature,
     get_driver_name,
 )
-
-from ._common import IterationTestBase
+from tests.stub.iteration._common import IterationTestBase
 
 
 class TestResultPeek(IterationTestBase):

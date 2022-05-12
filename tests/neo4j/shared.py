@@ -140,8 +140,8 @@ def requires_multi_db_support(func):
             raise TypeError("Should only decorate TestkitTestCase methods")
         return args[0]
 
-    @wraps(func)
     @requires_min_bolt_version(protocol.Feature.BOLT_4_0)
+    @wraps(func)
     def wrapper(*args, **kwargs):
         test_case = get_valid_test_case(*args, **kwargs)
         if not get_server_info().supports_multi_db:

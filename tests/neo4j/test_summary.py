@@ -1,17 +1,15 @@
 from nutkit import protocol as types
-
-from ..shared import (
-    driver_feature,
-    get_driver_name,
-    TestkitTestCase,
-)
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
     requires_multi_db_support,
+)
+from tests.shared import (
+    get_driver_name,
+    TestkitTestCase,
 )
 
 
@@ -38,7 +36,6 @@ class TestSummary(TestkitTestCase):
         self._session = self._driver.session("w")
         return self._session.write_transaction(work)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_summary_after_consuming_result(self):
         summary = self.get_summary("CREATE (n) RETURN n")
         self.assertEqual(summary.query.text, "CREATE (n) RETURN n")
@@ -46,28 +43,23 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.query_type, "rw")
         self.assertEqual(summary.counters.nodes_created, 1)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_plan_info(self):
         summary = self.get_summary("CREATE (n) RETURN n")
         self.assertIsNone(summary.plan)
         self.assertIsNone(summary.profile)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_plan_info(self):
         summary = self.get_summary("EXPLAIN CREATE (n) RETURN n")
         self.assertIsInstance(summary.plan, dict)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_profile_info(self):
         summary = self.get_summary("PROFILE CREATE (n) RETURN n")
         self.assertIsInstance(summary.profile, dict)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_no_notification_info(self):
         summary = self.get_summary("CREATE (n) RETURN n")
         self.assertIsNone(summary.notifications)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_can_obtain_notification_info(self):
         summary = self.get_summary("EXPLAIN MATCH (n), (m) RETURN n, m")
         notifications = summary.notifications
@@ -75,7 +67,6 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(len(notifications), 1)
         self.assertIsInstance(notifications[0], dict)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_contains_time_information(self):
         summary = self.get_summary("UNWIND range(1, 100) AS n "
                                    "RETURN n AS number")
@@ -86,7 +77,6 @@ class TestSummary(TestkitTestCase):
         self.assertGreaterEqual(summary.result_available_after, 0)
         self.assertGreaterEqual(summary.result_consumed_after, 0)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
 
@@ -148,7 +138,6 @@ class TestSummary(TestkitTestCase):
             self.assertIsInstance(counter_val, type(val))
             self.assertEqual(counter_val, val)
 
-    @driver_feature(types.Feature.TMP_FULL_SUMMARY)
     def test_summary_counters_case_1(self):
         params = {"number": types.CypherInt(3)}
 
@@ -161,8 +150,6 @@ class TestSummary(TestkitTestCase):
 
         self._assert_counters(summary)
 
-    @driver_feature(types.Feature.TMP_RESULT_KEYS,
-                    types.Feature.TMP_FULL_SUMMARY)
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
