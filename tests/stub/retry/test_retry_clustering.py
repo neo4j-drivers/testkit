@@ -186,6 +186,52 @@ class TestRetryClustering(TestkitTestCase):
         self._routingServer.done()
         self._readServer.done()
 
+    def test_should_not_retry_on_mapped_transient_failures(self):
+        def _test():
+            self._routingServer.start(
+                path=self.script_path("clustering",
+                                      "router.script"),
+                vars_=self.get_vars()
+            )
+            self._writeServer.start(
+                path=self.script_path("tx_pull_yielding_failure.script"),
+                vars_={
+                    "#FAILURE#": '{"code": "%s", "message": "message"}'
+                                 % error[0]
+                }
+            )
+            num_retries = 0
+
+            def once(tx):
+                nonlocal num_retries
+                num_retries = num_retries + 1
+                result = tx.run("RETURN 1 as n")
+                result.next()
+
+            driver = Driver(self._backend, self._uri, self._auth,
+                            self._userAgent)
+            session = driver.session("w")
+
+            with self.assertRaises(types.DriverError) as exc:
+                session.write_transaction(once)
+
+            self.assertEqual(exc.exception.code, error[1])
+
+            self.assertEqual(num_retries, 1)
+            session.close()
+            driver.close()
+            self._routingServer.done()
+            self._writeServer.done()
+
+        for error in (["Neo.TransientError.Transaction.Terminated",
+                       "Neo.ClientError.Transaction.Terminated"],
+                      ["Neo.TransientError.Transaction.LockClientStopped",
+                       "Neo.ClientError.Transaction.LockClientStopped"]):
+            with self.subTest(error=error):
+                _test()
+            self._routingServer.reset()
+            self._writeServer.reset()
+
     def _run_with_transient_error(self, script, err):
         self._routingServer.start(
             path=self.script_path("clustering", "router.script"),
