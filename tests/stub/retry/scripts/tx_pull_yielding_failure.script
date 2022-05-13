@@ -6,7 +6,6 @@ S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 1000}
-S: RECORD [1]
-   FAILURE #FAILURE#
+S: FAILURE #FAILURE#
 *: RESET
 ?: GOODBYE
