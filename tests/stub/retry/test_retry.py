@@ -175,13 +175,13 @@ class TestRetry(TestkitTestCase):
                 _test()
             self._server.reset()
 
-    def test_should_not_retry_on_mapped_transient_failures(self):
+    def test_should_not_retry_non_retryable_tx_failures(self):
         def _test():
             self._server.start(
                 path=self.script_path("tx_pull_yielding_failure.script"),
                 vars_={
                     "#FAILURE#": '{"code": "%s", "message": "message"}'
-                                 % error[0]
+                                 % failure[0]
                 }
             )
             num_retries = 0
@@ -201,17 +201,31 @@ class TestRetry(TestkitTestCase):
             with self.assertRaises(types.DriverError) as exc:
                 session.write_transaction(once)
 
-            self.assertEqual(exc.exception.code, error[1])
+            self.assertEqual(exc.exception.code, failure[1])
 
             self.assertEqual(num_retries, 1)
             session.close()
             driver.close()
             self._server.done()
 
-        for error in (["Neo.TransientError.Transaction.Terminated",
-                       "Neo.ClientError.Transaction.Terminated"],
-                      ["Neo.TransientError.Transaction.LockClientStopped",
-                       "Neo.ClientError.Transaction.LockClientStopped"]):
-            with self.subTest(error=error):
+        failures = []
+        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
+        if get_driver_name() in ["javascript", "go", "ruby", "python"]:
+            failures.append(
+                ["Neo.TransientError.Transaction.Terminated",
+                 "Neo.TransientError.Transaction.Terminated"])
+            failures.append(
+                ["Neo.TransientError.Transaction.Terminated",
+                 "Neo.TransientError.Transaction.Terminated"])
+        else:
+            failures.append(
+                ["Neo.TransientError.Transaction.Terminated",
+                 "Neo.ClientError.Transaction.Terminated"])
+            failures.append(
+                ["Neo.TransientError.Transaction.LockClientStopped",
+                 "Neo.ClientError.Transaction.LockClientStopped"])
+
+        for failure in failures:
+            with self.subTest(failure=failure):
                 _test()
             self._server.reset()

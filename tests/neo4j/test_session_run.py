@@ -155,11 +155,20 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-        self.assertEqual(e.exception.code,
-                         "Neo.ClientError.Transaction.LockClientStopped")
-        if get_driver_name() in ["python"]:
-            self.assertEqual(e.exception.errorType,
-                             "<class 'neo4j.exceptions.ClientError'>")
+        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
+        if get_driver_name() in ["javascript", "go", "ruby", "python"]:
+            self.assertEqual(
+                e.exception.code,
+                "Neo.TransientError.Transaction.LockClientStopped")
+            if get_driver_name() in ["python"]:
+                self.assertEqual(e.exception.errorType,
+                                 "<class 'neo4j.exceptions.TransientError'>")
+        else:
+            self.assertEqual(e.exception.code,
+                             "Neo.ClientError.Transaction.LockClientStopped")
+            if get_driver_name() in ["python"]:
+                self.assertEqual(e.exception.errorType,
+                                 "<class 'neo4j.exceptions.ClientError'>")
 
     @cluster_unsafe_test
     def test_regex_in_parameter(self):
