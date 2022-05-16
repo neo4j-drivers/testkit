@@ -3,6 +3,7 @@ import pathlib
 import re
 import subprocess
 from threading import Thread
+import traceback
 
 _running = {}
 _created_tags = set()
@@ -33,12 +34,22 @@ def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
                     err_fd.write(str(cmd) + "\n")
                     err_fd.flush()
                     print(cmd)
-                    subprocess.run(cmd, *args,
-                                   stdout=out_fd, stderr=err_fd, **kwargs)
-                    out_fd.write("\n")
-                    out_fd.flush()
-                    err_fd.write("\n")
-                    err_fd.flush()
+                    try:
+                        subprocess.run(cmd, *args,
+                                       stdout=out_fd, stderr=err_fd, **kwargs)
+                    except BaseException:
+                        formatted_exc = ("\nProcess failed:\n"
+                                         + traceback.format_exc())
+                        out_fd.write(formatted_exc + "\n")
+                        out_fd.flush()
+                        err_fd.write(formatted_exc + "\n")
+                        err_fd.flush()
+                        raise
+                    finally:
+                        out_fd.write("\n")
+                        out_fd.flush()
+                        err_fd.write("\n")
+                        err_fd.flush()
 
     if not background:
         run()
