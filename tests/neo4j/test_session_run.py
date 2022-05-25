@@ -156,7 +156,7 @@ class TestSessionRun(TestkitTestCase):
             # requires explicit termination of transactions
             tx1.rollback()
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        if get_driver_name() in ["javascript", "go", "ruby", "python"]:
+        if get_driver_name() in ["javascript", "ruby", "python"]:
             self.assertEqual(
                 e.exception.code,
                 "Neo.TransientError.Transaction.LockClientStopped")
