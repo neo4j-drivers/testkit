@@ -222,7 +222,7 @@ class TestTxFuncRun(TestkitTestCase):
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
         self.assertEqual(exc.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
+                         "Neo.ClientError.Transaction.LockClientStopped")
         if get_driver_name() in ["python"]:
             self.assertEqual(exc.errorType,
                              "<class 'neo4j.exceptions.TransientError'>")
