@@ -237,7 +237,7 @@ class TestRetryClustering(TestkitTestCase):
                 ["Neo.TransientError.Transaction.Terminated",
                  "Neo.ClientError.Transaction.Terminated"])
             failures.append(
-                ["Neo.TransientError.Transaction.LockClientStopped",
+                ["Neo.ClientError.Transaction.LockClientStopped",
                  "Neo.ClientError.Transaction.LockClientStopped"])
 
         for failure in (failures):

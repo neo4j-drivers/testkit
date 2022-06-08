@@ -203,7 +203,7 @@ class TestTxFuncRun(TestkitTestCase):
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
             if (exc.code
-                    != "Neo.TransientError.Transaction.LockClientStopped"):
+                    != "Neo.ClientError.Transaction.LockClientStopped"):
                 # This is not the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise exc
