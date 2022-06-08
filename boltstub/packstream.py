@@ -77,7 +77,8 @@ class StructTagV1:
 
 
 class StructTagV2(StructTagV1):
-    pass
+    date_time = b"\x49"
+    date_time_zone_id = b"\x69"
 
 
 class Structure:

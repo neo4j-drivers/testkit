@@ -1,6 +1,8 @@
 import datetime
 import re
+from typing import Optional
 
+from ..common.errors import JOLTValueError
 from ..common.types import _JoltParsedType
 from ..common.types import JoltType as _JoltTypeCommon
 from ..common.types import JoltWildcard
@@ -55,9 +57,11 @@ class JoltDate(JoltV1DateMixin, JoltType):
 class JoltV1TimeMixin(_JoltParsedType):
     _parse_re = re.compile(
         r"^(\d{2}):(\d{2})(?::(\d{2}))?(?:\.(\d{1,9}))?"
-        r"(Z|\+00|[+-]00(?::?[0-5][0-9]|60)|"
-        r"(?:[+-](?:0[1-9]|1[0-9]|2[0-3]))(?::?[0-5][0-9]|60)?)$"
+        r"(?:(Z)|(\+00|[+-]00(?::?[0-5][0-9]|60)|"
+        r"(?:[+-](?:0[1-9]|1[0-9]|2[0-3]))(?::?[0-5][0-9]|60)?)"
+        r"(?:\[([^\]]+)\])?)$"
     )
+
     # yes:
     # 12:00:00.000000000+0000
     # 12:00:00.000+0000
@@ -73,37 +77,45 @@ class JoltV1TimeMixin(_JoltParsedType):
     # 12:00:00-0000
     # 12:0:0Z
 
-    def __init__(self, value: str):
-        def parse_group(enumerated):
-            idx, g = enumerated
-            if g is None:
-                return 0
-            if idx <= 2:  # hours, minutes, seconds
-                return int(g)
-            if idx == 3:  # nanoseconds
-                g = g.ljust(9, "0")  # fill missing decimal places
-                return int(g)
-            else:  # utc offset
-                if g == "Z":
-                    return 0
-                g = g.replace(":", "")
-                g = g.ljust(5, "0")
-                sign_, hours_, minutes_ = g[0], g[1:3], g[3:5]
-                minutes_ = int(minutes_) + int(hours_) * 60
-                return int(sign_.ljust(2, "1")) * minutes_ * 60
-
+    def __init__(self, value: str, allow_timezone_id: bool = False):
         super().__init__(value)
-        hours, minutes, seconds, nanoseconds, utc_offset = map(
-            parse_group, enumerate(self._groups)
-        )
+        hours = minutes = seconds = nanoseconds = 0
+        self.utc_offset = self.zone_id = None
+        if self._groups[0] is not None:
+            hours = int(self._groups[0])
+        if self._groups[1] is not None:
+            minutes = int(self._groups[1])
+        if self._groups[2] is not None:
+            seconds = int(self._groups[2])
+        if self._groups[3] is not None:
+            # fill missing decimal places
+            nanoseconds = int(self._groups[3].ljust(9, "0"))
+        if self._groups[4] is not None:
+            # Z
+            self.utc_offset = 0
+        elif self._groups[5] is not None:
+            # +XY:ZT
+            g = self._groups[5]
+            g = g.replace(":", "")
+            g = g.ljust(5, "0")
+            sign_, hours_, minutes_ = g[0], g[1:3], g[3:5]
+            minutes_ = int(minutes_) + int(hours_) * 60
+            # in seconds
+            self.utc_offset = int(sign_.ljust(2, "1")) * minutes_ * 60
+        if self._groups[6] is not None:
+            if allow_timezone_id:
+                self.zone_id = self._groups[6]
+            else:
+                raise JOLTValueError("timezone with ID not allowed here")
+
         self.nanoseconds = (nanoseconds
                             + seconds * 1000000000
                             + minutes * 60000000000
                             + hours * 3600000000000)
-        self.utc_offset = utc_offset  # in seconds
 
     @classmethod
-    def new(cls, nanoseconds: int, utc_offset_seconds: int):
+    def new(cls, nanoseconds: int, utc_offset_seconds: Optional[int] = None,
+            timezone_id: Optional[str] = None):
         if nanoseconds < 0:
             raise ValueError("nanoseconds must be >= 0")
         hours, nanoseconds = divmod(nanoseconds, 3600000000000)
@@ -116,14 +128,14 @@ class JoltV1TimeMixin(_JoltParsedType):
         seconds_str = "%02i" % seconds
         if nanoseconds:
             seconds_str += "." + re.sub(r"0+$", "", "%09i" % nanoseconds)
-        if utc_offset_seconds >= 0:
-            s = "%02i:%02i:%s+%02i%02i" % (hours, minutes, seconds_str,
-                                           offset_hours, offset_minutes)
-        else:
-            s = "%02i:%02i:%s-%02i%02i" % (
-                hours, minutes, seconds_str,
-                -offset_hours - 1, 60 - offset_minutes
-            )
+        s = "%02i:%02i:%s" % (hours, minutes, seconds_str)
+        if utc_offset_seconds is not None:
+            if utc_offset_seconds >= 0:
+                s += "+%02i%02i" % (offset_hours, offset_minutes)
+            else:
+                s += "-%02i%02i" % (-offset_hours - 1, 60 - offset_minutes)
+        if timezone_id is not None:
+            s += "[%s]" % timezone_id
         return cls(s)
 
     def __eq__(self, other):
@@ -216,7 +228,7 @@ class JoltV1DateTimeMixin(_JoltParsedType):
     def __init__(self, value: str):
         super().__init__(value)
         self.date = JoltV1DateMixin(self._groups[0])
-        self.time = JoltV1TimeMixin(self._groups[4])
+        self.time = JoltV1TimeMixin(self._groups[4], allow_timezone_id=True)
 
     def __eq__(self, other):
         if not isinstance(other, JoltV1DateTimeMixin):
