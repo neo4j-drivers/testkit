@@ -222,7 +222,7 @@ class TestRetry(TestkitTestCase):
                 ["Neo.TransientError.Transaction.Terminated",
                  "Neo.ClientError.Transaction.Terminated"])
             failures.append(
-                ["Neo.ClientError.Transaction.LockClientStopped",
+                ["Neo.TransientError.Transaction.LockClientStopped",
                  "Neo.ClientError.Transaction.LockClientStopped"])
 
         for failure in failures:
