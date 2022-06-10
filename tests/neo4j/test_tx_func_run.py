@@ -203,15 +203,17 @@ class TestTxFuncRun(TestkitTestCase):
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
             # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-            is_server_affected_with_bug = get_server_info().version <= "4.4"
-            if (is_server_affected_with_bug
-                and get_driver_name() in ["javascript", "ruby", "python"]
+            server_is_affect_by_bug = get_server_info().version <= "4.4"
+            driver_has_fixed_bug = not get_driver_name() in [
+                "javascript", "ruby", "python"]
+            if (server_is_affect_by_bug
+                and not driver_has_fixed_bug
                 and exc.code
                     == "Neo.TransientError.Transaction.LockClientStopped"):
                 # This is the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise ApplicationCodeError("Stop, hammer time!")
-            elif (not is_server_affected_with_bug
+            elif ((not server_is_affect_by_bug or driver_has_fixed_bug)
                     and exc.code
                   == "Neo.ClientError.Transaction.LockClientStopped"):
                 # This is the error we are looking for. Maybe there was  a
@@ -230,8 +232,8 @@ class TestTxFuncRun(TestkitTestCase):
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        is_server_affected_with_bug = get_server_info().version <= "4.4"
-        if is_server_affected_with_bug and get_driver_name() in [
+        server_is_affect_by_bug = get_server_info().version <= "4.4"
+        if server_is_affect_by_bug and get_driver_name() in [
                 "javascript", "ruby", "python"]:
             self.assertEqual(
                 exc.code,
