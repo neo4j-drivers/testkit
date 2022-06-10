@@ -321,7 +321,9 @@ class TestTxRun(TestkitTestCase):
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        if get_driver_name() in ["javascript", "ruby", "python"]:
+        is_previous_5xx = get_server_info().version > "4.4"
+        if is_previous_5xx and get_driver_name() in [
+                "javascript", "ruby", "python"]:
             self.assertEqual(
                 e.exception.code,
                 "Neo.TransientError.Transaction.LockClientStopped")
