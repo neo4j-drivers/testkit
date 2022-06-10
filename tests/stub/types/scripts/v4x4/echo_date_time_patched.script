@@ -1,7 +1,7 @@
 !: BOLT 4.4
 
-C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*", "patch": ["utc"]}
-S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/4.4.0", "routing": null, "patch": ["utc"]}
+C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*", "patch_bolt": ["utc"]}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/4.4.0", "routing": null, "patch_bolt": ["utc"]}
 *: RESET
 C: RUN {"U": "RETURN $dt AS dt"} {"dt": {"Tv2": "2022-06-07T11:52:05+02:00"}} {"{}": "*"}
 S: SUCCESS {"fields": ["dt"], "qid": 1}
