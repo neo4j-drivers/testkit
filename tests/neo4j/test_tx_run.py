@@ -321,8 +321,8 @@ class TestTxRun(TestkitTestCase):
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        is_previous_5xx = get_server_info().version > "4.4"
-        if is_previous_5xx and get_driver_name() in [
+        is_server_affected_with_bug = get_server_info().version <= "4.4"
+        if is_server_affected_with_bug and get_driver_name() in [
                 "javascript", "ruby", "python"]:
             self.assertEqual(
                 e.exception.code,
