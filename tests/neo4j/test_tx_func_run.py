@@ -220,8 +220,12 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            if (exc.code
-                    != "Neo.TransientError.Transaction.LockClientStopped"):
+            if (exc.code not in (
+                    # Neo4j 4.4-
+                    "Neo.ClientError.Transaction.LockClientStopped",
+                    # Neo4j 5.0+
+                    "Neo.TransientError.Transaction.LockClientStopped"
+            )):
                 # This is not the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise exc
