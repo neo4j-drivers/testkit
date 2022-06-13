@@ -205,6 +205,10 @@ class TestTxFuncRun(TestkitTestCase):
         if get_driver_name() in ["dotnet"]:
             self.skipTest("Backend crashes.")
 
+        lock_error_code = "Neo.TransientError.Transaction.LockClientStopped"
+        if get_server_info().version >= "5":
+            lock_error_code = "Neo.ClientError.Transaction.LockClientStopped"
+
         def create(tx):
             summary = tx.run("MERGE (:Node)").consume()
             return summary.database
@@ -220,12 +224,7 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            if (exc.code not in (
-                    # Neo4j 4.4-
-                    "Neo.ClientError.Transaction.LockClientStopped",
-                    # Neo4j 5.0+
-                    "Neo.TransientError.Transaction.LockClientStopped"
-            )):
+            if exc.code != lock_error_code:
                 # This is not the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise exc
@@ -243,8 +242,9 @@ class TestTxFuncRun(TestkitTestCase):
         )
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
-        self.assertEqual(exc.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
+        self.assertEqual(exc.code, lock_error_code)
         if get_driver_name() in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.TransientError'>")
+            error_type = "<class 'neo4j.exceptions.TransientError'>"
+            if get_server_info().version >= "5":
+                error_type = "<class 'neo4j.exceptions.ClientError'>"
+            self.assertEqual(exc.errorType, error_type)
