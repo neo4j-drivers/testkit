@@ -9,11 +9,11 @@ from tests.stub.shared import StubServer
 
 class TestMaxConnectionPoolSize(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_4,
+    required_features = types.Feature.BOLT_5_0,
 
     def setUp(self):
         super().setUp()
-        self._server = StubServer(9999)
+        self._server = StubServer(9000)
         self._server.start(
             self.script_path("tx_without_commit_or_rollback.script")
         )
