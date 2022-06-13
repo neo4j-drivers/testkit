@@ -62,7 +62,7 @@ suite_4x3 = suite_4x2
 suite_4x4 = suite_4x3
 
 #######################
-# Suite for Neo4j 4.4 #
+# Suite for Neo4j 5.0 #
 #######################
 suite_5x0 = suite_4x4
 
