@@ -204,8 +204,7 @@ class TestTxFuncRun(TestkitTestCase):
             exc = e.exception
             # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
             server_is_affect_by_bug = get_server_info().version <= "4.4"
-            driver_has_fixed_bug = not get_driver_name() in [
-                "javascript", "ruby", "python"]
+            driver_has_fixed_bug = get_driver_name() not in ["javascript"]
             if (server_is_affect_by_bug
                 and not driver_has_fixed_bug
                 and exc.code
@@ -233,8 +232,7 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertIsInstance(exc, types.DriverError)
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
         server_is_affect_by_bug = get_server_info().version <= "4.4"
-        if server_is_affect_by_bug and get_driver_name() in [
-                "javascript", "ruby", "python"]:
+        if server_is_affect_by_bug and get_driver_name() in ["javascript"]:
             self.assertEqual(
                 exc.code,
                 "Neo.TransientError.Transaction.LockClientStopped")

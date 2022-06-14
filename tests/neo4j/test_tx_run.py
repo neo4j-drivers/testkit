@@ -322,8 +322,7 @@ class TestTxRun(TestkitTestCase):
             result.consume()
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
         is_server_affected_with_bug = get_server_info().version <= "4.4"
-        if is_server_affected_with_bug and get_driver_name() in [
-                "javascript", "ruby", "python"]:
+        if is_server_affected_with_bug and get_driver_name() in ["javascript"]:
             self.assertEqual(
                 e.exception.code,
                 "Neo.TransientError.Transaction.LockClientStopped")
