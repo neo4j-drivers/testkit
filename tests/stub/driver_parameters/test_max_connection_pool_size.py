@@ -13,7 +13,11 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
 
     def setUp(self):
         super().setUp()
-        self._server = StubServer(9000)
+        # This needs to be a port that's not used by other tests.
+        # Else, when testing the javascript driver in a browser (specifically
+        # Firefox), the browser might block this port for the driver after this
+        # test for security reasons.
+        self._server = StubServer(9999)
         self._server.start(
             self.script_path("tx_without_commit_or_rollback.script")
         )
@@ -24,7 +28,7 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analysis.
+        # is killed, and it's output is dumped for analysis.
         self._server.reset()
         for tx in self._transactions:
             with self.assertRaises(types.DriverError):
