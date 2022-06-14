@@ -83,7 +83,7 @@ class TestDirectDriver(TestkitTestCase):
         result = self._driver.supports_multi_db()
         server_version = tuple(map(int, get_server_info().version.split(".")))
 
-        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3), (4, 4)):
+        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3), (4, 4), (5, 0)):
             self.assertTrue(result)
             # This is the default database name if not set explicitly on the
             # Neo4j Server
