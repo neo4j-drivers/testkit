@@ -174,6 +174,11 @@ _JOLT_FIELD_REPR_TO_FIELDS_V1 = (
         '{"T": "1970-01-02T01:01:01.1234+01"}',
         [Structure(b"\x46", 90061, 123400000, 3600, packstream_version=1)]
     ),
+    (
+        '{"T": "1970-01-02T01:01:01.1234+01[Europe/Stockholm]"}',
+        [Structure(b"\x66", 90061, 123400000, "Europe/Stockholm",
+                   packstream_version=1)]
+    ),
 
     # local date time - full
     (
@@ -243,6 +248,36 @@ _JOLT_FIELD_REPR_TO_FIELDS_V1 = (
         )]
     ),
 )
+
+_JOLT_FIELD_REPR_TO_FIELDS_V1_V2_COMPAT = (
+    # date v2 - full
+    ('{"Tv2": "1970-01-02"}', [Structure(b"\x44", 1, packstream_version=2)]),
+
+    # time v2 - full
+    ('{"Tv2": "00:00:02Z"}', [Structure(b"\x54", 2000000000, 0,
+                                        packstream_version=2)]),
+    ('{"Tv2": "00:00:02.001+0130"}', [Structure(b"\x54", 2001000000, 5400,
+                                                packstream_version=2)]),
+
+    # local time v2 - full
+    ('{"Tv2": "00:01:00.000000001"}', [Structure(b"\x74", 60000000001,
+                                                 packstream_version=2)]),
+    ('{"Tv2": "01:00:01"}', [Structure(b"\x74", 3601000000000,
+                                       packstream_version=2)]),
+
+    # date time v2 - full
+    (
+        '{"Tv2": "1970-01-02T01:01:01.1234+01"}',
+        [Structure(b"\x49", 90061 - 3600, 123400000, 3600,
+                   packstream_version=2)]
+    ),
+    (
+        '{"Tv2": "1970-01-02T02:01:01.1234+01[Europe/Stockholm]"}',
+        [Structure(b"\x69", 90061, 123400000, "Europe/Stockholm",
+                   packstream_version=2)]
+    ),
+)
+
 _JOLT_FIELD_REPR_TO_FIELDS_V2 = (
     # date - full
     ('{"T": "1970-01-02"}', [Structure(b"\x44", 1, packstream_version=2)]),
@@ -262,7 +297,13 @@ _JOLT_FIELD_REPR_TO_FIELDS_V2 = (
     # date time - full
     (
         '{"T": "1970-01-02T01:01:01.1234+01"}',
-        [Structure(b"\x46", 90061, 123400000, 3600, packstream_version=2)]
+        [Structure(b"\x49", 90061 - 3600, 123400000, 3600,
+                   packstream_version=2)]
+    ),
+    (
+        '{"T": "1970-01-02T02:01:01.1234+01[Europe/Stockholm]"}',
+        [Structure(b"\x69", 90061, 123400000, "Europe/Stockholm",
+                   packstream_version=2)]
     ),
 
     # local date time - full
@@ -343,11 +384,41 @@ _JOLT_FIELD_REPR_TO_FIELDS_V2 = (
     ),
 )
 
+_JOLT_FIELD_REPR_TO_FIELDS_V2_V1_COMPAT = (
+    # date v1 - full
+    ('{"Tv1": "1970-01-02"}', [Structure(b"\x44", 1, packstream_version=1)]),
+
+    # time v1 - full
+    ('{"Tv1": "00:00:02Z"}', [Structure(b"\x54", 2000000000, 0,
+                                        packstream_version=1)]),
+    ('{"Tv1": "00:00:02.001+0130"}', [Structure(b"\x54", 2001000000, 5400,
+                                                packstream_version=1)]),
+
+    # local time v1 - full
+    ('{"Tv1": "00:01:00.000000001"}', [Structure(b"\x74", 60000000001,
+                                                 packstream_version=1)]),
+    ('{"Tv1": "01:00:01"}', [Structure(b"\x74", 3601000000000,
+                                       packstream_version=1)]),
+
+    # date time v1 - full
+    (
+        '{"Tv1": "1970-01-02T01:01:01.1234+01"}',
+        [Structure(b"\x46", 90061, 123400000, 3600, packstream_version=1)]
+    ),
+    (
+        '{"Tv1": "1970-01-02T01:01:01.1234+01[Europe/Stockholm]"}',
+        [Structure(b"\x66", 90061, 123400000, "Europe/Stockholm",
+                   packstream_version=1)]
+    ),
+)
+
 JOLT_FIELD_REPR_TO_FIELDS = (
     *((*ex, 1) for ex in _JOLT_FIELD_REPR_TO_FIELDS_V1_V2),
     *((*ex, 2) for ex in _JOLT_FIELD_REPR_TO_FIELDS_V1_V2),
     *((*ex, 1) for ex in _JOLT_FIELD_REPR_TO_FIELDS_V1),
+    *((*ex, 1) for ex in _JOLT_FIELD_REPR_TO_FIELDS_V1_V2_COMPAT),
     *((*ex, 2) for ex in _JOLT_FIELD_REPR_TO_FIELDS_V2),
+    *((*ex, 2) for ex in _JOLT_FIELD_REPR_TO_FIELDS_V2_V1_COMPAT),
 )
 
 _JOLT_WILDCARD_TO_FIELDS_V1_V2 = (
@@ -472,7 +543,7 @@ _JOLT_WILDCARD_TO_FIELDS_V2 = (
         [Structure(b"\x54", 2001000000, 5400, packstream_version=2)],
         [Structure(b"\x74", 60000000001, packstream_version=2)],
         [Structure(b"\x74", 3601000000000, packstream_version=2)],
-        [Structure(b"\x46", 90061, 123400000, 3600, packstream_version=2)],
+        [Structure(b"\x49", 90061, 123400000, 3600, packstream_version=2)],
         [Structure(b"\x64", 90061, 1234, packstream_version=2)],
         [Structure(b"\x45", 25, 2, 1080, 100000000, packstream_version=2)],
     )),

@@ -28,7 +28,10 @@ from .errors import (
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt.common.types import JoltWildcard
+from .simple_jolt.common.types import (
+    JoltType,
+    JoltWildcard,
+)
 
 
 def load_parser():
@@ -243,7 +246,7 @@ class MessageLine(Line, abc.ABC):
                 )
             else:
                 return decoded
-        if isinstance(decoded, jolt_package.types.JoltType):
+        if isinstance(decoded, JoltType):
             return Structure.from_jolt_type(decoded)
         if isinstance(decoded, (list, tuple)):
             return type(decoded)(self._jolt_to_struct(d, jolt_package)
