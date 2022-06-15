@@ -37,10 +37,11 @@ class TestTemporalTypesV4x4(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.run("RETURN $dt AS dt", params={
+        result = self._session.run("RETURN $dt AS dt", params={
             "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
                                        utc_offset_s=7200)
         })
+        list(result)
 
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_date_time_with_patch(self):
@@ -49,10 +50,11 @@ class TestTemporalTypesV4x4(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.run("RETURN $dt AS dt", params={
+        result = self._session.run("RETURN $dt AS dt", params={
             "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
                                        utc_offset_s=7200)
         })
+        list(result)
 
     def test_zoned_date_time(self):
         self._server.start(
@@ -60,12 +62,13 @@ class TestTemporalTypesV4x4(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.run("RETURN $dt AS dt", params={
+        result = self._session.run("RETURN $dt AS dt", params={
             "dt": types.CypherDateTime(
                 2022, 6, 7, 11, 52, 5, 0,
                 utc_offset_s=7200, timezone_id="Europe/Stockholm"
             )
         })
+        list(result)
 
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_zoned_date_time_with_patch(self):
@@ -75,12 +78,13 @@ class TestTemporalTypesV4x4(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.run("RETURN $dt AS dt", params={
+        result = self._session.run("RETURN $dt AS dt", params={
             "dt": types.CypherDateTime(
                 2022, 6, 7, 11, 52, 5, 0,
                 utc_offset_s=7200, timezone_id="Europe/Stockholm"
             )
         })
+        list(result)
 
 
 class TestTemporalTypesV5x0(TestkitTestCase):
@@ -114,10 +118,11 @@ class TestTemporalTypesV5x0(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.run("RETURN $dt AS dt", params={
+        result = self._session.run("RETURN $dt AS dt", params={
             "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
                                        utc_offset_s=7200)
         })
+        list(result)
 
     def test_zoned_date_time(self):
         self._server.start(
@@ -125,9 +130,10 @@ class TestTemporalTypesV5x0(TestkitTestCase):
         )
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.run("RETURN $dt AS dt", params={
+        result = self._session.run("RETURN $dt AS dt", params={
             "dt": types.CypherDateTime(
                 2022, 6, 7, 11, 52, 5, 0,
                 utc_offset_s=7200, timezone_id="Europe/Stockholm"
             )
         })
+        list(result)
