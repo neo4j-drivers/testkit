@@ -9,7 +9,10 @@ from tests.stub.shared import StubServer
 
 class TestTemporalTypesV4x4(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_4,
+    required_features = (
+        types.Feature.API_TYPE_TEMPORAL,
+        types.Feature.BOLT_4_4,
+    )
 
     def setUp(self):
         super().setUp()
@@ -89,7 +92,10 @@ class TestTemporalTypesV4x4(TestkitTestCase):
 
 class TestTemporalTypesV5x0(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_5_0,
+    required_features = (
+        types.Feature.API_TYPE_TEMPORAL,
+        types.Feature.BOLT_5_0,
+    )
 
     def setUp(self):
         super().setUp()
