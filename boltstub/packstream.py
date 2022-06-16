@@ -20,6 +20,7 @@
 from codecs import decode
 import inspect
 from io import BytesIO
+import re
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 
@@ -125,7 +126,12 @@ class Structure:
 
     def __eq__(self, other):
         try:
-            if self.tag in (StructTagV1.path, StructTagV2.path):
+            assert all(
+                StructTagV1.path == value.path
+                for key, value in locals().items()
+                if re.match(r"^StructTagV[1-9]\d*$", key)
+            )
+            if self.tag == StructTagV1.path:
                 # path struct => order of nodes and rels is irrelevant
                 return (other.tag == self.tag
                         and len(other.fields) == 3
