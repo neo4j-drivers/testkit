@@ -184,7 +184,7 @@ _JOLT_FIELD_REPR_TO_FIELDS_V1 = (
         [Structure(b"\x66", 25666200, 0,
                    "America/New_York", packstream_version=1)]
     ),
-    (  # wow! the same encoding \o/
+    (  # Wow! The same encoding \o/ [/sarcasm]
         '{"T": "1970-10-25T01:30-05:00[America/New_York]"}',
         [Structure(b"\x66", 25666200, 0,
                    "America/New_York", packstream_version=1)]
@@ -315,12 +315,12 @@ _JOLT_FIELD_REPR_TO_FIELDS_V2 = (
         [Structure(b"\x69", 90061, 123400000, "Europe/Stockholm",
                    packstream_version=2)]
     ),
-    (  # packstream v1 bug (non-unique times) fixed:
+    (  # packstream v1 bug (non-unique times) fixed
         '{"T": "1970-10-25T01:30-04:00[America/New_York]"}',
         [Structure(b"\x69", 25680600, 0,
                    "America/New_York", packstream_version=2)]
     ),
-    (  # wow! different times have different representations :O
+    (  # Wow! Different times have different representations :O
         '{"T": "1970-10-25T01:30-05:00[America/New_York]"}',
         [Structure(b"\x69", 25684200, 0,
                    "America/New_York", packstream_version=2)]
@@ -512,6 +512,8 @@ _JOLT_WILDCARD_TO_FIELDS_V1 = (
         [Structure(b"\x74", 60000000001, packstream_version=1)],
         [Structure(b"\x74", 3601000000000, packstream_version=1)],
         [Structure(b"\x46", 90061, 123400000, 3600, packstream_version=1)],
+        [Structure(b"\x66", 90061, 123400000, "Europe/Stockholm",
+                   packstream_version=1)],
         [Structure(b"\x64", 90061, 1234, packstream_version=1)],
         [Structure(b"\x45", 25, 2, 1080, 100000000, packstream_version=1)],
     )),
@@ -564,6 +566,8 @@ _JOLT_WILDCARD_TO_FIELDS_V2 = (
         [Structure(b"\x74", 60000000001, packstream_version=2)],
         [Structure(b"\x74", 3601000000000, packstream_version=2)],
         [Structure(b"\x49", 90061, 123400000, 3600, packstream_version=2)],
+        [Structure(b"\x69", 90061, 123400000, "Europe/Stockholm",
+                   packstream_version=2)],
         [Structure(b"\x64", 90061, 1234, packstream_version=2)],
         [Structure(b"\x45", 25, 2, 1080, 100000000, packstream_version=2)],
     )),

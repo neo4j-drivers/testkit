@@ -176,7 +176,8 @@ class Structure:
                 if self.tag == struct_tags.local_time:
                     return True
             elif issubclass(t, jolt_types_.JoltDateTime):
-                if self.tag == struct_tags.date_time:
+                if self.tag in (struct_tags.date_time,
+                                struct_tags.date_time_zone_id):
                     return True
             elif issubclass(t, jolt_types_.JoltLocalDateTime):
                 if self.tag == struct_tags.local_date_time:

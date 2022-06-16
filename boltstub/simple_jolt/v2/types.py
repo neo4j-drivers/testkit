@@ -34,7 +34,7 @@ class JoltV2DateTimeMixin(JoltV1DateTimeMixin):
 
     @classmethod
     def _format_s_ns_tz_info(cls, seconds: int, nanoseconds: int, tz_info):
-        # zone_id UTC unix epoch
+        # seconds, nanoseconds since UTC unix epoch
         dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
 
         microseconds, buffered_ns = divmod(nanoseconds, 1000)

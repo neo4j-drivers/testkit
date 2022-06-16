@@ -1,9 +1,6 @@
 import datetime
 import re
-from typing import (
-    Optional,
-    Union,
-)
+from typing import Union
 
 import pytz
 
@@ -122,7 +119,7 @@ class JoltV1TimeMixin(_JoltParsedType):
                             + hours * 3600000000000)
 
     @classmethod
-    def new(cls, nanoseconds: int, utc_offset_seconds: Optional[int] = None):
+    def new(cls, nanoseconds: int, utc_offset_seconds: int):
         if nanoseconds < 0:
             raise ValueError("nanoseconds must be >= 0")
         hours, nanoseconds = divmod(nanoseconds, 3600000000000)
@@ -136,11 +133,10 @@ class JoltV1TimeMixin(_JoltParsedType):
         if nanoseconds:
             seconds_str += "." + re.sub(r"0+$", "", "%09i" % nanoseconds)
         s = "%02i:%02i:%s" % (hours, minutes, seconds_str)
-        if utc_offset_seconds is not None:
-            if utc_offset_seconds >= 0:
-                s += "+%02i%02i" % (offset_hours, offset_minutes)
-            else:
-                s += "-%02i%02i" % (-offset_hours - 1, 60 - offset_minutes)
+        if utc_offset_seconds >= 0:
+            s += "+%02i%02i" % (offset_hours, offset_minutes)
+        else:
+            s += "-%02i%02i" % (-offset_hours - 1, 60 - offset_minutes)
         return cls(s)
 
     def __eq__(self, other):
@@ -335,6 +331,7 @@ class JoltV1DateTimeMixin(_JoltParsedType):
 
     @classmethod
     def _format_s_ns_tz_info(cls, seconds: int, nanoseconds: int, tz_info):
+        # seconds, nanoseconds since local unix epoch
         microseconds, buffered_ns = divmod(nanoseconds, 1000)
         dt = datetime.datetime(1970, 1, 1)  # zone_id local unix epoch
         dt += datetime.timedelta(seconds=seconds, microseconds=microseconds)
@@ -346,9 +343,6 @@ class JoltV1DateTimeMixin(_JoltParsedType):
     def _new_zone_id(cls, seconds: int, nanoseconds: int, zone_id: str):
         tz_info = pytz.timezone(zone_id)
         return cls(cls._format_s_ns_tz_info(seconds, nanoseconds, tz_info))
-
-        # TODO:
-        #  - make sure there are tests for the representation converters
 
     @classmethod
     def _new_fixed_offset(cls, seconds: int, nanoseconds: int,

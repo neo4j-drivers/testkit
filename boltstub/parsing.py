@@ -232,12 +232,12 @@ class MessageLine(Line, abc.ABC):
                     self,
                     "message fields failed JOLT parser"
                 ) from e
-            decoded = self._jolt_to_struct(decoded, jolt_package)
+            decoded = self._jolt_to_struct(decoded)
             jolt_fields.append(decoded)
         self.jolt_parsed = self.parsed[0], jolt_fields
         return self.jolt_parsed
 
-    def _jolt_to_struct(self, decoded, jolt_package):
+    def _jolt_to_struct(self, decoded):
         if isinstance(decoded, JoltWildcard):
             if not self.allow_jolt_wildcard:
                 raise LineError(
@@ -249,11 +249,9 @@ class MessageLine(Line, abc.ABC):
         if isinstance(decoded, JoltType):
             return Structure.from_jolt_type(decoded)
         if isinstance(decoded, (list, tuple)):
-            return type(decoded)(self._jolt_to_struct(d, jolt_package)
-                                 for d in decoded)
+            return type(decoded)(self._jolt_to_struct(d) for d in decoded)
         if isinstance(decoded, dict):
-            return {k: self._jolt_to_struct(v, jolt_package)
-                    for k, v in decoded.items()}
+            return {k: self._jolt_to_struct(v) for k, v in decoded.items()}
         return decoded
 
 
