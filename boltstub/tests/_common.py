@@ -179,6 +179,16 @@ _JOLT_FIELD_REPR_TO_FIELDS_V1 = (
         [Structure(b"\x66", 90061, 123400000, "Europe/Stockholm",
                    packstream_version=1)]
     ),
+    (  # packstream v1 bug: non-unique times
+        '{"T": "1970-10-25T01:30-04:00[America/New_York]"}',
+        [Structure(b"\x66", 25666200, 0,
+                   "America/New_York", packstream_version=1)]
+    ),
+    (  # wow! the same encoding \o/
+        '{"T": "1970-10-25T01:30-05:00[America/New_York]"}',
+        [Structure(b"\x66", 25666200, 0,
+                   "America/New_York", packstream_version=1)]
+    ),
 
     # local date time - full
     (
@@ -304,6 +314,16 @@ _JOLT_FIELD_REPR_TO_FIELDS_V2 = (
         '{"T": "1970-01-02T02:01:01.1234+01[Europe/Stockholm]"}',
         [Structure(b"\x69", 90061, 123400000, "Europe/Stockholm",
                    packstream_version=2)]
+    ),
+    (  # packstream v1 bug (non-unique times) fixed:
+        '{"T": "1970-10-25T01:30-04:00[America/New_York]"}',
+        [Structure(b"\x69", 25680600, 0,
+                   "America/New_York", packstream_version=2)]
+    ),
+    (  # wow! different times have different representations :O
+        '{"T": "1970-10-25T01:30-05:00[America/New_York]"}',
+        [Structure(b"\x69", 25684200, 0,
+                   "America/New_York", packstream_version=2)]
     ),
 
     # local date time - full
@@ -594,9 +614,9 @@ _JOLT_WILDCARD_TO_FIELDS_V2 = (
 
 JOLT_WILDCARD_TO_FIELDS = (
     *((*ex, 1) for ex in _JOLT_WILDCARD_TO_FIELDS_V1_V2),
-    # *((*ex, 2) for ex in _JOLT_WILDCARD_TO_FIELDS_V1_V2),
-    # *((*ex, 1) for ex in _JOLT_WILDCARD_TO_FIELDS_V1),
-    # *((*ex, 2) for ex in _JOLT_WILDCARD_TO_FIELDS_V2),
+    *((*ex, 2) for ex in _JOLT_WILDCARD_TO_FIELDS_V1_V2),
+    *((*ex, 1) for ex in _JOLT_WILDCARD_TO_FIELDS_V1),
+    *((*ex, 2) for ex in _JOLT_WILDCARD_TO_FIELDS_V2),
 )
 
 

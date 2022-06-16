@@ -26,8 +26,7 @@ class JoltV2DateTimeMixin(JoltV1DateTimeMixin):
     @property
     def seconds_nanoseconds(self):
         # since UTC unix epoch
-        utc_epoch = datetime.datetime(1970, 1, 1)
-        utc_epoch = utc_epoch.replace(tzinfo=pytz.UTC)
+        utc_epoch = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
         elapsed = self._to_dt() - utc_epoch
         s = elapsed.days * 86400 + elapsed.seconds
         ns = elapsed.microseconds * 1000 + self._ns_buffer

@@ -299,12 +299,8 @@ class JoltV1DateTimeMixin(_JoltParsedType):
     def seconds_nanoseconds(self):
         # since local unix epoch
         epoch = datetime.datetime(1970, 1, 1)
-        tz_info = self._to_dt().tzinfo
-        if hasattr(tz_info, "localize"):
-            epoch = self._to_dt().tzinfo.localize(epoch)
-        else:
-            epoch = epoch.replace(tzinfo=tz_info)
-        elapsed = self._to_dt() - epoch
+        dt = self._to_dt().replace(tzinfo=None)
+        elapsed = dt - epoch
         s = elapsed.days * 86400 + elapsed.seconds
         ns = elapsed.microseconds * 1000 + self._ns_buffer
         return s, ns
@@ -339,11 +335,10 @@ class JoltV1DateTimeMixin(_JoltParsedType):
 
     @classmethod
     def _format_s_ns_tz_info(cls, seconds: int, nanoseconds: int, tz_info):
-        dt = datetime.datetime(1970, 1, 1)  # zone_id local unix epoch
-        dt = tz_info.localize(dt)
-
         microseconds, buffered_ns = divmod(nanoseconds, 1000)
+        dt = datetime.datetime(1970, 1, 1)  # zone_id local unix epoch
         dt += datetime.timedelta(seconds=seconds, microseconds=microseconds)
+        dt = tz_info.localize(dt)
 
         return cls._format_dt(dt, buffered_ns)
 

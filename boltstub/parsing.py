@@ -1065,6 +1065,7 @@ class ScriptDeviation(ScriptFailure):
         res += ":\n"
         res += "\n".join(map(str, self.expected_lines))
         res += "\n\nReceived:\n" + str(self.received)
+        res += "\n => " + repr(self.received)
         return res
 
 
