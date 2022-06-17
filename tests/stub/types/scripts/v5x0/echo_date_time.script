@@ -1,7 +1,7 @@
 !: BOLT 5.0
 
 # make sure patch key is not in the HELLO message
-C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*"}
+C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*","[routing]": "*", "[user_agent]": "*"}
 S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/5.0.0", "routing": null}
 *: RESET
 C: RUN {"U": "RETURN $dt AS dt"} {"dt": {"T": "2022-06-07T11:52:05+02:00"}} {"{}": "*"}
