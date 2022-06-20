@@ -35,7 +35,7 @@ class _TestTemporalTypes(TestkitTestCase):
         auth = types.AuthorizationToken("basic", principal="", credentials="")
         self._driver = Driver(self._backend, uri, auth)
 
-    def test_date_time(self):
+    def _test_date_time(self):
         self._start_server("echo_date_time.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
@@ -45,7 +45,7 @@ class _TestTemporalTypes(TestkitTestCase):
         })
         list(result)
 
-    def test_zoned_date_time(self):
+    def _test_zoned_date_time(self):
         self._start_server("echo_zoned_date_time.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
@@ -61,7 +61,7 @@ class _TestTemporalTypes(TestkitTestCase):
 class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
 
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
-    def test_date_time_with_patch(self):
+    def _test_date_time_with_patch(self):
         self._start_server("echo_date_time_patched.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
@@ -72,7 +72,7 @@ class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
         list(result)
 
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
-    def test_zoned_date_time_with_patch(self):
+    def _test_zoned_date_time_with_patch(self):
         self._start_server("echo_zoned_date_time_patched.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
@@ -94,10 +94,10 @@ class TestTemporalTypesV3x0(_TestTemporalTypes):
     bolt_version = "3.0"
 
     def test_date_time(self):
-        super().test_date_time()
+        super()._test_date_time()
 
     def test_zoned_date_time(self):
-        super().test_zoned_date_time()
+        super()._test_zoned_date_time()
 
 
 class TestTemporalTypesV4x1(_TestTemporalTypes):
@@ -108,10 +108,10 @@ class TestTemporalTypesV4x1(_TestTemporalTypes):
     bolt_version = "4.1"
 
     def test_date_time(self):
-        super().test_date_time()
+        super()._test_date_time()
 
     def test_zoned_date_time(self):
-        super().test_zoned_date_time()
+        super()._test_zoned_date_time()
 
 
 class TestTemporalTypesV4x2(_TestTemporalTypes):
@@ -123,10 +123,10 @@ class TestTemporalTypesV4x2(_TestTemporalTypes):
     bolt_version = "4.2"
 
     def test_date_time(self):
-        super().test_date_time()
+        super()._test_date_time()
 
     def test_zoned_date_time(self):
-        super().test_zoned_date_time()
+        super()._test_zoned_date_time()
 
 
 class TestTemporalTypesV4x3(_TestTemporalTypesPatchedBolt):
@@ -138,16 +138,16 @@ class TestTemporalTypesV4x3(_TestTemporalTypesPatchedBolt):
     bolt_version = "4.3"
 
     def test_date_time(self):
-        super().test_date_time()
+        super()._test_date_time()
 
     def test_date_time_with_patch(self):
-        super().test_date_time_with_patch()
+        super()._test_date_time_with_patch()
 
     def test_zoned_date_time(self):
-        super().test_zoned_date_time()
+        super()._test_zoned_date_time()
 
     def test_zoned_date_time_with_patch(self):
-        super().test_zoned_date_time_with_patch()
+        super()._test_zoned_date_time_with_patch()
 
 
 class TestTemporalTypesV4x4(_TestTemporalTypesPatchedBolt):
@@ -159,16 +159,16 @@ class TestTemporalTypesV4x4(_TestTemporalTypesPatchedBolt):
     bolt_version = "4.4"
 
     def test_date_time(self):
-        super().test_date_time()
+        super()._test_date_time()
 
     def test_date_time_with_patch(self):
-        super().test_date_time_with_patch()
+        super()._test_date_time_with_patch()
 
     def test_zoned_date_time(self):
-        super().test_zoned_date_time()
+        super()._test_zoned_date_time()
 
     def test_zoned_date_time_with_patch(self):
-        super().test_zoned_date_time_with_patch()
+        super()._test_zoned_date_time_with_patch()
 
 
 class TestTemporalTypesV5x0(_TestTemporalTypes):
@@ -180,7 +180,7 @@ class TestTemporalTypesV5x0(_TestTemporalTypes):
     bolt_version = "5.0"
 
     def test_date_time(self):
-        super().test_date_time()
+        super()._test_date_time()
 
     def test_zoned_date_time(self):
-        super().test_zoned_date_time()
+        super()._test_zoned_date_time()
