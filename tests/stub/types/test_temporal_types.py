@@ -27,7 +27,8 @@ class _TestTemporalTypes(TestkitTestCase):
         super().tearDown()
 
     def _start_server(self, script):
-        self._server.start(path=self.script_path(self.bolt_version, script))
+        version_folder = "v{}".format(self.bolt_version.replace(".", "x"))
+        self._server.start(path=self.script_path(version_folder, script))
 
     def _create_direct_driver(self):
         uri = "bolt://%s" % self._server.address
