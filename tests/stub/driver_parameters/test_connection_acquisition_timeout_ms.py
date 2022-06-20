@@ -45,7 +45,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._sessions = []
         self._txs = []
 
-    def tearDown(self) -> None:
+    def tearDown(self):
         self._server.reset()
         self._router.reset()
         for tx in self._txs:
