@@ -196,7 +196,7 @@ class TestTemporalTypes3x0(TestTemporalTypesV5x0):
 
     required_features = (
         types.Feature.API_TYPE_TEMPORAL,
-        types.Feature.BOLT_4_1,
+        types.Feature.BOLT_3_0,
     )
 
     @property
