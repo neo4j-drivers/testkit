@@ -12,5 +12,5 @@ S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": "*"}
 S: RECORD [1]
    SUCCESS {"type": "r"}
-
 *: RESET
+?: GOODBYE

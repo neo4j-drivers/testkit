@@ -1,12 +1,12 @@
 !: BOLT 5.0
 !: ALLOW CONCURRENT
 
-C: HELLO {"{}": "*"}
+A: HELLO {"{}": "*"}
 *: RESET
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": "*"}
 S: RECORD [1]
    SUCCESS {"type": "r"}
-
 *: RESET
+?: GOODBYE
