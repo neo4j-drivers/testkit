@@ -1,0 +1,16 @@
+!: BOLT 4.4
+
+C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*", "[routing]": "*", "patch_bolt": ["utc"]}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/4.4.0", "routing": null, "patch_bolt": ["utc"]}
+*: RESET
+C: RUN {"U": "RETURN $dt AS dt"} {"dt": {"Tv2": "2022-06-07T11:52:05+02:00[Europe/Stockholm]"}} {"{}": "*"}
+S: SUCCESS {"fields": ["dt"], "qid": 1}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+----
+    C: PULL {"n": {"Z": "*"}, "qid": 1}
+}}
+S: RECORD [{"Tv2": "2022-06-07T11:52:05+02:00[Europe/Stockholm]"}]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

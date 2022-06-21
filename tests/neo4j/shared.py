@@ -16,6 +16,7 @@ TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
 from functools import wraps
 import os
+import re
 from warnings import warn
 
 from nutkit import protocol
@@ -153,7 +154,7 @@ def requires_min_bolt_version(min_version):
     server_max_version = get_server_info().max_protocol_version
     all_viable_versions = [
         f for f in protocol.Feature
-        if (f.name.startswith("BOLT_")
+        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
             and min_version <= f.value.split(":")[-1] <= server_max_version)
     ]
 

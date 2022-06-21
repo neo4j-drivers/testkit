@@ -1,4 +1,5 @@
 import abc
+import importlib
 import inspect
 import re
 import sys
@@ -561,7 +562,13 @@ class Codec:
     def decode(cls, value):
         def transform(value_):
             if isinstance(value_, dict) and len(value_) == 1:
-                sigil = next(iter(value_))
+                sigil, content = next(iter(value_.items()))
+                match = re.match(r"(.+)(v\d+)", sigil)
+                if match:
+                    sigil, version = match.groups()
+                    other_codec = importlib.import_module(f"..{version}.codec",
+                                                          package=__package__)
+                    return other_codec.Codec.decode({sigil: content})
                 transformer = cls.sigil_to_type.get(sigil)
                 if transformer:
                     return transformer.decode_full(value_[sigil], transform)
