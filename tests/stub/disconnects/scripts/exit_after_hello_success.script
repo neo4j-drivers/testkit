@@ -1,5 +1,5 @@
 !: BOLT 4.3
 
-C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass" #EXTRA_HELLO_PARAMS# }
+C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass" #EXTRA_HELLO_PARAMS#, "[patch_bolt]": "*" }
 S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "bolt-0"}
 S: <EXIT>

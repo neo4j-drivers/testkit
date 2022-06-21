@@ -1,0 +1,12 @@
+!: BOLT 3
+
+C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*", "[routing]": "*"}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/4.4.0", "routing": null}
+*: RESET
+C: RUN {"U": "RETURN $dt AS dt"} {"dt": {"T": "2022-06-07T11:52:05+02:00"}} {"{}": "*"}
+S: SUCCESS {"fields": ["dt"]}
+C: PULL_ALL
+S: RECORD [{"T": "2022-06-07T11:52:05+02:00"}]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE
