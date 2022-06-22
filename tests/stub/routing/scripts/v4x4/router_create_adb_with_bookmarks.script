@@ -1,0 +1,21 @@
+!: BOLT #VERSION#
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#, "[patch_bolt]": "*"}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+C: BEGIN {"db": "system"}
+S: SUCCESS {}
+C: RUN "CREATE database foo" {} {}
+S: SUCCESS {"fields": []}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "w"}
+C: COMMIT
+S: SUCCESS {"bookmark": "SystemBookmark"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {"db": "adb", "bookmarks": ["SystemBookmark"]}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

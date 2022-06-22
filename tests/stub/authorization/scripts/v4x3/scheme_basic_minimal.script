@@ -1,6 +1,6 @@
 !: BOLT 4.3
 
-A: HELLO {"user_agent": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+A: HELLO {"user_agent": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[patch_bolt]": "*"}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

@@ -1,6 +1,6 @@
 !: BOLT 4.3
 
-C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*"}
+C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "[patch_bolt]": "*"}
 S: SUCCESS {"server": "Neo4j/4.3.0", "connection_id": "example-connection-id:1"}
 *: RESET
 {{

@@ -1,0 +1,12 @@
+!: BOLT #VERSION#
+!: AUTO RESET
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#, "[patch_bolt]": "*"}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+{{
+    C: ROUTE #ROUTINGCTX# [] {}
+----
+    C: ROUTE #ROUTINGCTX# [] {"db": "system"}
+}}
+S: FAILURE {"code": "Neo.ClientError.Procedure.ProcedureNotFound", "message": "blabla"}
+   <EXIT>
