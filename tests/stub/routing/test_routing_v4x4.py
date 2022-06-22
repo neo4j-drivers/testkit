@@ -2776,7 +2776,7 @@ class RoutingV4x4(RoutingBase):
     def test_should_enforce_pool_size_per_cluster_member(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, max_connection_pool_size=1,
-                        connection_acquisition_timeout_ms=10)
+                        connection_acquisition_timeout_ms=500)
         self.start_server(self._routingServer1,
                           "router_adb_multi_no_bookmarks.script")
         self.start_server(self._writeServer1, "writer_tx.script")
