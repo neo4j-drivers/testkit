@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import inspect
 import json
 import os
@@ -59,6 +60,7 @@ class Backend:
         self._encoder = Encoder()
         self._reader = self._socket.makefile(mode="r", encoding="utf-8")
         self._writer = self._socket.makefile(mode="w", encoding="utf-8")
+        self.default_timeout = DEFAULT_TIMEOUT
 
     def close(self):
         self._reader.close()
@@ -79,7 +81,9 @@ class Backend:
         self._writer.write("#request end\n")
         self._writer.flush()
 
-    def receive(self, timeout=DEFAULT_TIMEOUT, hooks=None):
+    def receive(self, timeout=None, hooks=None):
+        if timeout is None:
+            timeout = self.default_timeout
         self._socket.settimeout(timeout)
         response = ""
         in_response = False
@@ -128,6 +132,14 @@ class Backend:
                     elif DEBUG_MESSAGES:
                         print("[BACKEND]: %s" % line)
 
-    def send_and_receive(self, req, timeout=DEFAULT_TIMEOUT, hooks=None):
+    def send_and_receive(self, req, timeout=None, hooks=None):
         self.send(req, hooks=hooks)
         return self.receive(timeout, hooks=hooks)
+
+
+@contextmanager
+def backend_timeout_adjustment(backend, timeout):
+    old_timeout = backend.default_timeout
+    backend.default_timeout = timeout
+    yield
+    backend.default_timeout = old_timeout
