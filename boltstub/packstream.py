@@ -17,13 +17,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from codecs import decode
+import inspect
 from io import BytesIO
+import re
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 
-from .simple_jolt import types as jolt_types
+from .simple_jolt.common import types as jolt_common_types
+from .simple_jolt.v1 import types as jolt_v1_types
+from .simple_jolt.v2 import types as jolt_v2_types
+
+_jolt_types = {
+    1: jolt_v1_types,
+    2: jolt_v2_types,
+}
+
+
+def jolt_types(packstream_version):
+    if not packstream_version:
+        raise ValueError(
+            "JOLT conversion requires packstream_version to be specified"
+        )
+    return _jolt_types[packstream_version]
+
 
 PACKED_UINT_8 = [struct_pack(">B", value) for value in range(0x100)]
 PACKED_UINT_16 = [struct_pack(">H", value) for value in range(0x10000)]
@@ -44,7 +61,7 @@ INT64_MAX = 2 ** 63
 EndOfStream = object()
 
 
-class StructTag:
+class StructTagV1:
     node = b"\x4E"
     relationship = b"\x52"
     unbound_relationship = b"\x72"
@@ -60,127 +77,63 @@ class StructTag:
     point_3d = b"\x59"
 
 
+class StructTagV2(StructTagV1):
+    date_time = b"\x49"
+    date_time_zone_id = b"\x69"
+
+
 class Structure:
 
-    def __init__(self, tag, *fields, verified=True):
+    def __init__(self, tag, *fields, packstream_version=None, verified=True):
         self.tag = tag
         self.fields = list(fields)
+        self._packstream_version = packstream_version
         self._verified = verified
+        if packstream_version not in (None, 1, 2):
+            raise ValueError("Unknown packstream version: %s"
+                             % packstream_version)
+
         if verified:
-            self._verify_fields()
+            if not packstream_version:
+                raise ValueError(
+                    "packstream_version is required to verify the Structure"
+                )
+            self._verify()
+
+    def _verify(self):
+        if self._packstream_version == 1:
+            PackstreamV1StructureValidator.verify_fields(self)
+        elif self._packstream_version == 2:
+            PackstreamV2StructureValidator.verify_fields(self)
 
     @property
     def verified(self):
         return self._verified
 
-    def _verify_fields(self):
-        tag, fields = self.tag, self.fields
-
-        def verify_node():
-            if (len(fields) != 3
-                    or not isinstance(fields[0], int)
-                    or not isinstance(fields[1], list)
-                    or not all(isinstance(label, str) for label in fields[1])
-                    or not isinstance(fields[2], dict)
-                    or not all(isinstance(k, str) for k in fields[2].keys())):
-                raise ValueError("Invalid Node struct received %r" % self)
-
-        def verify_relationship():
-            if (len(fields) != 5
-                    or not isinstance(fields[0], int)
-                    or not isinstance(fields[1], int)
-                    or not isinstance(fields[2], int)
-                    or not isinstance(fields[3], str)
-                    or not isinstance(fields[4], dict)
-                    or not all(isinstance(k, str) for k in fields[4].keys())):
-                raise ValueError(
-                    "Invalid Relationship struct received %r" % self
-                )
-
-        def verify_unbound_relationship():
-            if (len(fields) != 3
-                    or not isinstance(fields[0], int)
-                    or not isinstance(fields[1], str)
-                    or not isinstance(fields[2], dict)
-                    or not all(isinstance(k, str) for k in fields[2].keys())):
-                raise ValueError(
-                    "Invalid UnboundRelationship struct received %r" % self
-                )
-
-        def verify_path():
-            if (len(fields) != 3
-                    or not isinstance(fields[0], list)
-                    or not all(isinstance(n, Structure)
-                               and n.tag == StructTag.node
-                               and n.fields[0] in fields[2]  # id is used
-                               for n in fields[0])
-                    or not isinstance(fields[1], list)
-                    or not all(isinstance(rel, Structure)
-                               and rel.tag == StructTag.unbound_relationship
-                               and rel.fields[0] in fields[2]  # id is used
-                               for rel in fields[1])
-                    or not isinstance(fields[2], list)
-                    or not all(isinstance(id_, int)
-                               # id exists in nodes or relationships
-                               and id_ in {s.fields[0]
-                                           for s in fields[0] + fields[1]}
-                               for id_ in fields[2])):
-                raise ValueError(
-                    "Invalid Path struct received %r" % self
-                )
-
-        def build_generic_verifier(types, name):
-            def verify():
-                if (len(fields) != len(types)
-                        or not all(isinstance(f, t)
-                                   for f, t in zip(fields, types))):
-                    raise ValueError(
-                        "Invalid %s struct received %r" % (name, self)
-                    )
-
-            return verify
-
-        field_validator = {
-            StructTag.node:
-                verify_node,
-            StructTag.relationship:
-                verify_relationship,
-            StructTag.unbound_relationship:
-                verify_unbound_relationship,
-            StructTag.path:
-                verify_path,
-            StructTag.date:
-                build_generic_verifier((int,), "Date"),
-            StructTag.time:
-                build_generic_verifier((int, int), "Time"),
-            StructTag.local_time:
-                build_generic_verifier((int,), "LocalTime"),
-            StructTag.date_time:
-                build_generic_verifier((int, int, int,), "DateTime"),
-            StructTag.date_time_zone_id:
-                build_generic_verifier((int, int, str), "DateTimeZoneId"),
-            StructTag.local_date_time:
-                build_generic_verifier((int, int), "LocalDateTime"),
-            StructTag.duration:
-                build_generic_verifier((int, int, int, int), "Duration"),
-            StructTag.point_2d:
-                build_generic_verifier((int, float, float), "Point2D"),
-            StructTag.point_3d:
-                build_generic_verifier((int, float, float, float), "Point3D"),
-        }
-
-        if tag in field_validator:
-            field_validator[tag]()
+    @property
+    def packstream_version(self):
+        return self._packstream_version
 
     def __repr__(self):
-        return "Structure[0x%02X](%s)" % (ord(self.tag),
-                                          ", ".join(map(repr, self.fields)))
+        if self.packstream_version:
+            return "StructureV%i[0x%02X](%s)" % (
+                self.packstream_version,
+                ord(self.tag), ", ".join(map(repr, self.fields))
+            )
+        return "Structure[0x%02X](%s)" % (
+            ord(self.tag), ", ".join(map(repr, self.fields))
+        )
 
     def __eq__(self, other):
         try:
-            if self.tag == StructTag.path:
+            assert all(
+                StructTagV1.path == value.path
+                for key, value in locals().items()
+                if re.match(r"^StructTagV[1-9]\d*$", key)
+            )
+            if self.tag == StructTagV1.path:
                 # path struct => order of nodes and rels is irrelevant
-                return (other.tag == StructTag.path
+                return (other.tag == self.tag
                         and len(other.fields) == 3
                         and sorted(self.fields[0]) == sorted(other.fields[0])
                         and sorted(self.fields[1]) == sorted(other.fields[1])
@@ -206,127 +159,341 @@ class Structure:
     def __setitem__(self, key, value):
         self.fields[key] = value
         if self._verified:
-            self._verify_fields()
+            self._verify()
 
-    def match_jolt_wildcard(self, wildcard: jolt_types.JoltWildcard):
+    def match_jolt_wildcard(self, wildcard: jolt_common_types.JoltWildcard):
+        jolt_types_ = jolt_types(self._packstream_version)
+        struct_tags = (StructTagV1 if self._packstream_version == 1
+                       else StructTagV2)
         for t in wildcard.types:
-            if issubclass(t, jolt_types.JoltDate):
-                if self.tag == StructTag.date:
+            if issubclass(t, jolt_types_.JoltDate):
+                if self.tag == struct_tags.date:
                     return True
-            elif issubclass(t, jolt_types.JoltTime):
-                if self.tag == StructTag.time:
+            elif issubclass(t, jolt_types_.JoltTime):
+                if self.tag == struct_tags.time:
                     return True
-            elif issubclass(t, jolt_types.JoltLocalTime):
-                if self.tag == StructTag.local_time:
+            elif issubclass(t, jolt_types_.JoltLocalTime):
+                if self.tag == struct_tags.local_time:
                     return True
-            elif issubclass(t, jolt_types.JoltDateTime):
-                if self.tag == StructTag.date_time:
+            elif issubclass(t, jolt_types_.JoltDateTime):
+                if self.tag in (struct_tags.date_time,
+                                struct_tags.date_time_zone_id):
                     return True
-            elif issubclass(t, jolt_types.JoltLocalDateTime):
-                if self.tag == StructTag.local_date_time:
+            elif issubclass(t, jolt_types_.JoltLocalDateTime):
+                if self.tag == struct_tags.local_date_time:
                     return True
-            elif issubclass(t, jolt_types.JoltDuration):
-                if self.tag == StructTag.duration:
+            elif issubclass(t, jolt_types_.JoltDuration):
+                if self.tag == struct_tags.duration:
                     return True
-            elif issubclass(t, jolt_types.JoltPoint):
-                if self.tag in (StructTag.point_2d, StructTag.point_3d):
+            elif issubclass(t, jolt_types_.JoltPoint):
+                if self.tag in (struct_tags.point_2d, struct_tags.point_3d):
                     return True
-            elif issubclass(t, jolt_types.JoltNode):
-                if self.tag == StructTag.node:
+            elif issubclass(t, jolt_types_.JoltNode):
+                if self.tag == struct_tags.node:
                     return True
-            elif issubclass(t, jolt_types.JoltRelationship):
-                if self.tag == StructTag.relationship:
+            elif issubclass(t, jolt_types_.JoltRelationship):
+                if self.tag == struct_tags.relationship:
                     return True
-            elif issubclass(t, jolt_types.JoltPath):
-                if self.tag == StructTag.path:
+            elif issubclass(t, jolt_types_.JoltPath):
+                if self.tag == struct_tags.path:
                     return True
 
     @classmethod
-    def from_jolt_type(cls, jolt: jolt_types.JoltType):
-        if isinstance(jolt, jolt_types.JoltDate):
-            return cls(StructTag.date, jolt.days)
-        if isinstance(jolt, jolt_types.JoltTime):
-            return cls(StructTag.time, jolt.nanoseconds, jolt.utc_offset)
-        if isinstance(jolt, jolt_types.JoltLocalTime):
-            return cls(StructTag.local_time, jolt.nanoseconds)
-        if isinstance(jolt, jolt_types.JoltDateTime):
-            return cls(StructTag.date_time, *jolt.seconds_nanoseconds,
-                       jolt.time.utc_offset)
-        if isinstance(jolt, jolt_types.JoltLocalDateTime):
-            return cls(StructTag.local_date_time, *jolt.seconds_nanoseconds)
-        if isinstance(jolt, jolt_types.JoltDuration):
-            return cls(StructTag.duration, jolt.months, jolt.days,
-                       jolt.seconds, jolt.nanoseconds)
-        if isinstance(jolt, jolt_types.JoltPoint):
-            if jolt.z is None:  # 2D
-                return cls(StructTag.point_2d, jolt.srid, jolt.x, jolt.y)
+    def _from_jolt_v1_type(cls, jolt: jolt_v1_types.JoltType):
+        if isinstance(jolt, jolt_v1_types.JoltDate):
+            return cls(StructTagV1.date, jolt.days, packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltTime):
+            return cls(StructTagV1.time, jolt.nanoseconds, jolt.utc_offset,
+                       packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltLocalTime):
+            return cls(StructTagV1.local_time, jolt.nanoseconds,
+                       packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltDateTime):
+            if jolt.time.zone_id:
+                return cls(StructTagV1.date_time_zone_id,
+                           *jolt.seconds_nanoseconds, jolt.time.zone_id,
+                           packstream_version=1)
             else:
-                return cls(StructTag.point_3d, jolt.srid, jolt.x, jolt.y,
-                           jolt.z)
-        if isinstance(jolt, jolt_types.JoltNode):
-            return cls(StructTag.node, jolt.id, jolt.labels, jolt.properties)
-        if isinstance(jolt, jolt_types.JoltRelationship):
-            return cls(StructTag.relationship, jolt.id, jolt.start_node_id,
-                       jolt.end_node_id, jolt.rel_type, jolt.properties)
-        if isinstance(jolt, jolt_types.JoltPath):
-            # Node structs
+                return cls(StructTagV1.date_time, *jolt.seconds_nanoseconds,
+                           jolt.time.utc_offset, packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltLocalDateTime):
+            return cls(StructTagV1.local_date_time, *jolt.seconds_nanoseconds,
+                       packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltDuration):
+            return cls(StructTagV1.duration, jolt.months, jolt.days,
+                       jolt.seconds, jolt.nanoseconds, packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltPoint):
+            if jolt.z is None:  # 2D
+                return cls(StructTagV1.point_2d, jolt.srid, jolt.x, jolt.y,
+                           packstream_version=1)
+            else:
+                return cls(StructTagV1.point_3d, jolt.srid, jolt.x, jolt.y,
+                           jolt.z, packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltNode):
+            return cls(StructTagV1.node, jolt.id, jolt.labels, jolt.properties,
+                       packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltRelationship):
+            return cls(StructTagV1.relationship, jolt.id, jolt.start_node_id,
+                       jolt.end_node_id, jolt.rel_type, jolt.properties,
+                       packstream_version=1)
+        if isinstance(jolt, jolt_v1_types.JoltPath):
+            uniq_nodes = []
+            uniq_rels = []
+            ids = []
             nodes = []
-            for node in jolt.path[::2]:
-                node = cls(StructTag.node, node.id, node.labels,
-                           node.properties)
-                if node not in nodes:
-                    nodes.append(node)
-            # UnboundRelationship structs
             rels = []
+            # Node structs
+            node_idxs = {}
+            node_idx = 0
+            for node in jolt.path[::2]:
+                nodes.append(node)
+                map_node = Structure._from_jolt_v1_type(node)
+                if map_node not in uniq_nodes:
+                    node_idxs[node.id] = node_idx
+                    node_idx = node_idx + 1
+                    uniq_nodes.append(map_node)
+
+            # UnboundRelationship structs
+
+            rel_idxs = {}
+            rel_idx = 1
             for rel in jolt.path[1::2]:
-                rel = cls(StructTag.unbound_relationship, rel.id, rel.rel_type,
-                          rel.properties)
-                if rel not in rels:
-                    rels.append(rel)
-            ids = [e.id for e in jolt.path]
-            return cls(StructTag.path, nodes, rels, ids)
+                rels.append(rel)
+
+                ub_rel = cls(StructTagV1.unbound_relationship, rel.id,
+                             rel.rel_type, rel.properties,
+                             packstream_version=1)
+                if ub_rel not in uniq_rels:
+                    rel_idxs[rel.id] = rel_idx
+                    rel_idx = rel_idx + 1
+                    uniq_rels.append(ub_rel)
+
+            last_node = nodes[0]
+            for i in range(1, (len(rels) * 2) + 1):
+                if i % 2 == 0:
+                    last_node = nodes[i // 2]
+                    index = node_idxs[last_node.id]
+                    ids.append(index)
+                else:
+                    rel = rels[i // 2]
+                    index = rel_idxs[rel.id]
+                    if last_node.id == rel.start_node_id:
+                        ids.append(index)
+                    else:
+                        ids.append(-index)
+
+            return cls(StructTagV1.path, uniq_nodes, uniq_rels, ids,
+                       packstream_version=1)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+
+    @classmethod
+    def _from_jolt_v2_type(cls, jolt: jolt_v1_types.JoltType):
+        if isinstance(jolt, jolt_v2_types.JoltDate):
+            return cls(StructTagV2.date, jolt.days, packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltTime):
+            return cls(StructTagV2.time, jolt.nanoseconds, jolt.utc_offset,
+                       packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltLocalTime):
+            return cls(StructTagV2.local_time, jolt.nanoseconds,
+                       packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltDateTime):
+            if jolt.time.zone_id:
+                return cls(StructTagV2.date_time_zone_id,
+                           *jolt.seconds_nanoseconds, jolt.time.zone_id,
+                           packstream_version=2)
+            else:
+                return cls(StructTagV2.date_time, *jolt.seconds_nanoseconds,
+                           jolt.time.utc_offset, packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltLocalDateTime):
+            return cls(StructTagV2.local_date_time, *jolt.seconds_nanoseconds,
+                       packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltDuration):
+            return cls(StructTagV2.duration, jolt.months, jolt.days,
+                       jolt.seconds, jolt.nanoseconds, packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltPoint):
+            if jolt.z is None:  # 2D
+                return cls(StructTagV2.point_2d, jolt.srid, jolt.x, jolt.y,
+                           packstream_version=2)
+            else:
+                return cls(StructTagV2.point_3d, jolt.srid, jolt.x, jolt.y,
+                           jolt.z, packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltNode):
+            return cls(StructTagV2.node, jolt.id, jolt.labels,
+                       jolt.properties, jolt.element_id, packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltRelationship):
+            return cls(StructTagV2.relationship, jolt.id, jolt.start_node_id,
+                       jolt.end_node_id, jolt.rel_type, jolt.properties,
+                       jolt.element_id, jolt.start_node_element_id,
+                       jolt.end_node_element_id, packstream_version=2)
+        if isinstance(jolt, jolt_v2_types.JoltPath):
+            uniq_nodes = []
+            uniq_rels = []
+            ids = []
+            nodes = []
+            rels = []
+            # Node structs
+            node_idxs = {}
+            node_idx = 0
+            for node in jolt.path[::2]:
+                nodes.append(node)
+                map_node = Structure._from_jolt_v2_type(node)
+                if map_node not in uniq_nodes:
+                    node_idxs[node.element_id] = node_idx
+                    node_idx = node_idx + 1
+                    uniq_nodes.append(map_node)
+
+            # UnboundRelationship structs
+
+            rel_idxs = {}
+            rel_idx = 1
+            for rel in jolt.path[1::2]:
+                rels.append(rel)
+
+                ub_rel = cls(StructTagV2.unbound_relationship, rel.id,
+                             rel.rel_type, rel.properties, rel.element_id,
+                             packstream_version=2)
+                if ub_rel not in uniq_rels:
+                    rel_idxs[rel.element_id] = rel_idx
+                    rel_idx = rel_idx + 1
+                    uniq_rels.append(ub_rel)
+
+            last_node = nodes[0]
+            for i in range(1, (len(rels) * 2) + 1):
+                if i % 2 == 0:
+                    last_node = nodes[i // 2]
+                    index = node_idxs[last_node.element_id]
+                    ids.append(index)
+                else:
+                    rel = rels[i // 2]
+                    index = rel_idxs[rel.element_id]
+                    if last_node.id == rel.start_node_id:
+                        ids.append(index)
+                    else:
+                        ids.append(-index)
+
+            return cls(StructTagV2.path, uniq_nodes, uniq_rels, ids,
+                       packstream_version=2)
+        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+
+    @classmethod
+    def from_jolt_type(cls, jolt: jolt_common_types.JoltType):
+        if isinstance(jolt, jolt_v1_types.JoltType):
+            return cls._from_jolt_v1_type(jolt)
+        elif isinstance(jolt, jolt_v2_types.JoltType):
+            return cls._from_jolt_v2_type(jolt)
+        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+
+    def _to_jolt_v1_type(self):
+        if self.tag == StructTagV1.date:
+            return jolt_v1_types.JoltDate.new(*self.fields)
+        if self.tag == StructTagV1.time:
+            return jolt_v1_types.JoltTime.new(*self.fields)
+        if self.tag == StructTagV1.local_time:
+            return jolt_v1_types.JoltLocalTime.new(*self.fields)
+        if self.tag in (StructTagV1.date_time, StructTagV1.date_time_zone_id):
+            return jolt_v1_types.JoltDateTime.new(*self.fields)
+        if self.tag == StructTagV1.local_date_time:
+            return jolt_v1_types.JoltLocalDateTime.new(*self.fields)
+        if self.tag == StructTagV1.duration:
+            return jolt_v1_types.JoltDuration.new(*self.fields)
+        if self.tag in (StructTagV1.point_2d, StructTagV1.point_3d):
+            return jolt_v1_types.JoltPoint.new(*self.fields[1:],
+                                               srid=self.fields[0])
+        if self.tag == StructTagV1.node:
+            return jolt_v1_types.JoltNode(*self.fields)
+        if self.tag == StructTagV1.relationship:
+            return jolt_v1_types.JoltRelationship(
+                *(self.fields[i] for i in (0, 1, 3, 2, 4))
+            )
+        if self.tag == StructTagV1.path:
+            nodes = self.fields[0]
+            rels = self.fields[1]
+            idxs = self.fields[2]
+            last_node = nodes[0]
+            path = [nodes[0].to_jolt_type()]
+            for i, idx in enumerate(idxs):
+                if i % 2 == 0:
+                    assert len(idxs) > i + 1
+                    rel = rels[abs(idx) - 1]
+                    next_node = nodes[abs(idxs[i + 1])]
+                    if idx > 0:
+                        start_node, end_node = last_node, next_node
+                    else:
+                        start_node, end_node = next_node, last_node
+                    path.append(
+                        jolt_v1_types.JoltRelationship(
+                            rel.fields[0], start_node.fields[0],
+                            rel.fields[1], end_node.fields[0], rel.fields[2],
+                        )
+                    )
+                else:
+                    last_node = nodes[idx]
+                    path.append(nodes[idx].to_jolt_type())
+            return jolt_v1_types.JoltPath(*path)
+        raise TypeError("Unsupported struct type: {}".format(self.tag))
+
+    def _to_jolt_v2_type(self):
+        if self.tag == StructTagV2.date:
+            return jolt_v2_types.JoltDate.new(*self.fields)
+        if self.tag == StructTagV2.time:
+            return jolt_v2_types.JoltTime.new(*self.fields)
+        if self.tag == StructTagV2.local_time:
+            return jolt_v2_types.JoltLocalTime.new(*self.fields)
+        if self.tag in (StructTagV2.date_time, StructTagV2.date_time_zone_id):
+            return jolt_v2_types.JoltDateTime.new(*self.fields)
+        if self.tag == StructTagV2.local_date_time:
+            return jolt_v2_types.JoltLocalDateTime.new(*self.fields)
+        if self.tag == StructTagV2.duration:
+            return jolt_v2_types.JoltDuration.new(*self.fields)
+        if self.tag in (StructTagV2.point_2d, StructTagV2.point_3d):
+            return jolt_v2_types.JoltPoint.new(*self.fields[1:],
+                                               srid=self.fields[0])
+        if self.tag == StructTagV2.node:
+            return jolt_v2_types.JoltNode(*self.fields)
+        if self.tag == StructTagV2.relationship:
+            return jolt_v2_types.JoltRelationship(
+                *(self.fields[i] for i in (0, 1, 3, 2, 4, 5, 6, 7))
+            )
+        if self.tag == StructTagV2.path:
+            nodes = self.fields[0]
+            rels = self.fields[1]
+            idxs = self.fields[2]
+            last_node = nodes[0]
+            path = [nodes[0].to_jolt_type()]
+            for i, idx in enumerate(idxs):
+                if i % 2 == 0:
+                    assert len(idxs) > i + 1
+                    rel = rels[abs(idx) - 1]
+                    next_node = nodes[abs(idxs[i + 1])]
+                    if idx > 0:
+                        start_node, end_node = last_node, next_node
+                    else:
+                        start_node, end_node = next_node, last_node
+                    path.append(
+                        jolt_v2_types.JoltRelationship(
+                            rel.fields[0], start_node.fields[0],
+                            rel.fields[1], end_node.fields[0], rel.fields[2],
+                            rel.fields[3], start_node.fields[3],
+                            end_node.fields[3]
+                        )
+                    )
+                else:
+                    last_node = nodes[idx]
+                    path.append(nodes[idx].to_jolt_type())
+            return jolt_v2_types.JoltPath(*path)
+        raise TypeError("Unsupported struct type: {}".format(self.tag))
 
     def to_jolt_type(self):
         if not self._verified:
             raise ValueError("Can only convert verified struct to jolt type")
-        if self.tag == StructTag.date:
-            return jolt_types.JoltDate.new(*self.fields)
-        if self.tag == StructTag.time:
-            return jolt_types.JoltTime.new(*self.fields)
-        if self.tag == StructTag.local_time:
-            return jolt_types.JoltLocalTime.new(*self.fields)
-        if self.tag == StructTag.date_time:
-            return jolt_types.JoltDateTime.new(*self.fields)
-        if self.tag == StructTag.local_date_time:
-            return jolt_types.JoltLocalDateTime.new(*self.fields)
-        if self.tag == StructTag.duration:
-            return jolt_types.JoltDuration.new(*self.fields)
-        if self.tag == StructTag.point_2d or self.tag == StructTag.point_3d:
-            return jolt_types.JoltPoint.new(*self.fields[1:],
-                                            srid=self.fields[0])
-        if self.tag == StructTag.node:
-            return jolt_types.JoltNode(*self.fields)
-        if self.tag == StructTag.relationship:
-            return jolt_types.JoltRelationship(*(self.fields[i]
-                                                 for i in (0, 1, 3, 2, 4)))
-        if self.tag == StructTag.path:
-            nodes = {node.fields[0]: node
-                     for node in self.fields[0]}
-            rels = {rel.fields[0]: rel
-                    for rel in self.fields[1]}
-            ids = self.fields[2]
-            path = []
-            for idx, id_ in enumerate(ids):
-                if idx % 2 == 0:
-                    path.append(nodes[id_].to_jolt_type())
-                else:
-                    path.append(jolt_types.JoltRelationship(
-                        id_, ids[idx - 1], rels[id_].fields[1],
-                        ids[idx + 1], rels[id_].fields[2])
-                    )
-            return jolt_types.JoltPath(*path)
-        raise TypeError("Unsupported struct type: {}".format(self.tag))
+        if self._packstream_version == 1:
+            return self._to_jolt_v1_type()
+        elif self._packstream_version == 2:
+            return self._to_jolt_v2_type()
+        raise ValueError(
+            "JOLT encoding is only defined for packstream_version 1 and 2, "
+            "not {}".format(self._packstream_version)
+        )
 
     def fields_to_jolt_types(self):
         def transform_field(field):
@@ -339,6 +506,204 @@ class Structure:
             return field
 
         return transform_field(self.fields)
+
+
+class PackstreamV1StructureValidator:
+
+    packstream_version = 1
+
+    @classmethod
+    def _validate_validations(cls, validations, type_name, structure, fields):
+        type_name += f"_v{cls.packstream_version}"
+        for validation in validations:
+            if not validation(fields):
+                raise ValueError(
+                    f"Invalid {type_name} struct received.\n"
+                    f"validation failed: {inspect.getsource(validation)}"
+                    f" {structure}")
+
+    @classmethod
+    def _verify_node(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 3,
+            lambda f: isinstance(f[0], int),
+            lambda f: isinstance(f[1], list),
+            lambda f: all(isinstance(label, str) for label in f[1]),
+            lambda f: isinstance(f[2], dict),
+            lambda f: all(isinstance(k, str) for k in f[2].keys())
+        ]
+        cls._validate_validations(validations, "Node", structure, fields)
+
+    @classmethod
+    def _verify_unbound_relationship(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 3,
+            lambda f: isinstance(f[0], int),
+            lambda f: isinstance(f[1], str),
+            lambda f: isinstance(f[2], dict),
+            lambda f: all(isinstance(k, str) for k in f[2].keys())
+        ]
+        cls._validate_validations(validations, "UnboundRelationship",
+                                  structure, fields)
+
+    @classmethod
+    def _verify_relationship(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 5,
+            lambda f: isinstance(f[0], int),
+            lambda f: isinstance(f[1], int),
+            lambda f: isinstance(f[2], int),
+            lambda f: isinstance(f[3], str),
+            lambda f: isinstance(f[4], dict),
+            lambda f: all(isinstance(k, str) for k in f[4].keys())
+        ]
+        cls._validate_validations(validations, "Relationship",
+                                  structure, fields)
+
+    @classmethod
+    def _verify_path(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 3,
+            lambda f: all(isinstance(n, Structure)
+                          and n.tag == StructTagV1.node
+                          and cls.verify_fields(n)
+                          for n in f[0]),
+            lambda f: isinstance(f[1], list),
+            lambda f: all(isinstance(rel, Structure)
+                          and rel.tag == StructTagV1.unbound_relationship
+                          and cls.verify_fields(rel)
+                          for rel in f[1]),
+            lambda f: isinstance(f[2], list),
+            # index is less than respective array length
+            # rels indexed from 1, nodes 0
+            lambda f: all(isinstance(id_, int)
+                          and abs(id_) <= len(f[1])
+                          if i % 2 == 0 else abs(id_) < len(f[0])
+                          for i, id_ in enumerate(f[2]))
+        ]
+        cls._validate_validations(validations, "Path", structure, fields)
+
+    @classmethod
+    def _build_generic_verifier(cls, types, name):
+        def verify(structure, fields):
+            if (len(fields) != len(types)
+                or not all(isinstance(f, t)
+                           for f, t in zip(fields, types))):
+                raise ValueError(
+                    "Invalid %s struct received %r" % (name, structure)
+                )
+
+        return verify
+
+    @classmethod
+    def verify_fields(cls, structure: Structure):
+        tag, fields = structure.tag, structure.fields
+
+        field_validator = {
+            StructTagV1.node: cls._verify_node,
+            StructTagV1.relationship: cls._verify_relationship,
+            StructTagV1.unbound_relationship: cls._verify_unbound_relationship,
+            StructTagV1.path: cls._verify_path,
+            StructTagV1.date: cls._build_generic_verifier((int,), "Date"),
+            StructTagV1.time: cls._build_generic_verifier((int, int), "Time"),
+            StructTagV1.local_time: cls._build_generic_verifier(
+                (int,), "LocalTime"
+            ),
+            StructTagV1.date_time: cls._build_generic_verifier(
+                (int, int, int,), "DateTime"
+            ),
+            StructTagV1.date_time_zone_id: cls._build_generic_verifier(
+                (int, int, str), "DateTimeZoneId"
+            ),
+            StructTagV1.local_date_time: cls._build_generic_verifier(
+                (int, int), "LocalDateTime"
+            ),
+            StructTagV1.duration: cls._build_generic_verifier(
+                (int, int, int, int), "Duration"
+            ),
+            StructTagV1.point_2d: cls._build_generic_verifier(
+                (int, float, float), "Point2D"
+            ),
+            StructTagV1.point_3d: cls._build_generic_verifier(
+                (int, float, float, float), "Point3D"
+            ),
+        }
+
+        if tag in field_validator:
+            field_validator[tag](structure, fields)
+        return True
+
+
+class PackstreamV2StructureValidator(PackstreamV1StructureValidator):
+
+    @classmethod
+    def _verify_node(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 4,
+            lambda f: isinstance(f[0], int) or f[0] is None,
+            lambda f: isinstance(f[1], list),
+            lambda f: all(isinstance(label, str) for label in f[1]),
+            lambda f: isinstance(f[2], dict),
+            lambda f: all(isinstance(k, str) for k in f[2].keys()),
+            lambda f: isinstance(f[3], str)
+        ]
+        cls._validate_validations(validations, "Node", structure, fields)
+
+    @classmethod
+    def _verify_unbound_relationship(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 4,
+            lambda f: isinstance(f[0], int) or f[0] is None,
+            lambda f: isinstance(f[1], str),
+            lambda f: isinstance(f[2], dict),
+            lambda f: all(isinstance(k, str) for k in f[2].keys()),
+            lambda f: isinstance(f[3], str)
+        ]
+        cls._validate_validations(validations, "UnboundRelationship",
+                                  structure, fields)
+
+    @classmethod
+    def _verify_relationship(cls, structure, fields):
+        validations = [
+            lambda f: len(f) == 8,
+            lambda f: (isinstance(f[0], int) or f[0] is None),
+            lambda f: (isinstance(f[1], int) or f[1] is None),
+            lambda f: (isinstance(f[2], int) or f[2] is None),
+            lambda f: isinstance(f[3], str),
+            lambda f: isinstance(f[4], dict),
+            lambda f: all(isinstance(k, str) for k in f[4].keys()),
+            lambda f: isinstance(f[5], str),
+            lambda f: isinstance(f[6], str),
+            lambda f: isinstance(f[7], str),
+        ]
+        cls._validate_validations(validations, "Relationship",
+                                  structure, fields)
+
+    @classmethod
+    def verify_fields(cls, structure: Structure):
+        assert all(
+            hasattr(StructTagV1, tag)
+            and getattr(StructTagV1, tag) == getattr(StructTagV2, tag)
+            for tag in dir(StructTagV2) if not (
+                tag.startswith("_")
+                or tag in ("date_time", "date_time_zone_id")
+            )
+        )
+
+        tag, fields = structure.tag, structure.fields
+
+        field_validator = {
+            StructTagV2.date_time: cls._build_generic_verifier(
+                (int, int, int,), "DateTime"
+            ),
+            StructTagV2.date_time_zone_id: cls._build_generic_verifier(
+                (int, int, str), "DateTimeZoneId"
+            ),
+        }
+
+        if tag in field_validator:
+            return field_validator[tag](structure, fields)
+        return super().verify_fields(structure)
 
 
 class Packer:
@@ -633,8 +998,9 @@ class Packer:
 
 class Unpacker:
 
-    def __init__(self, unpackable):
+    def __init__(self, unpackable, packstream_version):
         self.unpackable = unpackable
+        self.packstream_version = packstream_version
 
     def reset(self):
         self.unpackable.reset()
@@ -731,7 +1097,9 @@ class Unpacker:
                 fields = [None] * size
                 for i in range(len(fields)):
                     fields[i] = self._unpack(verify_struct=True)
-                return Structure(tag, *fields, verified=verify_struct)
+                return Structure(tag, *fields,
+                                 packstream_version=self.packstream_version,
+                                 verified=verify_struct)
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
@@ -888,8 +1256,9 @@ class UnpackableBuffer:
 class PackStream:
     """Chunked message reader/writer for PackStream messaging."""
 
-    def __init__(self, wire):
+    def __init__(self, wire, packstream_version):
         self.wire = wire
+        self.packstream_version = packstream_version
         self.data_buffer = []
         self.next_chunk_size = None
 
@@ -911,7 +1280,7 @@ class PackStream:
                 break
         buffer = UnpackableBuffer(b"".join(self.data_buffer))
         self.data_buffer = []
-        unpacker = Unpacker(buffer)
+        unpacker = Unpacker(buffer, self.packstream_version)
         return unpacker.unpack_message()
 
     def write_message(self, message):
