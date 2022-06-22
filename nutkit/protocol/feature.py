@@ -43,6 +43,8 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The driver supports sending and receiving temporal data types.
+    API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
     # The driver offers a configuration option to limit time it spends at most,
     # trying to update the routing table whenever needed.
     API_UPDATE_ROUTING_TABLE_TIMEOUT = "Feature:API:UpdateRoutingTableTimeout"
@@ -67,6 +69,8 @@ class Feature(Enum):
     BOLT_4_3 = "Feature:Bolt:4.3"
     # The driver supports Bolt protocol version 4.4
     BOLT_4_4 = "Feature:Bolt:4.4"
+    # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
+    BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.

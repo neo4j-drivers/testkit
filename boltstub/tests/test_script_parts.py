@@ -18,15 +18,23 @@ class TestClientLine:
     LINE_MARKER = "C"
     LINE_CLS = ClientLine
 
-    def test_matches_tag_name(self):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_matches_tag_name(self, packstream_version):
         line = self.LINE_CLS(10, "%s: MSG" % self.LINE_MARKER, "MSG")
-        msg = TranslatedStructure("MSG", b"\x00")
-        assert line.match(msg)
+        msg = TranslatedStructure("MSG", b"\x00",
+                                  packstream_version=packstream_version)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        assert line.match_message(msg.name, msg.fields)
 
-    def test_doesnt_match_wrong_tag_name(self):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_doesnt_match_wrong_tag_name(self, packstream_version):
         line = self.LINE_CLS(10, "%s: MSG2" % self.LINE_MARKER, "MSG2")
-        msg = TranslatedStructure("MSG", b"\x00")
-        assert not line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00",
+                                  packstream_version=packstream_version)
+        assert not line.match_message(msg.name, msg.fields)
 
     @pytest.mark.parametrize("fields", (
         ["a"],
@@ -40,12 +48,16 @@ class TestClientLine:
         [["hello", "world"]],
     ))
     @pytest.mark.parametrize("wildcard", (True, False))
-    def test_matches_fields(self, fields, wildcard):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_matches_fields(self, fields, wildcard, packstream_version):
         msg_fields = ["*" if wildcard else f for f in fields]
         content = "MSG " + " ".join(map(json.dumps, msg_fields))
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert line.match_message(msg.name, msg.fields)
 
     @pytest.mark.parametrize(("expected", "received"), (
         [["a"], [["a"]]],
@@ -61,59 +73,75 @@ class TestClientLine:
         [[["hello", "world"]], [["world", "hello"]]],
     ))
     @pytest.mark.parametrize("flip", (True, False))
-    def test_doesnt_match_wrong_fields(self, expected, received, flip):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_doesnt_match_wrong_fields(self, expected, received, flip,
+                                       packstream_version):
         content = "MSG " + " ".join(map(json.dumps,
                                         received if flip else expected))
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
         msg = TranslatedStructure("MSG", b"\x00",
-                                  *(expected if flip else received))
-        assert not line.match(msg)
+                                  *(expected if flip else received),
+                                  packstream_version=1)
+        assert not line.match_message(msg.name, msg.fields)
 
-    @pytest.mark.parametrize(("field_repr", "fields"), (
+    @pytest.mark.parametrize(("field_repr", "fields", "packstream_version"), (
         *_common.JOLT_FIELD_REPR_TO_FIELDS,
     ))
-    def test_matches_jolt_fields(self, field_repr, fields):
+    def test_matches_jolt_fields(self, field_repr, fields, packstream_version):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert line.match_message(msg.name, msg.fields)
 
-    @pytest.mark.parametrize(("field_repr", "fields"), (
-        *((rep, fields)
-          for rep, field_matches in _common.JOLT_WILDCARD_TO_FIELDS
+    @pytest.mark.parametrize(("field_repr", "fields", "packstream_version"), (
+        *((rep, fields, pv)
+          for rep, field_matches, pv in _common.JOLT_WILDCARD_TO_FIELDS
           for fields in field_matches),
     ))
-    def test_matches_jolt_wildcard(self, field_repr, fields):
+    def test_matches_jolt_wildcard(self, field_repr, fields,
+                                   packstream_version):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert line.match_message(msg.name, msg.fields)
 
-    @pytest.mark.parametrize(("field_repr", "fields"), (
-        *((r1, f2)
-          for r1, f1 in _common.JOLT_FIELD_REPR_TO_FIELDS
-          for _, f2 in _common.JOLT_FIELD_REPR_TO_FIELDS
+    @pytest.mark.parametrize(("field_repr", "fields", "packstream_version"), (
+        *((r1, f2, pv)
+          for r1, f1, pv in _common.JOLT_FIELD_REPR_TO_FIELDS
+          for _, f2, _ in _common.JOLT_FIELD_REPR_TO_FIELDS
           if not _common.nan_and_type_equal(f1, f2)),
     ))
-    def test_does_not_match_wrong_jolt_fields(self, field_repr, fields):
+    def test_does_not_match_wrong_jolt_fields(self, field_repr, fields,
+                                              packstream_version):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert not line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert not line.match_message(msg.name, msg.fields)
 
-    @pytest.mark.parametrize(("field_repr", "fields"), (
-        *((rep1, wrong_fields)
-          for rep1, _ in _common.JOLT_WILDCARD_TO_FIELDS
-          for rep2, wrong_field_matches in _common.JOLT_WILDCARD_TO_FIELDS
+    @pytest.mark.parametrize(("field_repr", "fields", "packstream_version"), (
+        *((rep1, wrong_fields, pv)
+          for rep1, _, pv in _common.JOLT_WILDCARD_TO_FIELDS
+          for rep2, wrong_field_matches, _ in _common.JOLT_WILDCARD_TO_FIELDS
           if rep1 != rep2
           for wrong_fields in wrong_field_matches),
     ))
-    def test_does_not_matches_jolt_wildcard_wrong_fields(self, field_repr,
-                                                         fields):
+    def test_does_not_matches_jolt_wildcard_wrong_fields(
+        self, field_repr, fields, packstream_version
+    ):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert not line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert not line.match_message(msg.name, msg.fields)
 
     @pytest.mark.parametrize(("field_repr", "fields"), (*(
         (rep, fields)
@@ -139,11 +167,16 @@ class TestClientLine:
         )
         for fields in field_matches
     ),))
-    def test_does_match_nested_jolt_wildcard(self, field_repr, fields):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_does_match_nested_jolt_wildcard(self, field_repr, fields,
+                                             packstream_version):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert line.match_message(msg.name, msg.fields)
 
     @pytest.mark.parametrize(("field_repr", "fields"), (*(
         (rep, fields)
@@ -170,12 +203,17 @@ class TestClientLine:
         )
         for fields in field_matches
     ),))
-    def test_does_match_nested_jolt_wildcard_wrong_fields(self, field_repr,
-                                                          fields):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_does_match_nested_jolt_wildcard_wrong_fields(
+        self, field_repr, fields, packstream_version
+    ):
         content = "MSG " + field_repr
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *fields)
-        assert not line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *fields,
+                                  packstream_version=packstream_version)
+        assert not line.match_message(msg.name, msg.fields)
 
     @pytest.mark.parametrize(("expected", "received", "match"), (
         # optional
@@ -302,8 +340,11 @@ class TestClientLine:
         [[{"[a{}]": "*"}], [{}], True],
     ))
     @pytest.mark.parametrize("nested", (None, "list", "dict"))
-    def test_optional_wildcard_set_dict_entries(self, expected, received,
-                                                match, nested):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_optional_wildcard_set_dict_entries(
+        self, expected, received, match, nested, packstream_version
+    ):
         if nested == "list":
             expected = [expected]
             received = [received]
@@ -313,8 +354,10 @@ class TestClientLine:
                 received[0] = {"key": received[0]}
         content = "MSG " + " ".join(map(json.dumps, expected))
         line = self.LINE_CLS(10, self.LINE_MARKER + ": " + content, content)
-        msg = TranslatedStructure("MSG", b"\x00", *received)
-        assert match == line.match(msg)
+        line.parse_jolt(_common.get_jolt_package(packstream_version))
+        msg = TranslatedStructure("MSG", b"\x00", *received,
+                                  packstream_version=packstream_version)
+        assert match == line.match_message(msg.name, msg.fields)
 
 
 class TestAutoLine(TestClientLine):
@@ -396,7 +439,10 @@ class TestServerLine:
         with pytest.raises(LineError):
             ServerLine(10, "S: " + content, content)
 
-    def test_does_not_accept_jolt_wildcard(self):
+    @pytest.mark.parametrize("packstream_version",
+                             _common.ALL_PACKSTREAM_VERSIONS)
+    def test_does_not_accept_jolt_wildcard(self, packstream_version):
         content = 'MSG {"Z": "*"}'
+        line = ServerLine(10, "S: " + content, content)
         with pytest.raises(LineError):
-            ServerLine(10, "S: " + content, content)
+            line.parse_jolt(_common.get_jolt_package(packstream_version))
