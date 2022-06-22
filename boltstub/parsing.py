@@ -17,7 +17,10 @@ import warnings
 
 import lark
 
-from .bolt_protocol import verify_script_messages
+from .bolt_protocol import (
+    get_bolt_protocol,
+    verify_script_messages,
+)
 from .errors import (
     BoltMissingVersionError,
     BoltUnknownMessageError,
@@ -25,8 +28,10 @@ from .errors import (
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt import types as jolt_types
-from .simple_jolt.transformers import decode as jolt_decode
+from .simple_jolt.common.types import (
+    JoltType,
+    JoltWildcard,
+)
 
 
 def load_parser():
@@ -74,8 +79,6 @@ class LineError(lark.GrammarError):
 
 
 class Line(str, abc.ABC):
-    allow_jolt_wildcard = False
-
     def __new__(cls, line_number: int, raw_line, content: str):
         obj = super(Line, cls).__new__(cls, raw_line)
         obj.line_number = line_number
@@ -96,58 +99,8 @@ class Line(str, abc.ABC):
     def canonical(self):
         pass
 
-    @classmethod
-    def parse_line(cls, line):
-        def splart(s):
-            parts = s.split(maxsplit=1)
-            while len(parts) < 2:
-                parts.append("")
-            return parts
-
-        content = line.content
-        name, data = splart(content.strip())
-        fields = []
-        decoder = json.JSONDecoder()
-        while data:
-            data = data.lstrip()
-            try:
-                decoded, end = decoder.raw_decode(data)
-            except json.JSONDecodeError as e:
-                raise LineError(
-                    line,
-                    "message fields must be white space separated json"
-                ) from e
-            try:
-                decoded = jolt_decode(decoded)
-            except (ValueError, AssertionError) as e:
-                raise LineError(
-                    line,
-                    "message fields failed JOLT parser"
-                ) from e
-            decoded = cls._jolt_to_struct(line, decoded)
-            fields.append(decoded)
-            data = data[end:]
-        return name, fields
-
-    @classmethod
-    def _jolt_to_struct(cls, line, decoded):
-        if isinstance(decoded, jolt_types.JoltWildcard):
-            if not cls.allow_jolt_wildcard:
-                raise LineError(
-                    line, "{} does not allow for JOLT wildcard values"
-                          .format(cls.__name__)
-                )
-            else:
-                return decoded
-        if isinstance(decoded, jolt_types.JoltType):
-            return Structure.from_jolt_type(decoded)
-        if isinstance(decoded, (list, tuple)):
-            return type(decoded)(cls._jolt_to_struct(line, d)
-                                 for d in decoded)
-        if isinstance(decoded, dict):
-            return {k: cls._jolt_to_struct(line, v)
-                    for k, v in decoded.items()}
-        return decoded
+    def parse_jolt(self, jolt_package):
+        pass
 
 
 class BangLine(Line):
@@ -158,7 +111,7 @@ class BangLine(Line):
     TYPE_HANDSHAKE = "handshake"
 
     def __new__(cls, *args, **kwargs):
-        obj = super(BangLine, cls).__new__(cls, *args, **kwargs)
+        obj = super().__new__(cls, *args, **kwargs)
         if re.match(r"^AUTO\s", obj.content):
             obj._type = BangLine.TYPE_AUTO
             obj._arg = obj.content[5:].strip()
@@ -231,26 +184,93 @@ class BangLine(Line):
             )
 
 
-class ClientLine(Line):
-    allow_jolt_wildcard = True
+class MessageLine(Line, abc.ABC):
+    allow_jolt_wildcard = False
+    always_parse = True
 
-    def __new__(cls, *args, **kwargs):
-        obj = super(ClientLine, cls).__new__(cls, *args, **kwargs)
-        obj.parsed = cls.parse_line(obj)
+    def __new__(cls, line_number: int, raw_line, content: str):
+        obj = super().__new__(cls, line_number, raw_line, content)
+        if cls.always_parse:
+            obj.parsed = cls._parse_line(obj)
+        else:
+            obj.parsed = None, []
+        obj.jolt_parsed = None
         return obj
+
+    @staticmethod
+    def _parse_line(line):
+        def splart(s):
+            parts = s.split(maxsplit=1)
+            while len(parts) < 2:
+                parts.append("")
+            return parts
+
+        content = line.content
+        name, data = splart(content.strip())
+        fields = []
+        decoder = json.JSONDecoder()
+        while data:
+            data = data.lstrip()
+            try:
+                decoded, end = decoder.raw_decode(data)
+            except json.JSONDecodeError as e:
+                raise LineError(
+                    line,
+                    "message fields must be white space separated json"
+                ) from e
+            fields.append(decoded)
+            data = data[end:]
+        return name, fields
+
+    def parse_jolt(self, jolt_package):
+        jolt_fields = []
+        for field in self.parsed[1]:
+            try:
+                decoded = jolt_package.codec.decode(field)
+            except (ValueError, AssertionError) as e:
+                raise LineError(
+                    self,
+                    "message fields failed JOLT parser"
+                ) from e
+            decoded = self._jolt_to_struct(decoded)
+            jolt_fields.append(decoded)
+        self.jolt_parsed = self.parsed[0], jolt_fields
+        return self.jolt_parsed
+
+    def _jolt_to_struct(self, decoded):
+        if isinstance(decoded, JoltWildcard):
+            if not self.allow_jolt_wildcard:
+                raise LineError(
+                    self, "{} does not allow for JOLT wildcard values"
+                          .format(self.__class__.__name__)
+                )
+            else:
+                return decoded
+        if isinstance(decoded, JoltType):
+            return Structure.from_jolt_type(decoded)
+        if isinstance(decoded, (list, tuple)):
+            return type(decoded)(self._jolt_to_struct(d) for d in decoded)
+        if isinstance(decoded, dict):
+            return {k: self._jolt_to_struct(v) for k, v in decoded.items()}
+        return decoded
+
+
+class ClientLine(MessageLine):
+    allow_jolt_wildcard = True
 
     def canonical(self):
         return " ".join(("C:", self.parsed[0],
                          *map(json.dumps, self.parsed[1])))
 
-    def match(self, msg):
-        tag, fields = self.parsed
-        if tag != msg.name:
+    def match_message(self, name, fields):
+        assert self.jolt_parsed
+        line_name, line_fields = self.jolt_parsed
+        if line_name != name:
             return False
-        return ClientLine.field_match(fields, msg.fields)
+        return self._field_match(line_fields, fields)
 
-    @staticmethod
-    def _dict_match(should, is_):
+    @classmethod
+    def _dict_match(cls, should, is_):
         accepted_keys = set()
         for should_key in should:
             should_key_unescaped = re.sub(r"\\([\[\]\\\{\}])", r"\1",
@@ -269,19 +289,19 @@ class ClientLine(Line):
                 is_value = is_[should_key_unescaped]
                 if ordered and isinstance(is_value, list):
                     is_value = sorted(is_value)
-                if not ClientLine.field_match(should_value, is_value):
+                if not cls._field_match(should_value, is_value):
                     return False
             elif not optional:
                 return False
         return not set(is_.keys()).difference(accepted_keys)
 
-    @staticmethod
-    def field_match(should, is_):
+    @classmethod
+    def _field_match(cls, should, is_):
         if isinstance(should, str):
             if should == "*":
                 return True
             should = re.sub(r"\\([\\*])", r"\1", should)
-        if isinstance(should, jolt_types.JoltWildcard):
+        if isinstance(should, JoltWildcard):
             if isinstance(is_, Structure):
                 return is_.match_jolt_wildcard(should)
             return type(is_) in should.types
@@ -292,10 +312,10 @@ class ClientLine(Line):
         if isinstance(should, (list, tuple)):
             if len(should) != len(is_):
                 return False
-            return all(ClientLine.field_match(a, b)
+            return all(cls._field_match(a, b)
                        for a, b in zip(should, is_))
         if isinstance(should, dict):
-            return ClientLine._dict_match(should, is_)
+            return cls._dict_match(should, is_)
         if isinstance(should, float) and math.isnan(should):
             return isinstance(is_, float) and math.isnan(is_)
         return is_ == should
@@ -307,26 +327,25 @@ class AutoLine(ClientLine):
                          *map(json.dumps, self.parsed[1])))
 
 
-class ServerLine(Line):
+class ServerLine(MessageLine):
+    always_parse = False
+
     def __new__(cls, *args, **kwargs):
         obj = super(ServerLine, cls).__new__(cls, *args, **kwargs)
         obj.command_match = re.match(r"^<(\S+)>(.*)$", obj.content)
-        if not obj.command_match:
-            obj.parsed = cls.parse_line(obj)
+        obj.is_command = bool(obj.command_match)
+        if not obj.is_command:
+            obj.parsed = cls._parse_line(obj)
         else:
-            if not cls._transform_auto(obj):
-                obj.parsed = None, []
-                cls._verify_command(obj)
+            cls._verify_command(obj)
         return obj
 
-    @staticmethod
-    def _transform_auto(obj):
-        if not obj.command_match:
-            return False
-        tag, args = obj.command_match.groups()
-        if tag != "AUTO":
-            return False
-        pass
+    def parse_jolt(self, simple_jolt):
+        if not self.is_command:
+            super().parse_jolt(simple_jolt)
+        else:
+            self._verify_command(self)
+        return self
 
     @staticmethod
     def _verify_command(obj):
@@ -355,7 +374,7 @@ class ServerLine(Line):
                 raise LineError(obj, "Unknown command %r" % (tag,))
 
     def canonical(self):
-        if self.parsed is None:
+        if self.is_command is None:
             return "S: {}".format(self.content)
         else:
             return " ".join(("S:", self.parsed[0],
@@ -446,6 +465,10 @@ class Block(abc.ABC):
     def server_lines(self):
         pass
 
+    @abc.abstractmethod
+    def parse_jolt(self, simple_jolt):
+        pass
+
 
 class ClientBlock(Block):
     def __init__(self, lines: List[ClientLine], line_number: int):
@@ -465,10 +488,12 @@ class ClientBlock(Block):
     def can_consume(self, channel) -> bool:
         if self.done():
             return False
-        return self.lines[self.index].match(channel.peek())
+        return channel.match_client_line(self.lines[self.index],
+                                         channel.peek())
 
     def can_consume_after_reset(self, channel) -> bool:
-        return self.lines and self.lines[0].match(channel.peek())
+        return self.lines and channel.match_client_line(self.lines[0],
+                                                        channel.peek())
 
     def _consume(self, channel):
         channel.consume(self.lines[self.index].line_number)
@@ -503,6 +528,10 @@ class ClientBlock(Block):
     @property
     def server_lines(self):
         yield from ()
+
+    def parse_jolt(self, simple_jolt):
+        for line in self.lines:
+            line.parse_jolt(simple_jolt)
 
 
 class AutoBlock(ClientBlock):
@@ -582,6 +611,10 @@ class ServerBlock(Block):
     def server_lines(self):
         yield from map(deepcopy, self.lines)
 
+    def parse_jolt(self, simple_jolt):
+        for line in self.lines:
+            line.parse_jolt(simple_jolt)
+
 
 class AlternativeBlock(Block):
     def __init__(self, block_lists: List["BlockList"], line_number: int):
@@ -658,6 +691,10 @@ class AlternativeBlock(Block):
         for block_list in self.block_lists:
             yield from block_list.server_lines
 
+    def parse_jolt(self, simple_jolt):
+        for block_list in self.block_lists:
+            block_list.parse_jolt(simple_jolt)
+
 
 class ParallelBlock(Block):
     def __init__(self, block_lists: List["BlockList"], line_number: int):
@@ -721,6 +758,10 @@ class ParallelBlock(Block):
     def server_lines(self):
         for block_list in self.block_lists:
             yield from block_list.server_lines
+
+    def parse_jolt(self, simple_jolt):
+        for block_list in self.block_lists:
+            block_list.parse_jolt(simple_jolt)
 
 
 class OptionalBlock(Block):
@@ -787,6 +828,9 @@ class OptionalBlock(Block):
     @property
     def server_lines(self):
         return self.block_list.server_lines
+
+    def parse_jolt(self, simple_jolt):
+        self.block_list.parse_jolt(simple_jolt)
 
 
 class _RepeatBlock(Block, abc.ABC):
@@ -878,6 +922,9 @@ class _RepeatBlock(Block, abc.ABC):
     @property
     def server_lines(self):
         return self.block_list.server_lines
+
+    def parse_jolt(self, simple_jolt):
+        self.block_list.parse_jolt(simple_jolt)
 
 
 class Repeat0Block(_RepeatBlock):
@@ -994,6 +1041,10 @@ class BlockList(Block):
         for block in self.blocks:
             yield from block.server_lines
 
+    def parse_jolt(self, simple_jolt):
+        for block in self.blocks:
+            block.parse_jolt(simple_jolt)
+
 
 class ScriptFailure(RuntimeError):
     pass
@@ -1012,6 +1063,7 @@ class ScriptDeviation(ScriptFailure):
         res += ":\n"
         res += "\n".join(map(str, self.expected_lines))
         res += "\n\nReceived:\n" + str(self.received)
+        res += "\n => " + repr(self.received)
         return res
 
 
@@ -1039,22 +1091,31 @@ class Script:
         self.block_list = block_list
         self.filename = filename or ""
         self._skipped = False
+        self._set_bolt_protocol()
+        self._post_process()
         self._verify_script()
         self._lock = CopyableRLock()
 
-    def _verify_script(self):
+    def _set_bolt_protocol(self):
         try:
-            verify_script_messages(self)
+            self._bolt_protocol = get_bolt_protocol(self.context.bolt_version)
         except BoltMissingVersionError as e:
             raise lark.GrammarError(
                 'Missing bolt version bang line (e.g. "!: BOLT 4.3")'
             ) from e
-        except BoltUnknownMessageError as e:
-            raise LineError(e.line, e.msg) from e
         except BoltUnknownVersionError as e:
             raise LineError(
                 self.context.bang_lines["bolt_version"], *e.args[:1]
             ) from e
+
+    def _post_process(self):
+        self.block_list.parse_jolt(self._bolt_protocol.get_jolt_package())
+
+    def _verify_script(self):
+        try:
+            verify_script_messages(self)
+        except BoltUnknownMessageError as e:
+            raise LineError(e.line, e.msg) from e
 
     def _consume_bang_lines(self, bang_lines):
         for bl in bang_lines:

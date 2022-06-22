@@ -1,9 +1,10 @@
 import abc
+import importlib
 import inspect
 import re
 import sys
 
-from .errors import (
+from ..common.errors import (
     JOLTValueError,
     NoFullRepresentation,
     NoSimpleRepresentation,
@@ -468,8 +469,11 @@ class JoltReverseRelationTransformer(JoltTypeTransformer):
     def _decode_simple(value, decode_cb):
         raise NoSimpleRepresentation()
 
-    @staticmethod
-    def _decode_full(value, decode_cb):
+    @classmethod
+    def _decode_full(cls, value, decode_cb):
+        if not isinstance(value, list) or len(value) != 5:
+            raise JOLTValueError('Expecting list of length 5 after sigil "%s"'
+                                 % cls.sigil)
         value = [value[idx] for idx in (0, 3, 2, 1, 4)]
         return JoltRelationTransformer.decode_full(value, decode_cb)
 
@@ -539,68 +543,85 @@ class JoltPathTransformer(JoltTypeTransformer):
         return {cls.sigil: list(map(encode_cb, value.path))}
 
 
-sigil_to_type = {
-    cls.sigil: cls
-    for cls in globals().values()
-    if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
-        and cls.sigil is not None)
-}
-native_to_type = {
-    type_: cls
-    for cls in globals().values()
-    if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
-        and cls._supported_types)
-    for type_ in cls._supported_types
-}
+class Codec:
+    sigil_to_type = {
+        cls.sigil: cls
+        for cls in globals().values()
+        if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
+            and cls.sigil is not None)
+    }
+    native_to_type = {
+        type_: cls
+        for cls in globals().values()
+        if (inspect.isclass(cls) and issubclass(cls, JoltTypeTransformer)
+            and cls._supported_types)
+        for type_ in cls._supported_types
+    }
 
-
-def decode(value):
-    def transform(value_):
-        if isinstance(value_, dict) and len(value_) == 1:
-            sigil = next(iter(value_))
-            transformer = sigil_to_type.get(sigil)
+    @classmethod
+    def decode(cls, value):
+        def transform(value_):
+            if isinstance(value_, dict) and len(value_) == 1:
+                sigil, content = next(iter(value_.items()))
+                match = re.match(r"(.+)(v\d+)", sigil)
+                if match:
+                    sigil, version = match.groups()
+                    other_codec = importlib.import_module(f"..{version}.codec",
+                                                          package=__package__)
+                    return other_codec.Codec.decode({sigil: content})
+                transformer = cls.sigil_to_type.get(sigil)
+                if transformer:
+                    return transformer.decode_full(value_[sigil], transform)
+            transformer = cls.native_to_type.get(type(value_))
             if transformer:
-                return transformer.decode_full(value_[sigil], transform)
-        transformer = native_to_type.get(type(value_))
-        if transformer:
-            try:
-                return transformer.decode_simple(value_, transform)
-            except NoSimpleRepresentation:
-                pass
-        return value_
-    return transform(value)
+                try:
+                    return transformer.decode_simple(value_, transform)
+                except NoSimpleRepresentation:
+                    pass
+            return value_
+        return transform(value)
+
+    @classmethod
+    def encode_simple(cls, value, human_readable=False):
+        def transform(value_):
+            transformer = cls.native_to_type.get(type(value_))
+            if transformer:
+                try:
+                    return transformer.encode_simple(
+                        value_, transform, human_readable=human_readable
+                    )
+                except NoSimpleRepresentation:
+                    return transformer.encode_full(
+                        value_, transform, human_readable=human_readable
+                    )
+            return value_
+        return transform(value)
+
+    @classmethod
+    def encode_full(cls, value, human_readable=False):
+        def transform(value_):
+            transformer = cls.native_to_type.get(type(value_))
+            if transformer:
+                try:
+                    return transformer.encode_full(
+                        value_, transform, human_readable=human_readable
+                    )
+                except NoFullRepresentation:
+                    return transformer.encode_simple(
+                        value_, transform, human_readable=human_readable
+                    )
+            return value_
+        return transform(value)
 
 
-def encode_simple(value, human_readable=False):
-    def transform(value_):
-        transformer = native_to_type.get(type(value_))
-        if transformer:
-            try:
-                return transformer.encode_simple(value_, transform,
-                                                 human_readable=human_readable)
-            except NoSimpleRepresentation:
-                return transformer.encode_full(value_, transform,
-                                               human_readable=human_readable)
-        return value_
-    return transform(value)
-
-
-def encode_full(value, human_readable=False):
-    def transform(value_):
-        transformer = native_to_type.get(type(value_))
-        if transformer:
-            try:
-                return transformer.encode_full(value_, transform,
-                                               human_readable=human_readable)
-            except NoFullRepresentation:
-                return transformer.encode_simple(value_, transform,
-                                                 human_readable=human_readable)
-        return value_
-    return transform(value)
+decode = Codec.decode
+encode_simple = Codec.encode_simple
+encode_full = Codec.encode_full
 
 
 __all__ = [
+    Codec,
     decode,
-    encode_full,
     encode_simple,
+    encode_full,
 ]

@@ -13,7 +13,6 @@ from ..parsing import (
     BlockList,
     ClientBlock,
     ClientLine,
-    Line,
     OptionalBlock,
     ParallelBlock,
     Repeat0Block,
@@ -21,14 +20,26 @@ from ..parsing import (
     ServerBlock,
     ServerLine,
 )
+from ..simple_jolt import v1 as jolt_v1
+from ..simple_jolt import v2 as jolt_v2
 
 
 class MockChannel:
-    def __init__(self, messages: Iterable[TranslatedStructure]):
+    def __init__(self, messages: Iterable[TranslatedStructure],
+                 packstream_version=1):
         self.messages = tuple(messages)
         self.index = 0
         self.raw_buffer = bytearray()
         self.msg_buffer = []
+        self.packstream_version = packstream_version
+        if self.packstream_version == 1:
+            self.jolt_package = jolt_v1
+        elif self.packstream_version == 2:
+            self.jolt_package = jolt_v2
+        else:
+            raise ValueError(
+                f"Unknown packstream version: {packstream_version}"
+            )
 
     def __repr__(self):
         return "MockChannel[{}][{}]".format(
@@ -37,6 +48,11 @@ class MockChannel:
 
         )
 
+    def match_client_line(self, client_line, msg):
+        # we only test using message names (no fields)
+        client_line.parse_jolt(self.jolt_package)
+        return client_line.match_message(msg.name, msg.fields)
+
     def send_raw(self, b):
         self.raw_buffer.extend(b)
 
@@ -44,8 +60,10 @@ class MockChannel:
         self.msg_buffer.append(struct)
 
     def send_server_line(self, server_line):
-        name, fields = Line.parse_line(server_line)
-        msg = TranslatedStructure(name, b"\x00", *fields)
+        server_line.parse_jolt(self.jolt_package)
+        name, fields = server_line.jolt_parsed
+        msg = TranslatedStructure(name, b"\x00", *fields,
+                                  packstream_version=self.packstream_version)
         self.msg_buffer.append(msg)
 
     def msg_buffer_names(self):
@@ -71,12 +89,21 @@ class MockChannel:
         assert self.index == prev_idx + 1
 
     def auto_respond(self, msg):
-        msg = TranslatedStructure("AUTO_REPLY", b"\x00", msg.name)
+        msg = TranslatedStructure("AUTO_REPLY", b"\x00", msg.name,
+                                  packstream_version=1)
         self.msg_buffer.append(msg)
 
 
-def channel_factory(msg_names):
-    return MockChannel([TranslatedStructure(n, b"\x00") for n in msg_names])
+def channel_factory(msg_names, packstream_version=1):
+    return MockChannel(
+        [
+            TranslatedStructure(
+                n, b"\x00", packstream_version=packstream_version
+            )
+            for n in msg_names
+        ],
+        packstream_version=packstream_version
+    )
 
 
 def _test_block_reset_deterministic_end(block, channel, reset_idx):
@@ -821,11 +848,12 @@ class TestServerBlock:
     def multi_channel(self):
         return channel_factory(["NOMATCH"])
 
-    @pytest.mark.parametrize(("content", "fields"), (
+    @pytest.mark.parametrize(("content", "fields", "packstream_version"), (
         *_common.JOLT_FIELD_REPR_TO_FIELDS,
     ))
-    def test_send_jolt(self, content, fields):
-        channel = channel_factory(["NOMATCH"])
+    def test_send_jolt(self, content, fields, packstream_version):
+        channel = channel_factory(["NOMATCH"],
+                                  packstream_version=packstream_version)
         content = "SMSG1 " + content
         block = ServerBlock([
             ServerLine(1, "S: " + content, content)

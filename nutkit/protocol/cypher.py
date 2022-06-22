@@ -232,3 +232,167 @@ class Path:
 
 # More in line with other naming
 CypherPath = Path
+
+
+class CypherDate:
+    def __init__(self, year, month, day):
+        self.year = int(year)
+        self.month = int(month)
+        self.day = int(day)
+        for v in ("year", "month", "day"):
+            if getattr(self, v) != locals()[v]:
+                raise ValueError("{} must be integer".format(v))
+
+    def __str__(self):
+        return "CypherDate(year={}, month={}, day={})".format(
+            self.year, self.month, self.day
+        )
+
+    def __repr__(self):
+        return "<{}(year={}, month={}, day={})>".format(
+            self.__class__.__name__, self.year, self.month, self.day
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("year", "month", "day"))
+
+
+class CypherTime:
+    def __init__(self, hour, minute, second, nanosecond, utc_offset_s=None):
+        self.hour = int(hour)
+        self.minute = int(minute)
+        self.second = int(second)
+        self.nanosecond = int(nanosecond)
+        # seconds east of UTC or None for local time
+        self.utc_offset_s = utc_offset_s
+        if self.utc_offset_s is not None:
+            self.utc_offset_s = int(utc_offset_s)
+        for v in ("hour", "minute", "second", "nanosecond", "utc_offset_s"):
+            if getattr(self, v) != locals()[v]:
+                raise ValueError("{} must be integer".format(v))
+
+    def __str__(self):
+        return (
+            "CypherTime(hour={}, minute={}, second={}, nanosecond={}, "
+            "utc_offset_s={})".format(
+                self.hour, self.minute, self.second, self.nanosecond,
+                self.utc_offset_s
+            )
+        )
+
+    def __repr__(self):
+        return (
+            "<{}(hour={}, minute={}, second={}, nanosecond={}, "
+            "utc_offset_s={})>".format(
+                self.__class__.__name__, self.hour, self.minute, self.second,
+                self.nanosecond, self.utc_offset_s
+            )
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("hour", "minute", "second", "nanosecond",
+                                "utc_offset_s"))
+
+
+class CypherDateTime:
+    def __init__(self, year, month, day, hour, minute, second, nanosecond,
+                 utc_offset_s=None, timezone_id=None):
+        # The date time is always wall clock time (with or without timezone)
+        # If timezone_id is given (e.g., "Europe/Stockholm"), utc_offset_s
+        # must also be provided to avoid ambiguity.
+        self.year = int(year)
+        self.month = int(month)
+        self.day = int(day)
+        self.hour = int(hour)
+        self.minute = int(minute)
+        self.second = int(second)
+        self.nanosecond = int(nanosecond)
+
+        self.utc_offset_s = utc_offset_s
+        if self.utc_offset_s is not None:
+            self.utc_offset_s = int(utc_offset_s)
+        self.timezone_id = timezone_id
+        if self.timezone_id is not None:
+            self.timezone_id = str(timezone_id)
+
+        for v in ("year", "month", "day", "hour", "minute", "second",
+                  "nanosecond", "utc_offset_s"):
+            if getattr(self, v) != locals()[v]:
+                raise ValueError("{} must be integer".format(v))
+        if timezone_id is not None and utc_offset_s is None:
+            raise ValueError("utc_offset_s must be provided if timezone_id "
+                             "is given")
+
+    def __str__(self):
+        return (
+            "CypherDateTime(year={}, month={}, day={}, hour={}, minute={}, "
+            "second={}, nanosecond={}, utc_offset_s={}, timezone_id={})"
+            .format(
+                self.year, self.month, self.day, self.hour, self.minute,
+                self.second, self.nanosecond, self.utc_offset_s,
+                self.timezone_id
+            )
+        )
+
+    def __repr__(self):
+        return (
+            "<{}(year={}, month={}, day={}, hour={}, minute={}, second={}, "
+            "nanosecond={}, utc_offset_s={}, timezone_id={})>"
+            .format(
+                self.__class__.__name__, self.year, self.month, self.day,
+                self.hour, self.minute, self.second, self.nanosecond,
+                self.utc_offset_s, self.timezone_id
+            )
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("year", "month", "day", "hour", "minute",
+                                "second", "nanosecond", "utc_offset_s",
+                                "timezone_id"))
+
+
+class CypherDuration:
+    def __init__(self, months, days, seconds, nanoseconds):
+        self.months = int(months)
+        self.days = int(days)
+        seconds, nanoseconds = divmod(
+            seconds * 1000000000 + nanoseconds, 1000000000
+        )
+        self.seconds = int(seconds)
+        self.nanoseconds = int(nanoseconds)
+
+        for v in ("months", "days", "seconds", "nanoseconds"):
+            if getattr(self, v) != locals()[v]:
+                raise ValueError("{} must be integer".format(v))
+
+    def __str__(self):
+        return (
+            "CypherDuration(months={}, days={}, seconds={}, nanoseconds={})"
+            .format(self.months, self.days, self.seconds, self.nanoseconds)
+        )
+
+    def __repr__(self):
+        return (
+            "<{}(months={}, days={}, seconds={}, nanoseconds={})>"
+            .format(self.__class__.__name__, self.months, self.days,
+                    self.seconds, self.nanoseconds)
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("months", "days", "seconds", "nanoseconds"))
