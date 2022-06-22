@@ -48,6 +48,10 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
             types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
         ):
             kwargs["connection_acquisition_timeout_ms"] = 500
+        if self.driver_supports_features(
+            types.Feature.API_SESSION_CONNECTION_TIMEOUT
+        ):
+            kwargs["session_connection_timeout_ms"] = 1000
         if max_pool_size is not None:
             kwargs["max_connection_pool_size"] = max_pool_size
         auth = types.AuthorizationToken("basic", principal="neo4j",
@@ -57,8 +61,12 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
 
     @contextmanager
     def _backend_timeout_adjustment(self):
-        if self.driver_supports_features(
-            types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
+        if any(
+            self.driver_supports_features(feature)
+            for feature in (
+                types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT,
+                types.Feature.API_SESSION_CONNECTION_TIMEOUT,
+            )
         ):
             yield
         else:
