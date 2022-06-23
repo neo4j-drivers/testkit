@@ -4,9 +4,18 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # The driver offers a configuration option to limit time it spends at most,
+    # trying to acquire a connection from the pool.
+    # The connection acquisition timeout must account for the whole acquisition
+    # execution time, whether a new connection is created, an idle connection
+    # is picked up instead or we need to wait until the full pool depletes.
+    API_CONNECTION_ACQUISITION_TIMEOUT = \
+        "Feature:API:ConnectionAcquisitionTimeout"
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports connection liveness check.
+    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"
@@ -18,8 +27,13 @@ class Feature(Enum):
     # This methods asserts that exactly one record in left in the result
     # stream, else it will raise an exception.
     API_RESULT_SINGLE = "Feature:API:Result.Single"
-    # The driver supports connection liveness check.
-    API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
+    # The driver offers a configuration option to limit time it spends at most,
+    # trying to acquire a usable read/write connection for any session.
+    # The connection acquisition timeout must account for the whole acquisition
+    # execution time, whether a new connection is created, an idle connection
+    # is picked up instead, we need to wait until the full pool depletes, or
+    # a routing table must be fetched.
+    API_SESSION_CONNECTION_TIMEOUT = "Feature:API:SessionConnectionTimeout"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -31,6 +45,9 @@ class Feature(Enum):
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
     # The driver supports sending and receiving temporal data types.
     API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
+    # The driver offers a configuration option to limit time it spends at most,
+    # trying to update the routing table whenever needed.
+    API_UPDATE_ROUTING_TABLE_TIMEOUT = "Feature:API:UpdateRoutingTableTimeout"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"

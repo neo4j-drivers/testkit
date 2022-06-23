@@ -48,6 +48,7 @@ class NewDriver:
     def __init__(
         self, uri, authToken, userAgent=None, resolverRegistered=False,
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
+        sessionConnectionTimeoutMs=None, updateRoutingTableTimeoutMs=None,
         fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
         trustedCertificates=None, liveness_check_timeout_ms=None,
         max_connection_pool_size=None,
@@ -62,6 +63,8 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
+        self.sessionConnectionTimeoutMs = sessionConnectionTimeoutMs
+        self.updateRoutingTableTimeoutMs = updateRoutingTableTimeoutMs
         self.fetchSize = fetchSize
         self.maxTxRetryTimeMs = maxTxRetryTimeMs
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
