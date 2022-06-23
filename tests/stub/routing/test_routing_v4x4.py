@@ -2776,7 +2776,7 @@ class RoutingV4x4(RoutingBase):
     def test_should_enforce_pool_size_per_cluster_member(self):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent, max_connection_pool_size=1,
-                        connection_acquisition_timeout_ms=500)
+                        connection_acquisition_timeout_ms=250)
         self.start_server(self._routingServer1,
                           "router_adb_multi_no_bookmarks.script")
         self.start_server(self._writeServer1, "writer_tx.script")
@@ -2804,9 +2804,9 @@ class RoutingV4x4(RoutingBase):
                 "org.neo4j.driver.exceptions.ClientException",
                 exc.exception.errorType
             )
-            self.assertTrue("Unable to acquire connection from the "
-                            "pool within configured maximum time of 10ms"
-                            in exc.exception.msg)
+            self.assertIn("Unable to acquire connection from the "
+                          "pool within configured maximum time of 250ms",
+                          exc.exception.msg)
 
         session2.close()
 
