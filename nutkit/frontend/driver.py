@@ -6,7 +6,8 @@ class Driver:
     def __init__(self, backend, uri, auth_token, user_agent=None,
                  resolver_fn=None, domain_name_resolver_fn=None,
                  connection_timeout_ms=None, fetch_size=None,
-                 max_tx_retry_time_ms=None, encrypted=None,
+                 max_tx_retry_time_ms=None, session_connection_timeout_ms=None,
+                 update_routing_table_timeout_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
                  connection_acquisition_timeout_ms=None):
@@ -18,6 +19,8 @@ class Driver:
             resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
+            sessionConnectionTimeoutMs=session_connection_timeout_ms,
+            updateRoutingTableTimeoutMs=update_routing_table_timeout_ms,
             fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,

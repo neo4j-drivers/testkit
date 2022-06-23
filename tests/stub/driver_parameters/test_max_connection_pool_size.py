@@ -9,10 +9,14 @@ from tests.stub.shared import StubServer
 
 class TestMaxConnectionPoolSize(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_4,
+    required_features = types.Feature.BOLT_5_0,
 
     def setUp(self):
         super().setUp()
+        # This needs to be a port that's not used by other tests.
+        # Else, when testing the javascript driver in a browser (specifically
+        # Firefox), the browser might block this port for the driver after this
+        # test for security reasons.
         self._server = StubServer(9999)
         self._server.start(
             self.script_path("tx_without_commit_or_rollback.script")
@@ -24,7 +28,7 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
 
     def tearDown(self):
         # If test raised an exception this will make sure that the stub server
-        # is killed and it's output is dumped for analysis.
+        # is killed, and it's output is dumped for analysis.
         self._server.reset()
         for tx in self._transactions:
             with self.assertRaises(types.DriverError):
@@ -44,6 +48,10 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
             types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
         ):
             kwargs["connection_acquisition_timeout_ms"] = 500
+        if self.driver_supports_features(
+            types.Feature.API_SESSION_CONNECTION_TIMEOUT
+        ):
+            kwargs["session_connection_timeout_ms"] = 1000
         if max_pool_size is not None:
             kwargs["max_connection_pool_size"] = max_pool_size
         auth = types.AuthorizationToken("basic", principal="neo4j",
@@ -53,8 +61,12 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
 
     @contextmanager
     def _backend_timeout_adjustment(self):
-        if self.driver_supports_features(
-            types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
+        if any(
+            self.driver_supports_features(feature)
+            for feature in (
+                types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT,
+                types.Feature.API_SESSION_CONNECTION_TIMEOUT,
+            )
         ):
             yield
         else:
