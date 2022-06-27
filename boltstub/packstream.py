@@ -17,10 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from codecs import decode
 import inspect
-from io import BytesIO
 import re
+from codecs import decode
+from io import BytesIO
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 

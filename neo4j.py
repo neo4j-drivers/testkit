@@ -1,7 +1,7 @@
 """Neo4j instance test configuration (no runtime properties)."""
 
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from os.path import join
 from typing import Optional
 

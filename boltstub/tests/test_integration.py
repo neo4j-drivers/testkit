@@ -1,7 +1,7 @@
 import socket
-from struct import unpack as struct_unpack
 import threading
 import traceback
+from struct import unpack as struct_unpack
 
 import pytest
 

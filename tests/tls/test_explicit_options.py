@@ -1,5 +1,5 @@
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from nutkit.protocol import Feature
 from tests.shared import (
     driver_feature,
