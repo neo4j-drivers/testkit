@@ -1,0 +1,15 @@
+!: BOLT 5.0
+!: AUTO RESET
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+*: RESET
+{+
+    C: ROUTE "*" "*" "*"
+    S: <SLEEP> 2
+       <NOOP>
+       <SLEEP> 2
+       SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+    *: RESET
++}
+?: GOODBYE

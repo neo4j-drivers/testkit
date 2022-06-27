@@ -159,19 +159,25 @@ from ..simple_jolt.v2 import types as jolt_v2_types
     ),
     (
         2,
-        [Structure(b"\x46", 121, 123, -3600, packstream_version=2)],
+        [Structure(b"\x49", 121 + 3600, 123, -3600, packstream_version=2)],
         [jolt_v2_types.JoltDateTime("1970-01-01T00:02:01.000000123-01")]
     ),
-    # DateTimeZoneId (has no jolt type)
+    # DateTimeZoneId
     (
         1,
-        [Structure(b"\x66", 121, 123, "Europe/Paris", packstream_version=1)],
-        TypeError
+        [Structure(b"\x66", 121, 123,
+                   "Europe/Paris", packstream_version=1)],
+        [jolt_v1_types.JoltDateTime(
+            "1970-01-01T00:02:01.000000123+01[Europe/Paris]"
+        )]
     ),
     (
         2,
-        [Structure(b"\x66", 121, 123, "Europe/Paris", packstream_version=2)],
-        TypeError
+        [Structure(b"\x69", 121 - 3600, 123,
+                   "Europe/Paris", packstream_version=2)],
+        [jolt_v2_types.JoltDateTime(
+            "1970-01-01T00:02:01.000000123+01[Europe/Paris]"
+        )]
     ),
     # LocalDateTime
     (

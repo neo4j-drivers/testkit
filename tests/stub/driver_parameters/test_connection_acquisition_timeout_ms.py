@@ -9,7 +9,7 @@ from tests.stub.shared import StubServer
 
 class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
     """
-    Connection Acquition Timeout Tests.
+    Connection Acquisition Timeout Tests.
 
     The connection acquisition timeout must account for the
     whole acquisition execution time, whether a new connection is created,
@@ -32,20 +32,22 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
     """
 
     required_features = (
-        types.Feature.BOLT_4_4,
-        types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT
+        types.Feature.BOLT_5_0,
+        types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT,
     )
 
     def setUp(self):
         super().setUp()
-        self._server = StubServer(9001)
+        self._server = StubServer(9010)
+        self._router = StubServer(9000)
         self._driver = None
         self._session = None
         self._sessions = []
         self._txs = []
 
-    def tearDown(self) -> None:
+    def tearDown(self):
         self._server.reset()
+        self._router.reset()
         for tx in self._txs:
             with self.assertRaises(types.DriverError):
                 # The server does not accept ending the transaction.
@@ -63,6 +65,10 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         return super().tearDown()
 
+    def _start_server(self, server, script):
+        server.start(self.script_path(script),
+                     vars_={"#HOST#": self._router.host})
+
     def test_should_work_when_every_step_is_done_in_time(self):
         """
         Everything in time scenario.
@@ -75,9 +81,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         Then the query is executed successfully
         """
-        self._server.start(
-            self.script_path("session_run_auth_delay.script")
-        )
+        self._start_server(self._server, "session_run_auth_delay.script")
 
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
@@ -88,7 +92,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         self._session = self._driver.session("r")
 
-        list(self._session.run("RETURN 1 as n"))
+        list(self._session.run("RETURN 1 AS n"))
 
     def test_should_encompass_the_handshake_time(self):
         """
@@ -104,9 +108,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         Then the query is not executed since the connection acquisition
         timed out.
         """
-        self._server.start(
-            self.script_path("session_run_auth_delay.script")
-        )
+        self._start_server(self._server, "session_run_auth_delay.script")
 
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
@@ -118,11 +120,11 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._session = self._driver.session("r")
 
         with self.assertRaises(types.DriverError):
-            list(self._session.run("RETURN 1 as n"))
+            list(self._session.run("RETURN 1 AS n"))
 
     def test_should_fail_when_acquisition_timeout_is_reached_first(self):
         """
-        Connection creation bigger then acquisition timeout scenario.
+        Connection creation bigger than acquisition timeout scenario.
 
         This test scenario tests the case where:
 
@@ -146,11 +148,11 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._session = self._driver.session("r")
 
         with self.assertRaises(types.DriverError):
-            list(self._session.run("RETURN 1 as n"))
+            list(self._session.run("RETURN 1 AS n"))
 
     def test_should_fail_when_connection_timeout_is_reached_first(self):
         """
-        Acquisition timeout bigger then connection creation timeout scenario.
+        Acquisition timeout bigger than connection creation timeout scenario.
 
         This test scenario tests the case where:
 
@@ -174,7 +176,47 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._session = self._driver.session("r")
 
         with self.assertRaises(types.DriverError):
-            list(self._session.run("RETURN 1 as n"))
+            list(self._session.run("RETURN 1 AS n"))
+
+    def test_does_not_encompass_router_handshake(self):
+        self._start_server(self._router, "router_hello_delay.script")
+        self._start_server(self._server, "session_run.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(self._backend, uri, auth,
+                              connection_acquisition_timeout_ms=2000,
+                              connection_timeout_ms=720000)
+        self._session = self._driver.session("r")
+        list(self._session.run("RETURN 1 AS n"))
+
+        self._session.close()
+        self._session = None
+        self._driver.close()
+        self._driver = None
+        self._router.done()
+        self._server.done()
+
+    def test_does_not_encompass_router_route_response(self):
+        self._start_server(self._router, "router_route_delay.script")
+        self._start_server(self._server, "session_run.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(self._backend, uri, auth,
+                              connection_acquisition_timeout_ms=2000,
+                              connection_timeout_ms=720000)
+        self._session = self._driver.session("r")
+        list(self._session.run("RETURN 1 AS n"))
+
+        self._session.close()
+        self._session = None
+        self._driver.close()
+        self._driver = None
+        self._router.done()
+        self._server.done()
 
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
     def test_should_regulate_the_time_for_acquiring_connections(self):
@@ -182,19 +224,16 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         No connection available scenario.
 
         This test scenario tests the case where:
-
-        1. the connection acquisition timeout is higher than
-            the connection creation timeout
-        2. the connection is successfully created and in due time
-        3. the connection pool doesn't have connections available in
-            suitable time
+        1. The connection pool is configured for max 1 connection
+        2. A connection is acquired and locked by another transaction
+        3. When the new session try to acquire a connection, the connection
+           pool doesn't have connections available in suitable time
 
         Then the begin transaction is not executed
         since the connection acquisition times out.
         """
-        self._server.start(
-            self.script_path("tx_without_commit_or_rollback.script")
-        )
+        self._start_server(self._server,
+                           "tx_without_commit_or_rollback.script")
 
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")

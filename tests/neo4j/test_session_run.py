@@ -2,6 +2,7 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
+    get_server_info,
 )
 from tests.shared import (
     get_driver_name,
@@ -156,7 +157,9 @@ class TestSessionRun(TestkitTestCase):
             # requires explicit termination of transactions
             tx1.rollback()
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        if get_driver_name() in ["javascript", "ruby", "python"]:
+        is_server_affected_with_bug = get_server_info().version <= "4.4"
+        if is_server_affected_with_bug and get_driver_name() in [
+                "ruby", "python", "javascript"]:
             self.assertEqual(
                 e.exception.code,
                 "Neo.TransientError.Transaction.LockClientStopped")

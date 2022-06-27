@@ -202,15 +202,25 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            if (exc.code
-                    != "Neo.TransientError.Transaction.LockClientStopped"):
-                # This is not the error we are looking for. Maybe there was  a
+            # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
+            server_is_affect_by_bug = get_server_info().version <= "4.4"
+            driver_has_fixed_bug = not get_driver_name() in [
+                "javascript", "ruby", "python"]
+            if (server_is_affect_by_bug
+                and not driver_has_fixed_bug
+                and exc.code
+                    == "Neo.TransientError.Transaction.LockClientStopped"):
+                # This is the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
-                raise exc
-            else:
-                # The error we are looking for. Raise ApplicationError instead
-                # to make the driver stop retrying.
                 raise ApplicationCodeError("Stop, hammer time!")
+            elif ((not server_is_affect_by_bug or driver_has_fixed_bug)
+                    and exc.code
+                  == "Neo.ClientError.Transaction.LockClientStopped"):
+                # This is the error we are looking for. Maybe there was  a
+                # leader election or so. Give the driver the chance to retry.
+                raise ApplicationCodeError("Stop, hammer time!")
+            else:
+                raise exc
 
         exc = None
 
@@ -221,8 +231,19 @@ class TestTxFuncRun(TestkitTestCase):
         )
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
-        self.assertEqual(exc.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
-        if get_driver_name() in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.TransientError'>")
+        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
+        server_is_affect_by_bug = get_server_info().version <= "4.4"
+        if server_is_affect_by_bug and get_driver_name() in [
+                "javascript", "ruby", "python"]:
+            self.assertEqual(
+                exc.code,
+                "Neo.TransientError.Transaction.LockClientStopped")
+            if get_driver_name() in ["python"]:
+                self.assertEqual(exc.errorType,
+                                 "<class 'neo4j.exceptions.TransientError'>")
+        else:
+            self.assertEqual(exc.code,
+                             "Neo.ClientError.Transaction.LockClientStopped")
+            if get_driver_name() in ["python"]:
+                self.assertEqual(exc.errorType,
+                                 "<class 'neo4j.exceptions.ClientError'>")
