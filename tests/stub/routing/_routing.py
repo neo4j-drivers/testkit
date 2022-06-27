@@ -1,6 +1,6 @@
-from abc import abstractmethod
 import inspect
 import os
+from abc import abstractmethod
 
 import nutkit.protocol as types
 from tests.shared import TestkitTestCase

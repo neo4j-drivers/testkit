@@ -1,5 +1,5 @@
-from itertools import cycle
 import math
+from itertools import cycle
 
 from ..bolt_protocol import Structure
 from ..simple_jolt import v1 as jolt_v1

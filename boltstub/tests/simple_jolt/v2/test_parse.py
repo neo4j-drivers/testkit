@@ -2,7 +2,6 @@ import inspect
 
 import pytest
 
-from ... import _common
 from ....simple_jolt.common.errors import JOLTValueError
 from ....simple_jolt.v2 import (
     dumps_full,
@@ -21,6 +20,7 @@ from ....simple_jolt.v2.types import (
     JoltRelationship,
     JoltTime,
 )
+from ... import _common
 from ..v1.parse_data import V1_EXPLICIT_LOADS
 from .parse_data import (
     V2_EXPLICIT_LOADS,

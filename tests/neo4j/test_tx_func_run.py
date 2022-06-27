@@ -1,5 +1,5 @@
-from nutkit.frontend.session import ApplicationCodeError
 import nutkit.protocol as types
+from nutkit.frontend.session import ApplicationCodeError
 from tests.neo4j.shared import (
     get_driver,
     get_server_info,

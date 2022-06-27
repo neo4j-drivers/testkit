@@ -1,8 +1,8 @@
-from contextlib import contextmanager
 import inspect
 import json
 import os
 import socket
+from contextlib import contextmanager
 
 import nutkit.protocol as protocol
 

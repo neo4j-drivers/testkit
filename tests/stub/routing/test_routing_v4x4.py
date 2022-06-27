@@ -1,8 +1,8 @@
-from collections import defaultdict
 import time
+from collections import defaultdict
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
     get_dns_resolved_server_address,
