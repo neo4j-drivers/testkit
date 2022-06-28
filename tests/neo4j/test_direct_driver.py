@@ -6,6 +6,7 @@ from tests.neo4j.shared import (
     get_neo4j_host_and_port,
     get_neo4j_scheme,
     get_server_info,
+    QueryBuilder,
     requires_multi_db_support,
 )
 from tests.shared import (
@@ -100,6 +101,10 @@ class TestDirectDriver(TestkitTestCase):
         if not get_server_info().supports_multi_db:
             self.skipTest("Needs multi DB support")
         self._driver = get_driver(self._backend)
+        self._session = self._driver.session("w", database="system")
+        self._session.run(QueryBuilder.drop_db("test-database")).consume()
+        self._session.close()
+
         self._session = self._driver.session("r", database="test-database")
         with self.assertRaises(types.DriverError) as e:
             result = self._session.run("RETURN 1")
@@ -117,13 +122,14 @@ class TestDirectDriver(TestkitTestCase):
     @cluster_unsafe_test
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
+        create_db_query = QueryBuilder.create_db("test-database")
+        drop_db_query = QueryBuilder.drop_db("test-database")
         server_info = get_server_info()
         if server_info.max_protocol_version >= "4":
             self._session = self._driver.session("w", database="system")
 
-            self._session.run("DROP DATABASE `test-database` IF EXISTS")\
-                .consume()
-            self._session.run("CREATE DATABASE `test-database`").consume()
+            self._session.run(drop_db_query).consume()
+            self._session.run(create_db_query).consume()
             self._session.close()
 
             self._session = self._driver.session("r", database="test-database")
@@ -135,8 +141,7 @@ class TestDirectDriver(TestkitTestCase):
 
             self._session.close()
             self._session = self._driver.session("w", database="system")
-            self._session.run("DROP DATABASE `test-database` IF EXISTS").\
-                consume()
+            self._session.run(drop_db_query).consume()
         else:
             self._session = self._driver.session("w", database="neo4j")
             with self.assertRaises(types.DriverError) as e:
@@ -177,6 +182,10 @@ class TestDirectDriver(TestkitTestCase):
                 self.assertIsInstance(name, types.CypherString)
                 names.add(name.value)
             return names
+        create_db_testa_query = QueryBuilder.create_db("testa")
+        create_db_testb_query = QueryBuilder.create_db("testb")
+        drop_db_testa_query = QueryBuilder.drop_db("testa")
+        drop_db_testb_query = QueryBuilder.drop_db("testb")
 
         self._driver = get_driver(self._backend)
 
@@ -187,8 +196,8 @@ class TestDirectDriver(TestkitTestCase):
         self.assertIsInstance(result.next(), types.NullRecord)
         self._session.close()
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE testa IF EXISTS").consume()
-        self._session.run("DROP DATABASE testb IF EXISTS").consume()
+        self._session.run(drop_db_testa_query).consume()
+        self._session.run(drop_db_testb_query).consume()
         bookmarks = self._session.last_bookmarks()
         self._session.close()
         self._session = self._driver.session("w", database="system",
@@ -196,9 +205,9 @@ class TestDirectDriver(TestkitTestCase):
         result = self._session.run("SHOW DATABASES")
         self.assertEqual(get_names(result, node=False), {"system", "neo4j"})
 
-        result = self._session.run("CREATE DATABASE testa")
+        result = self._session.run(create_db_testa_query)
         result.consume()
-        result = self._session.run("CREATE DATABASE testb")
+        result = self._session.run(create_db_testb_query)
         result.consume()
         bookmarks = self._session.last_bookmarks()
         self._session.close()
@@ -231,11 +240,11 @@ class TestDirectDriver(TestkitTestCase):
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE testa IF EXISTS").consume()
+        self._session.run(drop_db_testa_query).consume()
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE testb IF EXISTS").consume()
+        self._session.run(drop_db_testb_query).consume()
         self._session.close()
 
         self._session = self._driver.session("w")

@@ -5,6 +5,7 @@ from tests.neo4j.shared import (
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    QueryBuilder,
     requires_multi_db_support,
 )
 from tests.shared import (
@@ -155,7 +156,9 @@ class TestSummary(TestkitTestCase):
     def test_summary_counters_case_2(self):
         self._session = self._driver.session("w", database="system")
 
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        drop_db_test_query = QueryBuilder.drop_db("test")
+        create_db_test_query = QueryBuilder.create_db("test")
+        self._session.run(drop_db_test_query).consume()
 
         # SHOW DATABASES
 
@@ -181,10 +184,10 @@ class TestSummary(TestkitTestCase):
         self._assert_counters(summary)
 
         # CREATE DATABASE test
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
-        summary = self._session.run("CREATE DATABASE test").consume()
+        self._session.run(drop_db_test_query).consume()
+        summary = self._session.run(create_db_test_query).consume()
 
-        self.assertEqual(summary.query.text, "CREATE DATABASE test")
+        self.assertEqual(summary.query.text, create_db_test_query)
         self.assertEqual(summary.query.parameters, {})
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
@@ -261,4 +264,4 @@ class TestSummary(TestkitTestCase):
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        self._session.run(drop_db_test_query).consume()
