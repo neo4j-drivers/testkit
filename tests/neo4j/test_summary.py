@@ -94,11 +94,6 @@ class TestSummary(TestkitTestCase):
             # server versions into the handshake
             self.assertIn(summary.server_info.protocol_version,
                           ("4.2", "4.1"))
-        # TODO: this will start to fail as soon as 5.0 servers implement bolt
-        #       5.0. For now they don't. Until then, we expect the driver to
-        #       negotiate bolt 4.4.
-        elif common_max_version == "5.0":
-            self.assertEqual(summary.server_info.protocol_version, "4.4")
         else:
             self.assertEqual(summary.server_info.protocol_version,
                              common_max_version)

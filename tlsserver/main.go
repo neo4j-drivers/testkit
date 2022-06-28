@@ -72,7 +72,7 @@ func main() {
 	}
 	// Deadline needed for dotnet, seems to stick to the socket even when TLS handshake failed.
 	// Deadline is a good thing anyway...
-	conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	fmt.Printf("TLS, client connected from %s, waiting for Bolt handshake\n", conn.RemoteAddr())
 
 	handshake := make([]byte, 4*5)
