@@ -209,9 +209,8 @@ class QueryBuilder:
     @staticmethod
     def drop_db(database, if_exists=True, wait=True):
         version = get_server_info().version
-        if_exists = " IF EXISTS" if if_exists else ""
         return "DROP  DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
-            if_exists,
+            " IF EXISTS" if if_exists else "",
             QueryBuilder._wait_clause(version) if wait else ""
         )
