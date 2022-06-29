@@ -1,7 +1,7 @@
 !: BOLT 4.4
 !: ALLOW CONCURRENT
 
-C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "routing": {"{}": "*"}}
+C: HELLO {"user_agent": "*", "scheme": "basic", "principal": "*", "credentials": "*", "routing": {"{}": "*"}, "[patch_bolt]": "*"}
 S: SUCCESS {"server": "Neo4j/4.4.0", "connection_id": "example-connection-id:0"}
 *: RESET
 {*
