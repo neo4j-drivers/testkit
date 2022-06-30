@@ -43,6 +43,7 @@ class _TestTemporalTypes(TestkitTestCase):
         result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
         records = list(result)
         self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
         self.assertEqual(dt, records[0].values[0])
 
     def _test_zoned_date_time(self):
@@ -56,6 +57,7 @@ class _TestTemporalTypes(TestkitTestCase):
         result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
         records = list(result)
         self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
         self.assertEqual(dt, records[0].values[0])
 
     def _test_unknown_zoned_date_time(self):
@@ -86,6 +88,8 @@ class _TestTemporalTypes(TestkitTestCase):
             self.assertIn("Europe/Neo4j", exc.exception.msg)
 
             rec = res.next()
+            self.assertIsInstance(rec, types.Record)
+            self.assertEqual(len(rec.values), 1)
             self.assertEqual(
                 rec.values[0],
                 types.CypherDateTime(1970, 1, 1, 1, 0, 0, 0, utc_offset_s=1800)
@@ -108,6 +112,7 @@ class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
         result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
         records = list(result)
         self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
         self.assertEqual(dt, records[0].values[0])
 
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
@@ -122,6 +127,7 @@ class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
         result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
         records = list(result)
         self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
         self.assertEqual(dt, records[0].values[0])
 
 
