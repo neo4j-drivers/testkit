@@ -39,23 +39,62 @@ class _TestTemporalTypes(TestkitTestCase):
         self._start_server("echo_date_time.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
-                                       utc_offset_s=7200)
-        })
-        list(result)
+        dt = types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0, utc_offset_s=7200)
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(dt, records[0].values[0])
 
     def _test_zoned_date_time(self):
         self._start_server("echo_zoned_date_time.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(
-                2022, 6, 7, 11, 52, 5, 0,
-                utc_offset_s=7200, timezone_id="Europe/Stockholm"
+        dt = types.CypherDateTime(
+            2022, 6, 7, 11, 52, 5, 0,
+            utc_offset_s=7200, timezone_id="Europe/Stockholm"
+        )
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(dt, records[0].values[0])
+
+    def _test_unknown_zoned_date_time(self):
+        tx_count = 0
+
+        def work(tx):
+            nonlocal tx_count
+            tx_count += 1
+            res = tx.run("MATCH (n:State) RETURN n.founded AS dt")
+            with self.assertRaises(types.DriverError) as exc:
+                res.next()
+            self.assertIn("Europe/Neo4j", exc.exception.msg)
+            raise exc.exception
+
+        self._start_server("echo_unknown_zoned_date_time.script")
+        self._create_direct_driver()
+        self._session = self._driver.session("w")
+        with self.assertRaises(types.DriverError):
+            self._session.read_transaction(work)
+        self._server.done()
+        self.assertEqual(tx_count, 1)
+
+    def _test_unknown_then_known_zoned_date_time(self):
+        def work(tx):
+            res = tx.run("MATCH (n:State) RETURN n.founded AS dt")
+            with self.assertRaises(types.DriverError) as exc:
+                res.next()
+            self.assertIn("Europe/Neo4j", exc.exception.msg)
+
+            rec = res.next()
+            self.assertEqual(
+                rec.values[0],
+                types.CypherDateTime(1970, 1, 1, 1, 0, 0, 0, utc_offset_s=1800)
             )
-        })
-        list(result)
+
+        self._start_server("echo_unknown_then_known_zoned_date_time.script")
+        self._create_direct_driver()
+        self._session = self._driver.session("w")
+        self._session.read_transaction(work)
 
 
 class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
@@ -65,24 +104,25 @@ class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
         self._start_server("echo_date_time_patched.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
-                                       utc_offset_s=7200)
-        })
-        list(result)
+        dt = types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0, utc_offset_s=7200)
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(dt, records[0].values[0])
 
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def _test_zoned_date_time_with_patch(self):
         self._start_server("echo_zoned_date_time_patched.script")
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(
-                2022, 6, 7, 11, 52, 5, 0,
-                utc_offset_s=7200, timezone_id="Europe/Stockholm"
-            )
-        })
-        list(result)
+        dt = types.CypherDateTime(
+            2022, 6, 7, 11, 52, 5, 0,
+            utc_offset_s=7200, timezone_id="Europe/Stockholm"
+        )
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(dt, records[0].values[0])
 
 
 class TestTemporalTypesV3x0(_TestTemporalTypes):
@@ -169,3 +209,9 @@ class TestTemporalTypesV4x4(_TestTemporalTypesPatchedBolt):
 
     def test_zoned_date_time_with_patch(self):
         super()._test_zoned_date_time_with_patch()
+
+    def test_unknown_zoned_date_time(self):
+        super()._test_unknown_zoned_date_time()
+
+    def test_unknown_then_known_zoned_date_time(self):
+        super()._test_unknown_then_known_zoned_date_time()
