@@ -287,7 +287,7 @@ class Structure:
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
-    def _from_jolt_v2_type(cls, jolt: jolt_v1_types.JoltType):
+    def _from_jolt_v2_type(cls, jolt: jolt_v2_types.JoltType):
         if isinstance(jolt, jolt_v2_types.JoltDate):
             return cls(StructTagV2.date, jolt.days, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltTime):

@@ -103,8 +103,7 @@ class TestDataTypes(_TestTypesBase):
             echoed_tz_id = self._session.read_transaction(work)
             return echoed_tz_id == tz_id
         except types.DriverError as e:
-            print("timezone %s not supported by server" % tz_id)
-            print(e)
+            assert tz_id in e.msg
             return False
 
     def test_should_echo_all_timezone_ids(self):
