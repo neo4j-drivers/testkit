@@ -11,6 +11,7 @@ TEST_BACKEND_PORT  Port on backend host, default is 9876
 
 
 from contextlib import contextmanager
+import functools
 import inspect
 import os
 import re
@@ -89,6 +90,7 @@ def driver_feature(*features):
         return args[0]
 
     def driver_feature_decorator(func):
+        @functools.wraps(func)
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
             test_case.skip_if_missing_driver_features(*features)
