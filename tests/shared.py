@@ -226,9 +226,15 @@ class TestkitTestCase(unittest.TestCase):
             if not self._check_subtests:
                 yield
                 return
-            response = self._backend.send_and_receive(
-                protocol.StartSubTest(self._testkit_test_name, params)
-            )
+            try:
+                response = self._backend.send_and_receive(
+                    protocol.StartSubTest(self._testkit_test_name, params)
+                )
+            except Exception as outer_exc:
+                try:
+                    yield
+                finally:
+                    raise outer_exc
             # we have to run the subtest, but we don't care for the result
             # if we want to throw or skip (in fact also a throw)
             try:
