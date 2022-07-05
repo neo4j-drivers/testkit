@@ -26,8 +26,11 @@ class TestDataTypes(_TestTypesBase):
             and get_server_info().version >= "5.0"
             and self.driver_supports_features(types.Feature.BOLT_5_0)
         ):
-            with self.assertRaises(types.BaseError):
+            with self.assertRaises(Exception) as exc:
                 yield
+            if not isinstance(exc.exception,
+                              (types.BaseError, AssertionError)):
+                raise exc.exception
         else:
             yield
 
