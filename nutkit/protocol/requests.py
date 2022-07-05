@@ -274,6 +274,18 @@ class SessionRun:
             self.timeout = kwargs["timeout"]
 
 
+class SessionPlan:
+    """
+    Request to plan a query on a specified session.
+
+    Backend should respond with QueryCharacteristics or an Error response.
+    """
+
+    def __init__(self, sessionId, cypher) -> None:
+        self.sessionId = sessionId
+        self.cypher = cypher
+
+
 class SessionReadTransaction:
     """
     Request to run a retryable read transaction.

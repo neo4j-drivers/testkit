@@ -47,6 +47,9 @@ class Feature(Enum):
     # is picked up instead, we need to wait until the full pool depletes, or
     # a routing table must be fetched.
     API_SESSION_CONNECTION_TIMEOUT = "Feature:API:SessionConnectionTimeout"
+    # The Driver offers an explicity interface for planning its query using
+    # the PLAN message or some sort of polyfill
+    API_SESSION_PLAN = "Feature:API:Session.Plan"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all

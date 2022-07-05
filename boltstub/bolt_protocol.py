@@ -451,4 +451,26 @@ class Bolt5x0Protocol(Bolt4x4Protocol):
 
     packstream_version = 2
 
+    messages = {
+        "C": {
+            b"\x01": "HELLO",
+            b"\x02": "GOODBYE",
+            b"\x0F": "RESET",
+            b"\x10": "RUN",
+            b"\x11": "BEGIN",
+            b"\x12": "COMMIT",
+            b"\x13": "ROLLBACK",
+            b"\x2F": "DISCARD",
+            b"\x3F": "PULL",
+            b"\x66": "ROUTE",
+            b"\x73": "PLAN",
+        },
+        "S": {
+            b"\x70": "SUCCESS",
+            b"\x71": "RECORD",
+            b"\x7E": "IGNORED",
+            b"\x7F": "FAILURE",
+        },
+    }
+
     server_agent = "Neo4j/5.0.0"

@@ -28,6 +28,16 @@ class Session:
             )
         return Result(self._driver, res)
 
+    def plan(self, cypher):
+        req = protocol.SessionPlan(self._session.id, cypher)
+        res = self._driver.send_and_receive(req, allow_resolution=True)
+        if not isinstance(res, protocol.QueryCharacteristics):
+            raise Exception(
+                "Should be QueryCharacteristics "
+                "but was: %s" % res
+            )
+        return res
+
     def process_transaction(self, req, fn, config=None, hooks=None):
         self._driver.send(req, hooks=hooks)
         x = None

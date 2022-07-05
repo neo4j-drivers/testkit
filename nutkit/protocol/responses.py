@@ -455,6 +455,13 @@ class ConnectionPoolMetrics:
         self.idle = idle
 
 
+class QueryCharacteristics:
+    def __init__(self, autocommit, update):
+        """Sent from backend in response of SessionPlan."""
+        self.autocommit = autocommit
+        self.update = update
+
+
 class BaseError(Exception):
     """
     Base class for all types of errors, should not be sent from backend.
