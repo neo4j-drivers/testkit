@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import datetime
 
 import pytz
@@ -9,12 +10,26 @@ from tests.neo4j.datatypes._base import (
     MIN_INT64,
 )
 from tests.neo4j.datatypes._util import TZ_IDS
+from tests.neo4j.shared import get_server_info
 from tests.shared import get_driver_name
 
 
 class TestDataTypes(_TestTypesBase):
 
     required_features = (types.Feature.API_TYPE_TEMPORAL,)
+
+    # TODO: remove this as soon the 5.0 server implemented the UTC fix
+    @contextmanager
+    def expect_broken_utc_server(self, conditional=True):
+        if (
+            conditional
+            and get_server_info().version >= "5.0"
+            and self.driver_supports_features(types.Feature.BOLT_5_0)
+        ):
+            with self.assertRaises(types.BaseError):
+                yield
+        else:
+            yield
 
     def test_should_echo_temporal_type(self):
         vals = [
@@ -86,7 +101,11 @@ class TestDataTypes(_TestTypesBase):
                             "timezone library cannot tell the difference "
                             "between named UTC and 0s offset timezone"
                         )
-                self._verify_can_echo(val)
+                with self.expect_broken_utc_server(
+                    isinstance(val, types.CypherDateTime)
+                    and val.utc_offset_s is not None
+                ):
+                    self._verify_can_echo(val)
 
     def _timezone_server_support(self, tz_id):
         def work(tx):
@@ -158,7 +177,8 @@ class TestDataTypes(_TestTypesBase):
                         utc_offset_s=dst_local_dt.utcoffset().total_seconds(),
                         timezone_id=tz_id
                     )
-                    self._verify_can_echo(dt)
+                    with self.expect_broken_utc_server():
+                        self._verify_can_echo(dt)
 
     def test_date_time_cypher_created_tz_id(self):
         def work(tx):
@@ -189,16 +209,17 @@ class TestDataTypes(_TestTypesBase):
             if not self._timezone_server_support(tz_id):
                 continue
             with self.subTest(tz_id=tz_id):
-                dt, y, mo, d, h, m, s, ns, offset, tz = \
-                    self._session.read_transaction(work)
-                self.assertEqual(dt.year, y)
-                self.assertEqual(dt.month, mo)
-                self.assertEqual(dt.day, d)
-                self.assertEqual(dt.hour, h)
-                self.assertEqual(dt.minute, m)
-                self.assertEqual(dt.second, s)
-                self.assertEqual(dt.nanosecond, ns)
-                self.assertEqual(dt.timezone_id, tz)
+                with self.expect_broken_utc_server():
+                    dt, y, mo, d, h, m, s, ns, offset, tz = \
+                        self._session.read_transaction(work)
+                    self.assertEqual(dt.year, y)
+                    self.assertEqual(dt.month, mo)
+                    self.assertEqual(dt.day, d)
+                    self.assertEqual(dt.hour, h)
+                    self.assertEqual(dt.minute, m)
+                    self.assertEqual(dt.second, s)
+                    self.assertEqual(dt.nanosecond, ns)
+                    self.assertEqual(dt.timezone_id, tz)
 
     def test_date_components(self):
         self._create_driver_and_session()
@@ -331,56 +352,61 @@ class TestDataTypes(_TestTypesBase):
 
     def test_datetime_with_offset_components(self):
         self._create_driver_and_session()
-        values = self._read_query_values(
-            "CYPHER runtime=interpreted WITH $x AS x "
-            "RETURN [x.year, x.month, x.day, x.hour, x.minute, x.second, "
-            "x.nanosecond, x.offset]",
-            params={"x": types.CypherDateTime(2022, 3, 30, 13, 24, 34,
-                                              699546224, utc_offset_s=-5520)}
-        )
-        self.assertEqual(
-            values,
-            [
-                types.CypherList([
-                    types.CypherInt(2022),
-                    types.CypherInt(3),
-                    types.CypherInt(30),
-                    types.CypherInt(13),
-                    types.CypherInt(24),
-                    types.CypherInt(34),
-                    types.CypherInt(699546224),
-                    types.CypherString("-01:32")
-                ])
-            ]
-        )
+        with self.expect_broken_utc_server():
+            values = self._read_query_values(
+                "CYPHER runtime=interpreted WITH $x AS x "
+                "RETURN [x.year, x.month, x.day, x.hour, x.minute, x.second, "
+                "x.nanosecond, x.offset]",
+                params={
+                    "x": types.CypherDateTime(
+                        2022, 3, 30, 13, 24, 34, 699546224, utc_offset_s=-5520
+                    ),
+                }
+            )
+            self.assertEqual(
+                values,
+                [
+                    types.CypherList([
+                        types.CypherInt(2022),
+                        types.CypherInt(3),
+                        types.CypherInt(30),
+                        types.CypherInt(13),
+                        types.CypherInt(24),
+                        types.CypherInt(34),
+                        types.CypherInt(699546224),
+                        types.CypherString("-01:32")
+                    ])
+                ]
+            )
 
     def test_datetime_with_timezone_components(self):
         self._create_driver_and_session()
-        values = self._read_query_values(
-            "CYPHER runtime=interpreted WITH $x AS x "
-            "RETURN [x.year, x.month, x.day, x.hour, x.minute, x.second, "
-            "x.nanosecond, x.offset, x.timezone]",
-            params={"x": types.CypherDateTime(
-                2022, 3, 30, 13, 24, 34, 699546224,
-                utc_offset_s=-14400, timezone_id="America/Toronto"
-            )}
-        )
-        self.assertEqual(
-            values,
-            [
-                types.CypherList([
-                    types.CypherInt(2022),
-                    types.CypherInt(3),
-                    types.CypherInt(30),
-                    types.CypherInt(13),
-                    types.CypherInt(24),
-                    types.CypherInt(34),
-                    types.CypherInt(699546224),
-                    types.CypherString("-04:00"),
-                    types.CypherString("America/Toronto")
-                ])
-            ]
-        )
+        with self.expect_broken_utc_server():
+            values = self._read_query_values(
+                "CYPHER runtime=interpreted WITH $x AS x "
+                "RETURN [x.year, x.month, x.day, x.hour, x.minute, x.second, "
+                "x.nanosecond, x.offset, x.timezone]",
+                params={"x": types.CypherDateTime(
+                    2022, 3, 30, 13, 24, 34, 699546224,
+                    utc_offset_s=-14400, timezone_id="America/Toronto"
+                )}
+            )
+            self.assertEqual(
+                values,
+                [
+                    types.CypherList([
+                        types.CypherInt(2022),
+                        types.CypherInt(3),
+                        types.CypherInt(30),
+                        types.CypherInt(13),
+                        types.CypherInt(24),
+                        types.CypherInt(34),
+                        types.CypherInt(699546224),
+                        types.CypherString("-04:00"),
+                        types.CypherString("America/Toronto")
+                    ])
+                ]
+            )
 
     def test_nested_datetime(self):
         data = types.CypherList([
@@ -393,11 +419,12 @@ class TestDataTypes(_TestTypesBase):
             utc_offset_s=-14400, timezone_id="America/Toronto"
         )
         self._create_driver_and_session()
-        values = self._write_query_values(
-            "CREATE (a {x:$x, y:$y, z:$z}) RETURN a.x, a.y, a.z",
-            params={"x": data, "y": dt1, "z": dt2}
-        )
-        self.assertEqual(values, [data, dt1, dt2])
+        with self.expect_broken_utc_server():
+            values = self._write_query_values(
+                "CREATE (a {x:$x, y:$y, z:$z}) RETURN a.x, a.y, a.z",
+                params={"x": data, "y": dt1, "z": dt2}
+            )
+            self.assertEqual(values, [data, dt1, dt2])
 
     def test_cypher_created_datetime(self):
         for (s, dt) in (
@@ -434,8 +461,11 @@ class TestDataTypes(_TestTypesBase):
         ):
             with self.subTest(s=s, dt=dt):
                 self._create_driver_and_session()
-                values = self._read_query_values(f"RETURN {s}")
-                self.assertEqual(values, [dt])
+                with self.expect_broken_utc_server(
+                    dt.utc_offset_s is not None
+                ):
+                    values = self._read_query_values(f"RETURN {s}")
+                    self.assertEqual(values, [dt])
 
     def test_duration_components(self):
         for (mo, d, s, ns_os, ns) in (
