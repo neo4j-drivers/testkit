@@ -5,6 +5,7 @@ from tests.neo4j.shared import (
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    QueryBuilder,
     requires_multi_db_support,
 )
 from tests.shared import TestkitTestCase
@@ -93,11 +94,6 @@ class TestSummary(TestkitTestCase):
             # server versions into the handshake
             self.assertIn(summary.server_info.protocol_version,
                           ("4.2", "4.1"))
-        # TODO: this will start to fail as soon as 5.0 servers implement bolt
-        #       5.0. For now they don't. Until then, we expect the driver to
-        #       negotiate bolt 4.4.
-        elif common_max_version == "5.0":
-            self.assertEqual(summary.server_info.protocol_version, "4.4")
         else:
             self.assertEqual(summary.server_info.protocol_version,
                              common_max_version)
@@ -157,7 +153,9 @@ class TestSummary(TestkitTestCase):
 
         self._session = self._driver.session("w", database="system")
 
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        drop_db_test_query = QueryBuilder.drop_db("test")
+        create_db_test_query = QueryBuilder.create_db("test")
+        self._session.run(drop_db_test_query).consume()
 
         # SHOW DATABASES
 
@@ -183,10 +181,10 @@ class TestSummary(TestkitTestCase):
         self._assert_counters(summary)
 
         # CREATE DATABASE test
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
-        summary = self._session.run("CREATE DATABASE test").consume()
+        self._session.run(drop_db_test_query).consume()
+        summary = self._session.run(create_db_test_query).consume()
 
-        self.assertEqual(summary.query.text, "CREATE DATABASE test")
+        self.assertEqual(summary.query.text, create_db_test_query)
         self.assertEqual(summary.query.parameters, {})
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
@@ -280,4 +278,4 @@ class TestSummary(TestkitTestCase):
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        self._session.run(drop_db_test_query).consume()

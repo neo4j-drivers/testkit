@@ -178,3 +178,31 @@ def requires_min_bolt_version(min_version):
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
+
+
+class QueryBuilder:
+    @staticmethod
+    def escape_identifier(identifier):
+        identifier = identifier.replace("`", "``")
+        return "`{}`".format(identifier)
+
+    @staticmethod
+    def _wait_clause(version):
+        return " WAIT" if version >= "4.2" else ""
+
+    @staticmethod
+    def create_db(database, wait=True):
+        version = get_server_info().version
+        return "CREATE DATABASE {}{}".format(
+            QueryBuilder.escape_identifier(database),
+            QueryBuilder._wait_clause(version) if wait else ""
+        )
+
+    @staticmethod
+    def drop_db(database, if_exists=True, wait=True):
+        version = get_server_info().version
+        return "DROP  DATABASE {}{}{}".format(
+            QueryBuilder.escape_identifier(database),
+            " IF EXISTS" if if_exists else "",
+            QueryBuilder._wait_clause(version) if wait else ""
+        )
