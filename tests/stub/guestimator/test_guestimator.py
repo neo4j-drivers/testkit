@@ -1,3 +1,5 @@
+import json
+
 from nutkit import protocol as types
 from nutkit.frontend import Driver
 from tests.shared import TestkitTestCase
@@ -51,12 +53,13 @@ class TestSessionPlan(TestkitTestCase):
             self._read_server1.start(
                 path=self.script_path("reader.script"),
                 vars_={
-                    "#AUTOCOMMIT#": "true" if autocommit else "false",
-                    "#UPDATE#": "true" if update else "false"}
+                    "#AUTOCOMMIT#": json.dumps(autocommit),
+                    "#UPDATE#": json.dumps(update),
+                    "#QUERY#": query}
             )
 
             self._session = self._driver.session("w")
-            query_characteristics = self._session.plan("some query")
+            query_characteristics = self._session.plan(query)
 
             self.assertEqual(query_characteristics.autocommit,
                              "REQUIRED" if autocommit else "UNREQUIRED")
@@ -71,7 +74,9 @@ class TestSessionPlan(TestkitTestCase):
 
         for autocommit in (True, False):
             for update in (True, False):
-                with self.subTest(autocommit=autocommit, update=update):
+                query = f"query autocommit={autocommit}, update={update}"
+                with self.subTest(
+                        autocommit=autocommit, update=update, query=query):
                     _test()
                 self._read_server1.reset()
                 self._routing_server1.reset()
