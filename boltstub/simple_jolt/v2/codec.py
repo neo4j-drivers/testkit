@@ -98,8 +98,6 @@ class JoltNodeTransformer(JoltNodeTransformer):
             raise JOLTValueError("Node properties must be dict")
         if not isinstance(element_id, str):
             raise JOLTValueError("Node element_id must be a str")
-        if id_ is not None and str(id_) != element_id:
-            raise JOLTValueError("Node's element_id must equal id if present")
 
         properties = {k: decode_cb(v) for k, v in properties.items()}
         assert all(map(lambda e: isinstance(e, str), properties.keys()))
@@ -142,21 +140,12 @@ class JoltRelationTransformer(JoltRelationTransformer):
             raise JOLTValueError("Relationship's properties keys must be str")
         if not isinstance(element_id, str):
             raise JOLTValueError("Relationship's element_id must be str")
-        if id_ is not None and str(id_) != element_id:
-            raise JOLTValueError("Relationship's element_id must equal id")
         if not isinstance(start_node_element_id, str):
             raise JOLTValueError("Relationship's start_node_element_id must "
                                  "be str")
-        if (start_node_id is not None
-                and str(start_node_id) != start_node_element_id):
-            raise JOLTValueError("Relationship's start_node_element_id "
-                                 "must equal start_node_id")
         if not isinstance(end_node_element_id, str):
             raise JOLTValueError(
                 "Relationship's end_node_element_id must be str")
-        if end_node_id is not None and str(end_node_id) != end_node_element_id:
-            raise JOLTValueError("Relationship's end_node_element_id "
-                                 "must equal end_node_id")
 
         return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
                                 properties, element_id, start_node_element_id,
