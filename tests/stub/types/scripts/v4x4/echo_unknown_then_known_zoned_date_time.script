@@ -32,6 +32,12 @@ S: <RAW> 00 00
 S: RECORD [{"T": "1970-01-01T01:00:00+00:30"}]
 
 S: SUCCESS {"type": "r"}
-A: COMMIT
+{{
+    A: COMMIT
+----
+    # drivers that mark the result stream as broken after the unknown timezone
+    # are free to rollback the transaction or hang up
+    ?: ROLLBACK
+}}
 *: RESET
 ?: GOODBYE
