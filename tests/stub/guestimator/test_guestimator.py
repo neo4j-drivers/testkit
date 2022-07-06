@@ -232,7 +232,9 @@ class TestSessionPlan(TestkitTestCase):
         self._routing_server1.done()
 
     def test_should_respect_cache_size_and_lru_strategy(self):
-        def _test():
+        default_cache_size = 100
+
+        def _test(query_plan_cache_size):
             self._driver.close()
             self._driver = self._create_driver(
                 query_plan_cache_size=query_plan_cache_size)
@@ -240,6 +242,9 @@ class TestSessionPlan(TestkitTestCase):
             self._start_read_server1_with_reader_n_plan_script()
 
             self._session = self._driver.session("w")
+
+            if query_plan_cache_size is None:
+                query_plan_cache_size = default_cache_size
 
             queries = [f"query {i}" for i in range(query_plan_cache_size + 1)]
             for query in queries:
@@ -261,10 +266,10 @@ class TestSessionPlan(TestkitTestCase):
             expected_requests_count = [2] + [1] * query_plan_cache_size
             self.assertEqual(plan_requests_count, expected_requests_count)
 
-        for query_plan_cache_size in (0, 1, 2, 3, 5, 7):
+        for query_plan_cache_size in (0, 1, 2, 3, 5, 7, None):
             with self.subTest(
                     query_plan_cache_size=query_plan_cache_size):
-                _test()
+                _test(query_plan_cache_size)
                 self._read_server1.reset()
                 self._routing_server1.reset()
 
