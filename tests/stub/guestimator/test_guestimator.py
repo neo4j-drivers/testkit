@@ -62,6 +62,21 @@ class TestSessionPlan(TestkitTestCase):
                 "#QUERY#": query}
         )
 
+    def _start_read_server1_with_reader_two_plan_script(self, query1,
+                                                        autocommit1, update1,
+                                                        query2, autocommit2,
+                                                        update2):
+        self._read_server1.start(
+            path=self.script_path("reader_two_plan.script"),
+            vars_={
+                "#AUTOCOMMIT1#": json.dumps(autocommit1),
+                "#UPDATE1#": json.dumps(update1),
+                "#QUERY1#": query1,
+                "#AUTOCOMMIT2#": json.dumps(autocommit2),
+                "#UPDATE2#": json.dumps(update2),
+                "#QUERY2#": query2}
+        )
+
     def test_should_echo_plan_info(self):
         def _test():
             self._start_routing_server1()
@@ -174,6 +189,39 @@ class TestSessionPlan(TestkitTestCase):
                     _test()
                 self._read_server1.reset()
                 self._routing_server1.reset()
+
+    def test_should_not_mix_the_cached_results(self):
+        fist_query = "FIRST QUERY"
+        second_query = "SECOND_QUERY"
+        self._start_routing_server1()
+        self._start_read_server1_with_reader_two_plan_script(
+            query1=fist_query, autocommit1=True, update1=False,
+            query2=second_query, autocommit2=False, update2=True
+        )
+
+        self._session = self._driver.session("w")
+
+        first_query_characteristics = self._session.plan(fist_query)
+        self.assertEqual(first_query_characteristics.autocommit, "REQUIRED")
+        self.assertEqual(first_query_characteristics.update, "DOES_NOT_UPDATE")
+
+        second_query_characteristics = self._session.plan(second_query)
+        self.assertEqual(second_query_characteristics.autocommit, "UNREQUIRED")
+        self.assertEqual(second_query_characteristics.update, "UPDATE")
+
+        # THE CACHED SHOULD BE HITTED THIS TIME
+        first_query_characteristics = self._session.plan(fist_query)
+        self.assertEqual(first_query_characteristics.autocommit, "REQUIRED")
+        self.assertEqual(first_query_characteristics.update, "DOES_NOT_UPDATE")
+
+        second_query_characteristics = self._session.plan(second_query)
+        self.assertEqual(second_query_characteristics.autocommit, "UNREQUIRED")
+        self.assertEqual(second_query_characteristics.update, "UPDATE")
+
+        self._session.close()
+        self._session = None
+        self._read_server1.done()
+        self._routing_server1.done()
 
 
 def _bool_to_autocommit_string(autocommit):
