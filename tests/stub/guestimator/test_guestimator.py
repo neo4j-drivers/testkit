@@ -80,3 +80,95 @@ class TestSessionPlan(TestkitTestCase):
                     _test()
                 self._read_server1.reset()
                 self._routing_server1.reset()
+
+    def test_should_cache_requests_in_the_same_session(self):
+        def _test():
+            self._routing_server1.start(
+                path=self.script_path("router.script"),
+                vars_=self._get_vars()
+            )
+            self._read_server1.start(
+                path=self.script_path("reader.script"),
+                vars_={
+                    "#AUTOCOMMIT#": json.dumps(autocommit),
+                    "#UPDATE#": json.dumps(update),
+                    "#QUERY#": query}
+            )
+
+            self._session = self._driver.session("w")
+            query_characteristics = self._session.plan(query)
+
+            self.assertEqual(query_characteristics.autocommit,
+                             "REQUIRED" if autocommit else "UNREQUIRED")
+            self.assertEqual(query_characteristics.update,
+                             "UPDATE" if update else "DOES_NOT_UPDATE")
+
+            query_characteristics = self._session.plan(query)
+
+            self.assertEqual(query_characteristics.autocommit,
+                             "REQUIRED" if autocommit else "UNREQUIRED")
+            self.assertEqual(query_characteristics.update,
+                             "UPDATE" if update else "DOES_NOT_UPDATE")
+
+            self._session.close()
+            self._session = None
+
+            self._read_server1.done()
+            self._routing_server1.done()
+
+        for autocommit in (True, False):
+            for update in (True, False):
+                query = f"query autocommit={autocommit}, update={update}"
+                with self.subTest(
+                        autocommit=autocommit, update=update, query=query):
+                    _test()
+                self._read_server1.reset()
+                self._routing_server1.reset()
+
+    def test_should_cache_requests_in_different_sessions(self):
+        def _test():
+            self._routing_server1.start(
+                path=self.script_path("router.script"),
+                vars_=self._get_vars()
+            )
+            self._read_server1.start(
+                path=self.script_path("reader.script"),
+                vars_={
+                    "#AUTOCOMMIT#": json.dumps(autocommit),
+                    "#UPDATE#": json.dumps(update),
+                    "#QUERY#": query}
+            )
+
+            self._session = self._driver.session("w")
+            query_characteristics = self._session.plan(query)
+
+            self.assertEqual(query_characteristics.autocommit,
+                             "REQUIRED" if autocommit else "UNREQUIRED")
+            self.assertEqual(query_characteristics.update,
+                             "UPDATE" if update else "DOES_NOT_UPDATE")
+
+            self._session.close()
+            self._session = None
+
+            self._session = self._driver.session("w")
+            query_characteristics = self._session.plan(query)
+
+            self.assertEqual(query_characteristics.autocommit,
+                             "REQUIRED" if autocommit else "UNREQUIRED")
+            self.assertEqual(query_characteristics.update,
+                             "UPDATE" if update else "DOES_NOT_UPDATE")
+
+            self._session.close()
+            self._session = None
+
+            self._read_server1.done()
+            self._routing_server1.done()
+
+        for autocommit in (True, False):
+            for update in (True, False):
+                query = f"query autocommit={autocommit}, update={update}"
+                with self.subTest(
+                        autocommit=autocommit, update=update, query=query):
+                    _test()
+                self._read_server1.reset()
+                self._routing_server1.reset()
