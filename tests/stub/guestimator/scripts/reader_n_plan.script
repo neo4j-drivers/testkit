@@ -1,0 +1,10 @@
+!: BOLT 5.0
+
+A: HELLO {"{}": "*"}
+{*
+  C: PLAN {"query": "*", "db": "adb"}
+  S: SUCCESS {"autocommit": false, "update": false}
+  ?: RESET
+*}
+?: RESET
+?: GOODBYE

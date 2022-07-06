@@ -10,7 +10,8 @@ class Driver:
                  update_routing_table_timeout_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None):
+                 connection_acquisition_timeout_ms=None,
+                 query_plan_cache_size=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -25,6 +26,7 @@ class Driver:
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
+            query_plan_cache_size=query_plan_cache_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms
         )
         res = backend.send_and_receive(req)

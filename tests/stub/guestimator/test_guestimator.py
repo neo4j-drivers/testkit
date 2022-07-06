@@ -22,7 +22,7 @@ class TestSessionPlan(TestkitTestCase):
         self._auth = types.AuthorizationToken(
             "basic", principal="", credentials="")
 
-        self._driver = Driver(self._backend, self._uri, self._auth)
+        self._driver = self._create_driver()
         self._session = None
 
     def tearDown(self) -> None:
@@ -36,6 +36,9 @@ class TestSessionPlan(TestkitTestCase):
         self._routing_server1.reset()
 
         return super().tearDown()
+
+    def _create_driver(self, **config):
+        return Driver(self._backend, self._uri, self._auth, **config)
 
     def _get_routing_vars(self, host=None):
         if host is None:
@@ -60,6 +63,11 @@ class TestSessionPlan(TestkitTestCase):
                 "#AUTOCOMMIT#": json.dumps(autocommit),
                 "#UPDATE#": json.dumps(update),
                 "#QUERY#": query}
+        )
+
+    def _start_read_server1_with_reader_n_plan_script(self):
+        self._read_server1.start(
+            path=self.script_path("reader_n_plan.script")
         )
 
     def _start_read_server1_with_reader_two_plan_script(self, query1,
@@ -222,6 +230,43 @@ class TestSessionPlan(TestkitTestCase):
         self._session = None
         self._read_server1.done()
         self._routing_server1.done()
+
+    def test_should_respect_cache_size_and_lru_strategy(self):
+        def _test():
+            self._driver.close()
+            self._driver = self._create_driver(
+                query_plan_cache_size=query_plan_cache_size)
+            self._start_routing_server1()
+            self._start_read_server1_with_reader_n_plan_script()
+
+            self._session = self._driver.session("w")
+
+            queries = [f"query {i}" for i in range(query_plan_cache_size + 1)]
+            for query in queries:
+                self._session.plan(query)
+
+            for query in reversed(queries):
+                self._session.plan(query)
+
+            self._read_server1.done()
+            self._routing_server1.done()
+
+            plan_requests_count = [
+                self._read_server1.count_requests(
+                    'PLAN {"{}": {"query": "%s", "db": "adb"}}' % query)
+                for query in queries
+            ]
+
+            # the first query should be planned twice, the other only once
+            expected_requests_count = [2] + [1] * query_plan_cache_size
+            self.assertEqual(plan_requests_count, expected_requests_count)
+
+        for query_plan_cache_size in (0, 1, 2, 3, 5, 7):
+            with self.subTest(
+                    query_plan_cache_size=query_plan_cache_size):
+                _test()
+                self._read_server1.reset()
+                self._routing_server1.reset()
 
 
 def _bool_to_autocommit_string(autocommit):
