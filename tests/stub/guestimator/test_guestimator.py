@@ -8,8 +8,8 @@ from tests.stub.shared import StubServer
 
 class TestSessionPlan(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_5_0,
-    types.Feature.API_SESSION_PLAN,
+    required_features = (types.Feature.BOLT_5_0,
+                         types.Feature.API_SESSION_PLAN)
 
     def setUp(self) -> None:
         super().setUp()
@@ -93,7 +93,7 @@ class TestSessionPlan(TestkitTestCase):
                 self._read_server1.reset()
                 self._routing_server1.reset()
 
-    def test_should_cache_requests_in_the_same_session(self):
+    def test_should_cache_requests_from_the_same_session(self):
         def _test():
             self._start_routing_server1()
             self._start_read_server1_with_reader_script(
@@ -131,7 +131,7 @@ class TestSessionPlan(TestkitTestCase):
                 self._read_server1.reset()
                 self._routing_server1.reset()
 
-    def test_should_cache_requests_in_different_sessions(self):
+    def test_should_cache_requests_from_different_sessions(self):
         def _test():
             self._start_routing_server1()
             self._start_read_server1_with_reader_script(
