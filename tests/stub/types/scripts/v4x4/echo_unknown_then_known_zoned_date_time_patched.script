@@ -30,7 +30,7 @@ S: <RAW> 8C 45 75 72 6f 70 65 2f 4e 65 6f 34 6a
 S: <RAW> 00 00
 
 # Now something easy: a fixed offset timezone
-S: RECORD [{"T": "1970-01-01T01:00:00+00:30"}]
+S: RECORD [{"Tv2": "1970-01-01T01:00:00+00:30"}]
 
 S: SUCCESS {"type": "r"}
 {{
