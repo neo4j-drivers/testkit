@@ -225,7 +225,7 @@ class TestRetryClustering(TestkitTestCase):
 
         failures = []
         # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        if get_driver_name() in ["javascript", "ruby", "python"]:
+        if get_driver_name() in ["javascript"]:
             failures.append(
                 ["Neo.TransientError.Transaction.Terminated",
                  "Neo.TransientError.Transaction.Terminated"])
