@@ -283,9 +283,10 @@ class DriverPlan:
     Backend should respond with DriverPlanResponse or an Error response.
     """
 
-    def __init__(self, driverId, query, params) -> None:
+    def __init__(self, driverId, cypher, database=None, params=None):
         self.driverId = driverId
-        self.query = query
+        self.cypher = cypher
+        self.database = database
         self.params = params
 
 

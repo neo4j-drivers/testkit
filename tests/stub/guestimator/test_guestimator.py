@@ -68,7 +68,7 @@ class TestDriverPlan(TestkitTestCase):
             self._start_read_server1_with_reader_script(
                 query, autocommit, update)
 
-            plan = self._driver.plan(query, params=None)
+            plan = self._driver.plan(query)
 
             self.assertEqual(plan.autocommit, autocommit)
             self.assertEqual(plan.update, update)

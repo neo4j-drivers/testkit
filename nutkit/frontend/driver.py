@@ -138,8 +138,8 @@ class Driver:
             raise Exception("Should be ConnectionPoolMetrics")
         return res
 
-    def plan(self, query, params):
-        req = protocol.DriverPlan(self._driver.id, query, params)
+    def plan(self, cypher, database=None, params=None):
+        req = protocol.DriverPlan(self._driver.id, cypher, database, params)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.DriverPlanResponse):
             raise Exception(
