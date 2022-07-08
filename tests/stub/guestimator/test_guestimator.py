@@ -55,24 +55,26 @@ class TestDriverPlan(TestkitTestCase):
 
     def _start_read_server1_with_reader_script(self, query,
                                                autocommit, update, database):
-        database_param = f'"db": "{database}"'\
-            if database is not None else ""
         self._read_server1.start(
             path=self.script_path("reader.script"),
             vars_={
                 "#AUTOCOMMIT#": json.dumps(autocommit),
                 "#UPDATE#": json.dumps(update),
                 "#QUERY#": query,
-                "#DATABASE#": database_param}
-        )
+                "#DATABASE#": database
+            })
 
     def test_should_echo_plan_info(self):
         def _test():
             self.setUp()
             try:
-                self._start_routing_server1()
+                database_resolved_name = database or "adb"
+                self._start_routing_server1(vars_={
+                    "#DATABASE#": database_resolved_name,
+                    **self._get_routing_vars()
+                })
                 self._start_read_server1_with_reader_script(
-                    query, autocommit, update, database)
+                    query, autocommit, update, database_resolved_name)
 
                 plan = self._driver.plan(query, database)
 
