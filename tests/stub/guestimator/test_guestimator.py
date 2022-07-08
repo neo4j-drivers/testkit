@@ -54,14 +54,18 @@ class TestDriverPlan(TestkitTestCase):
         )
 
     def _start_read_server1_with_reader_script(self, query,
-                                               autocommit, update, database):
+                                               autocommit, update, database,
+                                               params):
+        params_field = f', "params": {json.dumps(params)}' \
+            if params is not None else ""
         self._read_server1.start(
             path=self.script_path("reader.script"),
             vars_={
                 "#AUTOCOMMIT#": json.dumps(autocommit),
                 "#UPDATE#": json.dumps(update),
                 "#QUERY#": query,
-                "#DATABASE#": database
+                "#DATABASE#": database,
+                "#PARAMS#": params_field
             })
 
     def test_should_echo_plan_info(self):
@@ -74,9 +78,10 @@ class TestDriverPlan(TestkitTestCase):
                     **self._get_routing_vars()
                 })
                 self._start_read_server1_with_reader_script(
-                    query, autocommit, update, database_resolved_name)
+                    query, autocommit, update, database_resolved_name,
+                    params)
 
-                plan = self._driver.plan(query, database)
+                plan = self._driver.plan(query, database, params)
 
                 self.assertEqual(plan.autocommit, autocommit)
                 self.assertEqual(plan.update, update)
@@ -90,12 +95,14 @@ class TestDriverPlan(TestkitTestCase):
         for autocommit in (True, False):
             for update in (True, False):
                 for database in (None, "somedb"):
-                    query = f"query autocommit={autocommit}, update={update}"
-                    with self.subTest(
-                            autocommit=autocommit,
-                            update=update,
-                            query=query,
-                            database=database):
-                        _test()
-                    self._read_server1.reset()
-                    self._routing_server1.reset()
+                    for params in (None, {"xs": ""}):
+                        query = "RETURN fancycall($xs)"
+                        with self.subTest(
+                                autocommit=autocommit,
+                                update=update,
+                                query=query,
+                                database=database,
+                                params=params):
+                            _test()
+                        self._read_server1.reset()
+                        self._routing_server1.reset()
