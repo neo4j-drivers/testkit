@@ -455,9 +455,9 @@ class ConnectionPoolMetrics:
         self.idle = idle
 
 
-class QueryCharacteristics:
+class DriverPlanResponse:
     def __init__(self, autocommit, update):
-        """Sent from backend in response of SessionPlan."""
+        """Sent from backend in response of DriverPlan."""
         self.autocommit = autocommit
         self.update = update
 

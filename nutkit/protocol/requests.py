@@ -276,16 +276,17 @@ class SessionRun:
             self.timeout = kwargs["timeout"]
 
 
-class SessionPlan:
+class DriverPlan:
     """
-    Request to plan a query on a specified session.
+    Request to plan a query.
 
-    Backend should respond with QueryCharacteristics or an Error response.
+    Backend should respond with DriverPlanResponse or an Error response.
     """
 
-    def __init__(self, sessionId, cypher) -> None:
-        self.sessionId = sessionId
-        self.cypher = cypher
+    def __init__(self, driverId, query, params) -> None:
+        self.driverId = driverId
+        self.query = query
+        self.params = params
 
 
 class SessionReadTransaction:

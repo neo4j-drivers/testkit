@@ -47,9 +47,6 @@ class Feature(Enum):
     # is picked up instead, we need to wait until the full pool depletes, or
     # a routing table must be fetched.
     API_SESSION_CONNECTION_TIMEOUT = "Feature:API:SessionConnectionTimeout"
-    # The Driver offers an explicity interface for planning its query using
-    # the PLAN message or some sort of polyfill
-    API_SESSION_PLAN = "Feature:API:Session.Plan"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -87,6 +84,8 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
+    # The driver supports new message PLAN specific tests
+    BOLT_MESSAGE_PLAN = "Feature:Bolt:Message:Plan"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
