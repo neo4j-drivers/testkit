@@ -1,7 +1,7 @@
 !: BOLT 5.0
 
 A: HELLO {"{}": "*"}
-C: PLAN "#QUERY#" {}
+C: PLAN "#QUERY#" { #DATABASE# }
 S: SUCCESS {"autocommit": #AUTOCOMMIT#, "update": #UPDATE#}
 ?: RESET
 ?: GOODBYE

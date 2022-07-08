@@ -27,6 +27,7 @@ class TestDriverPlan(TestkitTestCase):
     def tearDown(self) -> None:
         if self._driver is not None:
             self._driver.close()
+            self._driver = None
 
         self._write_server1.reset()
         self._read_server1.reset()
@@ -53,35 +54,46 @@ class TestDriverPlan(TestkitTestCase):
         )
 
     def _start_read_server1_with_reader_script(self, query,
-                                               autocommit, update):
+                                               autocommit, update, database):
+        database_param = f'"db": "{database}"'\
+            if database is not None else ""
         self._read_server1.start(
             path=self.script_path("reader.script"),
             vars_={
                 "#AUTOCOMMIT#": json.dumps(autocommit),
                 "#UPDATE#": json.dumps(update),
-                "#QUERY#": query}
+                "#QUERY#": query,
+                "#DATABASE#": database_param}
         )
 
     def test_should_echo_plan_info(self):
         def _test():
-            self._start_routing_server1()
-            self._start_read_server1_with_reader_script(
-                query, autocommit, update)
+            self.setUp()
+            try:
+                self._start_routing_server1()
+                self._start_read_server1_with_reader_script(
+                    query, autocommit, update, database)
 
-            plan = self._driver.plan(query)
+                plan = self._driver.plan(query, database)
 
-            self.assertEqual(plan.autocommit, autocommit)
-            self.assertEqual(plan.update, update)
+                self.assertEqual(plan.autocommit, autocommit)
+                self.assertEqual(plan.update, update)
 
-            self._read_server1.done()
-            self._routing_server1.done()
+                self._read_server1.done()
+                self._routing_server1.done()
+            finally:
+                self.tearDown()
 
+        self.tearDown()
         for autocommit in (True, False):
             for update in (True, False):
-                query = f"query autocommit={autocommit}, update={update}"
-
-                with self.subTest(
-                        autocommit=autocommit, update=update, query=query):
-                    _test()
-                self._read_server1.reset()
-                self._routing_server1.reset()
+                for database in (None, "somedb"):
+                    query = f"query autocommit={autocommit}, update={update}"
+                    with self.subTest(
+                            autocommit=autocommit,
+                            update=update,
+                            query=query,
+                            database=database):
+                        _test()
+                    self._read_server1.reset()
+                    self._routing_server1.reset()
