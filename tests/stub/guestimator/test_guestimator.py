@@ -38,16 +38,20 @@ class TestDriverPlan(TestkitTestCase):
     def _create_driver(self, **config):
         return Driver(self._backend, self._uri, self._auth, **config)
 
-    def _get_routing_vars(self, host=None):
+    def _get_routing_vars(self, host=None, database=None):
         if host is None:
             host = self._routing_server1.host
+        if database is None:
+            database = "adb"
         return {
-            "#HOST#": host
+            "#HOST#": host,
+            "#DATABASE#": database
         }
 
-    def _start_routing_server1(self, script="router.script", vars_=None):
+    def _start_routing_server1(self, script="router.script", database=None,
+                               vars_=None):
         if vars_ is None:
-            vars_ = self._get_routing_vars()
+            vars_ = self._get_routing_vars(database=database)
         self._routing_server1.start(
             path=self.script_path(script),
             vars_=vars_
@@ -56,7 +60,7 @@ class TestDriverPlan(TestkitTestCase):
     def _start_read_server1_with_reader_script(self, query,
                                                autocommit, update, database,
                                                params):
-        params_field = f', "params": {json.dumps(params)}' \
+        params_field = f', "params":{params}'\
             if params is not None else ""
         self._read_server1.start(
             path=self.script_path("reader.script"),
@@ -73,13 +77,12 @@ class TestDriverPlan(TestkitTestCase):
             self.setUp()
             try:
                 database_resolved_name = database or "adb"
-                self._start_routing_server1(vars_={
-                    "#DATABASE#": database_resolved_name,
-                    **self._get_routing_vars()
-                })
+                params_script = json.dumps(server_params) \
+                    if params is not None else None
+                self._start_routing_server1(database=database_resolved_name)
                 self._start_read_server1_with_reader_script(
                     query, autocommit, update, database_resolved_name,
-                    params)
+                    params_script)
 
                 plan = self._driver.plan(query, database, params)
 
@@ -92,17 +95,57 @@ class TestDriverPlan(TestkitTestCase):
                 self.tearDown()
 
         self.tearDown()
+
+        string_params = ({"xs": types.CypherString("")}, {"xs": ""})
         for autocommit in (True, False):
             for update in (True, False):
                 for database in (None, "somedb"):
-                    for params in (None, {"xs": ""}):
+                    for (params, server_params) in (
+                            (None, None), string_params):
                         query = "RETURN fancycall($xs)"
                         with self.subTest(
                                 autocommit=autocommit,
                                 update=update,
                                 query=query,
                                 database=database,
-                                params=params):
+                                params=params,
+                                server_params=server_params):
                             _test()
                         self._read_server1.reset()
                         self._routing_server1.reset()
+
+    def test_should_supports_all_datatypes_as_params(self):
+        def _test():
+            self.setUp()
+            try:
+                self._start_routing_server1()
+                self._start_read_server1_with_reader_script(
+                    query="RETURN $x",
+                    autocommit=True,
+                    update=True,
+                    database="adb",
+                    params=jolt_params)
+
+                plan = self._driver.plan("RETURN $x", params=params)
+
+                self.assertEqual(plan.autocommit, True)
+                self.assertEqual(plan.update, True)
+
+                self._read_server1.done()
+                self._routing_server1.done()
+            finally:
+                self.tearDown()
+
+        self.tearDown()
+        for (param, jolt_param) in self._all_supported_datatypes_fixture():
+            params = {"x": param}
+            jolt_params = '{"x": %s}' % jolt_param
+            with self.subTest(params=params):
+                _test()
+
+    def _all_supported_datatypes_fixture(self):
+        non_reductable_datatypes = [
+            (types.CypherBool(True), "true"),
+            (types.CypherNull(), "null")
+        ]
+        return non_reductable_datatypes
