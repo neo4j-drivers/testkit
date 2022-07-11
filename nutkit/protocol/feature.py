@@ -84,8 +84,6 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
-    # The driver supports new message PLAN specific tests
-    BOLT_MESSAGE_PLAN = "Feature:Bolt:Message:Plan"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
@@ -153,6 +151,10 @@ class Feature(Enum):
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
 
     # === BACKEND FEATURES FOR TESTING ===
+    # The backend understands the GetRoutingTable protocol message and provides
+    # a way for TestKit to request the plan message (for testing only, should
+    # not be exposed to the user).
+    BACKEND_FETCH_PLAN = "Backend:FetchPlan"
     # The backend understands the GetRoutingTable protocol message and provides
     # a way for TestKit to request the routing table (for testing only, should
     # not be exposed to the user).

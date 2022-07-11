@@ -9,7 +9,7 @@ from tests.stub.shared import StubServer
 class TestDriverPlan(TestkitTestCase):
 
     required_features = (types.Feature.BOLT_5_0,
-                         types.Feature.BOLT_MESSAGE_PLAN)
+                         types.Feature.BACKEND_FETCH_PLAN)
 
     def setUp(self) -> None:
         super().setUp()
