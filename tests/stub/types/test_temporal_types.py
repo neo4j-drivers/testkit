@@ -2,6 +2,7 @@ from nutkit import protocol as types
 from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
+    get_driver_name,
     TestkitTestCase,
 )
 from tests.stub.shared import StubServer
@@ -87,6 +88,10 @@ class _TestTemporalTypes(TestkitTestCase):
         with self.assertRaises(types.DriverError):
             self._session.read_transaction(work)
         self._server.done()
+        # TODO: Remove once all drivers roll back failed managed transactions
+        if get_driver_name() not in ["go"]:
+            rollback_count = self._server.count_requests("ROLLBACK")
+            self.assertEqual(rollback_count, 1)
         self.assertEqual(tx_count, 1)
 
     def _test_unknown_then_known_zoned_date_time(self, patched):
