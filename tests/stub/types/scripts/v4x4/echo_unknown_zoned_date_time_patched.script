@@ -30,6 +30,6 @@ S: <RAW> 8C 45 75 72 6f 70 65 2f 4e 65 6f 34 6a
 S: <RAW> 00 00
 
 S: SUCCESS {"type": "r"}
-A: ROLLBACK
+?: ROLLBACK
 *: RESET
 ?: GOODBYE
