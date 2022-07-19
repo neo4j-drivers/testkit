@@ -235,9 +235,6 @@ class BoltActor:
                     time.sleep(0.000001)
                     continue
         except OSError as e:
-            # It's likely the client has gone away, so we can
-            # safely drop out and silence the error. There's no
-            # point in flagging a broken client from a test helper.
             self.log("S: <BROKEN> %r", e)
             raise
         self.log("Script finished")
