@@ -1003,6 +1003,11 @@ class BlockList(Block):
 
     def init(self, channel):
         self.blocks[0].init(channel)
+        if (
+            self.blocks[0].has_deterministic_end
+            and self.blocks[0].done()
+        ):
+            self.index += 1
 
     def reset(self):
         for block in self.blocks:

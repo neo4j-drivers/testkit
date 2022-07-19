@@ -421,10 +421,17 @@ def test_restarting(server_factory, restarting, concurrent,
         "!: ALLOW CONCURRENT\n" if concurrent else "",
     )
 
-    server = server_factory(parse(script))
+    if restarting and concurrent:
+        with pytest.warns(
+            Warning, match="concurrent scripts are implicitly restarting"
+        ):
+            server = server_factory(parse(script))
+    else:
+        server = server_factory(parse(script))
+
     for i in range(3):
         if i > 0 and not (restarting or concurrent):
-            with pytest.raises((ConnectionError, OSError, BrokenSocket)):
+            with pytest.raises((OSError, BrokenSocket)):
                 con = connection_factory("localhost", 7687)
                 con.write(b"\x60\x60\xb0\x17")
                 con.write(server_version_to_version_request((4, 3)))
