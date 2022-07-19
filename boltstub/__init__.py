@@ -239,7 +239,7 @@ class BoltActor:
             # safely drop out and silence the error. There's no
             # point in flagging a broken client from a test helper.
             self.log("S: <BROKEN> %r", e)
-            return
+            raise
         self.log("Script finished")
 
     def try_skip_to_end(self):
