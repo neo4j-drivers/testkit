@@ -6,8 +6,8 @@ import pytz
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import (
     _TestTypesBase,
-    MAX_INT64,
-    MIN_INT64,
+    MAX_SAFE_INT64,
+    MIN_SAFE_INT64,
 )
 from tests.neo4j.datatypes._util import TZ_IDS
 from tests.neo4j.shared import get_server_info
@@ -83,15 +83,15 @@ class TestDataTypes(_TestTypesBase):
             types.CypherDuration(0, 0, 0, -999999999),
             types.CypherDuration(1, 2, 3, 4),
             types.CypherDuration(-4, -3, -2, -1),
-            types.CypherDuration(0, 0, MAX_INT64, 999999999),
-            types.CypherDuration(0, MAX_INT64 // 86400, 0, 999999999),
-            types.CypherDuration(MAX_INT64 // 2629746, 0, 0, 999999999),
-            types.CypherDuration(0, 0, MIN_INT64, 0),
+            types.CypherDuration(0, 0, MAX_SAFE_INT64, 999999999),
+            types.CypherDuration(0, MAX_SAFE_INT64 // 86400, 0, 999999999),
+            types.CypherDuration(MAX_SAFE_INT64 // 2629746, 0, 0, 999999999),
+            types.CypherDuration(0, 0, MIN_SAFE_INT64, 0),
             # Note: `int(a / b) != a // b`
             #       `int(a / b)` rounds towards zero
             #       `a // b` rounds down (towards negative infinity)
-            types.CypherDuration(0, int(MIN_INT64 / 86400), 0, 0),
-            types.CypherDuration(int(MIN_INT64 / 2629746), 0, 0, 0),
+            types.CypherDuration(0, int(MIN_SAFE_INT64 / 86400), 0, 0),
+            types.CypherDuration(int(MIN_SAFE_INT64 / 2629746), 0, 0, 0),
         ]
 
         self._create_driver_and_session()
@@ -484,7 +484,7 @@ class TestDataTypes(_TestTypesBase):
     def test_duration_components(self):
         for (mo, d, s, ns_os, ns) in (
             (3, 4, 999, 123456789, 999_123456789),
-            (0, 0, MAX_INT64, 999999999, -1),  # LUL, Cypher overflows
+            (0, 0, MAX_SAFE_INT64, 999999999, -1),  # LUL, Cypher overflows
         ):
             with self.subTest(mo=mo, d=d, s=s, ns=ns):
                 self._create_driver_and_session()
@@ -506,7 +506,7 @@ class TestDataTypes(_TestTypesBase):
         data = types.CypherList([
             types.CypherDuration(months=3, days=4, seconds=999,
                                  nanoseconds=123456789),
-            types.CypherDuration(months=0, days=0, seconds=MAX_INT64,
+            types.CypherDuration(months=0, days=0, seconds=MAX_SAFE_INT64,
                                  nanoseconds=999999999)
         ])
         self._create_driver_and_session()

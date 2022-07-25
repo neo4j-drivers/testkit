@@ -4,7 +4,9 @@ from tests.neo4j.shared import get_driver
 from tests.shared import TestkitTestCase
 
 MIN_INT64 = -(2 ** 63)
+MIN_SAFE_INT64 = -(2 ** 53 - 1)
 MAX_INT64 = (2 ** 63) - 1
+MAX_SAFE_INT64 = 2 ** 53 - 1
 
 
 class _TestTypesBase(TestkitTestCase):
