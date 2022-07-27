@@ -1,4 +1,4 @@
 !: BOLT 4.3
 
-C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass" #EXTRA_HELLO_PARAMS# }
+C: HELLO {"user_agent": "Modesty", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[patch_bolt]": "*" #EXTRA_HELLO_PARAMS# }
 S: <EXIT>

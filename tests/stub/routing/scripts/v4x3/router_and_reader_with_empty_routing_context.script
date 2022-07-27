@@ -2,7 +2,7 @@
 !: AUTO RESET
 !: ALLOW RESTART
 
-C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"} #EXTRA_HELLO_PROPS#}
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": {"address": "#HOST#:9000"}, "[patch_bolt]": "*" #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 {?
     C: ROUTE {"address": "#HOST#:9000"} [] "adb"
