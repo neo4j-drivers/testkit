@@ -47,12 +47,16 @@ test_flags = {
 
 
 def initialise_configurations():
-    def generate_config(version, enterprise, cluster, scheme, stress_test):
+    def generate_config(version, enterprise, cluster, use_ssr, scheme,
+                        stress_test):
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
+        assert (use_ssr and cluster or not use_ssr)
         edition = "enterprise" if enterprise else "community"
-        name = "%s-%s%s-%s" % (version, edition,
-                               "-cluster" if cluster else "", scheme)
+        name = "%s-%s%s%s-%s" % (version, edition,
+                                 "-cluster" if cluster else "",
+                                 "-ssr" if use_ssr else "",
+                                 scheme)
         return neo4j.Config(
             name=name,
             image=(
@@ -61,20 +65,25 @@ def initialise_configurations():
             version=version,
             edition=edition,
             cluster=cluster,
+            use_ssr=use_ssr,
             suite=version,
             scheme=scheme,
             download=None,
             stress_test_duration=stress_test
         )
 
-    def generate_tc_config(version, enterprise, cluster, scheme, stress_test):
+    def generate_tc_config(version, enterprise, cluster, use_ssr, scheme,
+                           stress_test):
         if not in_teamcity:
             return None
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
+        assert (use_ssr and cluster or not use_ssr)
         edition = "enterprise" if enterprise else "community"
-        name = "%s-tc-%s%s-%s" % (version, edition,
-                                  "-cluster" if cluster else "", scheme)
+        name = "%s-tc-%s%s%s-%s" % (version, edition,
+                                    "-cluster" if cluster else "",
+                                    "-ssr" if use_ssr else "",
+                                    scheme)
         version_without_drop = ".".join(version.split(".")[:2])
         return neo4j.Config(
             name=name,
@@ -84,6 +93,7 @@ def initialise_configurations():
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
+            use_ssr=use_ssr,
             suite=version_without_drop,
             scheme=scheme,
             download=teamcity.DockerImage("neo4j-%s-%s" % (edition, version)),
@@ -91,32 +101,37 @@ def initialise_configurations():
         )
 
     configurations = [
-        generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+        generate_config(version_, enterprise_, cluster_, use_ssr_, scheme_,
+                        stress_test_)
+        for (version_, enterprise_, cluster_, use_ssr_, scheme_,
+             stress_test_) in (
             # not officially supported versions
-            ("4.2",    True,        False,    "neo4j",  0),
-            ("4.3",    True,        False,    "neo4j",  0),
+            ("4.2",    True,        False,    False,    "neo4j", 0),
+            ("4.3",    True,        False,    False,    "neo4j", 0),
             # official backwards-compatibility
             # LTS version
-            ("4.4",    False,       False,    "bolt",   0),
-            ("4.4",    False,       False,    "neo4j",  0),
-            ("4.4",    True,        False,    "bolt",   0),
-            ("4.4",    True,        False,    "neo4j",  0),
-            ("4.4",    True,        True,     "neo4j", 90),
+            ("4.4",    False,       False,    False,    "bolt", 0),
+            ("4.4",    False,       False,    False,    "neo4j", 0),
+            ("4.4",    True,        False,    False,    "bolt", 0),
+            ("4.4",    True,        False,    False,    "neo4j", 0),
+            ("4.4",    True,        True,     False,    "neo4j", 90),
+            ("4.4",    True,        True,     True,     "neo4j", 90),
         )
     ]
     configurations += [
-        generate_tc_config(version_, enterprise_, cluster_, scheme_,
+        generate_tc_config(version_, enterprise_, cluster_, use_ssr_, scheme_,
                            stress_test_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+        for (version_, enterprise_, cluster_, use_ssr_, scheme_,
+             stress_test_) in (
             # nightly build of official backwards-compatible version
-            ("4.4",    True,        True,     "neo4j", 60),
+            ("4.4",    True,        True,     False,    "neo4j", 60),
+            ("4.4",    True,        True,     True,     "neo4j", 60),
             # latest version
-            ("5.0",    False,       False,    "bolt",   0),
-            ("5.0",    False,       False,    "neo4j",  0),
-            ("5.0",    True,        False,    "bolt",  90),
-            ("5.0",    True,        False,    "neo4j",  0),
-            ("5.0",    True,        True,     "neo4j", 90),
+            ("5.0",    False,       False,    False,    "bolt", 0),
+            ("5.0",    False,       False,    False,    "neo4j", 0),
+            ("5.0",    True,        False,    False,    "bolt", 90),
+            ("5.0",    True,        False,    False,    "neo4j", 0),
+            ("5.0",    True,        True,     False,    "neo4j", 90),
         )
     ]
 
@@ -397,7 +412,8 @@ def main(settings, configurations):
             print("\n    Starting neo4j cluster (%s)\n" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
-                                   neo4j_artifacts_path)
+                                   neo4j_artifacts_path,
+                                   neo4j_config.use_ssr)
         else:
             print("\n    Starting neo4j standalone server (%s)\n"
                   % server_name)

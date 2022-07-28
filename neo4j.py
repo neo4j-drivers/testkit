@@ -18,6 +18,7 @@ class Config:
     version: str
     edition: str
     cluster: bool
+    use_ssr: bool
     suite: str
     scheme: str
     download: Optional[DockerImage]
@@ -68,16 +69,17 @@ class Standalone:
 class Cluster:
     """Cluster of Neo4j servers."""
 
-    def __init__(self, image, name, artifacts_path, num_cores=3):
+    def __init__(self, image, name, artifacts_path, use_ssr, num_cores=3):
         self.name = name
         self._image = image
         self._artifacts_path = join(artifacts_path, name)
+        self._use_ssr = use_ssr
         self._num_cores = num_cores
         self._cores = []
 
     def start(self, network):
         for i in range(self._num_cores):
-            core = Core(i, self._artifacts_path)
+            core = Core(i, self._artifacts_path, self._use_ssr)
             self._cores.append(core)
 
         initial_members = ",".join([c.discover for c in self._cores])
@@ -100,19 +102,21 @@ class Core:
     TRANSACTION_PORT = 6000
     RAFT_PORT = 7000
 
-    def __init__(self, index, artifacts_path):
+    def __init__(self, index, artifacts_path, use_ssr):
         self.name = "core%d" % index
         self.discover = "%s:%d" % (self.name, Core.DISCOVERY_PORT + index)
         self.transaction = "%s:%d" % (self.name, Core.TRANSACTION_PORT + index)
         self.raft = "%s:%d" % (self.name, Core.RAFT_PORT + index)
         self._index = index
         self._artifacts_path = join(artifacts_path, self.name)
+        self._use_ssr = use_ssr
         self._container = None
 
     def start(self, image, initial_members, network):
+        advertised_address = "%s:%d" % (self.name, 7687)
         env_map = {
             "NEO4J_dbms_connector_bolt_advertised__address":
-                "%s:%d" % (self.name, 7687),
+                advertised_address,
             "NEO4J_dbms_mode":
                 "CORE",
             "NEO4J_causal__clustering_discovery__type":
@@ -135,6 +139,11 @@ class Core:
             "NEO4J_AUTH":
                 "%s/%s" % (username, password),
         }
+        if self._use_ssr:
+            env_map["NEO4J_dbms_routing_enabled"] = "true"
+            env_map["NEO4J_dbms_routing_listen__address"] = advertised_address
+            env_map["NEO4J_dbms_routing_default__router"] = "SERVER"
+
         # Config options renamed in 5.0 (old versions are deprecated and
         # still working; at lest they should be ;) )
         for old_key, new_key in ({
