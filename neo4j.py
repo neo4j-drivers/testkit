@@ -101,7 +101,7 @@ class Core:
     DISCOVERY_PORT = 5000
     TRANSACTION_PORT = 6000
     RAFT_PORT = 7000
-    SSR_PORT = 8000
+    SSR_PORT = 7688
 
     def __init__(self, index, artifacts_path, use_ssr):
         self.name = "core%d" % index
@@ -114,10 +114,9 @@ class Core:
         self._container = None
 
     def start(self, image, initial_members, network):
-        advertised_address = "%s:%d" % (self.name, 7687)
         env_map = {
             "NEO4J_dbms_connector_bolt_advertised__address":
-                advertised_address,
+                ("%s:%d" % (self.name, 7687)),
             "NEO4J_dbms_mode":
                 "CORE",
             "NEO4J_causal__clustering_discovery__type":
@@ -143,9 +142,9 @@ class Core:
         if self._use_ssr:
             env_map["NEO4J_dbms_routing_enabled"] = "true"
             env_map["NEO4J_dbms_routing_listen__address"] = "0.0.0.0:%d" % (
-                Core.SSR_PORT + self._index)
+                Core.SSR_PORT)
             env_map["NEO4J_dbms_routing_advertised__address"] = \
-                advertised_address
+                "%s:%d" % (self.name, Core.SSR_PORT)
             env_map["NEO4J_dbms_routing_default__router"] = "SERVER"
 
         # Config options renamed in 5.0 (old versions are deprecated and
