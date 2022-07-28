@@ -3,6 +3,8 @@
 import sys
 import unittest
 
+import xmlrunner
+
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -26,7 +28,7 @@ tls_suite.addTests(loader.loadTestsFromModule(test_unsecure_scheme))
 if __name__ == "__main__":
     suite_name = "TLS tests"
     begin_test_suite(suite_name)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
+    runner = xmlrunner.XMLTestRunner(resultclass=get_test_result_class(),
                                      verbosity=100)
     result = runner.run(tls_suite)
     end_test_suite(suite_name)

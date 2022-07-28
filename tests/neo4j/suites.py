@@ -4,6 +4,8 @@ import os
 import sys
 import unittest
 
+import xmlrunner
+
 from tests.neo4j.shared import env_neo4j_version
 from tests.testenv import (
     begin_test_suite,
@@ -64,7 +66,7 @@ if __name__ == "__main__":
 
     suite_name = "Integration tests " + name
     begin_test_suite(suite_name)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
+    runner = xmlrunner.XMLTestRunner(resultclass=get_test_result_class(),
                                      verbosity=100)
     result = runner.run(suite)
     end_test_suite(suite_name)

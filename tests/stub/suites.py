@@ -4,6 +4,8 @@ import os
 import sys
 import unittest
 
+import xmlrunner
+
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -24,7 +26,7 @@ stub_suite.addTest(loader.discover(
 if __name__ == "__main__":
     suite_name = "Stub tests"
     begin_test_suite(suite_name)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
+    runner = xmlrunner.XMLTestRunner(resultclass=get_test_result_class(),
                                      verbosity=100)
     result = runner.run(stub_suite)
     end_test_suite(suite_name)
