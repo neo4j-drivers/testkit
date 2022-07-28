@@ -3,7 +3,7 @@
 !: AUTO GOODBYE
 !: ALLOW RESTART
 
-C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "[patch_bolt]": "*", "routing": #HELLO_ROUTINGCTX# #EXTRA_HELLO_PROPS#}
 S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
 {+
     C: ROUTE #ROUTINGCTX# [] null
