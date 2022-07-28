@@ -101,6 +101,7 @@ class Core:
     DISCOVERY_PORT = 5000
     TRANSACTION_PORT = 6000
     RAFT_PORT = 7000
+    SSR_PORT = 8000
 
     def __init__(self, index, artifacts_path, use_ssr):
         self.name = "core%d" % index
@@ -141,7 +142,10 @@ class Core:
         }
         if self._use_ssr:
             env_map["NEO4J_dbms_routing_enabled"] = "true"
-            env_map["NEO4J_dbms_routing_listen__address"] = advertised_address
+            env_map["NEO4J_dbms_routing_listen__address"] = "0.0.0.0:%d" % (
+                Core.SSR_PORT + self._index)
+            env_map["NEO4J_dbms_routing_advertised__address"] = \
+                advertised_address
             env_map["NEO4J_dbms_routing_default__router"] = "SERVER"
 
         # Config options renamed in 5.0 (old versions are deprecated and
