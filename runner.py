@@ -33,6 +33,7 @@ def start_container(testkit_path, branch_name, network, secondary_network,
         image, "runner",
         command=["python3", "/testkit/driver/bootstrap.py"],
         mount_map={testkit_path: "/testkit"},
+        working_folder="/testkit",
         env_map=env,
         network=network,
         aliases=["thehost", "thehostbutwrong"])  # Used when testing TLS

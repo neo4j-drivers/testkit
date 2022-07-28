@@ -1,7 +1,6 @@
 from teamcity import (
     escape,
     in_teamcity,
-    TeamCityTestResult,
 )
 
 
@@ -17,9 +16,3 @@ def end_test_suite(name):
         print("##teamcity[testSuiteFinished name='%s']" % escape(name))
     else:
         print(">>> End test suite: %s" % name)
-
-
-def get_test_result_class():
-    if not in_teamcity:
-        return None
-    return TeamCityTestResult

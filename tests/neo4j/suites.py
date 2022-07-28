@@ -10,7 +10,6 @@ from tests.neo4j.shared import env_neo4j_version
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
-    get_test_result_class,
 )
 
 #######################
@@ -66,8 +65,11 @@ if __name__ == "__main__":
 
     suite_name = "Integration tests " + name
     begin_test_suite(suite_name)
-    runner = xmlrunner.XMLTestRunner(resultclass=get_test_result_class(),
-                                     verbosity=100)
+    runner = xmlrunner.XMLTestRunner(
+        verbosity=100,
+        output="./artifacts/reports/",
+        outsuffix=os.environ.get("TEST_CONFIG_NAME", name)
+    )
     result = runner.run(suite)
     end_test_suite(suite_name)
     if result.errors or result.failures:

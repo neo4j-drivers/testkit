@@ -113,6 +113,7 @@ class Container:
                     config: neo4j.Config):
         env = self._default_env()
         env.update({
+            "TEST_CONFIG_NAME":   config.name,
             "TEST_NEO4J_HOST":    hostname,
             "TEST_NEO4J_PORT":    port,
             "TEST_NEO4J_USER":    username,

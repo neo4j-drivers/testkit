@@ -9,7 +9,6 @@ import xmlrunner
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
-    get_test_result_class,
 )
 
 loader = unittest.TestLoader()
@@ -26,8 +25,11 @@ stub_suite.addTest(loader.discover(
 if __name__ == "__main__":
     suite_name = "Stub tests"
     begin_test_suite(suite_name)
-    runner = xmlrunner.XMLTestRunner(resultclass=get_test_result_class(),
-                                     verbosity=100)
+    runner = xmlrunner.XMLTestRunner(
+        verbosity=100,
+        output="./artifacts/reports/",
+        outsuffix="stub"
+    )
     result = runner.run(stub_suite)
     end_test_suite(suite_name)
     if result.errors or result.failures:
