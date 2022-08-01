@@ -4,6 +4,8 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # Driver supports the Bookmark Manager Feature
+    API_BOOKMARK_MANAGER = "Feature:API:BookmarkManager"
     # The driver offers a configuration option to limit time it spends at most,
     # trying to acquire a connection from the pool.
     # The connection acquisition timeout must account for the whole acquisition

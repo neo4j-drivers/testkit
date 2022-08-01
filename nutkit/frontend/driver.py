@@ -1,4 +1,8 @@
+from typing import Optional
+
 from .. import protocol
+from .config import DefaultBookmarkManagerConfig as BMMConfig
+from .config import to_protocol
 from .session import Session
 
 
@@ -10,10 +14,12 @@ class Driver:
                  update_routing_table_timeout_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None):
+                 connection_acquisition_timeout_ms=None,
+                 bookmark_manager_config: Optional[BMMConfig] = None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
+        self._bookmark_manager_config = bookmark_manager_config
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
             resolverRegistered=resolver_fn is not None,
@@ -25,7 +31,8 @@ class Driver:
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
-            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms
+            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
+            bookmark_manager=to_protocol(bookmark_manager_config)
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):

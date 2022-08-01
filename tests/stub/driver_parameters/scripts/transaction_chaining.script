@@ -1,0 +1,41 @@
+!: BOLT 5.0
+!: ALLOW CONCURRENT
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+*: RESET
+{*
+ {{
+    C: BEGIN {"tx_metadata": { "order": "1st" }, "[bookmarks]": "*" }
+    S: SUCCESS {}
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bm1"}
+    *: RESET
+    ----
+    C: BEGIN {"tx_metadata": { "order": "2nd" }, "[bookmarks]": "*"}
+    S: SUCCESS {}
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bm2"}
+    *: RESET
+    ----
+    C: BEGIN {"tx_metadata": { "order": "3rd" }, "[bookmarks]": "*"}
+    S: SUCCESS {}
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bm3"}
+    *: RESET
+ }}
+*}
+
+?: GOODBYE
