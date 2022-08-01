@@ -17,9 +17,9 @@ def to_protocol(
 ) -> Optional[dict]:
     if config is not None:
         return {
-            "initial_bookmarks": config.initial_bookmarks,
-            "bookmark_supplier": config.bookmark_supplier is not None,
-            "notify_bookmarks": config.notify_bookmarks is not None,
+            "initialBookmarks": config.initial_bookmarks,
+            "bookmarkSupplier": config.bookmark_supplier is not None,
+            "notifyBookmarks": config.notify_bookmarks is not None,
         }
 
     return None
