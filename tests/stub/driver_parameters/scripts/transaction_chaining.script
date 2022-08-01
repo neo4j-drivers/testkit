@@ -6,7 +6,7 @@ A: HELLO {"{}": "*"}
 *: RESET
 {*
  {{
-    C: BEGIN {"tx_metadata": { "order": "1st" }, "[bookmarks]": "*" }
+    C: BEGIN {"tx_metadata": { "order": "1st" }, "[bookmarks]": "*", "[db]": "*" }
     S: SUCCESS {}
     C: RUN "RETURN 1 as n" {} {}
     S: SUCCESS {"fields": ["n"]}
@@ -16,7 +16,7 @@ A: HELLO {"{}": "*"}
     S: SUCCESS {"bookmark": "bm1"}
     *: RESET
     ----
-    C: BEGIN {"tx_metadata": { "order": "2nd" }, "[bookmarks]": "*"}
+    C: BEGIN {"tx_metadata": { "order": "2nd" }, "[bookmarks]": "*", "[db]": "*" }
     S: SUCCESS {}
     C: RUN "RETURN 1 as n" {} {}
     S: SUCCESS {"fields": ["n"]}
@@ -26,7 +26,7 @@ A: HELLO {"{}": "*"}
     S: SUCCESS {"bookmark": "bm2"}
     *: RESET
     ----
-    C: BEGIN {"tx_metadata": { "order": "3rd" }, "[bookmarks]": "*"}
+    C: BEGIN {"tx_metadata": { "order": "3rd" }, "[bookmarks]": "*", "[db]": "*" }
     S: SUCCESS {}
     C: RUN "RETURN 1 as n" {} {}
     S: SUCCESS {"fields": ["n"]}

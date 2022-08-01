@@ -197,13 +197,13 @@ class TestDefaultBookmarkManger(TestkitTestCase):
             )
         )
 
-        s1 = self._driver.session("w")
+        s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"order": "1st"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
-        s2 = self._driver.session("w")
+        s2 = self._driver.session("w", database="neo4j")
         tx2 = s2.begin_transaction({"order": "2nd"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
