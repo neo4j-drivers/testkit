@@ -11,7 +11,7 @@ from tests.stub.shared import StubServer
 
 class TestDefaultBookmarkManger(TestkitTestCase):
     required_features = (
-        types.Feature.API_BOOKMARK_MANAGER
+        types.Feature.API_BOOKMARK_MANAGER,
     )
 
     def setUp(self):
