@@ -229,7 +229,7 @@ class TestDefaultBookmarkManger(TestkitTestCase):
             self._backend,
             uri, auth,
             bookmark_manager_config=DefaultBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["fist_bm"], "system": ["sys:bm1"]}
+                initial_bookmarks={"neo4j": ["fist_bm"], "adb": ["adb:bm1"]}
             )
         )
 
@@ -250,11 +250,11 @@ class TestDefaultBookmarkManger(TestkitTestCase):
         self.assertEqual(len(begin_requests), 2)
         self.assert_begin(
             begin_requests[0],
-            bookmarks=["fist_bm", "sys:bm1"]
+            bookmarks=["fist_bm", "adb:bm1"]
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["bm1", "sys:bm1"]
+            bookmarks=["bm1", "adb:bm1"]
         )
 
     def test_should_resolve_database_name_with_system_bookmarks(self):
@@ -334,4 +334,4 @@ class TestDefaultBookmarkManger(TestkitTestCase):
         regex = r".*(\[.*\])"
         matches = re.match(regex, line, re.MULTILINE)
         bookmarks_sent = json.loads(matches.group(1))
-        self.assertEquals(bookmarks, bookmarks_sent)
+        self.assertEqual(bookmarks, bookmarks_sent, line)
