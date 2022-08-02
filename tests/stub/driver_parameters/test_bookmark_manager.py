@@ -1,4 +1,5 @@
 import json
+import re
 
 from nutkit.frontend import (
     DefaultBookmarkManagerConfig,
@@ -170,10 +171,6 @@ class TestDefaultBookmarkManger(TestkitTestCase):
             bookmarks=None
         )
         self.assert_begin(
-            begin_requests[1],
-            bookmarks=None
-        )
-        self.assert_begin(
             begin_requests[2],
             bookmarks=["unmanaged"]
         )
@@ -221,6 +218,89 @@ class TestDefaultBookmarkManger(TestkitTestCase):
             bookmarks=["bm1"]
         )
 
+    def test_should_send_all_db_bookmarks_and_update_only_relevant(self):
+        self._start_server(self._router, "router.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=DefaultBookmarkManagerConfig(
+                initial_bookmarks={"neo4j": ["fist_bm"], "system": ["sys:bm1"]}
+            )
+        )
+
+        s1 = self._driver.session("w", database="neo4j")
+        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w", database="neo4j")
+        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2.run("RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertEqual(len(begin_requests), 2)
+        self.assert_begin(
+            begin_requests[0],
+            bookmarks=["fist_bm", "sys:bm1"]
+        )
+        self.assert_begin(
+            begin_requests[1],
+            bookmarks=["bm1", "sys:bm1"]
+        )
+
+    def test_should_resolve_database_name_with_system_bookmarks(self):
+        self._start_server(self._router, "router.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=DefaultBookmarkManagerConfig(
+                initial_bookmarks={"system": ["sys:bm1"]}
+            )
+        )
+
+        s1 = self._driver.session("w")
+        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w")
+        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2.run("RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        route_requests = self._router.get_requests("ROUTE")
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertGreaterEqual(len(route_requests), 1)
+        self.assertEqual(len(begin_requests), 2)
+
+        self.assert_route(route_requests[0], bookmarks=["sys:bm1"])
+
+        self.assert_begin(
+            begin_requests[0],
+            bookmarks=None
+        )
+        self.assert_begin(
+            begin_requests[1],
+            bookmarks=["bm1"]
+        )
+
     def _start_server(self, server, script):
         server.start(self.script_path(script),
                      vars_={"#HOST#": self._router.host})
@@ -239,6 +319,19 @@ class TestDefaultBookmarkManger(TestkitTestCase):
             )
         else:
             self.assertEqual(
-                begin_properties.get("bookmarks", None),
-                bookmarks
+                bookmarks,
+                begin_properties.get("bookmarks", None)
             )
+
+    def assert_route(self, line: str, bookmarks=None):
+        if bookmarks is None:
+            bookmarks = []
+        route_prefix = "ROUTE "
+        self.assertTrue(
+            line.startswith(route_prefix),
+            "Line should start with ROUTE"
+        )
+        regex = r".*(\[.*\])"
+        matches = re.match(regex, line, re.MULTILINE)
+        bookmarks_sent = json.loads(matches.group(1))
+        self.assertEquals(bookmarks, bookmarks_sent)
