@@ -1,5 +1,3 @@
-import pytest
-
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
@@ -211,7 +209,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
                               connection_acquisition_timeout_ms=2000,
                               connection_timeout_ms=720000)
         self._session = self._driver.session("r")
-        with pytest.raises(types.DriverError):
+        with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 AS n"))
 
     def test_does_not_encompass_router_route_response(self):
