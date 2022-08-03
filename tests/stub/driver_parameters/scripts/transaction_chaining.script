@@ -35,6 +35,16 @@ A: HELLO {"{}": "*"}
     C: COMMIT
     S: SUCCESS {"bookmark": "bm3"}
     *: RESET
+    ----
+    C: BEGIN {"tx_metadata": { "order": "adb" }, "[bookmarks]": "*", "[db]": "*" }
+    S: SUCCESS {}
+    C: RUN "USE adb RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {"bookmark": "adb:bm4", "db": "adb"}
+    *: RESET
  }}
 *}
 

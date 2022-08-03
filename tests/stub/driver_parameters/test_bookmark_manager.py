@@ -295,6 +295,62 @@ class TestDefaultBookmarkManager(TestkitTestCase):
             bookmarks=["bm1", "adb:bm1"]
         )
 
+    def test_should_handle_database_redirection(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=DefaultBookmarkManagerConfig()
+        )
+
+        s1 = self._driver.session("w", database="neo4j")
+        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w", database="neo4j")
+        tx2 = s2.begin_transaction({"order": "adb"})
+        tx2.run("USE adb RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        s3 = self._driver.session("w", database="neo4j")
+        tx3 = s3.begin_transaction({"order": "2nd"})
+        tx3.run("RETURN 1 as n").consume()
+        tx3.commit()
+        s3.close()
+
+        s4 = self._driver.session("w", database="neo4j")
+        tx4 = s4.begin_transaction({"order": "3rd"})
+        tx4.run("RETURN 1 as n").consume()
+        tx4.commit()
+        s4.close()
+
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertEqual(len(begin_requests), 4)
+        self.assert_begin(
+            begin_requests[0]
+        )
+        self.assert_begin(
+            begin_requests[1],
+            bookmarks=["bm1"]
+        )
+        self.assert_begin(
+            begin_requests[2],
+            bookmarks=["bm1", "adb:bm4"]
+        )
+        self.assert_begin(
+            begin_requests[3],
+            bookmarks=["bm2", "adb:bm4"]
+        )
+
     def test_should_resolve_database_name_with_system_bookmarks(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
