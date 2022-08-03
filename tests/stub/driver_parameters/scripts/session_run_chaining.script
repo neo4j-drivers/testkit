@@ -1,0 +1,29 @@
+!: BOLT 5.0
+!: ALLOW CONCURRENT
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+*: RESET
+{*
+ {{
+    C: RUN "QUERY1" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r", "bookmark": "bm1"}
+    *: RESET
+    ----
+    C: RUN "QUERY2" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r", "bookmark": "bm2"}
+    *: RESET
+    ----
+    C: RUN "QUERY3" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r", "bookmark": "bm3"}
+    *: RESET
+ }}
+*}
+
+?: GOODBYE

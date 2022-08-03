@@ -10,7 +10,7 @@ from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
-class TestDefaultBookmarkManger(TestkitTestCase):
+class TestDefaultBookmarkManager(TestkitTestCase):
     required_features = (
         types.Feature.API_BOOKMARK_MANAGER,
     )
@@ -37,6 +37,44 @@ class TestDefaultBookmarkManger(TestkitTestCase):
             self._driver.close()
 
         return super().tearDown()
+
+    def test_should_keep_track_of_session_run(self):
+        self._start_server(self._router, "router.script")
+        self._start_server(self._server, "session_run_chaining.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=DefaultBookmarkManagerConfig()
+        )
+
+        s1 = self._driver.session("w")
+        s1.run("QUERY1").consume()
+        s1.close()
+
+        s2 = self._driver.session("w")
+        s2.run("QUERY2").consume()
+        s2.close()
+
+        s3 = self._driver.session("w")
+        s3.run("QUERY3").consume()
+        s3.close()
+
+        run_requests = self._server.get_requests("RUN")
+
+        self.assertEqual(len(run_requests), 3)
+        self.assert_run(run_requests[0])
+        self.assert_run(
+            run_requests[1],
+            bookmarks=["bm1"]
+        )
+        self.assert_run(
+            run_requests[2],
+            bookmarks=["bm2"]
+        )
 
     def test_should_keep_track_of_tx_in_sequence(self):
         self._start_server(self._router, "router.script")
@@ -334,4 +372,19 @@ class TestDefaultBookmarkManger(TestkitTestCase):
         regex = r".*(\[.*\])"
         matches = re.match(regex, line, re.MULTILINE)
         bookmarks_sent = json.loads(matches.group(1))
+        self.assertEqual(bookmarks, bookmarks_sent, line)
+
+    def assert_run(self, line: str, bookmarks=None):
+
+        run_prefix = "RUN "
+        self.assertTrue(
+            line.startswith(run_prefix),
+            "Line should start with RUN"
+        )
+        regex = r".*\"bookmarks\":\ (\[.*\])"
+        matches = re.match(regex, line, re.MULTILINE)
+        if matches is None:
+            bookmarks_sent = None
+        else:
+            bookmarks_sent = json.loads(matches.group(1))
         self.assertEqual(bookmarks, bookmarks_sent, line)
