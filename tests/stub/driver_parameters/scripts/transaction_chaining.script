@@ -26,6 +26,16 @@ A: HELLO {"{}": "*"}
     S: SUCCESS {"bookmark": "bm2"}
     *: RESET
     ----
+    C: BEGIN {"tx_metadata": { "order": "2nd" }, "[bookmarks]": "*", "[db]": "*", "mode": "r" }
+    S: SUCCESS {}
+    C: RUN "RETURN 1 as n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+    *: RESET
+    ----
     C: BEGIN {"tx_metadata": { "order": "3rd" }, "[bookmarks]": "*", "[db]": "*" }
     S: SUCCESS {}
     C: RUN "RETURN 1 as n" {} {}
