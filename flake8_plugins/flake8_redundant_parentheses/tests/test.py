@@ -2,13 +2,17 @@ import ast
 import io
 import tokenize
 from typing import Set
+
 from parentheses_checker import Plugin
 
 
 def _results(s: str) -> Set[str]:
+    def read_lines():
+        return s.splitlines(keepends=True)
+
     file_tokens = tokenize.tokenize(io.BytesIO(s.encode("utf-8")).readline)
     tree = ast.parse(s)
-    plugin = Plugin(tree, s, file_tokens)
+    plugin = Plugin(tree, read_lines, file_tokens)
     return {f'{line}:{col + 1} {msg}' for line, col, msg, _ in plugin.run()}
 
 

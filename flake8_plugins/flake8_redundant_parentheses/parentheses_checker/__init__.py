@@ -1,10 +1,12 @@
 import ast
 import importlib.metadata
-from typing import Any
-from typing import Generator
-from typing import List
-from typing import Tuple
-from typing import Type
+from typing import (
+    Any,
+    Generator,
+    List,
+    Tuple,
+    Type,
+)
 
 
 class Visitor(ast.NodeVisitor):
@@ -25,13 +27,13 @@ class Visitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Module(self, node: ast.Module) -> None:
-        msg = 'Too many parentheses'
+        msg = 'PAR001: Too many parentheses'
         for node_ in node.body:
             if isinstance(node_, ast.Assign):
                 for targ in node_.targets:
                     if isinstance(targ, ast.Tuple):
                         self.problems.append((node_.lineno, node_.col_offset,
-                                              'Dont use parentheses for unpacking'))
+                                              'PAR002: Dont use parentheses for unpacking'))
                         continue
 
             self.visit_Something(node_, msg)
@@ -39,12 +41,12 @@ class Visitor(ast.NodeVisitor):
 
 class Plugin:
     name = __name__
-    version = importlib.metadata.version(__name__)
+    version = importlib.metadata.version("flake8_redundant_parentheses")
 
     def __init__(self, tree: ast.AST, read_lines, file_tokens):
         self._tree = tree
         self.file_tokens = list(file_tokens)
-        self._lines_list = "".join(read_lines)
+        self._lines_list = "".join(read_lines())
         self.parentheses_dict = check(self.file_tokens)
 
     def run(self) -> Generator[Tuple[int, int, str, Type[Any]], None, None]:
