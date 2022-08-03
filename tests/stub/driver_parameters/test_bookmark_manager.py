@@ -39,7 +39,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         return super().tearDown()
 
     def test_should_keep_track_of_session_run(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "session_run_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
@@ -77,7 +77,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
 
     def test_should_keep_track_of_tx_in_sequence(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
@@ -121,7 +121,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
 
     def test_should_keep_track_of_tx_in_parallel(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
@@ -164,7 +164,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
 
     def test_should_not_manager_explicity_sesssion_bookmarks(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
@@ -218,7 +218,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
 
     def test_should_use_initial_bookmark_set_in_the_fist_tx(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
@@ -257,7 +257,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
 
     def test_should_send_all_db_bookmarks_and_update_only_relevant(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
@@ -296,7 +296,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
 
     def test_should_resolve_database_name_with_system_bookmarks(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         uri = "neo4j://%s" % self._router.address
