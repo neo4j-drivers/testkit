@@ -23,6 +23,12 @@ A: HELLO {"{}": "*"}
     C: PULL {"n": 1000}
     S: SUCCESS {"type": "r", "bookmark": "bm3"}
     *: RESET
+    ----
+    C: RUN "USE adb QUERY2" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r", "bookmark": "adb:bm4", "db": "adb" }
+    *: RESET
  }}
 *}
 

@@ -295,7 +295,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
             bookmarks=["bm1", "adb:bm1"]
         )
 
-    def test_should_handle_database_redirection(self):
+    def test_should_handle_database_redirection_in_tx(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -348,6 +348,52 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         )
         self.assert_begin(
             begin_requests[3],
+            bookmarks=["bm2", "adb:bm4"]
+        )
+
+    def test_should_handle_database_redirection_in_session_run(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "session_run_chaining.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=DefaultBookmarkManagerConfig()
+        )
+
+        s1 = self._driver.session("w")
+        s1.run("QUERY1").consume()
+        s1.close()
+
+        s2 = self._driver.session("w")
+        s2.run("USE adb QUERY2").consume()
+        s2.close()
+
+        s3 = self._driver.session("w")
+        s3.run("QUERY2").consume()
+        s3.close()
+
+        s4 = self._driver.session("w")
+        s4.run("QUERY3").consume()
+        s4.close()
+
+        run_requests = self._server.get_requests("RUN")
+
+        self.assertEqual(len(run_requests), 4)
+        self.assert_run(run_requests[0])
+        self.assert_run(
+            run_requests[1],
+            bookmarks=["bm1"]
+        )
+        self.assert_run(
+            run_requests[2],
+            bookmarks=["bm1", "adb:bm4"]
+        )
+        self.assert_run(
+            run_requests[3],
             bookmarks=["bm2", "adb:bm4"]
         )
 
