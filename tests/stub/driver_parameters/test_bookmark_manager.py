@@ -12,6 +12,7 @@ from tests.stub.shared import StubServer
 
 class TestDefaultBookmarkManager(TestkitTestCase):
     required_features = (
+        types.Feature.BOLT_5_0,
         types.Feature.API_BOOKMARK_MANAGER,
     )
 
@@ -434,11 +435,11 @@ class TestDefaultBookmarkManager(TestkitTestCase):
 
         self.assert_begin(
             begin_requests[0],
-            bookmarks=None
+            bookmarks=["sys:bm1"]
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["bm1"]
+            bookmarks=["sys:bm1", "bm1"]
         )
 
     def _start_server(self, server, script):
