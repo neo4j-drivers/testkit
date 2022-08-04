@@ -262,6 +262,63 @@ class TestDefaultBookmarkManager(TestkitTestCase):
             bookmarks=["bm3"]
         )
 
+    def test_should_be_able_to_ignore_bookmark_manager_in_a_sesssion(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=DefaultBookmarkManagerConfig()
+        )
+
+        s1 = self._driver.session("w")
+        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w", ignore_bookmark_manager=True)
+        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2.run("RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        s3 = self._driver.session(
+            "w",
+            ignore_bookmark_manager=True,
+            bookmarks=["unmanaged"]
+        )
+        tx3 = s3.begin_transaction({"order": "3rd"})
+        tx3.run("RETURN 1 as n").consume()
+        tx3.commit()
+        s3.close()
+
+        s4 = self._driver.session("w")
+        tx4 = s4.begin_transaction({"order": "3rd"})
+        tx4.run("RETURN 1 as n").consume()
+        tx4.commit()
+        s4.close()
+
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertEqual(len(begin_requests), 4)
+        self.assert_begin(begin_requests[0])
+        self.assert_begin(
+            begin_requests[1]
+        )
+        self.assert_begin(
+            begin_requests[2],
+            bookmarks=["unmanaged"]
+        )
+        self.assert_begin(
+            begin_requests[3],
+            bookmarks=["bm1"]
+        )
+
     def test_should_use_initial_bookmark_set_in_the_fist_tx(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")

@@ -104,11 +104,13 @@ class Driver:
             raise Exception("Should be driver")
 
     def session(self, access_mode, bookmarks=None, database=None,
-                fetch_size=None, impersonated_user=None):
+                fetch_size=None, impersonated_user=None,
+                ignore_bookmark_manager=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
-            impersonatedUser=impersonated_user
+            impersonatedUser=impersonated_user,
+            ignoreBookmarkManager=ignore_bookmark_manager
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
