@@ -208,7 +208,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
             bookmarks=["bm1", "bm2"]
         )
 
-    def test_should_not_manager_explicity_sesssion_bookmarks(self):
+    def test_should_manage_explicity_session_bookmarks(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -234,13 +234,13 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         s2.close()
 
         s3 = self._driver.session("w", bookmarks=["unmanaged"])
-        tx3 = s3.begin_transaction({"order": "2nd"})
+        tx3 = s3.begin_transaction({"order": "3rd"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
 
         s4 = self._driver.session("w")
-        tx4 = s4.begin_transaction({"order": "2nd"})
+        tx4 = s4.begin_transaction({"order": "3rd"})
         tx4.run("RETURN 1 as n").consume()
         tx4.commit()
         s4.close()
@@ -251,15 +251,15 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self.assert_begin(begin_requests[0])
         self.assert_begin(
             begin_requests[1],
-            bookmarks=None
+            bookmarks=["bm1"]
         )
         self.assert_begin(
             begin_requests[2],
-            bookmarks=["unmanaged"]
+            bookmarks=["bm2", "unmanaged"]
         )
         self.assert_begin(
             begin_requests[3],
-            bookmarks=["bm1"]
+            bookmarks=["bm3"]
         )
 
     def test_should_use_initial_bookmark_set_in_the_fist_tx(self):
