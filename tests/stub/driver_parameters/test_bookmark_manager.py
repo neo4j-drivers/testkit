@@ -491,21 +491,23 @@ class TestDefaultBookmarkManager(TestkitTestCase):
                      vars_={"#HOST#": self._router.host})
 
     def assert_begin(self, line: str, bookmarks=None):
+        if bookmarks is None:
+            bookmarks = []
         begin_prefix = "BEGIN "
         self.assertTrue(
             line.startswith(begin_prefix),
             "Line should start with begin"
         )
         begin_properties = json.loads(line.removeprefix(begin_prefix))["{}"]
-        if bookmarks is None:
+        if not bookmarks:
             self.assertFalse(
                 "bookmarks" in begin_properties,
                 "bookmarks should not be in the begin"
             )
         else:
             self.assertEqual(
-                bookmarks,
-                begin_properties.get("bookmarks", None)
+                sorted(bookmarks),
+                sorted(begin_properties.get("bookmarks", []))
             )
 
     def assert_route(self, line: str, bookmarks=None):
