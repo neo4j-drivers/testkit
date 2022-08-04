@@ -519,7 +519,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         regex = r".*(\[.*\])"
         matches = re.match(regex, line, re.MULTILINE)
         bookmarks_sent = json.loads(matches.group(1))
-        self.assertEqual(bookmarks, bookmarks_sent, line)
+        self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
 
     def assert_run(self, line: str, bookmarks=None):
 
@@ -534,4 +534,4 @@ class TestDefaultBookmarkManager(TestkitTestCase):
             bookmarks_sent = None
         else:
             bookmarks_sent = json.loads(matches.group(1))
-        self.assertEqual(bookmarks, bookmarks_sent, line)
+        self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
