@@ -19,34 +19,50 @@ class Visitor(ast.NodeVisitor):
         msg = 'PAR001: Too many parentheses'
         ex = []
         for node_ in ast.walk(self.tree):
-            if isinstance(node_, ast.BinOp) or isinstance(node_, ast.BoolOp):
+            if isinstance(node_, ast.BinOp):
                 for node_op in ast.iter_child_nodes(node_):
-                    if \
-                        isinstance(node_op, ast.BinOp) or \
-                            isinstance(node_op, ast.BoolOp):
+                    if isinstance(node_op, ast.UnaryOp) and isinstance(
+                        node_.op, ast.Add) and isinstance(node_op.op, ast.Not):
+                        if not self.problems:
+                            self.problems.append(
+                                (node_.lineno, node_.col_offset, msg))
+
+            if isinstance(node_, ast.UnaryOp):
+                for node_op in ast.iter_child_nodes(node_):
+                    if isinstance(node_op, ast.BinOp) and isinstance(node_.op,
+                                                                     ast.Not) and isinstance(
+                        node_op.op, ast.Add):
+                        if not self.problems:
+                            self.problems.append(
+                                (node_.lineno, node_.col_offset, msg))
+
+            if isinstance(node_, (
+            ast.BinOp, ast.BoolOp, ast.UnaryOp, ast.Compare, ast.Await)):
+                for node_op in ast.iter_child_nodes(node_):
+                    if isinstance(node_op, (
+                    ast.BinOp, ast.BoolOp, ast.UnaryOp, ast.Compare,
+                    ast.Await)):
                         ex.append(
                             [node_op.col_offset - 1, node_op.end_col_offset])
 
             if isinstance(node_, ast.Assign):
                 for targ in node_.targets:
                     if isinstance(targ, ast.Tuple):
-                        self.problems.append(
-                            (node_.lineno, node_.col_offset,
-                             'PAR002: Dont use parentheses for unpacking'))
-                        continue
+                        for elts in targ.elts:
+                            if elts.col_offset != 0:
+                                if not self.problems:
+                                    self.problems.append(
+                                        (node_.lineno, node_.col_offset,
+                                         'PAR002: Dont use parentheses for unpacking'))
+                            break
 
             for node_tup in ast.iter_child_nodes(node_):
                 if isinstance(node_tup, ast.Tuple):
-                    for node__ in node_tup.elts:
-                        if node_tup.end_col_offset - node__.end_col_offset != 2:
-                            self.problems.append(
-                                (node_.lineno, node_.col_offset,
-                                 'PAR003: Use parentheses for tuple literal'))
-                            continue
+                    for node__ in reversed(node_tup.elts):
                         if node_tup.end_col_offset - node_.end_col_offset == 0:
                             ex.append([node_tup.col_offset,
                                        node_tup.end_col_offset - 1])
-                            continue
+                            break
 
         for node_ in node.body:
             if ex:
