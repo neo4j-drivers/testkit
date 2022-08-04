@@ -523,6 +523,8 @@ class TestDefaultBookmarkManager(TestkitTestCase):
 
     def assert_run(self, line: str, bookmarks=None):
 
+        if bookmarks is None:
+            bookmarks = []
         run_prefix = "RUN "
         self.assertTrue(
             line.startswith(run_prefix),
@@ -531,7 +533,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         regex = r".*\"bookmarks\":\ (\[.*\])"
         matches = re.match(regex, line, re.MULTILINE)
         if matches is None:
-            bookmarks_sent = None
+            bookmarks_sent = []
         else:
             bookmarks_sent = json.loads(matches.group(1))
         self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
