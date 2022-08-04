@@ -80,10 +80,12 @@ class Plugin:
         self._tree = tree
         self.vals = []
         self.dump_tree = ast.dump(tree)
-        self.dict = check(list(file_tokens))
+        self.parens_coords = check(list(file_tokens))
         self._lines_list = "".join(read_lines())
-        for i in self.dict.values():
-            self.vals.append(check_trees(self._lines_list, self.dump_tree, i))
+        for coords in self.parens_coords:
+            self.vals.append(
+                check_trees(self._lines_list, self.dump_tree, coords)
+            )
 
     def run(self) -> Generator[Tuple[int, int, str, Type[Any]], None, None]:
         checker = Checker(self.vals, self._tree)
@@ -93,50 +95,41 @@ class Plugin:
 
 
 def check(token):
-    open_cord_dict = []
-    close_cord_dict = []
-    result_ = {}
     open_list = ["[", "{", "("]
     close_list = ["]", "}", ")"]
-    num = 0
+    opening_stack = []
+    parentheses_pairs = []
     for i in token:
         if i.type == 54:
             if i.string in open_list:
-                open_cord_dict.append([i.start, i.string])
+                opening_stack.append([i.start, i.string])
             if i.string in close_list:
-                close_cord_dict.append([i.start, i.string])
+                opening = opening_stack.pop()
+                assert (open_list.index(opening[1])
+                        == close_list.index(i.string))
+                parentheses_pairs.append([opening[0], i.start])
 
-    for open_, close in zip(reversed(open_cord_dict), close_cord_dict):
-        if open_list.index(open_[1]) == close_list.index(close[1]):
-            result_.update({
-                "{number} {type}".format(number=num, type=open_[1]):
-                    [open_[0], close[0]]
-            })
-            num += 1
-    return result_
+    return parentheses_pairs
 
 
-def check_trees(list_, start_tree, parens_coords):
+def check_trees(source_code, start_tree, parens_coords):
     """Check if parentheses are redundant.
 
     Replace a pair of parentheses with a blank string and check if the
     resulting AST is still the same.
     """
-    list__ = list_.split("\n")
-    list__[parens_coords[0][0] - 1] = (
-        list__[parens_coords[0][0] - 1][:parens_coords[0][1]]
-        + " " + list__[parens_coords[0][0] - 1][parens_coords[0][1] + 1:]
-    )
-    list__[parens_coords[1][0] - 1] = (
-        list__[parens_coords[1][0] - 1][:parens_coords[1][1]]
-        + " " + list__[parens_coords[1][0] - 1][parens_coords[1][1] + 1:]
-    )
-    list__ = "\n".join(list__)
+    open_, close = parens_coords
+    lines = source_code.split("\n")
+    lines[open_[0] - 1] = (lines[open_[0] - 1][:open_[1]]
+                           + " " + lines[open_[0] - 1][open_[1] + 1:])
+    lines[close[0] - 1] = (lines[close[0] - 1][:close[1]]
+                           + " " + lines[close[0] - 1][close[1] + 1:])
+    code_without_parens = "\n".join(lines)
     try:
-        tree = ast.parse(list__)
+        tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
         return False
     if ast.dump(tree) == start_tree:
-        return [parens_coords[0][1], parens_coords[1][1]]
+        return [open_[1], close[1]]
     else:
         return False

@@ -215,7 +215,7 @@ def test_multi_line_list_unnecessary_parens_2():
     assert _results(s)
 
 
-# GOOD
+# BAD
 def test_function_call_unnecessary_multi_line_parens():
     s = """foo(
         (1 + 2) + 3,
@@ -223,7 +223,7 @@ def test_function_call_unnecessary_multi_line_parens():
          + 5)
     )
     """
-    assert not _results(s)
+    assert _results(s)
 
 
 # GOOD (function call with tuple literal)
@@ -340,6 +340,13 @@ def test_mixed_op_example_3():
     s = """a = not 1 + 2
     """
     assert not _results(s)
+
+
+# BAD (two redundant parentheses)
+def test_wildly_nested_parens():
+    s = """a = 1 + (2 + (3) + (4))
+    """
+    assert len(_results(s)) == 2
 
 
 BIN_OPS = ("**", "*", "@", "/", "//", "%", "+", "-", "<<",
