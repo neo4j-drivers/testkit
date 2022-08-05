@@ -1,20 +1,22 @@
 from dataclasses import dataclass
 from typing import (
     Callable,
+    Dict,
+    List,
     Optional,
 )
 
 
 @dataclass
 class DefaultBookmarkManagerConfig:
-    initial_bookmarks: Optional[dict[str, list[str]]] = None
-    bookmark_supplier: Optional[Callable[[str], list[str]]] = None
+    initial_bookmarks: Optional[Dict[str, List[str]]] = None
+    bookmark_supplier: Optional[Callable[[str], List[str]]] = None
     notify_bookmarks: Optional[Callable[[str, str], None]] = None
 
 
 def to_protocol(
     config: Optional[DefaultBookmarkManagerConfig]
-) -> Optional[dict]:
+) -> Optional[Dict]:
     if config is not None:
         return {
             "initialBookmarks": config.initial_bookmarks,
