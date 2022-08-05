@@ -26,17 +26,15 @@ class Checker:
             if isinstance(node_, bin_exc):
                 for node_op in ast.iter_child_nodes(node_):
                     if not isinstance(node_op, bin_exc):
-                        break
+                        continue
                     for val in self.vals:
-                        parens_range = range(val[0], val[1])
-                        if (
-                            node_.col_offset in parens_range
-                            and node_.end_col_offset - 1 in parens_range
+                        parens_range = range(val[0][0], val[1][0] + 1)
+                        if ((node_.lineno, node_.col_offset) > val[0]
+                            and (node_.end_lineno, node_.end_col_offset) <= val[1]
                         ):
                             break
-                        if (
-                            node_op.col_offset in parens_range
-                            and node_op.end_col_offset - 1 in parens_range
+                        if ((node_op.lineno, node_op.col_offset) > val[0]
+                            and (node_op.end_lineno, node_op.end_col_offset) <= val[1]
                         ):
                             exceptions.append(val[:2])
                             break
@@ -64,8 +62,8 @@ class Checker:
                             node_.lineno, node_.col_offset, msg))
                 if isinstance(node_tup, ast.Tuple):
                     if node_tup.end_col_offset - node_.end_col_offset == 0:
-                        exceptions.append([node_tup.col_offset,
-                                           node_tup.end_col_offset - 1])
+                        exceptions.append([(node_tup.lineno, node_tup.col_offset),
+                                           (node_tup.end_lineno, node_tup.end_col_offset - 1)])
                         break
 
         for node_ in self.tree.body:
@@ -147,8 +145,8 @@ def check_trees(source_code, start_tree, parens_coords):
     try:
         tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
-        return [open_[1], close[1], False]
+        return [open_, close, False]
     if ast.dump(tree) == start_tree:
-        return [open_[1], close[1], True]
+        return [open_, close, True]
     else:
-        return [open_[1], close[1], False]
+        return [open_, close, False]

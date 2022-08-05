@@ -123,7 +123,7 @@ def test_bin_op_example_unnecessary_parens():
     assert _results(s)
 
 
-# BAD (parentheses are redundant and can't help readability)
+# GOOD (parentheses are redundant and can help readability)
 def test_multi_line_bin_op_example_unnecessary_parens():
     # OK, please don't judge me for this incredibly ugly code...
     # I need to make a point here.
@@ -375,6 +375,13 @@ UNARY_OPS = ("not", "+", "-", "~", "await")
 
 def _id(s):
     return s
+
+
+# GOOD with ugly spaces (parentheses are redundant, but can help readability)
+def test_bin_op_example_8():
+    s = """a = (    1   +   2   ) + 3
+    """
+    assert not _results(s)
 
 
 def _make_multi_line(s):
