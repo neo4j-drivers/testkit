@@ -109,11 +109,29 @@ def test_bin_op_example_7():
     assert not _results(s)
 
 
+# GOOD with ugly spaces (parentheses are redundant, but can help readability)
+def test_bin_op_example_8():
+    s = """a = (   1 /   2)   /3
+    """
+    assert not _results(s)
+
+
 # BAD (parentheses are redundant and can't help readability)
 def test_bin_op_example_unnecessary_parens():
     s = """a = (foo or bar and baz)
     """
     assert _results(s)
+
+
+# BAD (parentheses are redundant and can't help readability)
+def test_multi_line_bin_op_example_unnecessary_parens():
+    # OK, please don't judge me for this incredibly ugly code...
+    # I need to make a point here.
+    s = """a = foo + (\\
+bar * baz
+)
+    """
+    assert not _results(s)
 
 
 # BAD (don't use parentheses for unpacking)

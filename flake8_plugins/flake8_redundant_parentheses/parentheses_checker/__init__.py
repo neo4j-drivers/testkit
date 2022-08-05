@@ -21,21 +21,31 @@ class Checker:
         # exceptions made for parentheses that are not strictly necessary
         # but help readability
         exceptions = []
+        bin_exc = (ast.BinOp, ast.BoolOp, ast.UnaryOp, ast.Compare, ast.Await)
         for node_ in ast.walk(self.tree):
-            if isinstance(node_, (ast.BinOp, ast.BoolOp, ast.UnaryOp,
-                                  ast.Compare, ast.Await)):
+            if isinstance(node_, bin_exc):
                 for node_op in ast.iter_child_nodes(node_):
-                    if isinstance(node_op, (ast.BinOp, ast.BoolOp, ast.UnaryOp,
-                                            ast.Compare, ast.Await)):
-                        exceptions.append(
-                            [node_op.col_offset - 1, node_op.end_col_offset]
-                        )
+                    if not isinstance(node_op, bin_exc):
+                        break
+                    for val in self.vals:
+                        parens_range = range(val[0], val[1])
+                        if (
+                            node_.col_offset in parens_range
+                            and node_.end_col_offset - 1 in parens_range
+                        ):
+                            break
+                        if (
+                            node_op.col_offset in parens_range
+                            and node_op.end_col_offset - 1 in parens_range
+                        ):
+                            exceptions.append(val[:2])
+                            break
 
             if isinstance(node_, ast.Assign):
                 for targ in node_.targets:
                     if isinstance(targ, ast.Tuple):
                         for elts in targ.elts:
-                            if elts.col_offset != 0 and not self.problems:
+                            if elts.col_offset > 0:
                                 self.problems.append((
                                     node_.lineno, node_.col_offset,
                                     "PAR002: Dont use parentheses for "
@@ -44,6 +54,14 @@ class Checker:
                             break
 
             for node_tup in ast.iter_child_nodes(node_):
+                if (isinstance(node_tup, ast.Constant)
+                   and not isinstance(node_, ast.Call)):
+                    if (
+                        node_.end_col_offset - node_tup.end_col_offset == 1
+                        and isinstance(node_tup.value, int)
+                    ):
+                        self.problems.append((
+                            node_.lineno, node_.col_offset, msg))
                 if isinstance(node_tup, ast.Tuple):
                     if node_tup.end_col_offset - node_.end_col_offset == 0:
                         exceptions.append([node_tup.col_offset,
@@ -54,22 +72,23 @@ class Checker:
             if exceptions:
                 for exception in exceptions:
                     for val in self.vals:
-                        if val is not False and val != exception:
+                        if val[2] is True and val[:2] != exception:
                             self.problems.append(
                                 (node_.lineno, node_.col_offset, msg))
+                        elif val[:2] == exception:
+                            self.vals.remove(val)
                         continue
 
             elif not self.vals:
                 break
 
-            elif not self.problems:
-                for exception in self.vals:
-                    if exception is False:
-                        continue
-                    else:
-                        self.problems.append(
-                            (node_.lineno, node_.col_offset, msg))
-                        break
+            for exception in self.vals:
+                if exception[2] is False:
+                    continue
+                else:
+                    self.problems.append(
+                        (node_.lineno, node_.col_offset, msg))
+                    continue
 
 
 class Plugin:
@@ -128,8 +147,8 @@ def check_trees(source_code, start_tree, parens_coords):
     try:
         tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
-        return False
+        return [open_[1], close[1], False]
     if ast.dump(tree) == start_tree:
-        return [open_[1], close[1]]
+        return [open_[1], close[1], True]
     else:
-        return False
+        return [open_[1], close[1], False]
