@@ -39,6 +39,30 @@ def test_tuple_literal_2():
     assert not _results(s)
 
 
+# GOOD (use parentheses for tuple literal)
+def test_tuple_literal_3():
+    s = """a = (\\
+    "a", "b")
+    """
+    assert not _results(s)
+
+
+# BAD (one pair of parentheses for tuple literal is enough)
+def test_multi_parens_tuple_literal_1():
+    s = """a = (("a", "b"))
+    """
+    assert _results(s)
+
+
+# BAD (one pair of parentheses for tuple literal is enough)
+def test_multi_parens_tuple_literal_2():
+    s = """a = ((
+        "a", "b"
+    ))
+    """
+    assert _results(s)
+
+
 # GOOD (parentheses for tuple literal are optional)
 def test_tuple_literal_optional_1():
     s = """a = "a",
@@ -375,13 +399,6 @@ UNARY_OPS = ("not", "+", "-", "~", "await")
 
 def _id(s):
     return s
-
-
-# GOOD with ugly spaces (parentheses are redundant, but can help readability)
-def test_bin_op_example_8():
-    s = """a = (    1   +   2   ) + 3
-    """
-    assert not _results(s)
 
 
 def _make_multi_line(s):
