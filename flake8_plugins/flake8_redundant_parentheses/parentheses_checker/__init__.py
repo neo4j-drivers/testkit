@@ -35,7 +35,7 @@ class Checker:
                 for targ in node_.targets:
                     if isinstance(targ, ast.Tuple):
                         for elts in targ.elts:
-                            if elts.col_offset > 0:
+                            if elts.col_offset != 0 and not self.problems:
                                 self.problems.append((
                                     node_.lineno, node_.col_offset,
                                     "PAR002: Dont use parentheses for "
@@ -44,13 +44,6 @@ class Checker:
                             break
 
             for node_tup in ast.iter_child_nodes(node_):
-                if (isinstance(node_tup, ast.Constant)
-                   and not isinstance(node_, ast.Call)):
-                    if (node_.end_col_offset - node_tup.end_col_offset == 1
-                        and isinstance(node_tup.value, int)
-                    ):
-                        self.problems.append((
-                            node_.lineno, node_.col_offset, msg))
                 if isinstance(node_tup, ast.Tuple):
                     if node_tup.end_col_offset - node_.end_col_offset == 0:
                         exceptions.append([node_tup.col_offset,
@@ -64,20 +57,19 @@ class Checker:
                         if val is not False and val != exception:
                             self.problems.append(
                                 (node_.lineno, node_.col_offset, msg))
-                        elif val == exception:
-                            self.vals.remove(val)
                         continue
 
             elif not self.vals:
                 break
 
-            for exception in self.vals:
-                if exception is False:
-                    continue
-                else:
-                    self.problems.append(
-                        (node_.lineno, node_.col_offset, msg))
-                    break
+            elif not self.problems:
+                for exception in self.vals:
+                    if exception is False:
+                        continue
+                    else:
+                        self.problems.append(
+                            (node_.lineno, node_.col_offset, msg))
+                        break
 
 
 class Plugin:
@@ -122,6 +114,7 @@ def check(token):
 
 def check_trees(source_code, start_tree, parens_coords):
     """Check if parentheses are redundant.
+
     Replace a pair of parentheses with a blank string and check if the
     resulting AST is still the same.
     """

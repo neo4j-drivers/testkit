@@ -1,20 +1,20 @@
 import ast
 import io
 import tokenize
-import pytest
 from typing import Set
 
 from parentheses_checker import Plugin
+import pytest
 
 
 def _results(s: str) -> Set[str]:
+    def read_lines():
+        return s.splitlines(keepends=True)
+
     file_tokens = tokenize.tokenize(io.BytesIO(s.encode("utf-8")).readline)
-    try:
-        tree = ast.parse(s)
-        plugin = Plugin(tree, s, file_tokens)
-        return {f'{line}:{col + 1} {msg}' for line, col, msg, _ in plugin.run()}
-    except SyntaxError:
-        return SyntaxError
+    tree = ast.parse(s)
+    plugin = Plugin(tree, read_lines, file_tokens)
+    return {f"{line}:{col + 1} {msg}" for line, col, msg, _ in plugin.run()}
 
 
 def test_multi_line_condition():
@@ -215,7 +215,7 @@ def test_multi_line_list_unnecessary_parens_2():
     assert _results(s)
 
 
-# GOOD
+# BAD
 def test_function_call_unnecessary_multi_line_parens():
     s = """foo(
         (1 + 2) + 3,
@@ -223,7 +223,7 @@ def test_function_call_unnecessary_multi_line_parens():
          + 5)
     )
     """
-    assert not _results(s)
+    assert _results(s)
 
 
 # GOOD (function call with tuple literal)
@@ -325,14 +325,28 @@ def test_unary_op_example_2():
 def test_mixed_op_example_1():
     s = """a = not (1 + 2)
     """
-    assert _results(s)
+    assert not _results(s)
 
 
 # GOOD (parentheses might be redundant, but can help readability)
 def test_mixed_op_example_2():
     s = """a = (not 1) + 2
     """
-    assert _results(s)
+    assert not _results(s)
+
+
+# GOOD (parentheses might be redundant, but can help readability)
+def test_mixed_op_example_3():
+    s = """a = not 1 + 2
+    """
+    assert not _results(s)
+
+
+# BAD (two redundant parentheses)
+def test_wildly_nested_parens():
+    s = """a = 1 + (2 + (3) + (4))
+    """
+    assert len(_results(s)) == 2
 
 
 BIN_OPS = ("**", "*", "@", "/", "//", "%", "+", "-", "<<",
