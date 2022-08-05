@@ -35,10 +35,10 @@ class Checker:
                     if not isinstance(child, bin_exc):
                         continue
                     for val in self.vals:
-                        if self._node_in_parens(node, val[:2]):
+                        if self._node_in_parens(node, val):
                             break
-                        if self._node_in_parens(child, val[:2]):
-                            exceptions.append(val[:2])
+                        if self._node_in_parens(child, val):
+                            exceptions.append(val)
                             break
 
             if isinstance(node, ast.Assign):
@@ -46,7 +46,13 @@ class Checker:
                     if not isinstance(targ, ast.Tuple):
                         continue
                     for elts in targ.elts:
-                        if elts.col_offset > 0:
+                        tuple_coords = (targ.lineno, targ.col_offset)
+                        elts_coords = (elts.lineno, elts.col_offset)
+                        if tuple_coords < elts_coords:
+                            for val in self.vals:
+                                if val[0] == tuple_coords:
+                                    exceptions.append(val)
+                                    break
                             self.problems.append((
                                 node.lineno, node.col_offset,
                                 "PAR002: Dont use parentheses for "
@@ -55,16 +61,6 @@ class Checker:
                         break
 
             for node_tup in ast.iter_child_nodes(node):
-                if (
-                    isinstance(node_tup, ast.Constant)
-                    and not isinstance(node, ast.Call)
-                ):
-                    if (
-                        node.end_col_offset - node_tup.end_col_offset == 1
-                        and isinstance(node_tup.value, int)
-                    ):
-                        self.problems.append((
-                            node.lineno, node.col_offset, msg))
                 if isinstance(node_tup, ast.Tuple):
                     if node_tup.end_col_offset - node.end_col_offset == 0:
                         exceptions.append(
@@ -78,27 +74,10 @@ class Checker:
                         )
                         break
 
-        for node in self.tree.body:
-            if exceptions:
-                for exception in exceptions:
-                    for val in self.vals:
-                        if val[2] is True and val[:2] != exception:
-                            self.problems.append(
-                                (node.lineno, node.col_offset, msg))
-                        elif val[:2] == exception:
-                            self.vals.remove(val)
-                        continue
-
-            elif not self.vals:
-                break
-
-            for exception in self.vals:
-                if exception[2] is False:
-                    continue
-                else:
-                    self.problems.append(
-                        (node.lineno, node.col_offset, msg))
-                    continue
+        for val in self.vals:
+            if val in exceptions:
+                continue
+            self.problems.append((*val[0], msg))
 
 
 class Plugin:
@@ -109,21 +88,22 @@ class Plugin:
         self._tree = tree
         self.vals = []
         self.dump_tree = ast.dump(tree)
-        self.parens_coords = check(list(file_tokens))
+        self.parens_coords = find_parens_coords(list(file_tokens))
         self._lines_list = "".join(read_lines())
         for coords in self.parens_coords:
-            self.vals.append(
-                check_trees(self._lines_list, self.dump_tree, coords)
-            )
+            if check_trees(self._lines_list, self.dump_tree, coords):
+                self.vals.append(coords)
 
     def run(self) -> Generator[Tuple[int, int, str, Type[Any]], None, None]:
+        if not self.vals:
+            return
         checker = Checker(self.vals, self._tree)
         checker.check()
         for line, col, msg in checker.problems:
             yield line, col, msg, type(self)
 
 
-def check(token):
+def find_parens_coords(token):
     open_list = ["[", "{", "("]
     close_list = ["]", "}", ")"]
     opening_stack = []
@@ -150,15 +130,20 @@ def check_trees(source_code, start_tree, parens_coords):
     open_, close = parens_coords
     lines = source_code.split("\n")
     lines[open_[0] - 1] = (lines[open_[0] - 1][:open_[1]]
-                           + " " + lines[open_[0] - 1][open_[1] + 1:])
-    lines[close[0] - 1] = (lines[close[0] - 1][:close[1]]
-                           + " " + lines[close[0] - 1][close[1] + 1:])
+                           + lines[open_[0] - 1][open_[1] + 1:])
+    if open_[0] == close[0]:
+        # on the same line
+        lines[close[0] - 1] = (lines[close[0] - 1][:close[1] - 1]
+                               + lines[close[0] - 1][close[1]:])
+    else:
+        lines[close[0] - 1] = (lines[close[0] - 1][:close[1]]
+                               + lines[close[0] - 1][close[1] + 1:])
     code_without_parens = "\n".join(lines)
     try:
         tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
-        return [open_, close, False]
+        return False
     if ast.dump(tree) == start_tree:
-        return [open_, close, True]
+        return True
     else:
-        return [open_, close, False]
+        return False

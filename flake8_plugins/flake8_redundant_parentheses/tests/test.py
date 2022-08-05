@@ -17,6 +17,10 @@ def _results(s: str) -> Set[str]:
     return {f"{line}:{col + 1} {msg}" for line, col, msg, _ in plugin.run()}
 
 
+def _ws_generator():
+    return (ws for ws in ("", " ", "\t", "   "))
+
+
 def test_multi_line_condition():
     s = """if (foo
             == bar):
@@ -51,7 +55,7 @@ def test_tuple_literal_3():
 def test_multi_parens_tuple_literal_1():
     s = """a = (("a", "b"))
     """
-    assert _results(s)
+    assert len(_results(s)) == 2
 
 
 # BAD (one pair of parentheses for tuple literal is enough)
@@ -60,7 +64,7 @@ def test_multi_parens_tuple_literal_2():
         "a", "b"
     ))
     """
-    assert _results(s)
+    assert len(_results(s)) == 2
 
 
 # GOOD (parentheses for tuple literal are optional)
@@ -82,6 +86,22 @@ def test_tuple_literal_unpacking():
     s = """a, b = "a", "b"
     """
     assert not _results(s)
+
+
+# BAD (redundant parentheses for unpacking)
+def test_ugly_multiline_unpacking():
+    s = """(
+a, b\
+) = 1, 2"""
+    assert len(_results(s)) == 1
+
+
+# GOOD (parentheses for tuple literal are optional)
+def test_tuple_literal_unpacking_in_if():
+    s = """if (foo):
+        a, b = "a", "b"
+    """
+    assert len(_results(s)) == 1
 
 
 # GOOD (parentheses are redundant, but can help readability)
@@ -144,7 +164,7 @@ def test_bin_op_example_8():
 def test_bin_op_example_unnecessary_parens():
     s = """a = (foo or bar and baz)
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # GOOD (parentheses are redundant and can help readability)
@@ -159,10 +179,22 @@ bar * baz
 
 
 # BAD (don't use parentheses for unpacking)
-def test_unpacking():
-    s = """(a,) = ["a"]
+@pytest.mark.parametrize("ws1", _ws_generator())
+@pytest.mark.parametrize("ws2", _ws_generator())
+@pytest.mark.parametrize("ws3", _ws_generator())
+@pytest.mark.parametrize("ws4", _ws_generator())
+@pytest.mark.parametrize("ws5", _ws_generator())
+def test_unpacking(ws1, ws2, ws3, ws4, ws5):
+    s = f"""({ws1}a{ws2},{ws3}){ws4}={ws5}["a"]
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
+
+
+# BAD (don't use parentheses for unpacking, even with leading white space)
+def test_unpacking_foo():
+    s = """( a,)=["a"]
+    """
+    assert len(_results(s)) == 1
 
 
 # BAD (don't use parentheses for one-line expressions)
@@ -170,21 +202,21 @@ def test_one_line_condition():
     s = """if (foo == bar):
         ...
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (don't use parentheses for one-line expressions)
 def test_one_line_expression_1():
     s = """a = (foo == bar)
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (don't use parentheses for one-line expressions)
 def test_one_line_expression_2():
     s = """a = (foo.bar())
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # GOOD (function call)
@@ -198,21 +230,21 @@ def test_function_call():
 def test_function_call_redundant_parens_1():
     s = """foo(("a"))
     """
-    assert _results(s)
+    assert len(_results(s)) == 2
 
 
 # BAD (function call with extra parentheses around expression)
 def test_function_call_redundant_parens_2():
     s = """foo((1 + 2))
     """
-    assert _results(s)
+    assert len(_results(s)) == 2
 
 
 # BAD
 def test_function_call_redundant_parens_3():
     s = """foo((1 + 2), 3)
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # GOOD
@@ -241,7 +273,7 @@ def test_multi_line_list_unnecessary_parens_1():
         3
     ]
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD
@@ -254,7 +286,7 @@ def test_multi_line_list_unnecessary_parens_2():
         3
     ]
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD
@@ -265,7 +297,7 @@ def test_function_call_unnecessary_multi_line_parens():
          + 5)
     )
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # GOOD (function call with tuple literal)
@@ -304,42 +336,42 @@ def test_multi_line_parens_2():
 def test_unnecessary_parens():
     s = """a = ("a")
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (one pair of parenthesis is enough)
 def test_bin_op_example_double_parens_1():
     s = """a = 1 * ((2 + 3))
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (one pair of parenthesis is enough)
 def test_bin_op_example_double_parens_2():
     s = """a = ((1 * 2)) + 3
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (one pair of parenthesis is enough)
 def test_bin_op_example_double_parens_3():
     s = """a = 1 + ((2 * 3))
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (one pair of parenthesis is enough)
 def test_bin_op_example_double_parens_4():
     s = """a = ((1 + 2)) * 3
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD (redundant parenthesis around 1)
 def test_redundant_parens_around_tuple():
     s = """a = ((1),)
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # GOOD (generator comprehension)
@@ -353,14 +385,14 @@ def test_generator_comprehension():
 def test_unary_op_example_1():
     s = """a = not (b)
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # BAD
 def test_unary_op_example_2():
     s = """a = (not b)
     """
-    assert _results(s)
+    assert len(_results(s)) == 1
 
 
 # GOOD (parentheses might be redundant, but can help readability)
@@ -418,20 +450,20 @@ def _make_multi_line_extra_parens_2(s):
 
 MULTI_LINE_ALTERATION = (
     # (function, makes it bad)
-    (_id, False),
-    (_make_multi_line, False),
-    (_make_multi_line_extra_parens_1, True),
-    (_make_multi_line_extra_parens_2, True),
+    (_id, 0),
+    (_make_multi_line, 0),
+    (_make_multi_line_extra_parens_1, 2),
+    (_make_multi_line_extra_parens_2, 1),
 )
 
 
 @pytest.mark.parametrize("op", UNARY_OPS)
 @pytest.mark.parametrize("alteration", MULTI_LINE_ALTERATION)
 def test_superfluous_parentheses_after_mono_op(op, alteration):
-    alteration_func, _ = alteration
+    alteration_func, introduced_flakes = alteration
     s = f"foo = {op} (bar)"
     s = alteration_func(s)
-    assert _results(s)
+    assert len(_results(s)) == 1 + introduced_flakes
 
 
 @pytest.mark.parametrize("op", UNARY_OPS)
@@ -440,26 +472,23 @@ def test_superfluous_parentheses_after_mono_op(op, alteration):
 def test_superfluous_but_helping_parentheses_after_mono_op(
     op, op2, alteration
 ):
-    alteration_func, bad_alteration = alteration
+    alteration_func, introduced_flakes = alteration
     if op2 in UNARY_OPS:
         expression = f"{op2} bar"
     else:
         expression = f"foo {op2} bar"
     s = f"foo = {op} ({expression})"
     s = alteration_func(s)
-    if bad_alteration:
-        assert _results(s)
-    else:
-        assert not _results(s)
+    assert len(_results(s)) == introduced_flakes
 
 
 @pytest.mark.parametrize("op", BIN_OPS)
 @pytest.mark.parametrize("alteration", MULTI_LINE_ALTERATION)
 def test_superfluous_parentheses_around_bin_op(op, alteration):
-    alteration_func, _ = alteration
+    alteration_func, introduced_flakes = alteration
     s = f"foo = (foo {op} bar)"
     s = alteration_func(s)
-    assert _results(s)
+    assert len(_results(s)) == 1 + introduced_flakes
 
 
 @pytest.mark.parametrize("op1", BIN_OPS)
@@ -469,17 +498,14 @@ def test_superfluous_parentheses_around_bin_op(op, alteration):
 def test_superfluous_but_helping_parentheses_around_bin_op(
     op1, op2, parens_first, alteration
 ):
-    alteration_func, bad_alteration = alteration
+    alteration_func, introduced_flakes = alteration
     parent_expr = f"(foo {op1} bar)"
     if parens_first:
         s = f"foo = {parent_expr} {op2} baz"
     else:
         s = f"foo = baz {op2} {parent_expr}"
     s = alteration_func(s)
-    if bad_alteration:
-        assert _results(s)
-    else:
-        assert not _results(s)
+    assert len(_results(s)) == introduced_flakes
 
 
 @pytest.mark.parametrize("op1", BIN_OPS)
@@ -489,11 +515,11 @@ def test_superfluous_but_helping_parentheses_around_bin_op(
 def test_double_superfluous_but_helping_parentheses_around_bin_op(
     op1, op2, parens_first, alteration
 ):
-    alteration_func, bad_alteration = alteration
+    alteration_func, introduced_flakes = alteration
     parent_expr = f"((foo {op1} bar))"
     if parens_first:
         s = f"foo = {parent_expr} {op2} baz"
     else:
         s = f"foo = baz {op2} {parent_expr}"
     s = alteration_func(s)
-    assert _results(s)
+    assert len(_results(s)) == 1 + introduced_flakes
