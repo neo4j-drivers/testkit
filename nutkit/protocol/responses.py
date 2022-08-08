@@ -91,7 +91,9 @@ class MultiDBSupport:
     Whether the driver is connection to a sever with supports multi-db-support.
 
     Specifies whether the server or cluster the driver connects to supports
-    multi-databases. It is sent in response to the CheckMultiDBSupport request.
+    multi-databases.
+
+    It is sent in response to the CheckMultiDBSupport request.
     """
 
     def __init__(self, id, available):
@@ -104,6 +106,20 @@ class DriverIsEncrypted:
 
     def __init__(self, encrypted):
         self.encrypted = encrypted
+
+
+class AutoQueryRoutingSupport:
+    """Whether the driver's conneection supports auto query routing.
+
+    Specifies whether the server or cluster the driver connects to supports
+    auto query routing.
+
+    It is sent in response to the CheckAutoQueryRoutingSupport request.
+    """
+
+    def __init__(self, id, available):
+        self.id = id
+        self.available = available
 
 
 class Session:
@@ -130,6 +146,18 @@ class Result:
         self.id = id
         # Keys is a list of strings: ['field1', 'field2']
         self.keys = keys
+
+
+class EagerResult:
+    def __init__(self, id, keys, records, summary):
+        # Id of EagerResult instance on backend
+        self.id = id
+        # Keys is a list of strings: ['field1', 'field2']
+        self.keys = keys
+        # Records is a list of Record objects
+        self.records = records
+        # Summary is a Summary object
+        self.summary = summary
 
 
 class Record:
@@ -419,6 +447,28 @@ class RetryableTry:
     def __init__(self, id):
         # Id of backend transaction
         self.id = id
+
+
+class RetryFunc:
+    """
+    Represents a retryable function call on the backend.
+
+    The driver called a function that needs to determine whether the current
+    transaction should be retried or not.
+
+    `exception` is the exception that made the transaction fail.
+        Should be `DriverError` or `FrontendError`.
+    `attempt` is the number of attempts that have been made.
+    `maxAttempts` is the maximum number of attempts that can be made as
+        configured when creating the transaction.
+
+    This response will make TestKit reply with a `RetryFuncResult` request.
+    """
+
+    def __init__(self, exception, attempt, maxAttempts):
+        self.exception = exception
+        self.attempt = attempt
+        self.max_attempts = maxAttempts
 
 
 class RetryableDone:

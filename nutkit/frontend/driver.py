@@ -1,4 +1,9 @@
 from .. import protocol
+from ._transaction_loop import (
+    handle_retry_func,
+    run_tx_loop,
+)
+from .eager_result import EagerResult
 from .session import Session
 
 
@@ -83,6 +88,13 @@ class Driver:
             raise Exception("Should be MultiDBSupport")
         return res.available
 
+    def supports_auto_query_routing(self):
+        req = protocol.CheckAutoQueryRoutingSupport(self._driver.id)
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.AutoQueryRoutingSupport):
+            raise Exception("Should be AutoQueryRoutingSupport")
+        return res.available
+
     def is_encrypted(self):
         req = protocol.CheckDriverIsEncrypted(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
@@ -107,6 +119,26 @@ class Driver:
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session")
         return Session(self, res)
+
+    def query(self, query, params=None, config=None, hooks=None):
+        retry_func = None
+        if config:
+            retry_func = getattr(config, "retry_function", None)
+        req = protocol.DriverQuery(self._driver.id, query, params, config)
+        res = self.send_and_receive(req, hooks=hooks, allow_resolution=True)
+        while isinstance(res, protocol.RetryFunc):
+            handle_retry_func(retry_func, res, self)
+            res = self.receive(hooks=hooks, allow_resolution=True)
+        if not isinstance(res, protocol.EagerResult):
+            raise Exception("Should be EagerResult or RetryFunc")
+        return EagerResult(self, res)
+
+    def execute(self, fn, config=None, hooks=None):
+        retry_func = None
+        if config:
+            retry_func = getattr(config, "retry_function", None)
+        req = protocol.DriverExecute(self._driver.id, config)
+        return run_tx_loop(fn, req, self, retry_func=retry_func, hooks=hooks)
 
     def resolve(self, address):
         return self._resolver_fn(address)

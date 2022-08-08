@@ -1,5 +1,9 @@
 from .. import protocol
-from .exceptions import ApplicationCodeError
+from ._transaction_loop import (
+    handle_retry_func,
+    run_tx_loop,
+)
+from .eager_result import EagerResult
 from .result import Result
 from .transaction import Transaction
 
@@ -28,71 +32,41 @@ class Session:
             )
         return Result(self._driver, res)
 
-    def process_transaction(self, req, fn, config=None, hooks=None):
-        self._driver.send(req, hooks=hooks)
-        x = None
-        while True:
+    def query(self, query, params=None, config=None, hooks=None):
+        retry_func = None
+        if config:
+            retry_func = getattr(config, "retry_function", None)
+        req = protocol.SessionQuery(self._session.id, query, params, config)
+        res = self._driver.send_and_receive(
+            req, hooks=hooks, allow_resolution=True
+        )
+        while isinstance(res, protocol.RetryFunc):
+            handle_retry_func(retry_func, res, self._driver)
             res = self._driver.receive(hooks=hooks, allow_resolution=True)
-            if isinstance(res, protocol.RetryableTry):
-                tx = Transaction(self._driver, res.id)
-                try:
-                    # Invoke the frontend test function until we succeed, note
-                    # that the frontend test function makes calls to the
-                    # backend it self.
-                    x = fn(tx)
-                except (ApplicationCodeError, protocol.DriverError) as e:
-                    # If this is an error originating from the driver in the
-                    # backend, retrieve the id of the error  and send that,
-                    # this saves us from having to recreate errors on backend
-                    # side, backend just needs to track the returned errors.
-                    error_id = ""
-                    if isinstance(e, protocol.DriverError):
-                        error_id = e.id
-                    self._driver.send(
-                        protocol.RetryableNegative(self._session.id,
-                                                   errorId=error_id),
-                        hooks=hooks
-                    )
-                except Exception as e:
-                    # If this fails any other way, we still want the backend
-                    # to rollback the transaction.
-                    try:
-                        res = self._driver.send_and_receive(
-                            protocol.RetryableNegative(self._session.id),
-                            allow_resolution=False, hooks=hooks
-                        )
-                    except protocol.FrontendError:
-                        raise e
-                    else:
-                        raise Exception("Should be FrontendError but was: %s" %
-                                        res)
-                else:
-                    # The frontend test function were fine with the
-                    # interaction, notify backend that we're happy to go.
-                    self._driver.send(
-                        protocol.RetryablePositive(self._session.id),
-                        hooks=hooks
-                    )
-            elif isinstance(res, protocol.RetryableDone):
-                return x
-            else:
-                raise Exception(
-                    "Should be RetryableTry or RetryableDone but was: %s" % res
-                )
+        if not isinstance(res, protocol.EagerResult):
+            raise Exception("Should be EagerResult or RetryFunc")
+        return EagerResult(self, res)
+
+    def execute(self, fn, config=None, hooks=None):
+        retry_func = None
+        if config:
+            retry_func = getattr(config, "retry_function", None)
+        req = protocol.SessionExecute(self._driver.id, config)
+        return run_tx_loop(fn, req, self, retry_func=retry_func, hooks=hooks)
 
     def read_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionReadTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )
-        return self.process_transaction(req, fn, hooks=hooks)
+        return run_tx_loop(fn, req, self._driver, hooks=hooks)
 
     def write_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionWriteTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )
-        return self.process_transaction(req, fn, hooks=hooks)
+        return run_tx_loop(fn, req, self._driver, hooks=hooks)
 
     def begin_transaction(self, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionBeginTransaction(

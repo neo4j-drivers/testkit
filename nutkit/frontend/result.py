@@ -29,6 +29,15 @@ class Result:
         req = protocol.ResultSingleOptional(self._result.id)
         return self._driver.send_and_receive(req, allow_resolution=True)
 
+    def scalar(self):
+        """Unpack a single record with a single value.
+
+        Raise error if there are not exactly one record or not exactly one
+        value.
+        """
+        req = protocol.EagerResultScalar(self._result.id)
+        return self._driver.send_and_receive(req, allow_resolution=True)
+
     def peek(self):
         """Return the next Record or NullRecord without consuming it."""
         req = protocol.ResultPeek(self._result.id)

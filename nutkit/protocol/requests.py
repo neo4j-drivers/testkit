@@ -181,6 +181,17 @@ class CheckDriverIsEncrypted:
         self.driverId = driverId
 
 
+class CheckAutoQueryRoutingSupport:
+    """
+    Perform a check if the connected sever supports auto query routing.
+
+    Backend should respond with a AutoQueryRoutingSupport response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
 class ResolverResolutionCompleted:
     """
     Results of a custom address resolution.
@@ -210,6 +221,28 @@ class DomainNameResolutionCompleted:
         self.addresses = addresses
 
 
+class DriverQuery:
+    """TODO: docs."""
+
+    def __init__(self, driver_id, query, params, config=None):
+        self.driverId = driver_id
+        self.query = query
+        self.params = params
+        self.config = config
+        if self.config is not None:
+            self.config = config.to_protocol()
+
+
+class DriverExecute:
+    """TODO: docs."""
+
+    def __init__(self, driver_id, config):
+        self.driverId = driver_id
+        self.config = config
+        if self.config is not None:
+            self.config = config.to_protocol()
+
+
 class DriverClose:
     """
     Request to close the driver instance on the backend.
@@ -227,7 +260,7 @@ class NewSession:
     """
     Request to create a new session.
 
-    Create the sessionon the backend on the driver instance corresponding to
+    Create the session on the backend on the driver instance corresponding to
     the specified driver id.
 
     Backend should respond with a Session response or an Error response.
@@ -272,6 +305,28 @@ class SessionRun:
         self.txMeta = txMeta
         if "timeout" in kwargs:
             self.timeout = kwargs["timeout"]
+
+
+class SessionQuery:
+    """TODO: docs."""
+
+    def __init__(self, session_id, query, params, config=None):
+        self.sessionId = session_id
+        self.query = query
+        self.params = params
+        self.config = config
+        if self.config is not None:
+            self.config = config.to_protocol()
+
+
+class SessionExecute:
+    """TODO: docs."""
+
+    def __init__(self, session_id, config):
+        self.sessionId = session_id
+        self.config = config
+        if self.config is not None:
+            self.config = config.to_protocol()
 
 
 class SessionReadTransaction:
@@ -340,6 +395,18 @@ class TransactionRun:
         self.txId = txId
         self.cypher = cypher
         self.params = params
+
+
+class TransactionQuery:
+    """TODO: docs."""
+
+    def __init__(self, tx_id, query, params, config=None):
+        self.txId = tx_id
+        self.query = query
+        self.params = params
+        self.config = config
+        if self.config is not None:
+            self.config = config.to_protocol()
 
 
 class TransactionCommit:
@@ -453,6 +520,34 @@ class ResultList:
         self.resultId = resultId
 
 
+class EagerResultSingle:
+    """
+    Request to expect and return exactly one record in the eager result.
+
+    Backend should respond with a Record if exactly one record was found.
+    If more or fewer records are left in the result stream, or if any other
+    error occurs while retrieving the records, an Error response should be
+    returned.
+    """
+
+    def __init__(self, eager_result_id):
+        self.eagerResultId = eager_result_id
+
+
+class EagerResultScalar:
+    """
+    Request to expect and return a single record with a single value.
+
+    Backend should respond with the value if exactly one record with exactly
+    one value was found. If more or fewer records are left in the result
+    stream, or if any other error occurs while retrieving the records,
+    an Error response should be returned.
+    """
+
+    def __init__(self, eager_result_id):
+        self.eagerResultId = eager_result_id
+
+
 class RetryablePositive:
     """
     Request to commit the retryable transaction.
@@ -463,8 +558,8 @@ class RetryablePositive:
     unretriable way.
     """
 
-    def __init__(self, sessionId):
-        self.sessionId = sessionId
+    def __init__(self, retryable_id):
+        self.retryableId = retryable_id
 
 
 class RetryableNegative:
@@ -478,9 +573,18 @@ class RetryableNegative:
     the backend will resend that error.
     """
 
-    def __init__(self, sessionId, errorId=""):
-        self.sessionId = sessionId
-        self.errorId = errorId
+    def __init__(self, retryable_id, error_id=""):
+        self.retryableId = retryable_id
+        self.errorId = error_id
+
+
+class RetryFuncResult:
+    """Request sent in response to receiving `RetryFunc` from the backend."""
+
+    def __init__(self, retry, delay_ms):
+
+        self.retry = retry  # bool
+        self.delayMs = delay_ms
 
 
 class ForcedRoutingTableUpdate:
