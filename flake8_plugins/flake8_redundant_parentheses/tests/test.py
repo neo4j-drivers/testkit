@@ -22,9 +22,7 @@ def _ws_generator():
 
 
 def test_multi_line_condition():
-    s = """if (foo
-            == bar):
-        ...
+    s = """foo = (foo ** bar) * baz
     """
     assert not _results(s)
 

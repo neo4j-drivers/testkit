@@ -1,7 +1,5 @@
 import ast
 import importlib.metadata
-import io
-import tokenize
 from typing import (
     Any,
     Generator,
@@ -20,10 +18,10 @@ class Checker:
 
     @staticmethod
     def _node_in_parens(node, parens_coords):
-        open_, close = parens_coords
+        open_, space, close = parens_coords
         node_start = (node.lineno, node.col_offset)
         node_end = (node.end_lineno, node.end_col_offset)
-        return node_start > open_ and node_end <= close
+        return node_start >= open_ and node_end <= close
 
     def check(self) -> None:
         msg = "PAR001: Too many parentheses"
@@ -86,19 +84,14 @@ class Plugin:
     def __init__(self, tree: ast.AST, read_lines, file_tokens):
         self.vals = []
         self._lines_list = "".join(read_lines())
-        self.splited_lines = self._lines_list.splitlines(keepends=True)
+        # self.split_lines = self._lines_list.splitlines(keepends=True)
         self.file_token = list(file_tokens)
-        self._lines_list = fucking_pars(self.file_token, self.splited_lines)
-
-        while "\t" in self._lines_list:
-            self._lines_list = self._lines_list[:self._lines_list.find("\t")] \
-                               + self._lines_list[self._lines_list.find("\t")
-                                                  + 1:]
-        self._lines_list = "".join(self._lines_list)
-        self._tree = ast.parse(self._lines_list)
+        # self._lines_list = delete_pars(self.file_token, self.split_lines)
+        # self._lines_list = "".join(self._lines_list)
+        self._tree = tree
         self.dump_tree = ast.dump(tree)
-        self.file_token = list(tokenize.tokenize(io.BytesIO(
-            self._lines_list.encode("utf-8")).readline))
+        # self.file_token = list(tokenize.tokenize(io.BytesIO(
+        #     self._lines_list.encode("utf-8")).readline))
         self.parens_coords = find_parens_coords(self.file_token)
         for coords in self.parens_coords:
             if check_trees(self._lines_list, self.dump_tree, coords):
@@ -118,15 +111,28 @@ def find_parens_coords(token):
     close_list = ["]", "}", ")"]
     opening_stack = []
     parentheses_pairs = []
-    for i in token:
-        if i.type == 54:
-            if i.string in open_list:
-                opening_stack.append([i.start, i.string])
-            if i.string in close_list:
+    for i in range(len(token)):
+        if token[i].type == 54:
+            if token[i].string in open_list:
+                if token[i + 1].start[0] == token[i].end[0]:
+                    opening_stack.append(
+                        [
+                            token[i].start,
+                            token[i + 1].start[1],
+                            token[i].string
+                        ]
+                    )
+                else:
+                    opening_stack.append(
+                        [token[i].start, 0, token[i].string])
+
+            if token[i].string in close_list:
                 opening = opening_stack.pop()
-                assert (open_list.index(opening[1])
-                        == close_list.index(i.string))
-                parentheses_pairs.append([opening[0], i.start])
+                assert (open_list.index(opening[2])
+                        == close_list.index(token[i].string))
+                parentheses_pairs.append(
+                    [opening[0], opening[1], token[i].start]
+                )
 
     return parentheses_pairs
 
@@ -137,15 +143,17 @@ def check_trees(source_code, start_tree, parens_coords):
     Replace a pair of parentheses with a blank string and check if the
     resulting AST is still the same.
     """
-    open_, close = parens_coords
+    open_, space, close = parens_coords
     lines = source_code.split("\n")
     lines_ex = source_code.split("\n")
     lines[open_[0] - 1] = (lines[open_[0] - 1][:open_[1]]
-                           + lines[open_[0] - 1][open_[1] + 1:])
+                           + lines[open_[0] - 1][space:])
     if open_[0] == close[0]:
         # on the same line
-        lines[close[0] - 1] = (lines[close[0] - 1][:close[1] - 1]
-                               + lines[close[0] - 1][close[1]:])
+        lines[close[0] - 1] = (lines[close[0] - 1][:close[1]
+                               - (space - open_[1])]
+                               + lines[close[0] - 1][close[1] + 1
+                                                     - (space - open_[1]):])
     else:
         lines[close[0] - 1] = (lines[close[0] - 1][:close[1]]
                                + lines[close[0] - 1][close[1] + 1:])
@@ -153,49 +161,26 @@ def check_trees(source_code, start_tree, parens_coords):
     try:
         tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
-        tree = exception_tree_parse(lines_ex, open_, close)
+        tree = exception_tree_parse(lines_ex, open_, close, space)
     if tree is not False and ast.dump(tree) == start_tree:
         return True
     else:
-        tree = exception_tree_parse(lines_ex, open_, close)
+        tree = exception_tree_parse(lines_ex, open_, close, space)
         if tree is not False and ast.dump(tree) == start_tree:
             return True
         else:
             return False
 
 
-def exception_tree_parse(lines_ex, open_, close):
-    lines_ex[open_[0] - 1] = (lines_ex[open_[0] - 1][:open_[1]] + " "
-                              + lines_ex[open_[0] - 1][open_[1] + 1:])
-    lines_ex[close[0] - 1] = (lines_ex[close[0] - 1][:close[1]] + " "
-                              + lines_ex[close[0] - 1][close[1] + 1:])
+def exception_tree_parse(lines_ex, open_, close, space):
+    lines_ex[open_[0] - 1] = (lines_ex[open_[0] - 1][:open_[1] - 1] + " "
+                              + lines_ex[open_[0] - 1][space:])
+    lines_ex[close[0] - 1] = (lines_ex[close[0] - 1][:close[1]
+                              - (space - open_[1])] + " "
+                              + lines_ex[close[0] - 1][close[1] + 1
+                                                       - (space - open_[1]):])
     code_without_parens_ex = "\n".join(lines_ex)
     try:
         return ast.parse(code_without_parens_ex)
     except (ValueError, SyntaxError):
         return False
-
-
-def fucking_pars(file_tokens, source_code):
-    diff = 0
-    diff_line = 0
-    for line in range(1, len(file_tokens)):
-        try:
-            if (file_tokens[line + 1].start[0] == file_tokens[line].end[0]
-               and file_tokens[line + 1].start[1]
-                - file_tokens[line].end[1] > 0
-               and file_tokens[line].type == 54
-               and file_tokens[line + 1].type != 54):
-                if diff_line != file_tokens[line].end[0]:
-                    diff = 0
-                source_code[file_tokens[line].end[0] - 1] \
-                    = source_code[file_tokens[line].end[0] - 1][
-                      :file_tokens[line].end[1] - diff] \
-                    + "" \
-                    + source_code[file_tokens[line].end[0] - 1][
-                      file_tokens[line + 1].start[1] - diff:]
-                diff_line = file_tokens[line].end[0]
-                diff += file_tokens[line + 1].start[1] \
-                    - file_tokens[line].end[1]
-        except IndexError:
-            return source_code
