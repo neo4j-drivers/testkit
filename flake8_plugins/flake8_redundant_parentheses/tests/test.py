@@ -190,9 +190,16 @@ def test_unpacking(ws1, ws2, ws3, ws4, ws5):
 
 
 # BAD (don't use parentheses for unpacking, even with leading white space)
-def test_unpacking_foo():
+def test_unpacking_with_white_space():
     s = """(\ta,)=["a"]
     """
+    assert len(_results(s)) == 1
+
+
+# BAD (don't use parentheses for unpacking, even with leading white space)
+def test_unpacking_with_lots_of_white_space():
+    s = """(%sa,)=["a"]
+    """ % ("\t" * 100)
     assert len(_results(s)) == 1
 
 
