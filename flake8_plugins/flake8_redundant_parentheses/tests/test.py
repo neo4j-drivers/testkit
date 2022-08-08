@@ -11,8 +11,9 @@ def _results(s: str) -> Set[str]:
     def read_lines():
         return s.splitlines(keepends=True)
 
+    file_tokens = tokenize.tokenize(io.BytesIO(s.encode("utf-8")).readline)
     tree = ast.parse(s)
-    plugin = Plugin(tree, read_lines)
+    plugin = Plugin(tree, read_lines, file_tokens)
     return {f"{line}:{col + 1} {msg}" for line, col, msg, _ in plugin.run()}
 
 
@@ -177,7 +178,7 @@ bar * baz
     assert not _results(s)
 
 
-#BAD (don't use parentheses for unpacking)
+# BAD (don't use parentheses for unpacking)
 @pytest.mark.parametrize("ws1", _ws_generator())
 @pytest.mark.parametrize("ws2", _ws_generator())
 @pytest.mark.parametrize("ws3", _ws_generator())
@@ -190,9 +191,16 @@ def test_unpacking(ws1, ws2, ws3, ws4, ws5):
 
 
 # BAD (don't use parentheses for unpacking, even with leading white space)
-def test_unpacking_foo():
-    s = """(\ta,)=["a"]
+def test_unpacking_with_white_space():
+    s = """( a,)=["a"]
     """
+    assert len(_results(s)) == 1
+
+
+# BAD (don't use parentheses for unpacking, even with leading white space)
+def test_unpacking_with_lots_of_white_space():
+    s = """(%sa,)=["a"]
+    """ % ("\t" * 100)
     assert len(_results(s)) == 1
 
 

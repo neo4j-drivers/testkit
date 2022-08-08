@@ -39,7 +39,8 @@ class Checker:
                     for val in self.vals:
                         if self._node_in_parens(node, val):
                             break
-                        if self._node_in_parens(child, val) and val not in exceptions:
+                        if self._node_in_parens(child, val) \
+                           and val not in exceptions:
                             exceptions.append(val)
                             break
 
@@ -52,7 +53,8 @@ class Checker:
                         elts_coords = (elts.lineno, elts.col_offset)
                         if tuple_coords < elts_coords:
                             for val in self.vals:
-                                if val[0] == tuple_coords and val not in exceptions:
+                                if val[0] == tuple_coords \
+                                 and val not in exceptions:
                                     exceptions.append(val)
                                     break
                             self.problems.append((
@@ -81,14 +83,20 @@ class Plugin:
     name = __name__
     version = importlib.metadata.version("flake8_redundant_parentheses")
 
-    def __init__(self, tree: ast.AST, read_lines):
+    def __init__(self, tree: ast.AST, read_lines, file_tokens):
         self.vals = []
-        self.dump_tree = ast.dump(tree)
         self._lines_list = "".join(read_lines())
-        for pos in range(len(self._lines_list)):
-            self._lines_list = list_without_spaces(
-                self._lines_list, self.dump_tree, pos)
+        self.splited_lines = self._lines_list.splitlines(keepends=True)
+        self.file_token = list(file_tokens)
+        self._lines_list = fucking_pars(self.file_token, self.splited_lines)
+
+        while "\t" in self._lines_list:
+            self._lines_list = self._lines_list[:self._lines_list.find("\t")] \
+                               + self._lines_list[self._lines_list.find("\t")
+                                                  + 1:]
+        self._lines_list = "".join(self._lines_list)
         self._tree = ast.parse(self._lines_list)
+        self.dump_tree = ast.dump(tree)
         self.file_token = list(tokenize.tokenize(io.BytesIO(
             self._lines_list.encode("utf-8")).readline))
         self.parens_coords = find_parens_coords(self.file_token)
@@ -168,21 +176,26 @@ def exception_tree_parse(lines_ex, open_, close):
         return False
 
 
-def list_without_spaces(list_, dump_tree, counter):
-    try:
-        if list_[counter] == " ":
-            list__ = list_[:counter] + "" + list_[counter + 1:]
-            try:
-                second_tree = ast.dump(ast.parse(list__))
-                if dump_tree == second_tree:
-                    list_ = list_without_spaces(list__, dump_tree, counter)
-            except SyntaxError:
-                return list_
-        elif "\t" in list_:
-            list_ = list_[:list_.find("\t")] + list_[list_.find("\t") + 1:]
-        else:
-            return list_
-    except IndexError:
-        return list_
-    return list_
-
+def fucking_pars(file_tokens, source_code):
+    diff = 0
+    diff_line = 0
+    for line in range(1, len(file_tokens)):
+        try:
+            if (file_tokens[line + 1].start[0] == file_tokens[line].end[0]
+               and file_tokens[line + 1].start[1]
+                - file_tokens[line].end[1] > 0
+               and file_tokens[line].type == 54
+               and file_tokens[line + 1].type != 54):
+                if diff_line != file_tokens[line].end[0]:
+                    diff = 0
+                source_code[file_tokens[line].end[0] - 1] \
+                    = source_code[file_tokens[line].end[0] - 1][
+                      :file_tokens[line].end[1] - diff] \
+                    + "" \
+                    + source_code[file_tokens[line].end[0] - 1][
+                      file_tokens[line + 1].start[1] - diff:]
+                diff_line = file_tokens[line].end[0]
+                diff += file_tokens[line + 1].start[1] \
+                    - file_tokens[line].end[1]
+        except IndexError:
+            return source_code
