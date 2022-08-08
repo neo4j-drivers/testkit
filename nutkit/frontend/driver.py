@@ -1,7 +1,7 @@
 from typing import Optional
 
 from .. import protocol
-from .config import DefaultBookmarkManagerConfig as BMMConfig
+from .config import Neo4jBookmarkManagerConfig as BMMConfig
 from .config import to_protocol
 from .session import Session
 

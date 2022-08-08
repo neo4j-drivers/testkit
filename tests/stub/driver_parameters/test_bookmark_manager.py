@@ -2,15 +2,15 @@ import json
 import re
 
 from nutkit.frontend import (
-    DefaultBookmarkManagerConfig,
     Driver,
+    Neo4jBookmarkManagerConfig,
 )
 import nutkit.protocol as types
 from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
-class TestDefaultBookmarkManager(TestkitTestCase):
+class TestNeo4jBookmarkManager(TestkitTestCase):
     required_features = (
         types.Feature.BOLT_5_0,
         types.Feature.API_BOOKMARK_MANAGER,
@@ -49,7 +49,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -87,7 +87,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -131,7 +131,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -175,7 +175,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -218,7 +218,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -272,7 +272,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -329,7 +329,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig(
+            bookmark_manager_config=Neo4jBookmarkManagerConfig(
                 initial_bookmarks={"neo4j": ["fist_bm"]}
             )
         )
@@ -368,7 +368,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig(
+            bookmark_manager_config=Neo4jBookmarkManagerConfig(
                 initial_bookmarks={"neo4j": ["fist_bm"], "adb": ["adb:bm1"]}
             )
         )
@@ -407,7 +407,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w", database="neo4j")
@@ -463,7 +463,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig()
+            bookmark_manager_config=Neo4jBookmarkManagerConfig()
         )
 
         s1 = self._driver.session("w")
@@ -509,7 +509,7 @@ class TestDefaultBookmarkManager(TestkitTestCase):
         self._driver = Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=DefaultBookmarkManagerConfig(
+            bookmark_manager_config=Neo4jBookmarkManagerConfig(
                 initial_bookmarks={"system": ["sys:bm1"]}
             )
         )
