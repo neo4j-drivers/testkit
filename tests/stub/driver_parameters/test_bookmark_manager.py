@@ -38,15 +38,15 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        s1.run("QUERY1").consume()
+        s1.run("RETURN BOOKMARK bm1").consume()
         s1.close()
 
         s2 = self._driver.session("w")
-        s2.run("QUERY2").consume()
+        s2.run("RETURN BOOKMARK bm2").consume()
         s2.close()
 
         s3 = self._driver.session("w")
-        s3.run("QUERY3").consume()
+        s3.run("RETURN BOOKMARK bm3").consume()
         s3.close()
 
         self._router.reset()
@@ -71,19 +71,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w")
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()
 
         s3 = self._driver.session("w")
-        tx3 = s3.begin_transaction({"order": "2nd"})
+        tx3 = s3.begin_transaction({"return_bookmark": "bm2"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
@@ -109,19 +109,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("r")
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "empty"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()
 
         s3 = self._driver.session("w")
-        tx3 = s3.begin_transaction({"order": "3rd"})
+        tx3 = s3.begin_transaction({"return_bookmark": "bm3"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
@@ -147,11 +147,11 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
 
         s2 = self._driver.session("w")
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
 
         tx1.commit()
@@ -160,7 +160,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s2.close()
 
         s3 = self._driver.session("w")
-        tx3 = s3.begin_transaction({"order": "2nd"})
+        tx3 = s3.begin_transaction({"return_bookmark": "bm2"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
@@ -184,25 +184,25 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", bookmarks=[])
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()
 
         s3 = self._driver.session("w", bookmarks=["unmanaged"])
-        tx3 = s3.begin_transaction({"order": "3rd"})
+        tx3 = s3.begin_transaction({"return_bookmark": "bm3"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
 
         s4 = self._driver.session("w")
-        tx4 = s4.begin_transaction({"order": "3rd"})
+        tx4 = s4.begin_transaction({"return_bookmark": "bm3"})
         tx4.run("RETURN 1 as n").consume()
         tx4.commit()
         s4.close()
@@ -232,13 +232,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", ignore_bookmark_manager=True)
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()
@@ -248,13 +248,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             ignore_bookmark_manager=True,
             bookmarks=["unmanaged"]
         )
-        tx3 = s3.begin_transaction({"order": "3rd"})
+        tx3 = s3.begin_transaction({"return_bookmark": "bm3"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
 
         s4 = self._driver.session("w")
-        tx4 = s4.begin_transaction({"order": "3rd"})
+        tx4 = s4.begin_transaction({"return_bookmark": "bm3"})
         tx4.run("RETURN 1 as n").consume()
         tx4.commit()
         s4.close()
@@ -285,13 +285,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         ))
 
         s1 = self._driver.session("w", database="neo4j")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", database="neo4j")
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()
@@ -318,13 +318,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         ))
 
         s1 = self._driver.session("w", database="neo4j")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", database="neo4j")
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()
@@ -349,7 +349,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w", database="neo4j")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
@@ -361,13 +361,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s2.close()
 
         s3 = self._driver.session("w", database="neo4j")
-        tx3 = s3.begin_transaction({"order": "2nd"})
+        tx3 = s3.begin_transaction({"return_bookmark": "bm2"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
         s3.close()
 
         s4 = self._driver.session("w", database="neo4j")
-        tx4 = s4.begin_transaction({"order": "3rd"})
+        tx4 = s4.begin_transaction({"return_bookmark": "bm3"})
         tx4.run("RETURN 1 as n").consume()
         tx4.commit()
         s4.close()
@@ -399,19 +399,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
-        s1.run("QUERY1").consume()
+        s1.run("RETURN BOOKMARK bm1").consume()
         s1.close()
 
         s2 = self._driver.session("w")
-        s2.run("USE adb QUERY2").consume()
+        s2.run("USE adb RETURN BOOKMARK adb:bm4").consume()
         s2.close()
 
         s3 = self._driver.session("w")
-        s3.run("QUERY2").consume()
+        s3.run("RETURN BOOKMARK bm2").consume()
         s3.close()
 
         s4 = self._driver.session("w")
-        s4.run("QUERY3").consume()
+        s4.run("RETURN BOOKMARK bm3").consume()
         s4.close()
 
         self._server.reset()
@@ -441,13 +441,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         ))
 
         s1 = self._driver.session("w")
-        tx1 = s1.begin_transaction({"order": "1st"})
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
         tx1.run("RETURN 1 as n").consume()
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w")
-        tx2 = s2.begin_transaction({"order": "2nd"})
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
         tx2.run("RETURN 1 as n").consume()
         tx2.commit()
         s2.close()

@@ -5,7 +5,7 @@ A: HELLO {"{}": "*"}
 *: RESET
 {*
     {{
-        C: BEGIN {"tx_metadata": {"order": "1st"}, "[bookmarks]": "*", "[db]": "*"}
+        C: BEGIN {"tx_metadata": {"return_bookmark": "bm1"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
         S: SUCCESS {"fields": ["n"]}
@@ -14,7 +14,7 @@ A: HELLO {"{}": "*"}
         C: COMMIT
         S: SUCCESS {"bookmark": "bm1"}
     ----
-        C: BEGIN {"tx_metadata": {"order": "2nd"}, "[bookmarks]": "*", "[db]": "*"}
+        C: BEGIN {"tx_metadata": {"return_bookmark": "bm2"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
         S: SUCCESS {"fields": ["n"]}
@@ -23,7 +23,7 @@ A: HELLO {"{}": "*"}
         C: COMMIT
         S: SUCCESS {"bookmark": "bm2"}
     ----
-        C: BEGIN {"tx_metadata": {"order": "2nd"}, "[bookmarks]": "*", "[db]": "*", "mode": "r"}
+        C: BEGIN {"tx_metadata": {"return_bookmark": "empty"}, "[bookmarks]": "*", "[db]": "*", "mode": "r"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
         S: SUCCESS {"fields": ["n"]}
@@ -32,7 +32,7 @@ A: HELLO {"{}": "*"}
         C: COMMIT
         S: SUCCESS {}
     ----
-        C: BEGIN {"tx_metadata": {"order": "3rd"}, "[bookmarks]": "*", "[db]": "*"}
+        C: BEGIN {"tx_metadata": {"return_bookmark": "bm3"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
         C: RUN "RETURN 1 as n" {} {}
         S: SUCCESS {"fields": ["n"]}

@@ -14,14 +14,14 @@ class Neo4jBookmarkManagerConfig:
     notify_bookmarks: Optional[Callable[[str, str], None]] = None
 
 
-def to_protocol(
+def from_bookmark_manager_config_to_protocol(
     config: Optional[Neo4jBookmarkManagerConfig]
 ) -> Optional[Dict]:
     if config is not None:
         return {
             "initialBookmarks": config.initial_bookmarks,
-            "bookmarkSupplier": config.bookmark_supplier is not None,
-            "notifyBookmarks": config.notify_bookmarks is not None,
+            "bookmarkSupplierRegistered": config.bookmark_supplier is not None,
+            "notifyBookmarksRegistered": config.notify_bookmarks is not None,
         }
 
     return None

@@ -1,8 +1,8 @@
 from typing import Optional
 
 from .. import protocol
+from .config import from_bookmark_manager_config_to_protocol
 from .config import Neo4jBookmarkManagerConfig as BMMConfig
-from .config import to_protocol
 from .session import Session
 
 
@@ -32,7 +32,7 @@ class Driver:
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
-            bookmark_manager=to_protocol(bookmark_manager_config)
+            bookmark_manager=from_bookmark_manager_config_to_protocol(bookmark_manager_config)  # noqa: E501
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
