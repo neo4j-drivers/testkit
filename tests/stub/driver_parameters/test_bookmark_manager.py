@@ -21,18 +21,10 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._server = StubServer(9010)
         self._router = StubServer(9000)
         self._driver = None
-        self._session = None
-        self._sessions = []
 
     def tearDown(self):
         self._server.reset()
         self._router.reset()
-
-        for s in self._sessions:
-            s.close()
-
-        if self._session:
-            self._session.close()
 
         if self._driver:
             self._driver.close()
@@ -43,14 +35,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "session_run_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         s1.run("QUERY1").consume()
@@ -63,6 +48,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s3 = self._driver.session("w")
         s3.run("QUERY3").consume()
         s3.close()
+
+        self._router.reset()
 
         run_requests = self._server.get_requests("RUN")
 
@@ -81,14 +68,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -108,6 +88,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx3.commit()
         s3.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 3)
@@ -125,14 +106,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -152,6 +126,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx3.commit()
         s3.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 3)
@@ -169,14 +144,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -197,6 +165,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx3.commit()
         s3.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 3)
@@ -212,14 +181,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -245,6 +207,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx4.commit()
         s4.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 4)
@@ -266,14 +229,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -303,6 +259,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx4.commit()
         s4.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 4)
@@ -323,16 +280,9 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["fist_bm"]}
-            )
-        )
+        self._driver = self._new_driver(Neo4jBookmarkManagerConfig(
+            initial_bookmarks={"neo4j": ["fist_bm"]}
+        ))
 
         s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -346,6 +296,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 2)
@@ -362,16 +313,9 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["fist_bm"], "adb": ["adb:bm1"]}
-            )
-        )
+        self._driver = self._new_driver(Neo4jBookmarkManagerConfig(
+            initial_bookmarks={"neo4j": ["fist_bm"], "adb": ["adb:bm1"]}
+        ))
 
         s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -385,6 +329,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 2)
@@ -401,14 +346,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -434,6 +372,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx4.commit()
         s4.close()
 
+        self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 4)
@@ -457,14 +396,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "session_run_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig()
-        )
+        self._driver = self._new_driver()
 
         s1 = self._driver.session("w")
         s1.run("QUERY1").consume()
@@ -482,6 +414,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s4.run("QUERY3").consume()
         s4.close()
 
+        self._server.reset()
         run_requests = self._server.get_requests("RUN")
 
         self.assertEqual(len(run_requests), 4)
@@ -503,16 +436,9 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        uri = "neo4j://%s" % self._router.address
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        self._driver = Driver(
-            self._backend,
-            uri, auth,
-            bookmark_manager_config=Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"system": ["sys:bm1"]}
-            )
-        )
+        self._driver = self._new_driver(Neo4jBookmarkManagerConfig(
+            initial_bookmarks={"system": ["sys:bm1"]}
+        ))
 
         s1 = self._driver.session("w")
         tx1 = s1.begin_transaction({"order": "1st"})
@@ -526,6 +452,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
+        self._router.reset()
+        self._server.reset()
         route_requests = self._router.get_requests("ROUTE")
         begin_requests = self._server.get_requests("BEGIN")
 
@@ -541,6 +469,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self.assert_begin(
             begin_requests[1],
             bookmarks=["sys:bm1", "bm1"]
+        )
+
+    def _new_driver(self, bookmark_manager_config=None):
+        if bookmark_manager_config is None:
+            bookmark_manager_config = Neo4jBookmarkManagerConfig()
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        return Driver(
+            self._backend,
+            uri, auth,
+            bookmark_manager_config=bookmark_manager_config
         )
 
     def _start_server(self, server, script):
@@ -570,26 +511,24 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
     def assert_route(self, line, bookmarks=None):
         if bookmarks is None:
             bookmarks = []
-        route_prefix = "ROUTE "
         self.assertTrue(
-            line.startswith(route_prefix),
+            line.startswith("ROUTE "),
             "Line should start with ROUTE"
         )
         regex = r".*(\[.*\])"
-        matches = re.match(regex, line, re.MULTILINE)
+        matches = re.match(regex, line)
         bookmarks_sent = json.loads(matches.group(1))
         self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
 
-    def assert_run(self, line: str, bookmarks=None):
+    def assert_run(self, line, bookmarks=None):
         if bookmarks is None:
             bookmarks = []
-        run_prefix = "RUN "
         self.assertTrue(
-            line.startswith(run_prefix),
+            line.startswith("RUN "),
             "Line should start with RUN"
         )
         regex = r".*\"bookmarks\":\ (\[.*\])"
-        matches = re.match(regex, line, re.MULTILINE)
+        matches = re.match(regex, line)
         if matches is None:
             bookmarks_sent = []
         else:

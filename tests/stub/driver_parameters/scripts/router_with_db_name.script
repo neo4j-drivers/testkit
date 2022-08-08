@@ -1,5 +1,4 @@
 !: BOLT 5.0
-!: AUTO RESET
 !: ALLOW RESTART
 
 A: HELLO {"{}": "*"}
