@@ -195,7 +195,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
-        s3 = self._driver.session("w", bookmarks=["unmanaged"])
+        s3 = self._driver.session("w", bookmarks=["bm2", "unmanaged"])
         tx3 = s3.begin_transaction({"return_bookmark": "bm3"})
         tx3.run("RETURN 1 as n").consume()
         tx3.commit()
@@ -503,9 +503,12 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
                 "bookmarks should not be in the begin"
             )
         else:
+            bookmarks_sent = begin_properties.get("bookmarks", [])
+            if not self.supports_minimal_bookmarks():
+                bookmarks_sent = [*set(bookmarks_sent)]
             self.assertEqual(
                 sorted(bookmarks),
-                sorted(begin_properties.get("bookmarks", []))
+                sorted(bookmarks_sent)
             )
 
     def assert_route(self, line, bookmarks=None):
@@ -518,6 +521,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         regex = r".*(\[.*\])"
         matches = re.match(regex, line)
         bookmarks_sent = json.loads(matches.group(1))
+        if not self.supports_minimal_bookmarks():
+            bookmarks_sent = [*set(bookmarks_sent)]
         self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
 
     def assert_run(self, line, bookmarks=None):
@@ -533,4 +538,11 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks_sent = []
         else:
             bookmarks_sent = json.loads(matches.group(1))
+            if not self.supports_minimal_bookmarks():
+                bookmarks_sent = [*set(bookmarks_sent)]
         self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
+
+    def supports_minimal_bookmarks(self):
+        return self.driver_supports_features(
+            types.Feature.OPT_MINIMAL_BOOKMARKS_SET
+        )

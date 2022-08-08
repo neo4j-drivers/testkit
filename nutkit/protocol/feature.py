@@ -120,6 +120,8 @@ class Feature(Enum):
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
+    # Driver should not send duplicated bookmarks to the server
+    OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
