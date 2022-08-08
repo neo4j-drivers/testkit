@@ -121,7 +121,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm2"]
         )
 
-    def test_should_not_replace_bookmarks_by_empty_bookmarks(self):
+    def test_should_not_replace_bookmarks_with_empty_bookmarks(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -567,7 +567,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
                 sorted(begin_properties.get("bookmarks", []))
             )
 
-    def assert_route(self, line: str, bookmarks=None):
+    def assert_route(self, line, bookmarks=None):
         if bookmarks is None:
             bookmarks = []
         route_prefix = "ROUTE "
@@ -581,7 +581,6 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self.assertEqual(sorted(bookmarks), sorted(bookmarks_sent), line)
 
     def assert_run(self, line: str, bookmarks=None):
-
         if bookmarks is None:
             bookmarks = []
         run_prefix = "RUN "

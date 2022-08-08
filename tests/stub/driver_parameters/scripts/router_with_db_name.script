@@ -18,6 +18,6 @@ A: HELLO {"{}": "*"}
         S: SUCCESS { "rt": { "ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
         *: RESET
     }}
-
 +}
+
 ?: GOODBYE

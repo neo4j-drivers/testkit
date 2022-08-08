@@ -110,7 +110,7 @@ class Driver:
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
-            ignoreBookmarkManager=ignore_bookmark_manager
+            ignore_bookmark_manager=ignore_bookmark_manager
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
