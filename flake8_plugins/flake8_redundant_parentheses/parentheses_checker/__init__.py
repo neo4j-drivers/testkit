@@ -84,14 +84,9 @@ class Plugin:
     def __init__(self, tree: ast.AST, read_lines, file_tokens):
         self.vals = []
         self._lines_list = "".join(read_lines())
-        # self.split_lines = self._lines_list.splitlines(keepends=True)
         self.file_token = list(file_tokens)
-        # self._lines_list = delete_pars(self.file_token, self.split_lines)
-        # self._lines_list = "".join(self._lines_list)
         self._tree = tree
         self.dump_tree = ast.dump(tree)
-        # self.file_token = list(tokenize.tokenize(io.BytesIO(
-        #     self._lines_list.encode("utf-8")).readline))
         self.parens_coords = find_parens_coords(self.file_token)
         for coords in self.parens_coords:
             if check_trees(self._lines_list, self.dump_tree, coords):
