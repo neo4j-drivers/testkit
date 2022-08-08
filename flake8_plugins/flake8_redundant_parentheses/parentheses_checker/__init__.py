@@ -1,5 +1,7 @@
 import ast
 import importlib.metadata
+import io
+import tokenize
 from typing import (
     Any,
     Generator,
@@ -37,7 +39,7 @@ class Checker:
                     for val in self.vals:
                         if self._node_in_parens(node, val):
                             break
-                        if self._node_in_parens(child, val):
+                        if self._node_in_parens(child, val) and val not in exceptions:
                             exceptions.append(val)
                             break
 
@@ -50,7 +52,7 @@ class Checker:
                         elts_coords = (elts.lineno, elts.col_offset)
                         if tuple_coords < elts_coords:
                             for val in self.vals:
-                                if val[0] == tuple_coords:
+                                if val[0] == tuple_coords and val not in exceptions:
                                     exceptions.append(val)
                                     break
                             self.problems.append((
@@ -63,15 +65,10 @@ class Checker:
             for node_tup in ast.iter_child_nodes(node):
                 if isinstance(node_tup, ast.Tuple):
                     if node_tup.end_col_offset - node.end_col_offset == 0:
-                        exceptions.append(
-                            [
-                                (node_tup.lineno, node_tup.col_offset),
-                                (
-                                    node_tup.end_lineno,
-                                    node_tup.end_col_offset - 1
-                                )
-                            ]
-                        )
+                        for val in self.vals:
+                            if val not in exceptions:
+                                exceptions.append(val)
+                                break
                         break
 
         for val in self.vals:
@@ -84,12 +81,17 @@ class Plugin:
     name = __name__
     version = importlib.metadata.version("flake8_redundant_parentheses")
 
-    def __init__(self, tree: ast.AST, read_lines, file_tokens):
-        self._tree = tree
+    def __init__(self, tree: ast.AST, read_lines):
         self.vals = []
         self.dump_tree = ast.dump(tree)
-        self.parens_coords = find_parens_coords(list(file_tokens))
         self._lines_list = "".join(read_lines())
+        for pos in range(len(self._lines_list)):
+            self._lines_list = list_without_spaces(
+                self._lines_list, self.dump_tree, pos)
+        self._tree = ast.parse(self._lines_list)
+        self.file_token = list(tokenize.tokenize(io.BytesIO(
+            self._lines_list.encode("utf-8")).readline))
+        self.parens_coords = find_parens_coords(self.file_token)
         for coords in self.parens_coords:
             if check_trees(self._lines_list, self.dump_tree, coords):
                 self.vals.append(coords)
@@ -129,6 +131,7 @@ def check_trees(source_code, start_tree, parens_coords):
     """
     open_, close = parens_coords
     lines = source_code.split("\n")
+    lines_ex = source_code.split("\n")
     lines[open_[0] - 1] = (lines[open_[0] - 1][:open_[1]]
                            + lines[open_[0] - 1][open_[1] + 1:])
     if open_[0] == close[0]:
@@ -142,8 +145,44 @@ def check_trees(source_code, start_tree, parens_coords):
     try:
         tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
-        return False
-    if ast.dump(tree) == start_tree:
+        tree = exception_tree_parse(lines_ex, open_, close)
+    if tree is not False and ast.dump(tree) == start_tree:
         return True
     else:
+        tree = exception_tree_parse(lines_ex, open_, close)
+        if tree is not False and ast.dump(tree) == start_tree:
+            return True
+        else:
+            return False
+
+
+def exception_tree_parse(lines_ex, open_, close):
+    lines_ex[open_[0] - 1] = (lines_ex[open_[0] - 1][:open_[1]] + " "
+                              + lines_ex[open_[0] - 1][open_[1] + 1:])
+    lines_ex[close[0] - 1] = (lines_ex[close[0] - 1][:close[1]] + " "
+                              + lines_ex[close[0] - 1][close[1] + 1:])
+    code_without_parens_ex = "\n".join(lines_ex)
+    try:
+        return ast.parse(code_without_parens_ex)
+    except (ValueError, SyntaxError):
         return False
+
+
+def list_without_spaces(list_, dump_tree, counter):
+    try:
+        if list_[counter] == " ":
+            list__ = list_[:counter] + "" + list_[counter + 1:]
+            try:
+                second_tree = ast.dump(ast.parse(list__))
+                if dump_tree == second_tree:
+                    list_ = list_without_spaces(list__, dump_tree, counter)
+            except SyntaxError:
+                return list_
+        elif "\t" in list_:
+            list_ = list_[:list_.find("\t")] + list_[list_.find("\t") + 1:]
+        else:
+            return list_
+    except IndexError:
+        return list_
+    return list_
+
