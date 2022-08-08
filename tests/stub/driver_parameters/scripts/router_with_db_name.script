@@ -7,16 +7,14 @@ A: HELLO {"{}": "*"}
     {{
         C: ROUTE "*" "*" {}
         S: SUCCESS { "rt": { "ttl": 1000, "db": "neo4j", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
-        *: RESET
-        ----
+    ----
         C: ROUTE "*" "*" {"db":"neo4j"}
         S: SUCCESS { "rt": { "ttl": 1000, "db": "neo4j", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
-        *: RESET
-        ----
+    ----
         C: ROUTE "*" "*" {"db":"adb"}
         S: SUCCESS { "rt": { "ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
-        *: RESET
     }}
+    *: RESET
 +}
 
 ?: GOODBYE
