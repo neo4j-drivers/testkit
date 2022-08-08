@@ -20,6 +20,9 @@ class Driver:
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
         self._bookmark_manager_config = bookmark_manager_config
+        bookmark_manager = from_bookmark_manager_config_to_protocol(
+            bookmark_manager_config
+        )
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
             resolverRegistered=resolver_fn is not None,
@@ -32,9 +35,7 @@ class Driver:
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
-	            bookmark_manager=from_bookmark_manager_config_to_protocol(
-                    bookmark_manager_config
-                )
+            bookmark_manager=bookmark_manager
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
