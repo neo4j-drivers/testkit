@@ -18,7 +18,7 @@ def _results(s: str) -> Set[str]:
 
 
 def _ws_generator():
-    return (ws for ws in ("", " ", "\t", "   "))
+    return "", " ", "\t", "   ", "\t\t", "\t ", " \t"
 
 
 def test_multi_line_condition():
@@ -191,10 +191,36 @@ def test_unpacking(ws1, ws2, ws3, ws4, ws5):
 
 
 # BAD (don't use parentheses for unpacking, even with leading white space)
-def test_unpacking_with_white_space():
-    s = """(\ta,)=["a"]
+@pytest.mark.parametrize("ws", _ws_generator())
+def test_unpacking_with_white_space(ws):
+    s = f"""({ws}a,)=["a"]
     """
     assert len(_results(s)) == 1
+
+
+# BAD (don't use parentheses when already using \ for line continuation)
+def test_call_chain_escaped_line_break_1():
+    s = """(\\
+foo\\
+).bar(baz)
+    """
+    assert len(_results(s)) == 1
+
+
+# BAD (don't use parentheses when already using \ for line continuation)
+def test_call_chain_escaped_line_break_2():
+    s = """(   \\
+    foo   \\
+    )  .  bar   (   baz   )
+    """
+    assert len(_results(s)) == 1
+
+
+# BAD (redundant parentheses)
+def test_parentheses_delimit_names():
+    s = """(a)and(b)
+    """
+    assert len(_results(s)) == 2
 
 
 # BAD (don't use parentheses for one-line expressions)

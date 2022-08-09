@@ -18,7 +18,7 @@ class Checker:
 
     @staticmethod
     def _node_in_parens(node, parens_coords):
-        open_, space, close = parens_coords
+        open_, _, _, close = parens_coords
         node_start = (node.lineno, node.col_offset)
         node_end = (node.end_lineno, node.end_col_offset)
         return node_start >= open_ and node_end <= close
@@ -51,8 +51,10 @@ class Checker:
                         elts_coords = (elts.lineno, elts.col_offset)
                         if tuple_coords < elts_coords:
                             for val in self.vals:
-                                if val[0] == tuple_coords \
-                                 and val not in exceptions:
+                                if (
+                                    val[0] == tuple_coords
+                                    and val not in exceptions
+                                ):
                                     exceptions.append(val)
                                     break
                             self.problems.append((
@@ -106,27 +108,31 @@ def find_parens_coords(token):
     close_list = ["]", "}", ")"]
     opening_stack = []
     parentheses_pairs = []
+    last_line = -1
     for i in range(len(token)):
+        first_in_line = last_line != token[i].start[0]
+        last_line = token[i].end[0]
         if token[i].type == 54:
             if token[i].string in open_list:
+                if not first_in_line:
+                    opening_stack.append([token[i].start, token[i].end[1],
+                                          " ", token[i].string])
+                    continue
                 if token[i + 1].start[0] == token[i].end[0]:
-                    opening_stack.append(
-                        [
-                            token[i].start,
-                            token[i + 1].start[1],
-                            token[i].string
-                        ]
-                    )
-                else:
-                    opening_stack.append(
-                        [token[i].start, 0, token[i].string])
+                    opening_stack.append([token[i].start,
+                                          token[i + 1].start[1], "",
+                                          token[i].string])
+                    continue
+                # there is only this opening parenthesis on this line
+                opening_stack.append([token[i].start, len(token[i].line) - 2,
+                                      "", token[i].string])
 
             if token[i].string in close_list:
                 opening = opening_stack.pop()
-                assert (open_list.index(opening[2])
+                assert (open_list.index(opening[3])
                         == close_list.index(token[i].string))
                 parentheses_pairs.append(
-                    [opening[0], opening[1], token[i].start]
+                    [*opening[0:3], token[i].start]
                 )
 
     return parentheses_pairs
@@ -138,44 +144,22 @@ def check_trees(source_code, start_tree, parens_coords):
     Replace a pair of parentheses with a blank string and check if the
     resulting AST is still the same.
     """
-    open_, space, close = parens_coords
+    open_, space, replacement, close = parens_coords
     lines = source_code.split("\n")
-    lines_ex = source_code.split("\n")
     lines[open_[0] - 1] = (lines[open_[0] - 1][:open_[1]]
+                           + replacement
                            + lines[open_[0] - 1][space:])
+    shift = 0
     if open_[0] == close[0]:
-        # on the same line
-        lines[close[0] - 1] = (lines[close[0] - 1][:close[1]
-                               - (space - open_[1])]
-                               + lines[close[0] - 1][close[1] + 1
-                                                     - (space - open_[1]):])
-    else:
-        lines[close[0] - 1] = (lines[close[0] - 1][:close[1]]
-                               + lines[close[0] - 1][close[1] + 1:])
+        shift -= (space - open_[1]) - len(replacement)
+    lines[close[0] - 1] = (lines[close[0] - 1][:close[1] + shift]
+                           + " " + lines[close[0] - 1][close[1] + 1 + shift:])
     code_without_parens = "\n".join(lines)
     try:
         tree = ast.parse(code_without_parens)
     except (ValueError, SyntaxError):
-        tree = exception_tree_parse(lines_ex, open_, close, space)
+        return False
     if tree is not False and ast.dump(tree) == start_tree:
         return True
     else:
-        tree = exception_tree_parse(lines_ex, open_, close, space)
-        if tree is not False and ast.dump(tree) == start_tree:
-            return True
-        else:
-            return False
-
-
-def exception_tree_parse(lines_ex, open_, close, space):
-    lines_ex[open_[0] - 1] = (lines_ex[open_[0] - 1][:open_[1] - 1] + " "
-                              + lines_ex[open_[0] - 1][space:])
-    lines_ex[close[0] - 1] = (lines_ex[close[0] - 1][:close[1]
-                              - (space - open_[1])] + " "
-                              + lines_ex[close[0] - 1][close[1] + 1
-                                                       - (space - open_[1]):])
-    code_without_parens_ex = "\n".join(lines_ex)
-    try:
-        return ast.parse(code_without_parens_ex)
-    except (ValueError, SyntaxError):
         return False
