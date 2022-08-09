@@ -474,14 +474,112 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
     def _new_driver(self, bookmark_manager_config=None):
         if bookmark_manager_config is None:
             bookmark_manager_config = Neo4jBookmarkManagerConfig()
-
         uri = "neo4j://%s" % self._router.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         return Driver(
             self._backend,
             uri, auth,
-            bookmark_manager_config=bookmark_manager_config
+            bookmark_manager_config=bookmark_manager_config)
+
+    def test_should_call_bookmark_supplier_for_all_get_bookmarks_call(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        adb_bookmarks = ["adb:bm1"]
+        get_bookmarks_calls = []
+
+        def get_bookmarks(db):
+            get_bookmarks_calls.append([db])
+            return []
+
+        self._driver = self._new_driver(
+            Neo4jBookmarkManagerConfig(
+                initial_bookmarks={
+                    "adb": adb_bookmarks
+                },
+                bookmark_supplier=get_bookmarks
+            )
+        )
+
+        s1 = self._driver.session("w", database="neo4j")
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w")
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
+        tx2.run("RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        self.assertEqual(8, len(get_bookmarks_calls))
+        self.assertEqual(sorted([
+            # routing table
+            ["system"],
+            # first tx
+            ["adb"],
+            ["system"],
+            ["neo4j"],
+            # name resolution
+            ["system"],
+            # second tx
+            ["adb"],
+            ["system"],
+            ["neo4j"]
+        ]), sorted(get_bookmarks_calls))
+
+    def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        system_bookmarks = ["sys:bm3"]
+        neo4j_bookmarks = ["neo4j:bm3"]
+        adb_bookmarks = ["adb:bm1"]
+        bookmarks = {
+            "system": system_bookmarks,
+            "neo4j": neo4j_bookmarks
+        }
+
+        def get_bookmarks(db):
+            if db in bookmarks:
+                return bookmarks[db]
+            return []
+
+        self._driver = self._new_driver(
+            Neo4jBookmarkManagerConfig(
+                initial_bookmarks={
+                    "adb": adb_bookmarks
+                },
+                bookmark_supplier=get_bookmarks
+            )
+        )
+
+        s1 = self._driver.session("w", database="neo4j")
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w")
+        tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
+        tx2.run("RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        self._server.reset()
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertEqual(len(begin_requests), 2)
+        self.assert_begin(
+            begin_requests[0],
+            bookmarks=system_bookmarks + neo4j_bookmarks + adb_bookmarks
+        )
+        self.assert_begin(
+            begin_requests[1],
+            bookmarks=["bm1"] + system_bookmarks + neo4j_bookmarks
+            + adb_bookmarks
         )
 
     def _start_server(self, server, script):

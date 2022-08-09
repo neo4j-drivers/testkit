@@ -195,6 +195,18 @@ class ResolverResolutionCompleted:
         self.addresses = addresses
 
 
+class BookmarkSupplierCompleted:
+    """
+    Results of a bookmark manager bookmark supplier call.
+
+    Pushes bookmarks for a given database to the Bookmark Manager.
+    """
+
+    def __init__(self, requestId, bookmarks):
+        self.requestId = requestId
+        self.bookmarks = bookmarks
+
+
 class DomainNameResolutionCompleted:
     """
     Results of a DNS resolution.

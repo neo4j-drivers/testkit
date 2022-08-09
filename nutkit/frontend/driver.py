@@ -59,6 +59,19 @@ class Driver:
                         hooks=hooks
                     )
                     continue
+            if self._bookmark_manager_config is not None:
+                if self._bookmark_manager_config.bookmark_supplier is not None:
+                    supplier = self._bookmark_manager_config.bookmark_supplier
+                    if isinstance(res, protocol.BookmarkSupplierRequest):
+                        bookmarks = supplier(res.database)
+                        self._backend.send(
+                            protocol.BookmarkSupplierCompleted(
+                                res.id,
+                                bookmarks
+                            ),
+                            hooks=hooks
+                        )
+                        continue
             return res
 
     def send(self, req, hooks=None):

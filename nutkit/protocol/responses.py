@@ -71,6 +71,21 @@ class ResolverResolutionRequired:
         self.address = address
 
 
+class BookmarkSupplierRequest:
+    """
+    Represents a bookmark supplier in the Bookmark Manager.
+
+    This means the Bookmark Manager is triggering the call
+    for enrich the bookmarks with user bookmarks for a given
+    database.
+    """
+
+    def __init__(self, id, database):
+        # id of the callback request
+        self.id = id
+        self.database = database
+
+
 class DomainNameResolutionRequired:
     """
     Represents a need for new domain name resolution.
