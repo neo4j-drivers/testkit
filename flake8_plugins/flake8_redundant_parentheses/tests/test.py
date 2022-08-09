@@ -51,6 +51,37 @@ def test_tuple_literal_3():
     assert not _results(s)
 
 
+def test_tuple_literal_4():
+    s = """((a,))
+    """
+    assert len(_results(s)) == 2
+
+
+def test_mixed_with_tuple_literal_5():
+    s = """(1 + 2)  # BAD
+(a,)  # GOOD
+    """
+    res = _results(s)
+    assert len(res) == 1
+    assert next(iter(res)).startswith("1:1 ")
+
+
+def test_mixed_with_tuple_literal_6():
+    s = """(a,)  # GOOD
+(1 + 2)  # BAD
+    """
+    res = _results(s)
+    assert len(res) == 1
+    assert next(iter(res)).startswith("2:1 ")
+
+
+# GOOD (use parentheses for tuple literal)
+def test_nested_tuple_literal():
+    s = """a = ("a", ("b", "c"))
+    """
+    assert not _results(s)
+
+
 # BAD (one pair of parentheses for tuple literal is enough)
 def test_multi_parens_tuple_literal_1():
     s = """a = (("a", "b"))
@@ -91,17 +122,25 @@ def test_tuple_literal_unpacking():
 # BAD (redundant parentheses for unpacking)
 def test_ugly_multiline_unpacking():
     s = """(
-a, b\
+a, b\\
 ) = 1, 2"""
     assert len(_results(s)) == 1
 
 
 # GOOD (parentheses for tuple literal are optional)
 def test_tuple_literal_unpacking_in_if():
-    s = """if (foo):
+    s = """if foo:
         a, b = "a", "b"
     """
     assert len(_results(s)) == 0
+
+
+# BAD (parentheses for tuple literal are optional)
+def test_tuple_literal_unpacking_in_if_redundant_parens_around_condition():
+    s = """if (foo):
+        a, b = "a", "b"
+    """
+    assert len(_results(s)) == 1
 
 
 # GOOD (parentheses are redundant, but can help readability)
@@ -323,7 +362,9 @@ def test_function_call_unnecessary_multi_line_parens():
          + 5)
     )
     """
-    assert len(_results(s)) == 1
+    res = _results(s)
+    assert len(res) == 1
+    assert next(iter(res)).startswith("3:9 ")
 
 
 # GOOD (function call with tuple literal)
@@ -369,7 +410,10 @@ def test_unnecessary_parens():
 def test_bin_op_example_double_parens_1():
     s = """a = 1 * ((2 + 3))
     """
-    assert len(_results(s)) == 1
+    res = _results(s)
+    assert len(res) == 1
+    msg = next(iter(res))
+    assert msg.startswith("1:9 ") or msg.startswith("1:10 ")
 
 
 # BAD (one pair of parenthesis is enough)
@@ -446,7 +490,22 @@ def test_mixed_op_example_3():
 def test_wildly_nested_parens():
     s = """a = 1 + (2 + (3) + (4))
     """
-    assert len(_results(s)) == 2
+    res = _results(s)
+    assert len(res) == 2
+    positions = set(msg.split(" ")[0] for msg in res)
+    assert positions == {"1:14", "1:20"}
+
+
+def test_mixture_of_good_and_bad():
+    s = """a = (1 + 2) * 3  # GOOD
+b = 1 + (2) + 3  # BAD
+c = 1 + (2 + 3)  # GOOD
+d = (1) + (2) + 3  # BAD
+    """
+    res = _results(s)
+    assert len(res) == 3
+    positions = set(msg.split(" ")[0] for msg in res)
+    assert positions == {"2:9", "4:5", "4:11"}
 
 
 BIN_OPS = ("**", "*", "@", "/", "//", "%", "+", "-", "<<",
