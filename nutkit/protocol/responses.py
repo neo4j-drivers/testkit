@@ -86,6 +86,21 @@ class BookmarkSupplierRequest:
         self.database = database
 
 
+class NotifyBookmarksRequest:
+    """
+    Represents a notify bookmark request in the Bookmark Manager.
+
+    This means the Bookmark Manager is triggering the call
+    to send the new bookmark set for a given database.
+    """
+
+    def __init__(self, id, database, bookmarks):
+        # id of the callback request
+        self.id = id
+        self.database = database
+        self.bookmarks = bookmarks
+
+
 class DomainNameResolutionRequired:
     """
     Represents a need for new domain name resolution.

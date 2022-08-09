@@ -207,6 +207,17 @@ class BookmarkSupplierCompleted:
         self.bookmarks = bookmarks
 
 
+class NotifyBookmarksCompleted:
+    """
+    Results of a bookmark manager notify bookmark call.
+
+    Signalize the method call has finished
+    """
+
+    def __init__(self, requestId):
+        self.requestId = requestId
+
+
 class DomainNameResolutionCompleted:
     """
     Results of a DNS resolution.

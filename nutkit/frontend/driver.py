@@ -72,6 +72,16 @@ class Driver:
                             hooks=hooks
                         )
                         continue
+                if self._bookmark_manager_config.notify_bookmarks is not None:
+                    notifier = self._bookmark_manager_config.notify_bookmarks
+                    if isinstance(res, protocol.NotifyBookmarksRequest):
+                        notifier(res.database, res.bookmarks)
+                        self._backend.send(
+                            protocol.NotifyBookmarksCompleted(
+                                res.id
+                            )
+                        )
+                        continue
             return res
 
     def send(self, req, hooks=None):

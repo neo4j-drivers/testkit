@@ -582,6 +582,45 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             + adb_bookmarks
         )
 
+    def test_should_call_notify_bookmarks_when_new_bookmarks_arrive(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        adb_bookmarks = ["adb:bm1"]
+        notify_bookmarks_calls = []
+
+        def notify_bookmarks(db, bookmarks):
+            notify_bookmarks_calls.append([db, bookmarks])
+
+        self._driver = self._new_driver(
+            Neo4jBookmarkManagerConfig(
+                initial_bookmarks={
+                    "adb": adb_bookmarks
+                },
+                notify_bookmarks=notify_bookmarks
+            )
+        )
+
+        s1 = self._driver.session("w", database="neo4j")
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
+        tx1.run("RETURN 1 as n").consume()
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session("w")
+        tx2 = s2.begin_transaction({"order": "adb"})
+        tx2.run("USE adb RETURN 1 as n").consume()
+        tx2.commit()
+        s2.close()
+
+        self.assertEqual(2, len(notify_bookmarks_calls))
+        self.assertEqual([
+            # first tx
+            ["neo4j", ["bm1"]],
+            # second tx
+            ["adb", ["adb:bm4"]],
+        ], notify_bookmarks_calls)
+
     def _start_server(self, server, script):
         server.start(self.script_path(script),
                      vars_={"#HOST#": self._router.host})

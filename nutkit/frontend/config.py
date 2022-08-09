@@ -11,7 +11,7 @@ from typing import (
 class Neo4jBookmarkManagerConfig:
     initial_bookmarks: Optional[Dict[str, List[str]]] = None
     bookmark_supplier: Optional[Callable[[str], List[str]]] = None
-    notify_bookmarks: Optional[Callable[[str, str], None]] = None
+    notify_bookmarks: Optional[Callable[[str, List[str]], None]] = None
 
 
 def from_bookmark_manager_config_to_protocol(
