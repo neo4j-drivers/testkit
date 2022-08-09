@@ -1,4 +1,8 @@
+from typing import Optional
+
 from .. import protocol
+from .config import from_bookmark_manager_config_to_protocol
+from .config import Neo4jBookmarkManagerConfig as BMMConfig
 from .session import Session
 
 
@@ -9,10 +13,15 @@ class Driver:
                  max_tx_retry_time_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None):
+                 connection_acquisition_timeout_ms=None,
+                 bookmark_manager_config: Optional[BMMConfig] = None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
+        self._bookmark_manager_config = bookmark_manager_config
+        bookmark_manager = from_bookmark_manager_config_to_protocol(
+            bookmark_manager_config
+        )
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
             resolverRegistered=resolver_fn is not None,
@@ -22,7 +31,8 @@ class Driver:
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
-            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms
+            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
+            bookmark_manager=bookmark_manager
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -94,11 +104,13 @@ class Driver:
             raise Exception("Should be driver")
 
     def session(self, access_mode, bookmarks=None, database=None,
-                fetch_size=None, impersonated_user=None):
+                fetch_size=None, impersonated_user=None,
+                ignore_bookmark_manager=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
-            impersonatedUser=impersonated_user
+            impersonatedUser=impersonated_user,
+            ignore_bookmark_manager=ignore_bookmark_manager
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):

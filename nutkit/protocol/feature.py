@@ -4,6 +4,8 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # Driver supports the Bookmark Manager Feature
+    API_BOOKMARK_MANAGER = "Feature:API:BookmarkManager"
     # The driver offers a configuration option to limit time it spends at most,
     # trying to acquire a connection from the pool.
     # The connection acquisition timeout must account for the whole acquisition
@@ -108,6 +110,8 @@ class Feature(Enum):
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
+    # Driver should not send duplicated bookmarks to the server
+    OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
