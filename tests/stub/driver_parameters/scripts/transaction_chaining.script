@@ -1,0 +1,56 @@
+!: BOLT 5.0
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+*: RESET
+{*
+    {{
+        C: BEGIN {"tx_metadata": {"return_bookmark": "bm1"}, "[bookmarks]": "*", "[db]": "*"}
+        S: SUCCESS {}
+        C: RUN "RETURN 1 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bm1"}
+    ----
+        C: BEGIN {"tx_metadata": {"return_bookmark": "bm2"}, "[bookmarks]": "*", "[db]": "*"}
+        S: SUCCESS {}
+        C: RUN "RETURN 1 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bm2"}
+    ----
+        C: BEGIN {"tx_metadata": {"return_bookmark": "empty"}, "[bookmarks]": "*", "[db]": "*", "mode": "r"}
+        S: SUCCESS {}
+        C: RUN "RETURN 1 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+    ----
+        C: BEGIN {"tx_metadata": {"return_bookmark": "bm3"}, "[bookmarks]": "*", "[db]": "*"}
+        S: SUCCESS {}
+        C: RUN "RETURN 1 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bm3"}
+    ----
+        C: BEGIN {"tx_metadata": {"order": "adb"}, "[bookmarks]": "*", "[db]": "*"}
+        S: SUCCESS {}
+        C: RUN "USE adb RETURN 1 as n" {} {}
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {"bookmark": "adb:bm4", "db": "adb"}
+   }}
+    *: RESET
+*}
+
+?: GOODBYE

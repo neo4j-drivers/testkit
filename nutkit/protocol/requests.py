@@ -68,11 +68,11 @@ class NewDriver:
     def __init__(
         self, uri, authToken, userAgent=None, resolverRegistered=False,
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
-        sessionConnectionTimeoutMs=None, updateRoutingTableTimeoutMs=None,
         fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
         trustedCertificates=None, liveness_check_timeout_ms=None,
         max_connection_pool_size=None,
-        connection_acquisition_timeout_ms=None
+        connection_acquisition_timeout_ms=None,
+        bookmark_manager=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -83,13 +83,13 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
-        self.sessionConnectionTimeoutMs = sessionConnectionTimeoutMs
-        self.updateRoutingTableTimeoutMs = updateRoutingTableTimeoutMs
         self.fetchSize = fetchSize
         self.maxTxRetryTimeMs = maxTxRetryTimeMs
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        if bookmark_manager is not None:
+            self.bookmarkManager = bookmark_manager
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -267,7 +267,8 @@ class NewSession:
     """
 
     def __init__(self, driverId, accessMode, bookmarks=None,
-                 database=None, fetchSize=None, impersonatedUser=None):
+                 database=None, fetchSize=None, impersonatedUser=None,
+                 ignore_bookmark_manager=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -277,6 +278,8 @@ class NewSession:
         self.database = database
         self.fetchSize = fetchSize
         self.impersonatedUser = impersonatedUser
+        if ignore_bookmark_manager is not None:
+            self.ignoreBookmarkManager = ignore_bookmark_manager
 
 
 class SessionClose:

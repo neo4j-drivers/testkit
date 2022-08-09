@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Collection,
     Dict,
+    List,
     Optional,
     Tuple,
 )
@@ -29,7 +30,7 @@ class TxClusterMemberAccess(Enum):
 class _BaseConf:
     _attr_to_conf_key = {}
 
-    def to_protocol(self):
+    def to_protocol(self) -> Dict[str, Any]:
         return {
             self._attr_to_conf_key[k]: v
             for k, v in vars(self).items() if v is not None
@@ -68,7 +69,7 @@ class SessionQueryConfig(QueryConfig):
         "execute_in_transaction": "executeInTransaction",
     }
 
-    def to_protocol(self):
+    def to_protocol(self) -> Dict[str, Any]:
         res = super().to_protocol()
         res["retryFunctionRegistered"] = self.retry_function is not None
         return res
@@ -104,7 +105,7 @@ class SessionTxConfig(_BaseConf):
         "retry_function": "retryFunctionRegistered",
     }
 
-    def to_protocol(self):
+    def to_protocol(self) -> Dict[str, Any]:
         res = super().to_protocol()
         res["retryFunctionRegistered"] = self.retry_function is not None
         return res
@@ -122,3 +123,23 @@ class DriverTxConfig(SessionTxConfig):
         "bookmarks": "bookmarks",
         "impersonated_user": "impersonatedUser",
     }
+
+
+@dataclass
+class Neo4jBookmarkManagerConfig:
+    initial_bookmarks: Optional[Dict[str, List[str]]] = None
+    bookmark_supplier: Optional[Callable[[str], List[str]]] = None
+    notify_bookmarks: Optional[Callable[[str, str], None]] = None
+
+
+def from_bookmark_manager_config_to_protocol(
+    config: Optional[Neo4jBookmarkManagerConfig]
+) -> Optional[Dict]:
+    if config is not None:
+        return {
+            "initialBookmarks": config.initial_bookmarks,
+            "bookmarkSupplierRegistered": config.bookmark_supplier is not None,
+            "notifyBookmarksRegistered": config.notify_bookmarks is not None,
+        }
+
+    return None

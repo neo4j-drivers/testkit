@@ -1,36 +1,50 @@
+from __future__ import annotations
+
+from typing import (
+    Optional,
+    TYPE_CHECKING,
+)
+
 from .. import protocol
 from ._transaction_loop import (
     handle_retry_func,
     run_tx_loop,
 )
+from .config import from_bookmark_manager_config_to_protocol
 from .eager_result import EagerResult
 from .session import Session
+
+if TYPE_CHECKING:
+    from .config import Neo4jBookmarkManagerConfig as BMMConfig
 
 
 class Driver:
     def __init__(self, backend, uri, auth_token, user_agent=None,
                  resolver_fn=None, domain_name_resolver_fn=None,
                  connection_timeout_ms=None, fetch_size=None,
-                 max_tx_retry_time_ms=None, session_connection_timeout_ms=None,
-                 update_routing_table_timeout_ms=None, encrypted=None,
+                 max_tx_retry_time_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None):
+                 connection_acquisition_timeout_ms=None,
+                 bookmark_manager_config: Optional[BMMConfig] = None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
+        self._bookmark_manager_config = bookmark_manager_config
+        bookmark_manager = from_bookmark_manager_config_to_protocol(
+            bookmark_manager_config
+        )
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
             resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
-            sessionConnectionTimeoutMs=session_connection_timeout_ms,
-            updateRoutingTableTimeoutMs=update_routing_table_timeout_ms,
             fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
-            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms
+            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
+            bookmark_manager=bookmark_manager
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -109,11 +123,13 @@ class Driver:
             raise Exception("Should be driver")
 
     def session(self, access_mode, bookmarks=None, database=None,
-                fetch_size=None, impersonated_user=None):
+                fetch_size=None, impersonated_user=None,
+                ignore_bookmark_manager=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
-            impersonatedUser=impersonated_user
+            impersonatedUser=impersonated_user,
+            ignore_bookmark_manager=ignore_bookmark_manager
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):

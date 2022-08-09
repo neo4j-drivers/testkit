@@ -4,6 +4,8 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # Driver supports the Bookmark Manager Feature
+    API_BOOKMARK_MANAGER = "Feature:API:BookmarkManager"
     # The driver offers a configuration option to limit time it spends at most,
     # trying to acquire a connection from the pool.
     # The connection acquisition timeout must account for the whole acquisition
@@ -40,13 +42,6 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
-    # The driver offers a configuration option to limit time it spends at most,
-    # trying to acquire a usable read/write connection for any session.
-    # The connection acquisition timeout must account for the whole acquisition
-    # execution time, whether a new connection is created, an idle connection
-    # is picked up instead, we need to wait until the full pool depletes, or
-    # a routing table must be fetched.
-    API_SESSION_CONNECTION_TIMEOUT = "Feature:API:SessionConnectionTimeout"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -60,9 +55,6 @@ class Feature(Enum):
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
     API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
-    # The driver offers a configuration option to limit time it spends at most,
-    # trying to update the routing table whenever needed.
-    API_UPDATE_ROUTING_TABLE_TIMEOUT = "Feature:API:UpdateRoutingTableTimeout"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -118,6 +110,8 @@ class Feature(Enum):
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
+    # Driver should not send duplicated bookmarks to the server
+    OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
