@@ -498,19 +498,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
                 initial_bookmarks={
                     "adb": adb_bookmarks
                 },
-                bookmark_supplier=get_bookmarks
+                bookmarks_supplier=get_bookmarks
             )
         )
 
         s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
-        tx1.run("RETURN 1 as n").consume()
+        list(tx1.run("RETURN 1 as n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w")
         tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
-        tx2.run("RETURN 1 as n").consume()
+        list(tx2.run("RETURN 1 as n"))
         tx2.commit()
         s2.close()
 
@@ -550,19 +550,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
                 initial_bookmarks={
                     "adb": adb_bookmarks
                 },
-                bookmark_supplier=get_bookmarks
+                bookmarks_supplier=get_bookmarks
             )
         )
 
         s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
-        tx1.run("RETURN 1 as n").consume()
+        list(tx1.run("RETURN 1 as n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w")
         tx2 = s2.begin_transaction({"return_bookmark": "bm2"})
-        tx2.run("RETURN 1 as n").consume()
+        list(tx2.run("RETURN 1 as n"))
         tx2.commit()
         s2.close()
 
@@ -585,39 +585,39 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._server, "transaction_chaining.script")
 
         adb_bookmarks = ["adb:bm1"]
-        notify_bookmarks_calls = []
+        bookmarks_consumer_calls = []
 
-        def notify_bookmarks(db, bookmarks):
-            notify_bookmarks_calls.append([db, bookmarks])
+        def bookmarks_consumer(db, bookmarks):
+            bookmarks_consumer_calls.append([db, bookmarks])
 
         self._driver = self._new_driver(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={
                     "adb": adb_bookmarks
                 },
-                notify_bookmarks=notify_bookmarks
+                bookmarks_consumer=bookmarks_consumer
             )
         )
 
         s1 = self._driver.session("w", database="neo4j")
         tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
-        tx1.run("RETURN 1 as n").consume()
+        list(tx1.run("RETURN 1 as n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w")
         tx2 = s2.begin_transaction({"order": "adb"})
-        tx2.run("USE adb RETURN 1 as n").consume()
+        list(tx2.run("USE adb RETURN 1 as n"))
         tx2.commit()
         s2.close()
 
-        self.assertEqual(2, len(notify_bookmarks_calls))
+        self.assertEqual(2, len(bookmarks_consumer_calls))
         self.assertEqual([
             # first tx
             ["neo4j", ["bm1"]],
             # second tx
             ["adb", ["adb:bm4"]],
-        ], notify_bookmarks_calls)
+        ], bookmarks_consumer_calls)
 
     def _start_server(self, server, script):
         server.start(self.script_path(script),

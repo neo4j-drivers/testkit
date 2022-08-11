@@ -71,7 +71,7 @@ class ResolverResolutionRequired:
         self.address = address
 
 
-class BookmarkSupplierRequest:
+class BookmarksSupplierRequest:
     """
     Represents a bookmark supplier in the Bookmark Manager.
 
@@ -86,9 +86,9 @@ class BookmarkSupplierRequest:
         self.database = database
 
 
-class NotifyBookmarksRequest:
+class BookmarksConsumerRequest:
     """
-    Represents a notify bookmark request in the Bookmark Manager.
+    Represents a bookmark consumer request in the Bookmark Manager.
 
     This means the Bookmark Manager is triggering the call
     to send the new bookmark set for a given database.

@@ -60,24 +60,24 @@ class Driver:
                     )
                     continue
             if self._bookmark_manager_config is not None:
-                if self._bookmark_manager_config.bookmark_supplier is not None:
-                    supplier = self._bookmark_manager_config.bookmark_supplier
-                    if isinstance(res, protocol.BookmarkSupplierRequest):
-                        bookmarks = supplier(res.database)
+                supply = self._bookmark_manager_config.bookmarks_supplier
+                if supply is not None:
+                    if isinstance(res, protocol.BookmarksSupplierRequest):
+                        bookmarks = supply(res.database)
                         self._backend.send(
-                            protocol.BookmarkSupplierCompleted(
+                            protocol.BookmarksSupplierCompleted(
                                 res.id,
                                 bookmarks
                             ),
                             hooks=hooks
                         )
                         continue
-                if self._bookmark_manager_config.notify_bookmarks is not None:
-                    notifier = self._bookmark_manager_config.notify_bookmarks
-                    if isinstance(res, protocol.NotifyBookmarksRequest):
-                        notifier(res.database, res.bookmarks)
+                consume = self._bookmark_manager_config.bookmarks_consumer
+                if consume is not None:
+                    if isinstance(res, protocol.BookmarksConsumerRequest):
+                        consume(res.database, res.bookmarks)
                         self._backend.send(
-                            protocol.NotifyBookmarksCompleted(
+                            protocol.BookmarksConsumerCompleted(
                                 res.id
                             )
                         )

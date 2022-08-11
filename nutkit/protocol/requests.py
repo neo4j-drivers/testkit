@@ -195,7 +195,7 @@ class ResolverResolutionCompleted:
         self.addresses = addresses
 
 
-class BookmarkSupplierCompleted:
+class BookmarksSupplierCompleted:
     """
     Results of a bookmark manager bookmark supplier call.
 
@@ -207,9 +207,9 @@ class BookmarkSupplierCompleted:
         self.bookmarks = bookmarks
 
 
-class NotifyBookmarksCompleted:
+class BookmarksConsumerCompleted:
     """
-    Results of a bookmark manager notify bookmark call.
+    Results of a bookmark manager bookmarks consumer call.
 
     Signalize the method call has finished
     """
