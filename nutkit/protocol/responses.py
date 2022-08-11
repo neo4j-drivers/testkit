@@ -80,7 +80,7 @@ class BookmarkSupplierRequest:
     database.
     """
 
-    def __init__(self, id, database):
+    def __init__(self, id, database=None):
         # id of the callback request
         self.id = id
         self.database = database

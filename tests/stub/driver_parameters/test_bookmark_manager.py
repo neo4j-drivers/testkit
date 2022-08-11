@@ -514,21 +514,17 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
-        self.assertEqual(8, len(get_bookmarks_calls))
-        self.assertEqual(sorted([
+        self.assertEqual(4, len(get_bookmarks_calls))
+        self.assertEqual([
             # routing table
             ["system"],
             # first tx
-            ["adb"],
-            ["system"],
-            ["neo4j"],
+            [None],
             # name resolution
             ["system"],
             # second tx
-            ["adb"],
-            ["system"],
-            ["neo4j"]
-        ]), sorted(get_bookmarks_calls))
+            [None]
+        ], get_bookmarks_calls)
 
     def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
         self._start_server(self._router, "router_with_db_name.script")
@@ -543,6 +539,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         }
 
         def get_bookmarks(db):
+            if db is None:
+                return system_bookmarks + neo4j_bookmarks
             if db in bookmarks:
                 return bookmarks[db]
             return []
