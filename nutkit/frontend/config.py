@@ -22,7 +22,7 @@ def from_bookmark_manager_config_to_protocol(
             "initialBookmarks": config.initial_bookmarks,
             "bookmarksSupplierRegistered":
                 config.bookmarks_supplier is not None,
-            "bookmarksConsumerRegistred":
+            "bookmarksConsumerRegistered":
                 config.bookmarks_consumer is not None,
         }
 
