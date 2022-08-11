@@ -619,6 +619,37 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             ["adb", ["adb:bm4"]],
         ], bookmarks_consumer_calls)
 
+    def test_should_call_consume_for_default_db(self):
+        self._start_server(self._router, "router.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        adb_bookmarks = ["adb:bm1"]
+        bookmarks_consumer_calls = []
+
+        def bookmarks_consumer(db, bookmarks):
+            bookmarks_consumer_calls.append([db, bookmarks])
+
+        self._driver = self._new_driver(
+            Neo4jBookmarkManagerConfig(
+                initial_bookmarks={
+                    "adb": adb_bookmarks
+                },
+                bookmarks_consumer=bookmarks_consumer
+            )
+        )
+
+        s1 = self._driver.session("w")
+        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
+        list(tx1.run("RETURN 1 as n"))
+        tx1.commit()
+        s1.close()
+
+        self.assertEqual(1, len(bookmarks_consumer_calls))
+        self.assertEqual([
+            # first tx
+            ["", ["bm1"]]
+        ], bookmarks_consumer_calls)
+
     def _start_server(self, server, script):
         server.start(self.script_path(script),
                      vars_={"#HOST#": self._router.host})
