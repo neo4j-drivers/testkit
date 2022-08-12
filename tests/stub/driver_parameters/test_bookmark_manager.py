@@ -576,11 +576,11 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["bm1"] + system_bookmarks + neo4j_bookmarks
-            + adb_bookmarks
+            bookmarks=["bm1", *system_bookmarks, *neo4j_bookmarks,
+                       *adb_bookmarks]
         )
 
-    def test_should_call_notify_bookmarks_when_new_bookmarks_arrive(self):
+    def test_should_call_bookmarks_consumer_when_new_bookmarks_arrive(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -619,7 +619,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             ["adb", ["adb:bm4"]],
         ], bookmarks_consumer_calls)
 
-    def test_should_call_consume_for_default_db(self):
+    def test_should_call_bookmarks_consumer_for_default_db(self):
         self._start_server(self._router, "router.script")
         self._start_server(self._server, "transaction_chaining.script")
 
