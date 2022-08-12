@@ -482,7 +482,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             uri, auth,
             bookmark_manager_config=bookmark_manager_config)
 
-    def test_should_call_bookmark_supplier_for_all_get_bookmarks_call(self):
+    def test_should_call_bookmark_supplier_for_all_get_bookmarks_calls(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
