@@ -75,9 +75,11 @@ class BookmarksSupplierRequest:
     """
     Represents a bookmark supplier in the Bookmark Manager.
 
-    This means the Bookmark Manager is triggering the call
-    for enrich the bookmarks with user bookmarks for a given
-    database.
+    Represents a bookmark supplier in the Bookmark Manager.
+    This means the Bookmark Manager is calling a user-function to get
+    additional bookmarks to enrich its own set of bookmarks before using them
+    for a given database. If database is None, the bookmark manager requests
+    bookmarks for all databases.
     """
 
     def __init__(self, id, database=None):
