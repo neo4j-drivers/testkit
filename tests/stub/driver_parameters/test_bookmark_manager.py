@@ -515,17 +515,31 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
-        self.assertEqual(4, len(get_bookmarks_calls))
-        self.assertEqual([
-            # routing table
-            ["system"],
-            # first tx
-            [None],
-            # name resolution
-            ["system"],
-            # second tx
-            [None]
-        ], get_bookmarks_calls)
+        if len(get_bookmarks_calls) == 5:
+            self.assertEqual([
+                # acquire connection
+                ["system"],
+                # first tx
+                [None],
+                # name resolution
+                ["system"],
+                # acquire connection
+                ["system"],
+                # second tx
+                [None]
+            ], get_bookmarks_calls)
+        else:
+            self.assertEqual(4, len(get_bookmarks_calls))
+            self.assertEqual([
+                # acquire connection
+                ["system"],
+                # first tx
+                [None],
+                # name resolution
+                ["system"],
+                # second tx
+                [None]
+            ], get_bookmarks_calls)
 
     def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
         self._start_server(self._router, "router_with_db_name.script")
