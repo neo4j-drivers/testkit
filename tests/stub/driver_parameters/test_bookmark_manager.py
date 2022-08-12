@@ -658,10 +658,18 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s1.close()
 
         self.assertEqual(1, len(bookmarks_consumer_calls))
-        self.assertEqual([
-            # first tx
-            ["", ["bm1"]]
-        ], bookmarks_consumer_calls)
+        self.assertIn(bookmarks_consumer_calls, [
+            # default is a ""
+            [
+                # first tx
+                ["", ["bm1"]]
+            ],
+            # OR default is None
+            [
+                # first tx
+                [None, ["bm1"]]
+            ]
+        ])
 
     def _start_server(self, server, script):
         server.start(self.script_path(script),
