@@ -503,7 +503,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
 
         s1 = self._driver.session("w", database="neo4j")
-        tx1 = s1.begin_transaction({"return_bookmark": "bm1"})
+        tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
         list(tx1.run("RETURN 1 as n"))
         tx1.commit()
         s1.close()
@@ -541,9 +541,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         def get_bookmarks(db):
             if db is None:
                 return system_bookmarks + neo4j_bookmarks
-            if db in bookmarks:
-                return bookmarks[db]
-            return []
+            return bookmarks.get(db, [])
 
         self._driver = self._new_driver(
             Neo4jBookmarkManagerConfig(
