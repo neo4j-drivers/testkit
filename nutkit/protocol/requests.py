@@ -197,7 +197,7 @@ class ResolverResolutionCompleted:
 
 class BookmarksSupplierCompleted:
     """
-    Results of a bookmark manager bookmark supplier call.
+    Results of a bookmark manager's bookmark supplier call.
 
     Pushes bookmarks for a given database to the Bookmark Manager.
     """
@@ -209,9 +209,9 @@ class BookmarksSupplierCompleted:
 
 class BookmarksConsumerCompleted:
     """
-    Results of a bookmark manager bookmarks consumer call.
+    Results of a bookmark manager's bookmarks consumer call.
 
-    Signalize the method call has finished
+    Signal the method call has finished
     """
 
     def __init__(self, requestId):
