@@ -75,7 +75,6 @@ class BookmarksSupplierRequest:
     """
     Represents a bookmark supplier in the Bookmark Manager.
 
-    Represents a bookmark supplier in the Bookmark Manager.
     This means the Bookmark Manager is calling a user-function to get
     additional bookmarks to enrich its own set of bookmarks before using them
     for a given database. If database is None, the bookmark manager requests
