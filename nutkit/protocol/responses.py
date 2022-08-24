@@ -71,6 +71,13 @@ class ResolverResolutionRequired:
         self.address = address
 
 
+class BookmarkManager:
+    """Represents a created Bookmark Manager."""
+
+    def __init__(self, id):
+        self.id = id
+
+
 class BookmarksSupplierRequest:
     """
     Represents a bookmark supplier in the Bookmark Manager.
@@ -81,9 +88,10 @@ class BookmarksSupplierRequest:
     bookmarks for all databases.
     """
 
-    def __init__(self, id, database=None):
+    def __init__(self, id, bookmarkManagerId, database=None):
         # id of the callback request
         self.id = id
+        self.bookmarkManagerId = bookmarkManagerId
         self.database = database
 
 
@@ -95,9 +103,10 @@ class BookmarksConsumerRequest:
     to send the new bookmark set for a given database.
     """
 
-    def __init__(self, id, database, bookmarks):
+    def __init__(self, id, bookmarkManagerId, database, bookmarks):
         # id of the callback request
         self.id = id
+        self.bookmarkManagerId = bookmarkManagerId
         self.database = database
         self.bookmarks = bookmarks
 
