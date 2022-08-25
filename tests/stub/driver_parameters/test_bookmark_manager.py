@@ -36,7 +36,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "session_run_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         list(s1.run("RETURN BOOKMARK bm1"))
@@ -69,7 +70,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
@@ -107,7 +109,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
@@ -145,7 +148,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
@@ -182,7 +186,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
@@ -234,7 +239,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
@@ -370,7 +376,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session(
             "w",
@@ -436,7 +443,8 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "session_run_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager()
+        self._driver = self._new_driver()
+        manager = self._new_bookmark_manager()
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         list(s1.run("RETURN BOOKMARK bm1"))
