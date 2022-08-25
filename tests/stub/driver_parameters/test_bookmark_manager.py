@@ -713,6 +713,69 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             ]
         ])
 
+    def test_multiple_bookmark_manager(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        self._driver = self._new_driver()
+
+        manager1 = self._new_bookmark_manager(
+            Neo4jBookmarkManagerConfig(
+                initial_bookmarks={"neo4j": ["manager_01_initial_bm"]}
+            )
+        )
+
+        manager2 = self._new_bookmark_manager(
+            Neo4jBookmarkManagerConfig(
+                initial_bookmarks={"neo4j": ["manager_02_initial_bm"]}
+            )
+        )
+
+        manager1_s1 = self._driver.session("w", bookmark_manager=manager1)
+        tx1 = manager1_s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
+        list(tx1.run("RETURN 1 as n"))
+        tx1.commit()
+        manager1_s1.close()
+
+        manager2_s1 = self._driver.session("w", bookmark_manager=manager2)
+        tx2 = manager2_s1.begin_transaction(tx_meta={"return_bookmark": "bm2"})
+        list(tx2.run("RETURN 1 as n"))
+        tx2.commit()
+        manager2_s1.close()
+
+        manager2_s2 = self._driver.session("w", bookmark_manager=manager2)
+        tx3 = manager2_s2.begin_transaction(tx_meta={"return_bookmark": "bm3"})
+        list(tx3.run("RETURN 1 as n"))
+        tx3.commit()
+        manager2_s2.close()
+
+        manager1_s2 = self._driver.session("w", bookmark_manager=manager1)
+        tx4 = manager1_s2.begin_transaction(tx_meta={"return_bookmark": "bm4"})
+        list(tx4.run("RETURN 1 as n"))
+        tx4.commit()
+        manager1_s2.close()
+
+        self._server.reset()
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertEqual(len(begin_requests), 4)
+        self.assert_begin(
+            begin_requests[0],
+            bookmarks=["manager_01_initial_bm"]
+        )
+        self.assert_begin(
+            begin_requests[1],
+            bookmarks=["manager_02_initial_bm"]
+        )
+        self.assert_begin(
+            begin_requests[2],
+            bookmarks=["bm2"]
+        )
+        self.assert_begin(
+            begin_requests[3],
+            bookmarks=["bm1"]
+        )
+
     def _start_server(self, server, script):
         server.start(self.script_path(script),
                      vars_={"#HOST#": self._router.host})
@@ -776,14 +839,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             types.Feature.OPT_MINIMAL_BOOKMARKS_SET
         )
 
-    def _new_driver_and_bookmark_manager(self, bookmark_manager_config=None):
-        if bookmark_manager_config is None:
-            bookmark_manager_config = Neo4jBookmarkManagerConfig()
-        bookmark_manager = create_bookmark_manager(
-            self._backend,
-            bookmark_manager_config
-        )
-
+    def _new_driver(self):
         uri = "neo4j://%s" % self._router.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
@@ -791,4 +847,17 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             self._backend,
             uri, auth
         )
+        return driver
+
+    def _new_bookmark_manager(self, bookmark_manager_config=None):
+        if bookmark_manager_config is None:
+            bookmark_manager_config = Neo4jBookmarkManagerConfig()
+        return create_bookmark_manager(
+            self._backend,
+            bookmark_manager_config
+        )
+
+    def _new_driver_and_bookmark_manager(self, bookmark_manager_config=None):
+        bookmark_manager = self._new_bookmark_manager(bookmark_manager_config)
+        driver = self._new_driver()
         return (driver, bookmark_manager)
