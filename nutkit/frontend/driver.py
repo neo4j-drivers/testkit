@@ -1,7 +1,3 @@
-from typing import Optional
-
-from nutkit.protocol.responses import BookmarkManager
-
 from .. import protocol
 from .session import Session
 
@@ -125,7 +121,7 @@ class Driver:
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
-                bookmark_manager: Optional[BookmarkManager] = None):
+                bookmark_manager=None):
         if bookmark_manager is not None:
             self._bookmarks_managers[bookmark_manager.id] = bookmark_manager
 
