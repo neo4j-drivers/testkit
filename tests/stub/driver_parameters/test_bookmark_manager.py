@@ -290,7 +290,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={"neo4j": ["fist_bm"]}
             )
@@ -333,7 +333,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={"neo4j": ["fist_bm"], "adb": ["adb:bm1"]}
             )
@@ -484,7 +484,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={"system": ["sys:bm1"]}
             )
@@ -532,7 +532,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             get_bookmarks_calls.append([db])
             return []
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={
                     "adb": adb_bookmarks
@@ -600,7 +600,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
                 return system_bookmarks + neo4j_bookmarks
             return bookmarks.get(db, [])
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={
                     "adb": adb_bookmarks
@@ -649,7 +649,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         def bookmarks_consumer(db, bookmarks):
             bookmarks_consumer_calls.append([db, bookmarks])
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={
                     "adb": adb_bookmarks
@@ -868,4 +868,4 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
     def _new_driver_and_bookmark_manager(self, bookmark_manager_config=None):
         bookmark_manager = self._new_bookmark_manager(bookmark_manager_config)
         driver = self._new_driver()
-        return (driver, bookmark_manager)
+        return driver, bookmark_manager
