@@ -72,7 +72,7 @@ class Driver:
                     manager = self._bookmarks_managers[res.bookmark_manager_id]
                     consume = manager.config.bookmarks_consumer
                     if consume is not None:
-                        bookmarks = consume(res.database, res.bookmarks)
+                        consume(res.database, res.bookmarks)
                         self._backend.send(
                             protocol.BookmarksConsumerCompleted(res.id),
                             hooks=hooks
