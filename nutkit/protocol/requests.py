@@ -199,9 +199,8 @@ class BookmarksSupplierCompleted:
     Pushes bookmarks for a given database to the Bookmark Manager.
     """
 
-    def __init__(self, requestId, bookmarkManagerId, bookmarks):
-        self.requestId = requestId
-        self.bookmarkManagerId = bookmarkManagerId
+    def __init__(self, request_id, bookmarks):
+        self.requestId = request_id
         self.bookmarks = bookmarks
 
 
@@ -212,19 +211,21 @@ class BookmarksConsumerCompleted:
     Signal the method call has finished
     """
 
-    def __init__(self, requestId, bookmarkManagerId):
-        self.requestId = requestId
-        self.bookmarkManagerId = bookmarkManagerId
+    def __init__(self, request_id):
+        self.requestId = request_id
 
 
 class NewBookmarkManager:
-    """Instantiates a bookmark manager by calling the default factory."""
+    """Instantiates a bookmark manager by calling the default factory.
 
-    def __init__(self, initialBookmarks,
-                 bookmarksSupplierRegistered, bookmarksConsumerRegistered):
-        self.initialBookmarks = initialBookmarks
-        self.bookmarksSupplierRegistered = bookmarksSupplierRegistered
-        self.bookmarksConsumerRegistered = bookmarksConsumerRegistered
+    Backend should respond with a BookmarkManager response.
+    """
+
+    def __init__(self, initial_bookmarks,
+                 bookmarks_supplier_registered, bookmarks_consumer_registered):
+        self.initialBookmarks = initial_bookmarks
+        self.bookmarksSupplierRegistered = bookmarks_supplier_registered
+        self.bookmarksConsumerRegistered = bookmarks_consumer_registered
 
 
 class DomainNameResolutionCompleted:

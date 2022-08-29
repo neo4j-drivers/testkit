@@ -62,11 +62,8 @@ class Driver:
                     if supply is not None:
                         bookmarks = supply(res.database)
                         self._backend.send(
-                            protocol.BookmarksSupplierCompleted(
-                                res.id,
-                                res.bookmark_manager_id,
-                                bookmarks
-                            ),
+                            protocol.BookmarksSupplierCompleted(res.id,
+                                                                bookmarks),
                             hooks=hooks
                         )
                         continue
@@ -77,10 +74,7 @@ class Driver:
                     if consume is not None:
                         bookmarks = consume(res.database, res.bookmarks)
                         self._backend.send(
-                            protocol.BookmarksConsumerCompleted(
-                                res.id,
-                                res.bookmark_manager_id
-                            ),
+                            protocol.BookmarksConsumerCompleted(res.id),
                             hooks=hooks
                         )
                         continue
