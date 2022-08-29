@@ -2,7 +2,7 @@ import json
 import re
 
 from nutkit.frontend import (
-    create_bookmark_manager,
+    BookmarkManager,
     Driver,
     Neo4jBookmarkManagerConfig,
 )
@@ -22,6 +22,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._server = StubServer(9010)
         self._router = StubServer(9000)
         self._driver = None
+        self._bookmark_managers = []
 
     def tearDown(self):
         self._server.reset()
@@ -29,6 +30,9 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         if self._driver:
             self._driver.close()
+        for bookmark_manager in self._bookmark_managers:
+            bookmark_manager.close()
+        self._bookmark_managers.clear()
 
         return super().tearDown()
 
@@ -692,7 +696,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         def bookmarks_consumer(db, bookmarks):
             bookmarks_consumer_calls.append([db, bookmarks])
 
-        (self._driver, manager) = self._new_driver_and_bookmark_manager(
+        self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
                 initial_bookmarks={
                     "adb": adb_bookmarks
@@ -860,10 +864,12 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
     def _new_bookmark_manager(self, bookmark_manager_config=None):
         if bookmark_manager_config is None:
             bookmark_manager_config = Neo4jBookmarkManagerConfig()
-        return create_bookmark_manager(
+        bookmark_manager = BookmarkManager(
             self._backend,
             bookmark_manager_config
         )
+        self._bookmark_managers.append(bookmark_manager)
+        return bookmark_manager
 
     def _new_driver_and_bookmark_manager(self, bookmark_manager_config=None):
         bookmark_manager = self._new_bookmark_manager(bookmark_manager_config)

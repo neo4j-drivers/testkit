@@ -1,4 +1,5 @@
 from .. import protocol
+from .bookmark_manager import BookmarkManager
 from .session import Session
 
 
@@ -51,29 +52,10 @@ class Driver:
                         hooks=hooks
                     )
                     continue
-            if isinstance(res, protocol.BookmarksSupplierRequest):
-                if res.bookmark_manager_id in self._bookmarks_managers:
-                    manager = self._bookmarks_managers[res.bookmark_manager_id]
-                    supply = manager.config.bookmarks_supplier
-                    if supply is not None:
-                        bookmarks = supply(res.database)
-                        self._backend.send(
-                            protocol.BookmarksSupplierCompleted(res.id,
-                                                                bookmarks),
-                            hooks=hooks
-                        )
-                        continue
-            if isinstance(res, protocol.BookmarksConsumerRequest):
-                if res.bookmark_manager_id in self._bookmarks_managers:
-                    manager = self._bookmarks_managers[res.bookmark_manager_id]
-                    consume = manager.config.bookmarks_consumer
-                    if consume is not None:
-                        consume(res.database, res.bookmarks)
-                        self._backend.send(
-                            protocol.BookmarksConsumerCompleted(res.id),
-                            hooks=hooks
-                        )
-                        continue
+            bookmark_manager_response = BookmarkManager.process_callbacks(res)
+            if bookmark_manager_response:
+                self._backend.send(bookmark_manager_response, hooks=hooks)
+                continue
 
             return res
 
@@ -122,9 +104,6 @@ class Driver:
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
                 bookmark_manager=None):
-        if bookmark_manager is not None:
-            self._bookmarks_managers[bookmark_manager.id] = bookmark_manager
-
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,

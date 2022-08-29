@@ -228,6 +228,16 @@ class NewBookmarkManager:
         self.bookmarksConsumerRegistered = bookmarks_consumer_registered
 
 
+class BookmarkManagerClose:
+    """Destroy the bookmark manager in the backend and free the resources.
+
+    Backend should respond with a BookmarkManager response.
+    """
+
+    def __init__(self, id):
+        self.id = id
+
+
 class DomainNameResolutionCompleted:
     """
     Results of a DNS resolution.
