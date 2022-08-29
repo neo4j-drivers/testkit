@@ -231,6 +231,10 @@ class NewBookmarkManager:
 class BookmarkManagerClose:
     """Destroy the bookmark manager in the backend and free the resources.
 
+    The driver-provided BookmarkManager implementation does not have a close
+    method. This message is an instruction solely for the backend to be able to
+    destroy the bookmark manager object when done testing it to free resources.
+
     Backend should respond with a BookmarkManager response.
     """
 
