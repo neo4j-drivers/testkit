@@ -132,6 +132,9 @@ class Driver:
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
                 bookmark_manager: Optional[BookmarkManager] = None):
+        if bookmark_manager is not None:
+            self._bookmarks_managers[bookmark_manager.id] = bookmark_manager
+
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
@@ -141,9 +144,6 @@ class Driver:
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session")
-
-        if bookmark_manager is not None:
-            self._bookmarks_managers[bookmark_manager.id] = bookmark_manager
 
         return Session(self, res)
 
