@@ -14,7 +14,6 @@ class Driver:
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
-        self._bookmarks_managers = {}
 
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
