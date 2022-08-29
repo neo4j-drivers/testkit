@@ -91,7 +91,7 @@ class BookmarksSupplierRequest:
     def __init__(self, id, bookmarkManagerId, database=None):
         # id of the callback request
         self.id = id
-        self.bookmarkManagerId = bookmarkManagerId
+        self.bookmark_manager_id = bookmarkManagerId
         self.database = database
 
 
@@ -106,7 +106,7 @@ class BookmarksConsumerRequest:
     def __init__(self, id, bookmarkManagerId, database, bookmarks):
         # id of the callback request
         self.id = id
-        self.bookmarkManagerId = bookmarkManagerId
+        self.bookmark_manager_id = bookmarkManagerId
         self.database = database
         self.bookmarks = bookmarks
 

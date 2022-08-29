@@ -56,30 +56,30 @@ class Driver:
                     )
                     continue
             if isinstance(res, protocol.BookmarksSupplierRequest):
-                if res.bookmarkManagerId in self._bookmarks_managers:
-                    manager = self._bookmarks_managers[res.bookmarkManagerId]
+                if res.bookmark_manager_id in self._bookmarks_managers:
+                    manager = self._bookmarks_managers[res.bookmark_manager_id]
                     supply = manager.config.bookmarks_supplier
                     if supply is not None:
                         bookmarks = supply(res.database)
                         self._backend.send(
                             protocol.BookmarksSupplierCompleted(
                                 res.id,
-                                res.bookmarkManagerId,
+                                res.bookmark_manager_id,
                                 bookmarks
                             ),
                             hooks=hooks
                         )
                         continue
             if isinstance(res, protocol.BookmarksConsumerRequest):
-                if res.bookmarkManagerId in self._bookmarks_managers:
-                    manager = self._bookmarks_managers[res.bookmarkManagerId]
+                if res.bookmark_manager_id in self._bookmarks_managers:
+                    manager = self._bookmarks_managers[res.bookmark_manager_id]
                     consume = manager.config.bookmarks_consumer
                     if consume is not None:
                         bookmarks = consume(res.database, res.bookmarks)
                         self._backend.send(
                             protocol.BookmarksConsumerCompleted(
                                 res.id,
-                                res.bookmarkManagerId
+                                res.bookmark_manager_id
                             ),
                             hooks=hooks
                         )
