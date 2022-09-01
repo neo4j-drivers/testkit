@@ -1,8 +1,5 @@
-from typing import Optional
-
 from .. import protocol
-from .config import from_bookmark_manager_config_to_protocol
-from .config import Neo4jBookmarkManagerConfig as BMMConfig
+from .bookmark_manager import BookmarkManager
 from .session import Session
 
 
@@ -13,15 +10,11 @@ class Driver:
                  max_tx_retry_time_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None,
-                 bookmark_manager_config: Optional[BMMConfig] = None):
+                 connection_acquisition_timeout_ms=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
-        self._bookmark_manager_config = bookmark_manager_config
-        bookmark_manager = from_bookmark_manager_config_to_protocol(
-            bookmark_manager_config
-        )
+
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
             resolverRegistered=resolver_fn is not None,
@@ -32,7 +25,6 @@ class Driver:
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
-            bookmark_manager=bookmark_manager
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -59,29 +51,11 @@ class Driver:
                         hooks=hooks
                     )
                     continue
-            if self._bookmark_manager_config is not None:
-                supply = self._bookmark_manager_config.bookmarks_supplier
-                if supply is not None:
-                    if isinstance(res, protocol.BookmarksSupplierRequest):
-                        bookmarks = supply(res.database)
-                        self._backend.send(
-                            protocol.BookmarksSupplierCompleted(
-                                res.id,
-                                bookmarks
-                            ),
-                            hooks=hooks
-                        )
-                        continue
-                consume = self._bookmark_manager_config.bookmarks_consumer
-                if consume is not None:
-                    if isinstance(res, protocol.BookmarksConsumerRequest):
-                        consume(res.database, res.bookmarks)
-                        self._backend.send(
-                            protocol.BookmarksConsumerCompleted(
-                                res.id
-                            )
-                        )
-                        continue
+            bookmark_manager_response = BookmarkManager.process_callbacks(res)
+            if bookmark_manager_response:
+                self._backend.send(bookmark_manager_response, hooks=hooks)
+                continue
+
             return res
 
     def send(self, req, hooks=None):
@@ -128,16 +102,17 @@ class Driver:
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
-                ignore_bookmark_manager=None):
+                bookmark_manager=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
-            ignore_bookmark_manager=ignore_bookmark_manager
+            bookmark_manager=bookmark_manager
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session")
+
         return Session(self, res)
 
     def resolve(self, address):
