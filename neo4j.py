@@ -116,7 +116,7 @@ class Core:
     def start(self, image, initial_members, network):
         env_map = {
             "NEO4J_dbms_connector_bolt_advertised__address":
-                ("%s:%d" % (self.name, 7687)),
+                "%s:%d" % (self.name, 7687),
             "NEO4J_dbms_mode":
                 "CORE",
             "NEO4J_causal__clustering_discovery__type":
