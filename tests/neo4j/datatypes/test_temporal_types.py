@@ -15,7 +15,6 @@ from tests.shared import get_driver_name
 
 
 class TestDataTypes(_TestTypesBase):
-
     required_features = (types.Feature.API_TYPE_TEMPORAL,)
 
     # TODO: remove this as soon the 5.0 server implemented the UTC fix
@@ -97,6 +96,11 @@ class TestDataTypes(_TestTypesBase):
         self._create_driver_and_session()
         for val in vals:
             with self.subTest(val=val):
+                if (get_driver_name() in ["dotnet"]
+                        and val.utc_offset_s is not None
+                        and abs(val.utc_offset_s) > (14 * 60 * 60)):
+                    self.skipTest("dotnet doesn't support larger"
+                                  " than 14 hour offsets.")
                 if get_driver_name() in ["python"]:
                     if (isinstance(val, types.CypherDateTime)
                             and val.utc_offset_s == 0):
