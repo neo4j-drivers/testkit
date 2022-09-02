@@ -109,6 +109,14 @@ class ServerInfo:
             "5.0": "5.0",
         }[".".join(self.version.split(".")[:2])]
 
+    @property
+    def has_utc_patch(self):
+        if self.version >= "5":
+            return 1
+        if self.version >= "4.3":
+            return 0.5  # maybe
+        return 0
+
 
 def get_server_info():
     return ServerInfo(
