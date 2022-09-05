@@ -65,6 +65,8 @@ class TestDataTypes(_TestTypesBase):
                                  utc_offset_s=60 * 60 * 18),
             types.CypherDateTime(1970, 1, 1, 0, 0, 0, 0,
                                  utc_offset_s=60 * 60 * -18),
+            types.CypherDateTime(-1970, 1, 1, 0, 0, 0, 0,
+                                 utc_offset_s=60 * 60 * -18),
 
             # # FIXME: this breaks because the bolt protocol needs fixing
             # # in the 80's the Swedes thought it was a good idea to introduce
@@ -138,6 +140,7 @@ class TestDataTypes(_TestTypesBase):
             (2022, 1, 17, 13, 24, 34, 699546224),
             # 0001-01-02 00:00:00
             (1, 1, 2, 0, 0, 0, 0),
+            (-2022, 1, 17, 13, 24, 34, 699546224),
         )
 
         self._create_driver_and_session()
