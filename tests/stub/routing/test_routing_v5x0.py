@@ -1880,7 +1880,7 @@ class RoutingV5x0(RoutingBase):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1,
-                          "router_yielding_writer1_and_other_routers.script")
+                          "router_yielding_writer1.script")
         self.start_server(
             self._writeServer1,
             "writer_tx_yielding_database_unavailable_failure.script"
@@ -1888,10 +1888,6 @@ class RoutingV5x0(RoutingBase):
         self.start_server(
             self._routingServer2,
             "router_yielding_database_unavailable_failure.script"
-        )
-        self.start_server(
-            self._routingServer3,
-            "router_yielding_writer2.script"
         )
         self.start_server(self._writeServer2, "writer_tx.script")
 
@@ -1905,13 +1901,26 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.write_transaction(work)
+        retried = False
+
+        def on_retryable_negative_hook(_):
+            nonlocal retried
+            if not retried:
+                self._routingServer1.done()
+                self.start_server(
+                    self._routingServer1,
+                    "router_yielding_writer2.script"
+                )
+            retried = True
+
+        session.write_transaction(work, hooks={
+            "on_send_RetryableNegative": on_retryable_negative_hook
+        })
         session.close()
         driver.close()
 
         self._routingServer1.done()
         self._routingServer2.done()
-        self._routingServer3.done()
         self._writeServer1.done()
         self._writeServer2.done()
         self.assertEqual([[]], sequences)
