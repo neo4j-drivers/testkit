@@ -1873,6 +1873,50 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual([[]], sequences)
         self.assertEqual(2, try_count)
 
+    def test_should_forget_router_address_on_database_unavailable_error(self):
+        # TODO remove this block once all languages work
+        if get_driver_name() in ["go"]:
+            self.skipTest("requires investigation")
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1,
+                          "router_yielding_writer1_and_other_routers.script")
+        self.start_server(
+            self._writeServer1,
+            "writer_tx_yielding_database_unavailable_failure.script"
+        )
+        self.start_server(
+            self._routingServer2,
+            "router_yielding_database_unavailable_failure.script"
+        )
+        self.start_server(
+            self._routingServer3,
+            "router_yielding_writer2.script"
+        )
+        self.start_server(self._writeServer2, "writer_tx.script")
+
+        session = driver.session("w", database=self.adb)
+        sequences = []
+        try_count = 0
+
+        def work(tx):
+            nonlocal try_count
+            try_count = try_count + 1
+            result = tx.run("RETURN 1 as n")
+            sequences.append(self.collect_records(result))
+
+        session.write_transaction(work)
+        session.close()
+        driver.close()
+
+        self._routingServer1.done()
+        self._routingServer2.done()
+        self._routingServer3.done()
+        self._writeServer1.done()
+        self._writeServer2.done()
+        self.assertEqual([[]], sequences)
+        self.assertEqual(2, try_count)
+
     def test_should_use_resolver_during_rediscovery_when_existing_routers_fail(
             self):
         resolver_invoked = 0
