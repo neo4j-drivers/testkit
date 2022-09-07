@@ -1,0 +1,8 @@
+!: BOLT #VERSION#
+!: AUTO RESET
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#, "[patch_bolt]": "*"}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+C: ROUTE #ROUTINGCTX# [] "adb"
+S: FAILURE {"code": "Neo.ClientError.General.Unknown", "message": "wut!"}
+   <EXIT>
