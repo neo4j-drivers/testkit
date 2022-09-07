@@ -2415,7 +2415,7 @@ class RoutingV5x0(RoutingBase):
 
     def test_should_fail_when_driver_closed_using_session_run(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
