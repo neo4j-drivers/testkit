@@ -1903,7 +1903,7 @@ class RoutingV5x0(RoutingBase):
 
         retried = False
 
-        def on_retryable_negative_hook(_):
+        def on_retryable_negative(_):
             nonlocal retried
             if not retried:
                 self._routingServer1.done()
@@ -1914,7 +1914,7 @@ class RoutingV5x0(RoutingBase):
             retried = True
 
         session.write_transaction(work, hooks={
-            "on_send_RetryableNegative": on_retryable_negative_hook
+            "on_send_RetryableNegative": on_retryable_negative
         })
         session.close()
         driver.close()
