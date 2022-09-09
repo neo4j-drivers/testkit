@@ -320,21 +320,12 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as e:
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        is_server_affected_with_bug = get_server_info().version <= "4.4"
-        if is_server_affected_with_bug and get_driver_name() in ["javascript"]:
-            self.assertEqual(
-                e.exception.code,
-                "Neo.TransientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.TransientError'>")
-        else:
-            self.assertEqual(e.exception.code,
-                             "Neo.ClientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
+
+        self.assertEqual(e.exception.code,
+                         "Neo.ClientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(e.exception.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")
 
     @cluster_unsafe_test
     def test_consume_after_commit(self):

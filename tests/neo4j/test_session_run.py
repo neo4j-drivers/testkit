@@ -2,7 +2,6 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
-    get_server_info,
 )
 from tests.shared import (
     get_driver_name,
@@ -156,21 +155,11 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        is_server_affected_with_bug = get_server_info().version <= "4.4"
-        if is_server_affected_with_bug and get_driver_name() in ["javascript"]:
-            self.assertEqual(
-                e.exception.code,
-                "Neo.TransientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.TransientError'>")
-        else:
-            self.assertEqual(e.exception.code,
-                             "Neo.ClientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
+        self.assertEqual(e.exception.code,
+                         "Neo.ClientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(e.exception.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")
 
     @cluster_unsafe_test
     def test_regex_in_parameter(self):
