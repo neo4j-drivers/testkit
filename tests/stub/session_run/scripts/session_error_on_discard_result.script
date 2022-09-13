@@ -1,0 +1,16 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+{*
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+       RECORD [2]
+       SUCCESS {"type": "r", "has_more": true}
+*}
+C: DISCARD {"n": -1, "[qid]": -1}
+S: FAILURE {"code": "Neo.ClientError.MadeUp.Code", "message": "Something went wrong..."}
++: RESET
+?: GOODBYE
