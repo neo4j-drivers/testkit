@@ -43,7 +43,7 @@ class TestSessionRun(TestkitTestCase):
     def test_discard_on_session_close_unfinished_result(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
+            self.skipTest("Driver sends RESET instead of DISCARD")
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
@@ -54,6 +54,27 @@ class TestSessionRun(TestkitTestCase):
         self._session.close()
         self._session = None
         self._server.done()
+
+    def test_discard_on_session_close_unfinished_result_with_error(self):
+        # TODO: remove this block once all languages work
+        if get_driver_name() in ["javascript"]:
+            self.skipTest("Driver sends RESET instead of DISCARD")
+        if get_driver_name() in ["go"]:
+            self.skipTest("Swallows errors on DISCARD during session close")
+        self._server.start(
+            path=self.script_path("session_error_on_discard_result.script")
+        )
+        self._session = self._driver.session("r", fetch_size=2)
+        result = self._session.run("RETURN 1 AS n")
+        result.next()
+        # closing session while tx is open and result is not fully consumed
+        with self.assertRaises(types.DriverError) as exc:
+            self._session.close()
+            self._session = None
+        self._session = None
+
+        self._server.done()
+        self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
 
     def test_discard_on_session_close_consumed_result(self):
         # TODO: remove this block once all languages work
