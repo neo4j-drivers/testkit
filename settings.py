@@ -10,8 +10,12 @@ class ArgumentError(Exception):
 
 Settings = collections.namedtuple("Settings", [
     "in_teamcity", "driver_name", "branch", "testkit_path", "driver_repo",
-    "run_all_tests"
+    "run_all_tests", "docker_rmi"
 ])
+
+
+def _get_env_bool(name):
+    return os.environ.get(name, "").lower() in ("true", "y", "yes", "1", "on")
 
 
 def build(testkit_path):
@@ -44,7 +48,8 @@ def build(testkit_path):
             )
         branch = "local"
 
-    run_all_tests = (os.environ.get("TEST_RUN_ALL_TESTS", "").lower()
-                     in ("true", "y", "yes", "1", "on"))
+    run_all_tests = _get_env_bool("TEST_RUN_ALL_TESTS")
+
+    docker_rmi = _get_env_bool("TEST_DOCKER_RMI")
 
     return Settings(**locals())

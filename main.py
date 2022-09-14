@@ -13,6 +13,7 @@ import argparse
 import atexit
 import errno
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -67,7 +68,9 @@ def initialise_configurations():
             stress_test_duration=stress_test
         )
 
-    def generate_tc_config(version, enterprise, cluster, scheme, stress_test):
+    def generate_tc_config(
+        version, enterprise, cluster, scheme, stress_test, build_type
+    ):
         if not in_teamcity:
             return None
         assert (cluster and scheme == "neo4j"
@@ -76,6 +79,10 @@ def initialise_configurations():
         name = "%s-tc-%s%s-%s" % (version, edition,
                                   "-cluster" if cluster else "", scheme)
         version_without_drop = ".".join(version.split(".")[:2])
+        image_filter = (
+            rf"neo4j-{re.escape(edition)}-{re.escape(version)}.*"
+            r"docker-loadable\.tar"
+        )
         return neo4j.Config(
             name=name,
             image=(
@@ -86,10 +93,14 @@ def initialise_configurations():
             cluster=cluster,
             suite=version_without_drop,
             scheme=scheme,
-            download=teamcity.DockerImage("neo4j-%s-%s" % (edition, version)),
+            download=teamcity.DockerImage(image_filter, build_type=build_type),
             stress_test_duration=stress_test
         )
 
+    # ATTENTION: make sure to have all configs that use the same neo4j docker
+    # image (e.g., all configs with neo4j:4.4-community, then all with
+    # neo4j:4.4-enterprise, ...) grouped together. Else, TestKit will download
+    # the same image multiple times if `TEST_DOCKER_RMI` is set to `true`.
     configurations = [
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
@@ -107,16 +118,18 @@ def initialise_configurations():
     ]
     configurations += [
         generate_tc_config(version_, enterprise_, cluster_, scheme_,
-                           stress_test_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+                           stress_test_, build_type_)
+        for (version_, enterprise_, cluster_, scheme_, stress_test_,
+             build_type_)
+        in (
             # nightly build of official backwards-compatible version
-            ("4.4",    True,        True,     "neo4j", 60),
+            ("4.4",    True,        True,     "neo4j", 60, "Neo4j44_Docker"),
             # latest version
-            ("5.0",    False,       False,    "bolt",   0),
-            ("5.0",    False,       False,    "neo4j",  0),
-            ("5.0",    True,        False,    "bolt",  90),
-            ("5.0",    True,        False,    "neo4j",  0),
-            ("5.0",    True,        True,     "neo4j", 90),
+            ("5.0",    False,       False,    "bolt",   0, "Neo4j50_Docker"),
+            ("5.0",    False,       False,    "neo4j",  0, "Neo4j50_Docker"),
+            ("5.0",    True,        False,    "bolt",  90, "Neo4j50_Docker"),
+            ("5.0",    True,        False,    "neo4j",  0, "Neo4j50_Docker"),
+            ("5.0",    True,        True,     "neo4j", 90, "Neo4j50_Docker"),
         )
     ]
 
@@ -223,14 +236,17 @@ def parse_command_line(configurations, argv):
     return configs
 
 
-def cleanup(*_, **__):
-    print("cleanup started")
-    docker.cleanup()
-    for n in networks:
-        print('docker network rm "%s"' % n)
-        subprocess.run(["docker", "network", "rm", n],
-                       check=False, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+def build_cleanup(settings):
+    def cleanup(*_, **__):
+        print("cleanup started")
+        docker.cleanup(settings)
+        for n in networks:
+            print('docker network rm "%s"' % n)
+            subprocess.run(["docker", "network", "rm", n],
+                           check=False, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+
+    return cleanup
 
 
 def is_stub_test_selected_to_run():
@@ -299,6 +315,7 @@ def main(settings, configurations):
 
     # Important to stop all docker images upon exit
     # Also make sure that none of those images are running at this point
+    cleanup = build_cleanup(settings)
     atexit.register(cleanup)
     cleanup()
 
@@ -306,12 +323,10 @@ def main(settings, configurations):
     # The host running this will be gateway on that network, retrieve that
     # address to be able to start services on the network that the driver
     # connects to (stub server and TLS server).
-    subprocess.run([
-        "docker", "network", "create", networks[0]
-    ])
-    subprocess.run([
-        "docker", "network", "create", networks[1]
-    ])
+    for network in networks:
+        cmd = ["docker", "network", "create", network]
+        print(cmd)
+        subprocess.run(cmd)
 
     driver_container = driver.start_container(
         this_path, testkit_branch, driver_name, driver_repo,
@@ -382,11 +397,22 @@ def main(settings, configurations):
     # time we start a database server we should use a different folder.
     neo4j_artifacts_path = os.path.join(artifacts_path, "neo4j")
     os.makedirs(neo4j_artifacts_path)
+    last_image = None
     for neo4j_config in configurations:
         download = neo4j_config.download
         if download:
             print("Downloading Neo4j docker image")
             neo4j_config.image = docker.load(download.get())
+
+        if (
+            last_image
+            and settings.docker_rmi
+            and neo4j_config.image != last_image
+        ):
+            cmd = ["docker", "rmi", last_image]
+            print(cmd)
+            subprocess.run(cmd)
+        last_image = neo4j_config.image
 
         cluster = neo4j_config.cluster
         server_name = neo4j_config.name
@@ -479,6 +505,11 @@ def main(settings, configurations):
         driver_container.assert_connections_closed(hostname, port)
 
         server.stop()
+
+    if last_image and settings.docker_rmi:
+        cmd = ["docker", "rmi", last_image]
+        print(cmd)
+        subprocess.run(cmd)
 
     return _exit()
 
