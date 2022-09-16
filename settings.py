@@ -10,7 +10,7 @@ class ArgumentError(Exception):
 
 Settings = collections.namedtuple("Settings", [
     "in_teamcity", "driver_name", "branch", "testkit_path", "driver_repo",
-    "run_all_tests", "docker_rmi"
+    "run_all_tests", "docker_rmi", "aws_ecr_uri"
 ])
 
 
@@ -51,5 +51,12 @@ def build(testkit_path):
     run_all_tests = _get_env_bool("TEST_RUN_ALL_TESTS")
 
     docker_rmi = _get_env_bool("TEST_DOCKER_RMI")
+
+    aws_ecr_uri = os.environ.get("TEST_AWS_ECR_URI")
+    if in_teamcity and not aws_ecr_uri:
+        raise ArgumentError(
+            "Environment variable TEST_AWS_ECR that contains AWS ECR "
+            "repository URI is mandatory when running with TEST_IN_TEAMCITY."
+        )
 
     return Settings(**locals())

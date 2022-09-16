@@ -13,7 +13,6 @@ import argparse
 import atexit
 import errno
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -25,7 +24,6 @@ import driver
 import neo4j
 import runner
 import settings
-import teamcity
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -47,7 +45,7 @@ test_flags = {
 }
 
 
-def initialise_configurations():
+def initialise_configurations(settings):
     def generate_config(version, enterprise, cluster, scheme, stress_test):
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
@@ -64,12 +62,11 @@ def initialise_configurations():
             cluster=cluster,
             suite=version,
             scheme=scheme,
-            download=None,
             stress_test_duration=stress_test
         )
 
     def generate_tc_config(
-        version, enterprise, cluster, scheme, stress_test, build_type
+        version, enterprise, cluster, scheme, stress_test, docker_tag=None
     ):
         if not in_teamcity:
             return None
@@ -79,21 +76,16 @@ def initialise_configurations():
         name = "%s-tc-%s%s-%s" % (version, edition,
                                   "-cluster" if cluster else "", scheme)
         version_without_drop = ".".join(version.split(".")[:2])
-        image_filter = (
-            rf"neo4j-{re.escape(edition)}-{re.escape(version)}.*"
-            r"docker-loadable\.tar"
-        )
+        if docker_tag is None:
+            docker_tag = version_without_drop
         return neo4j.Config(
             name=name,
-            image=(
-                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
-            ),
+            image=f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-nightly",
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
             suite=version_without_drop,
             scheme=scheme,
-            download=teamcity.DockerImage(image_filter, build_type=build_type),
             stress_test_duration=stress_test
         )
 
@@ -117,19 +109,18 @@ def initialise_configurations():
         )
     ]
     configurations += [
-        generate_tc_config(version_, enterprise_, cluster_, scheme_,
-                           stress_test_, build_type_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_,
-             build_type_)
+        generate_tc_config(version_, enterprise_, cluster_, scheme_, stress,
+                           docker_tag=docker_tag)
+        for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
             # nightly build of official backwards-compatible version
-            ("4.4",    True,        True,     "neo4j", 60, "Neo4j44_Docker"),
+            ("4.4",    "4.4",      True,        True,     "neo4j",  60),
             # latest version
-            ("5.0",    False,       False,    "bolt",   0, "Neo4j50_Docker"),
-            ("5.0",    False,       False,    "neo4j",  0, "Neo4j50_Docker"),
-            ("5.0",    True,        False,    "bolt",  90, "Neo4j50_Docker"),
-            ("5.0",    True,        False,    "neo4j",  0, "Neo4j50_Docker"),
-            ("5.0",    True,        True,     "neo4j", 90, "Neo4j50_Docker"),
+            ("5.0",    "5.0",      False,       False,    "bolt",    0),
+            ("5.0",    "5.0",      False,       False,    "neo4j",   0),
+            ("5.0",    "5.0",      True,        False,    "bolt",   90),
+            ("5.0",    "5.0",      True,        False,    "neo4j",   0),
+            ("5.0",    "5.0",      True,        True,     "neo4j",  90),
         )
     ]
 
@@ -399,11 +390,6 @@ def main(settings, configurations):
     os.makedirs(neo4j_artifacts_path)
     last_image = None
     for neo4j_config in configurations:
-        download = neo4j_config.download
-        if download:
-            print("Downloading Neo4j docker image")
-            neo4j_config.image = docker.load(download.get())
-
         if (
             last_image
             and settings.docker_rmi
@@ -515,22 +501,21 @@ def main(settings, configurations):
 
 
 if __name__ == "__main__":
-    # setup the configurations that are available
-    configurations = initialise_configurations()
-    configurations = parse_command_line(configurations, sys.argv)
-
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
     # Add this path to python sys path to be able to invoke modules
     # from this repo
     this_path = os.path.dirname(os.path.abspath(__file__))
     os.environ["PYTHONPATH"] = this_path
-
     try:
         settings = settings.build(this_path)
     except settings.ArgumentError as e:
         print("")
         print(e)
         sys.exit(-1)
+
+    # setup the configurations that are available
+    configurations = initialise_configurations(settings)
+    configurations = parse_command_line(configurations, sys.argv)
 
     sys.exit(main(settings, configurations))
