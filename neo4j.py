@@ -7,7 +7,7 @@ import docker
 
 Config = collections.namedtuple("Config", [
     "name", "image", "version", "edition", "cluster", "suite",
-    "scheme", "download", "stress_test_duration"
+    "scheme", "stress_test_duration"
 ])
 
 
