@@ -27,9 +27,9 @@ Environment variables:
     If specified, all docker containers are run as the specified user. Value is
     directly passed to docker, if present. See `docker run -u` for more details.
   * `TEST_DOCKER_RMI`  
-    Set to `true` to make testkit remove all tags it created/overwrote after
-    they are not needed anymore. If said tag is the only tag of that image,
-    docker will remove the image and all intermediate parent images.
+    Set to `true` to make testkit remove all tags it created, loaded, or
+    overwrote after they are not needed anymore. If said tag is the only tag of
+    that image, docker will remove the image and all intermediate parent images.
   * `ARTIFACTS_DIR`  
     Name of the directory into which logs and similar debug output is placed.
 
