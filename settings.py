@@ -11,8 +11,12 @@ class InvalidArgs(Exception):
 
 Settings = collections.namedtuple('Settings', [
     'in_teamcity', 'driver_name', 'branch', 'testkit_path', 'driver_repo',
-    'run_all_tests'
+    'run_all_tests', 'docker_rmi', 'aws_ecr_uri'
 ])
+
+
+def _get_env_bool(name):
+    return os.environ.get(name, "").lower() in ("true", "y", "yes", "1", "on")
 
 
 def build(testkit_path):
@@ -43,7 +47,15 @@ def build(testkit_path):
                 "This name is used to name Docker repository.")
         branch = "local"
 
-    run_all_tests = os.environ.get("TEST_RUN_ALL_TESTS", "").lower() \
-        in ("true", "y", "yes", "1", "on")
+    run_all_tests = _get_env_bool("TEST_RUN_ALL_TESTS")
+
+    docker_rmi = _get_env_bool("TEST_DOCKER_RMI")
+
+    aws_ecr_uri = os.environ.get("TEST_AWS_ECR_URI")
+    if in_teamcity and not aws_ecr_uri:
+        raise InvalidArgs(
+            "Environment variable TEST_AWS_ECR_URI which contains AWS ECR "
+            "repository URI is mandatory when running with TEST_IN_TEAMCITY."
+        )
 
     return Settings(**locals())

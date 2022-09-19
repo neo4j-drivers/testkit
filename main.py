@@ -22,7 +22,6 @@ import driver
 import neo4j
 import runner
 import settings
-import teamcity
 from tests.testenv import (
     begin_test_suite,
     end_test_suite,
@@ -45,7 +44,7 @@ test_flags = {
 }
 
 
-def initialise_configurations():
+def initialise_configurations(settings):
     def generate_config(version, enterprise, cluster, scheme, stress_test):
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
@@ -60,11 +59,12 @@ def initialise_configurations():
             cluster=cluster,
             suite=version,
             scheme=scheme,
-            download=None,
             stress_test_duration=stress_test
         )
 
-    def generate_tc_config(version, enterprise, cluster, scheme, stress_test):
+    def generate_tc_config(
+        version, enterprise, cluster, scheme, stress_test, docker_tag=None
+    ):
         if not in_teamcity:
             return None
         assert (cluster and scheme == "neo4j"
@@ -73,18 +73,23 @@ def initialise_configurations():
         name = "%s-tc-%s%s-%s" % (version, edition,
                                   "-cluster" if cluster else "", scheme)
         version_without_drop = ".".join(version.split(".")[:2])
+        if docker_tag is None:
+            docker_tag = version_without_drop
         return neo4j.Config(
             name=name,
-            image="neo4j:%s%s" % (version, "-enterprise" if enterprise else ""),
+            image=f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-nightly",
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
             suite=version_without_drop,
             scheme=scheme,
-            download=teamcity.DockerImage("neo4j-%s-%s" % (edition, version)),
             stress_test_duration=stress_test
         )
 
+    # ATTENTION: make sure to have all configs that use the same neo4j docker
+    # image (e.g., all configs with neo4j:4.4-community, then all with
+    # neo4j:4.4-enterprise, ...) grouped together. Else, TestKit will download
+    # the same image multiple times if `TEST_DOCKER_RMI` is set to `true`.
     configurations = [
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
@@ -111,13 +116,14 @@ def initialise_configurations():
         )
     ]
     configurations += [
-        generate_tc_config(version_, enterprise_, cluster_, scheme_,
-                           stress_test_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+        generate_tc_config(version_, enterprise_, cluster_, scheme_, stress,
+                           docker_tag=docker_tag)
+        for (version_, docker_tag, enterprise_, cluster_, scheme_, stress)
+        in (
             # nightly build of backwards-compatible version
-            ("4.2",    True,        True,     "neo4j",  0),
+            ("4.2",    "4.2",       True,        True,     "neo4j",  0),
             # nightly build of latest version
-            ("4.3",    True,        True,     "neo4j", 60),
+            ("4.3",    "4.3",       True,        True,     "neo4j", 60),
         )
     ]
 
@@ -221,14 +227,17 @@ def parse_command_line(configurations, argv):
     return configs
 
 
-def cleanup(*_, **__):
-    print("cleanup started")
-    docker.cleanup()
-    for n in networks:
-        print('docker network rm "%s"' % n)
-        subprocess.run(["docker", "network", "rm", n],
-                       check=False, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+def build_cleanup(settings):
+    def cleanup(*_, **__):
+        print("cleanup started")
+        docker.cleanup(settings)
+        for n in networks:
+            print('docker network rm "%s"' % n)
+            subprocess.run(["docker", "network", "rm", n],
+                           check=False, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+
+    return cleanup
 
 
 def is_stub_test_selected_to_run():
@@ -297,6 +306,7 @@ def main(settings, configurations):
 
     # Important to stop all docker images upon exit
     # Also make sure that none of those images are running at this point
+    cleanup = build_cleanup(settings)
     atexit.register(cleanup)
     cleanup()
 
@@ -304,12 +314,10 @@ def main(settings, configurations):
     # The host running this will be gateway on that network, retrieve that
     # address to be able to start services on the network that the driver
     # connects to (stub server and TLS server).
-    subprocess.run([
-        "docker", "network", "create", networks[0]
-    ])
-    subprocess.run([
-        "docker", "network", "create", networks[1]
-    ])
+    for network in networks:
+        cmd = ["docker", "network", "create", network]
+        print(cmd)
+        subprocess.run(cmd)
 
     driver_container = driver.start_container(
         this_path, testkit_branch, driver_name, driver_repo,
@@ -381,11 +389,17 @@ def main(settings, configurations):
     # time we start a database server we should use a different folder.
     neo4j_artifacts_path = os.path.join(artifacts_path, "neo4j")
     os.makedirs(neo4j_artifacts_path)
+    last_image = None
     for neo4j_config in configurations:
-        download = neo4j_config.download
-        if download:
-            print("Downloading Neo4j docker image")
-            docker.load(download.get())
+        if (
+            last_image
+            and settings.docker_rmi
+            and neo4j_config.image != last_image
+        ):
+            cmd = ["docker", "rmi", last_image]
+            print(cmd)
+            subprocess.run(cmd)
+        last_image = neo4j_config.image
 
         cluster = neo4j_config.cluster
         server_name = neo4j_config.name
@@ -472,15 +486,16 @@ def main(settings, configurations):
 
         server.stop()
 
+    if last_image and settings.docker_rmi:
+        cmd = ["docker", "rmi", last_image]
+        print(cmd)
+        subprocess.run(cmd)
+
     if failed:
         sys.exit("One or more test suites failed.")
 
 
 if __name__ == "__main__":
-    # setup the configurations that are available
-    configurations = initialise_configurations()
-    configurations = parse_command_line(configurations, sys.argv)
-
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
     # Add this path to python sys path to be able to invoke modules
@@ -494,5 +509,9 @@ if __name__ == "__main__":
         print('')
         print(e)
         sys.exit(-1)
+
+    # setup the configurations that are available
+    configurations = initialise_configurations(settings)
+    configurations = parse_command_line(configurations, sys.argv)
 
     main(settings, configurations)
