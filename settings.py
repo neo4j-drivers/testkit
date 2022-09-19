@@ -55,7 +55,7 @@ def build(testkit_path):
     aws_ecr_uri = os.environ.get("TEST_AWS_ECR_URI")
     if in_teamcity and not aws_ecr_uri:
         raise ArgumentError(
-            "Environment variable TEST_AWS_ECR that contains AWS ECR "
+            "Environment variable TEST_AWS_ECR_URI which contains AWS ECR "
             "repository URI is mandatory when running with TEST_IN_TEAMCITY."
         )
 
