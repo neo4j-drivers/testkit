@@ -3,10 +3,8 @@
 from dataclasses import dataclass
 import os
 from os.path import join
-from typing import Optional
 
 import docker
-from teamcity.download import DockerImage
 
 
 @dataclass
@@ -20,7 +18,6 @@ class Config:
     cluster: bool
     suite: str
     scheme: str
-    download: Optional[DockerImage]
     stress_test_duration: int
 
 
