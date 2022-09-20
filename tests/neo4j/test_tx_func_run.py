@@ -202,15 +202,12 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            if (exc.code
-                    != "Neo.TransientError.Transaction.LockClientStopped"):
-                # This is not the error we are looking for. Maybe there was  a
+            if (exc.code == "Neo.ClientError.Transaction.LockClientStopped"):
+                # This is the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
-                raise exc
-            else:
-                # The error we are looking for. Raise ApplicationError instead
-                # to make the driver stop retrying.
                 raise ApplicationCodeError("Stop, hammer time!")
+            else:
+                raise exc
 
         exc = None
 
@@ -221,8 +218,9 @@ class TestTxFuncRun(TestkitTestCase):
         )
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
+
         self.assertEqual(exc.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
+                         "Neo.ClientError.Transaction.LockClientStopped")
         if get_driver_name() in ["python"]:
             self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.TransientError'>")
+                             "<class 'neo4j.exceptions.ClientError'>")

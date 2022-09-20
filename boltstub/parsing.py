@@ -28,7 +28,10 @@ from .errors import (
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt.common.types import JoltWildcard
+from .simple_jolt.common.types import (
+    JoltType,
+    JoltWildcard,
+)
 
 
 def load_parser():
@@ -181,7 +184,7 @@ class BangLine(Line):
             )
 
 
-class MessageLine(Line, abc.ABC):
+class MessageLine(Line):
     allow_jolt_wildcard = False
     always_parse = True
 
@@ -229,12 +232,12 @@ class MessageLine(Line, abc.ABC):
                     self,
                     "message fields failed JOLT parser"
                 ) from e
-            decoded = self._jolt_to_struct(decoded, jolt_package)
+            decoded = self._jolt_to_struct(decoded)
             jolt_fields.append(decoded)
         self.jolt_parsed = self.parsed[0], jolt_fields
         return self.jolt_parsed
 
-    def _jolt_to_struct(self, decoded, jolt_package):
+    def _jolt_to_struct(self, decoded):
         if isinstance(decoded, JoltWildcard):
             if not self.allow_jolt_wildcard:
                 raise LineError(
@@ -243,14 +246,12 @@ class MessageLine(Line, abc.ABC):
                 )
             else:
                 return decoded
-        if isinstance(decoded, jolt_package.types.JoltType):
+        if isinstance(decoded, JoltType):
             return Structure.from_jolt_type(decoded)
         if isinstance(decoded, (list, tuple)):
-            return type(decoded)(self._jolt_to_struct(d, jolt_package)
-                                 for d in decoded)
+            return type(decoded)(self._jolt_to_struct(d) for d in decoded)
         if isinstance(decoded, dict):
-            return {k: self._jolt_to_struct(v, jolt_package)
-                    for k, v in decoded.items()}
+            return {k: self._jolt_to_struct(v) for k, v in decoded.items()}
         return decoded
 
 
@@ -1062,6 +1063,7 @@ class ScriptDeviation(ScriptFailure):
         res += ":\n"
         res += "\n".join(map(str, self.expected_lines))
         res += "\n\nReceived:\n" + str(self.received)
+        res += "\n => " + repr(self.received)
         return res
 
 

@@ -1,3 +1,7 @@
+import datetime
+
+import pytz
+
 from ..common.types import (
     JoltType,
     JoltWildcard,
@@ -16,6 +20,29 @@ from ..v1.types import (
 
 class JoltType(JoltType):  # version specific type base class
     pass
+
+
+class JoltV2DateTimeMixin(JoltV1DateTimeMixin):
+    @property
+    def seconds_nanoseconds(self):
+        # since UTC unix epoch
+        utc_epoch = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
+        elapsed = self._to_dt() - utc_epoch
+        s = elapsed.days * 86400 + elapsed.seconds
+        ns = elapsed.microseconds * 1000 + self._ns_buffer
+        return s, ns
+
+    @classmethod
+    def _format_s_ns_tz_info(cls, seconds: int, nanoseconds: int, tz_info):
+        # seconds, nanoseconds since UTC unix epoch
+        dt = datetime.datetime(1970, 1, 1, tzinfo=pytz.UTC)
+
+        microseconds, buffered_ns = divmod(nanoseconds, 1000)
+        dt += datetime.timedelta(seconds=seconds, microseconds=microseconds)
+
+        dt = dt.astimezone(tz_info)
+
+        return cls._format_dt(dt, buffered_ns)
 
 
 class JoltV2NodeMixin(JoltType):
@@ -91,7 +118,7 @@ class JoltLocalTime(JoltV1LocalTimeMixin, JoltType):
     pass
 
 
-class JoltDateTime(JoltV1DateTimeMixin, JoltType):
+class JoltDateTime(JoltV2DateTimeMixin, JoltType):
     pass
 
 

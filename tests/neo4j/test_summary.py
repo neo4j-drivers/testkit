@@ -1,14 +1,14 @@
 from nutkit import protocol as types
-
-from ..shared import TestkitTestCase
-from .shared import (
+from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    QueryBuilder,
     requires_multi_db_support,
 )
+from tests.shared import TestkitTestCase
 
 
 class TestSummary(TestkitTestCase):
@@ -94,11 +94,6 @@ class TestSummary(TestkitTestCase):
             # server versions into the handshake
             self.assertIn(summary.server_info.protocol_version,
                           ("4.2", "4.1"))
-        # TODO: this will start to fail as soon as 5.0 servers implement bolt
-        #       5.0. For now they don't. Until then, we expect the driver to
-        #       negotiate bolt 4.4.
-        elif common_max_version == "5.0":
-            self.assertEqual(summary.server_info.protocol_version, "4.4")
         else:
             self.assertEqual(summary.server_info.protocol_version,
                              common_max_version)
@@ -152,9 +147,15 @@ class TestSummary(TestkitTestCase):
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
+        version = get_server_info().version
+        new_index_syntax = version >= "4"
+        new_constraint_syntax = version >= "4.4"
+
         self._session = self._driver.session("w", database="system")
 
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        drop_db_test_query = QueryBuilder.drop_db("test")
+        create_db_test_query = QueryBuilder.create_db("test")
+        self._session.run(drop_db_test_query).consume()
 
         # SHOW DATABASES
 
@@ -180,10 +181,10 @@ class TestSummary(TestkitTestCase):
         self._assert_counters(summary)
 
         # CREATE DATABASE test
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
-        summary = self._session.run("CREATE DATABASE test").consume()
+        self._session.run(drop_db_test_query).consume()
+        summary = self._session.run(create_db_test_query).consume()
 
-        self.assertEqual(summary.query.text, "CREATE DATABASE test")
+        self.assertEqual(summary.query.text, create_db_test_query)
         self.assertEqual(summary.query.parameters, {})
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
@@ -234,30 +235,47 @@ class TestSummary(TestkitTestCase):
                               contains_updates=True)
         self._session.close()
 
+        if new_index_syntax:  # 4.0+
+            query = "CREATE INDEX test_label_prop FOR (n:ALabel) ON (n.prop)"
+        else:  # 3.5-
+            query = "CREATE INDEX ON :ALabel (prop)"
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("CREATE INDEX ON :ALabel(prop)").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary, indexes_added=1, contains_updates=True)
         self._session.close()
 
+        if new_index_syntax:  # 4.0+
+            query = "DROP INDEX test_label_prop"
+        else:  # 3.5-
+            query = "DROP INDEX ON :ALabel(prop)"
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("DROP INDEX ON :ALabel(prop)").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary, indexes_removed=1,
                               contains_updates=True)
         self._session.close()
 
+        if new_constraint_syntax:  # 4.4+
+            query = ("CREATE CONSTRAINT test_book_isbn FOR (book:Book) "
+                     "REQUIRE book.isbn IS UNIQUE")
+        else:  # 4.3-
+            query = ("CREATE CONSTRAINT ON (book:Book) "
+                     "ASSERT book.isbn IS UNIQUE")
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("CREATE CONSTRAINT ON (book:Book) "
-                                    "ASSERT book.isbn IS UNIQUE").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary,
                               constraints_added=1, contains_updates=True)
         self._session.close()
 
+        if new_constraint_syntax:  # 4.4+
+            query = "DROP CONSTRAINT test_book_isbn"
+        else:  # 4.3-
+            query = ("DROP CONSTRAINT ON (book:Book) "
+                     "ASSERT book.isbn IS UNIQUE")
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("DROP CONSTRAINT ON (book:Book) "
-                                    "ASSERT book.isbn IS UNIQUE").consume()
+        summary = self._session.run(query).consume()
         self._assert_counters(summary,
                               constraints_removed=1, contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        self._session.run(drop_db_test_query).consume()

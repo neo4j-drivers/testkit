@@ -47,7 +47,13 @@ class TestResultScope(TestkitTestCase):
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
-            self.assertEqual(exc.msg, "Result is already consumed")
+            self.assertIn(exc.msg, [
+                "Result is already consumed",
+                "Streaming has already started/consumed with a previous "
+                "records or summary subscription."
+            ])
+        elif driver in ["go"]:
+            self.assertEqual(exc.msg, "result cursor is not available anymore")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -65,7 +71,13 @@ class TestResultScope(TestkitTestCase):
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
-            self.assertEqual(exc.msg, "Result is already consumed")
+            self.assertIn(exc.msg, [
+                "Result is already consumed",
+                "Streaming has already started/consumed with a previous "
+                "records or summary subscription."
+            ])
+        elif driver in ["go"]:
+            self.assertEqual(exc.msg, "result cursor is not available anymore")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

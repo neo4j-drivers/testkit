@@ -174,3 +174,49 @@ class TestRetry(TestkitTestCase):
             with self.subTest(mode=mode):
                 _test()
             self._server.reset()
+
+    def test_should_not_retry_non_retryable_tx_failures(self):
+        def _test():
+            self._server.start(
+                path=self.script_path("tx_pull_yielding_failure.script"),
+                vars_={
+                    "#FAILURE#": '{"code": "%s", "message": "message"}'
+                                 % failure[0]
+                }
+            )
+            num_retries = 0
+
+            def once(tx):
+                nonlocal num_retries
+                num_retries = num_retries + 1
+                result = tx.run("RETURN 1 as n")
+                result.next()
+
+            auth = types.AuthorizationToken("basic", principal="",
+                                            credentials="")
+            driver = Driver(self._backend,
+                            "bolt://%s" % self._server.address, auth)
+            session = driver.session("w")
+
+            with self.assertRaises(types.DriverError) as exc:
+                session.write_transaction(once)
+
+            self.assertEqual(exc.exception.code, failure[1])
+
+            self.assertEqual(num_retries, 1)
+            session.close()
+            driver.close()
+            self._server.done()
+
+        failures = []
+        failures.append(
+            ["Neo.TransientError.Transaction.Terminated",
+                "Neo.ClientError.Transaction.Terminated"])
+        failures.append(
+            ["Neo.TransientError.Transaction.LockClientStopped",
+                "Neo.ClientError.Transaction.LockClientStopped"])
+
+        for failure in failures:
+            with self.subTest(failure=failure):
+                _test()
+            self._server.reset()

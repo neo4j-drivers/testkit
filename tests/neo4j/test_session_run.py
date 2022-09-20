@@ -156,10 +156,10 @@ class TestSessionRun(TestkitTestCase):
             # requires explicit termination of transactions
             tx1.rollback()
         self.assertEqual(e.exception.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
+                         "Neo.ClientError.Transaction.LockClientStopped")
         if get_driver_name() in ["python"]:
             self.assertEqual(e.exception.errorType,
-                             "<class 'neo4j.exceptions.TransientError'>")
+                             "<class 'neo4j.exceptions.ClientError'>")
 
     @cluster_unsafe_test
     def test_regex_in_parameter(self):

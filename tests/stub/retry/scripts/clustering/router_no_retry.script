@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
 !: AUTO RESET
 
-C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX#}
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #HELLO_ROUTINGCTX#, "[patch_bolt]": "*"}
 S: SUCCESS {"server": "Neo4j/4.0.0", "connection_id": "bolt-123456789"}
 C: ROUTE #ROUTINGCTX# [] null
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9001"], "role":"ROUTE"}, {"addresses": ["#HOST#:9002"], "role":"READ"}, {"addresses": ["#HOST#:9003"], "role":"WRITE"}]}}

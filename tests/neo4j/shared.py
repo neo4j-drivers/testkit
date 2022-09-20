@@ -16,6 +16,7 @@ TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
 from functools import wraps
 import os
+import re
 from warnings import warn
 
 from nutkit import protocol
@@ -108,6 +109,14 @@ class ServerInfo:
             "5.0": "5.0",
         }[".".join(self.version.split(".")[:2])]
 
+    @property
+    def has_utc_patch(self):
+        if self.version >= "5":
+            return 1
+        if self.version >= "4.3":
+            return 0.5  # maybe
+        return 0
+
 
 def get_server_info():
     return ServerInfo(
@@ -139,8 +148,8 @@ def requires_multi_db_support(func):
             raise TypeError("Should only decorate TestkitTestCase methods")
         return args[0]
 
-    @wraps(func)
     @requires_min_bolt_version("4.0")
+    @wraps(func)
     def wrapper(*args, **kwargs):
         test_case = get_valid_test_case(*args, **kwargs)
         if not get_server_info().supports_multi_db:
@@ -153,8 +162,8 @@ def requires_min_bolt_version(min_version):
     server_max_version = get_server_info().max_protocol_version
     all_viable_versions = [
         f for f in protocol.Feature
-        if (f.value.startswith("BOLT_")
-            and min_version <= f.value.spit(":")[-1] <= server_max_version)
+        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
+            and min_version <= f.value.split(":")[-1] <= server_max_version)
     ]
 
     def get_valid_test_case(*args, **kwargs):
@@ -177,3 +186,31 @@ def requires_min_bolt_version(min_version):
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
+
+
+class QueryBuilder:
+    @staticmethod
+    def escape_identifier(identifier):
+        identifier = identifier.replace("`", "``")
+        return "`{}`".format(identifier)
+
+    @staticmethod
+    def _wait_clause(version):
+        return " WAIT" if version >= "4.2" else ""
+
+    @staticmethod
+    def create_db(database, wait=True):
+        version = get_server_info().version
+        return "CREATE DATABASE {}{}".format(
+            QueryBuilder.escape_identifier(database),
+            QueryBuilder._wait_clause(version) if wait else ""
+        )
+
+    @staticmethod
+    def drop_db(database, if_exists=True, wait=True):
+        version = get_server_info().version
+        return "DROP  DATABASE {}{}{}".format(
+            QueryBuilder.escape_identifier(database),
+            " IF EXISTS" if if_exists else "",
+            QueryBuilder._wait_clause(version) if wait else ""
+        )

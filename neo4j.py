@@ -3,10 +3,8 @@
 from dataclasses import dataclass
 import os
 from os.path import join
-from typing import Optional
 
 import docker
-from teamcity.download import DockerImage
 
 
 @dataclass
@@ -20,7 +18,6 @@ class Config:
     cluster: bool
     suite: str
     scheme: str
-    download: Optional[DockerImage]
     stress_test_duration: int
 
 
@@ -135,13 +132,29 @@ class Core:
             "NEO4J_AUTH":
                 "%s/%s" % (username, password),
         }
-        for key in list(env_map.keys()):
-            # Config options renamed in 5.0 (old versions are deprecated and
-            # still working; at lest they should be ;) )
-            if key.startswith("NEO4J_causal__clustering_"):
-                new_key = key.replace("NEO4J_causal__clustering_",
-                                      "NEO4J_cluster_")
-                env_map[new_key] = env_map[key]
+        # Config options renamed in 5.0 (old versions are deprecated and
+        # still working; at lest they should be ;) )
+        for old_key, new_key in ({
+            "NEO4J_causal__clustering_transaction__advertised__address":
+                "NEO4J_server_cluster_advertised__address",
+            "NEO4J_causal__clustering_transaction__listen__address":
+                "NEO4J_server_cluster_listen__address",
+            "NEO4J_causal__clustering_raft__advertised__address":
+                "NEO4J_server_cluster_raft_advertised__address",
+            "NEO4J_causal__clustering_raft__listen__address":
+                "NEO4J_server_cluster_raft_listen__address",
+            "NEO4J_causal__clustering_discovery__advertised__address":
+                "NEO4J_server_discovery_advertised__address",
+            "NEO4J_causal__clustering_discovery__listen__address":
+                "NEO4J_server_discovery_listen__address",
+            "NEO4J_causal__clustering_initial__discovery__members":
+                "NEO4J_dbms_cluster_discovery_initial__members",
+            "NEO4J_causal__clustering_discovery__type":
+                "NEO4J_dbms_cluster_discovery_type",
+            "NEO4J_dbms_connector_bolt_advertised__address":
+                "NEO4J_server_bolt_advertised__address",
+        }).items():
+            env_map[new_key] = env_map[old_key]
         logs_path = join(self._artifacts_path, "logs")
         os.makedirs(logs_path, exist_ok=True)
 

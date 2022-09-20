@@ -1,4 +1,5 @@
 from .. import protocol
+from .bookmark_manager import BookmarkManager
 from .session import Session
 
 
@@ -13,6 +14,7 @@ class Driver:
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
+
         req = protocol.NewDriver(
             uri, auth_token, userAgent=user_agent,
             resolverRegistered=resolver_fn is not None,
@@ -22,7 +24,7 @@ class Driver:
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
-            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms
+            connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -49,6 +51,11 @@ class Driver:
                         hooks=hooks
                     )
                     continue
+            bookmark_manager_response = BookmarkManager.process_callbacks(res)
+            if bookmark_manager_response:
+                self._backend.send(bookmark_manager_response, hooks=hooks)
+                continue
+
             return res
 
     def send(self, req, hooks=None):
@@ -94,15 +101,18 @@ class Driver:
             raise Exception("Should be driver")
 
     def session(self, access_mode, bookmarks=None, database=None,
-                fetch_size=None, impersonated_user=None):
+                fetch_size=None, impersonated_user=None,
+                bookmark_manager=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
-            impersonatedUser=impersonated_user
+            impersonatedUser=impersonated_user,
+            bookmark_manager=bookmark_manager
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session")
+
         return Session(self, res)
 
     def resolve(self, address):

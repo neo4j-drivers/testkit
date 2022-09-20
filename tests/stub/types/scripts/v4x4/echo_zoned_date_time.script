@@ -1,0 +1,15 @@
+!: BOLT 4.4
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: RUN {"U": "RETURN $dt AS dt"} {"dt": {"T": "2022-06-07T11:52:05+02:00[Europe/Stockholm]"}} {"{}": "*"}
+S: SUCCESS {"fields": ["dt"], "qid": 1}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+----
+    C: PULL {"n": {"Z": "*"}, "qid": 1}
+}}
+S: RECORD [{"T": "2022-06-07T11:52:05+02:00[Europe/Stockholm]"}]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

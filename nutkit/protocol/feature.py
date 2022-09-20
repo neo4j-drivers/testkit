@@ -4,7 +4,9 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
-    # The driver offers a configuration option to limit time it spend at most,
+    # Driver supports the Bookmark Manager Feature
+    API_BOOKMARK_MANAGER = "Feature:API:BookmarkManager"
+    # The driver offers a configuration option to limit time it spends at most,
     # trying to acquire a connection from the pool.
     # The connection acquisition timeout must account for the whole acquisition
     # execution time, whether a new connection is created, an idle connection
@@ -74,6 +76,8 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
+    # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
+    BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.
@@ -106,6 +110,8 @@ class Feature(Enum):
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
+    # Driver should not send duplicated bookmarks to the server
+    OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
@@ -128,14 +134,6 @@ class Feature(Enum):
     # configuration as long as values match.
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
-    # The driver sets the id of nodes and relationships to Null if the server
-    # doesn't provide them. If the driver does not report this feature flag,
-    # TestKit will assert the value to be -1 instead.
-    DETAIL_NULL_ON_MISSING_ID = "Detail:NullOnMissingId"
-    # The driver throws when trying to access the id of nodes and relationships
-    # if the server doesn't provide them. If the driver does not report this
-    # feature flag,TestKit will assert the value to be -1/null instead.
-    DETAIL_THROW_ON_MISSING_ID = "Detail:ThrowOnMissingId"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint

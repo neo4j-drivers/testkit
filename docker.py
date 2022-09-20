@@ -233,11 +233,10 @@ def build_and_tag(tag_name, dockerfile_path, cwd=None,
     remove_dangling()
 
 
-def cleanup():
+def cleanup(settings):
     for c in list(_running.values()):
         c.rm()
-    if os.environ.get("TEST_DOCKER_RMI", "").lower() \
-            in ("true", "y", "yes", "1", "on"):
+    if settings.docker_rmi:
         for t in _created_tags:
             print("cleanup (docker rmi %s)" % t)
             subprocess.run(["docker", "rmi", t])

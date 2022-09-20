@@ -20,6 +20,7 @@
 from codecs import decode
 import inspect
 from io import BytesIO
+import re
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 
@@ -77,7 +78,8 @@ class StructTagV1:
 
 
 class StructTagV2(StructTagV1):
-    pass
+    date_time = b"\x49"
+    date_time_zone_id = b"\x69"
 
 
 class Structure:
@@ -124,9 +126,14 @@ class Structure:
 
     def __eq__(self, other):
         try:
+            assert all(
+                StructTagV1.path == value.path
+                for key, value in locals().items()
+                if re.match(r"^StructTagV[1-9]\d*$", key)
+            )
             if self.tag == StructTagV1.path:
                 # path struct => order of nodes and rels is irrelevant
-                return (other.tag == StructTagV1.path
+                return (other.tag == self.tag
                         and len(other.fields) == 3
                         and sorted(self.fields[0]) == sorted(other.fields[0])
                         and sorted(self.fields[1]) == sorted(other.fields[1])
@@ -169,7 +176,8 @@ class Structure:
                 if self.tag == struct_tags.local_time:
                     return True
             elif issubclass(t, jolt_types_.JoltDateTime):
-                if self.tag == struct_tags.date_time:
+                if self.tag in (struct_tags.date_time,
+                                struct_tags.date_time_zone_id):
                     return True
             elif issubclass(t, jolt_types_.JoltLocalDateTime):
                 if self.tag == struct_tags.local_date_time:
@@ -201,8 +209,13 @@ class Structure:
             return cls(StructTagV1.local_time, jolt.nanoseconds,
                        packstream_version=1)
         if isinstance(jolt, jolt_v1_types.JoltDateTime):
-            return cls(StructTagV1.date_time, *jolt.seconds_nanoseconds,
-                       jolt.time.utc_offset, packstream_version=1)
+            if jolt.time.zone_id:
+                return cls(StructTagV1.date_time_zone_id,
+                           *jolt.seconds_nanoseconds, jolt.time.zone_id,
+                           packstream_version=1)
+            else:
+                return cls(StructTagV1.date_time, *jolt.seconds_nanoseconds,
+                           jolt.time.utc_offset, packstream_version=1)
         if isinstance(jolt, jolt_v1_types.JoltLocalDateTime):
             return cls(StructTagV1.local_date_time, *jolt.seconds_nanoseconds,
                        packstream_version=1)
@@ -274,36 +287,41 @@ class Structure:
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
-    def _from_jolt_v2_type(cls, jolt: jolt_v1_types.JoltType):
+    def _from_jolt_v2_type(cls, jolt: jolt_v2_types.JoltType):
         if isinstance(jolt, jolt_v2_types.JoltDate):
-            return cls(StructTagV1.date, jolt.days, packstream_version=2)
+            return cls(StructTagV2.date, jolt.days, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltTime):
-            return cls(StructTagV1.time, jolt.nanoseconds, jolt.utc_offset,
+            return cls(StructTagV2.time, jolt.nanoseconds, jolt.utc_offset,
                        packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltLocalTime):
-            return cls(StructTagV1.local_time, jolt.nanoseconds,
+            return cls(StructTagV2.local_time, jolt.nanoseconds,
                        packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltDateTime):
-            return cls(StructTagV1.date_time, *jolt.seconds_nanoseconds,
-                       jolt.time.utc_offset, packstream_version=2)
+            if jolt.time.zone_id:
+                return cls(StructTagV2.date_time_zone_id,
+                           *jolt.seconds_nanoseconds, jolt.time.zone_id,
+                           packstream_version=2)
+            else:
+                return cls(StructTagV2.date_time, *jolt.seconds_nanoseconds,
+                           jolt.time.utc_offset, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltLocalDateTime):
-            return cls(StructTagV1.local_date_time, *jolt.seconds_nanoseconds,
+            return cls(StructTagV2.local_date_time, *jolt.seconds_nanoseconds,
                        packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltDuration):
-            return cls(StructTagV1.duration, jolt.months, jolt.days,
+            return cls(StructTagV2.duration, jolt.months, jolt.days,
                        jolt.seconds, jolt.nanoseconds, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltPoint):
             if jolt.z is None:  # 2D
-                return cls(StructTagV1.point_2d, jolt.srid, jolt.x, jolt.y,
+                return cls(StructTagV2.point_2d, jolt.srid, jolt.x, jolt.y,
                            packstream_version=2)
             else:
-                return cls(StructTagV1.point_3d, jolt.srid, jolt.x, jolt.y,
+                return cls(StructTagV2.point_3d, jolt.srid, jolt.x, jolt.y,
                            jolt.z, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltNode):
-            return cls(StructTagV1.node, jolt.id, jolt.labels,
+            return cls(StructTagV2.node, jolt.id, jolt.labels,
                        jolt.properties, jolt.element_id, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltRelationship):
-            return cls(StructTagV1.relationship, jolt.id, jolt.start_node_id,
+            return cls(StructTagV2.relationship, jolt.id, jolt.start_node_id,
                        jolt.end_node_id, jolt.rel_type, jolt.properties,
                        jolt.element_id, jolt.start_node_element_id,
                        jolt.end_node_element_id, packstream_version=2)
@@ -331,7 +349,7 @@ class Structure:
             for rel in jolt.path[1::2]:
                 rels.append(rel)
 
-                ub_rel = cls(StructTagV1.unbound_relationship, rel.id,
+                ub_rel = cls(StructTagV2.unbound_relationship, rel.id,
                              rel.rel_type, rel.properties, rel.element_id,
                              packstream_version=2)
                 if ub_rel not in uniq_rels:
@@ -353,7 +371,7 @@ class Structure:
                     else:
                         ids.append(-index)
 
-            return cls(StructTagV1.path, uniq_nodes, uniq_rels, ids,
+            return cls(StructTagV2.path, uniq_nodes, uniq_rels, ids,
                        packstream_version=2)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
@@ -372,7 +390,7 @@ class Structure:
             return jolt_v1_types.JoltTime.new(*self.fields)
         if self.tag == StructTagV1.local_time:
             return jolt_v1_types.JoltLocalTime.new(*self.fields)
-        if self.tag == StructTagV1.date_time:
+        if self.tag in (StructTagV1.date_time, StructTagV1.date_time_zone_id):
             return jolt_v1_types.JoltDateTime.new(*self.fields)
         if self.tag == StructTagV1.local_date_time:
             return jolt_v1_types.JoltLocalDateTime.new(*self.fields)
@@ -421,7 +439,7 @@ class Structure:
             return jolt_v2_types.JoltTime.new(*self.fields)
         if self.tag == StructTagV2.local_time:
             return jolt_v2_types.JoltLocalTime.new(*self.fields)
-        if self.tag == StructTagV2.date_time:
+        if self.tag in (StructTagV2.date_time, StructTagV2.date_time_zone_id):
             return jolt_v2_types.JoltDateTime.new(*self.fields)
         if self.tag == StructTagV2.local_date_time:
             return jolt_v2_types.JoltLocalDateTime.new(*self.fields)
@@ -663,12 +681,28 @@ class PackstreamV2StructureValidator(PackstreamV1StructureValidator):
 
     @classmethod
     def verify_fields(cls, structure: Structure):
-        # assert tags didn't change
         assert all(
             hasattr(StructTagV1, tag)
             and getattr(StructTagV1, tag) == getattr(StructTagV2, tag)
-            for tag in dir(StructTagV2) if not tag.startswith("_")
+            for tag in dir(StructTagV2) if not (
+                tag.startswith("_")
+                or tag in ("date_time", "date_time_zone_id")
+            )
         )
+
+        tag, fields = structure.tag, structure.fields
+
+        field_validator = {
+            StructTagV2.date_time: cls._build_generic_verifier(
+                (int, int, int,), "DateTime"
+            ),
+            StructTagV2.date_time_zone_id: cls._build_generic_verifier(
+                (int, int, str), "DateTimeZoneId"
+            ),
+        }
+
+        if tag in field_validator:
+            return field_validator[tag](structure, fields)
         return super().verify_fields(structure)
 
 

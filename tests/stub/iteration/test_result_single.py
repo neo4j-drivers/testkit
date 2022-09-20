@@ -1,7 +1,6 @@
 import nutkit.protocol as types
 from tests.shared import get_driver_name
-
-from ._common import IterationTestBase
+from tests.stub.iteration._common import IterationTestBase
 
 
 class TestResultSingle(IterationTestBase):
