@@ -14,6 +14,14 @@ S: SUCCESS {}
         S: RECORD [1]
            SUCCESS {"type": "r"}
     ?}
+    {{
+        C: COMMIT
+    ----
+        C: ROLLBACK
+    ----
+        C: RESET
+    }}
+    S: SUCCESS {}
 ----
     C: RUN "RETURN 2 AS n" "*" "*"
     S: SUCCESS {"fields": ["n"]}
@@ -22,6 +30,6 @@ S: SUCCESS {}
        SUCCESS {"type": "r"}
     C: COMMIT
     S: SUCCESS {}
-    *: RESET
 }}
+*: RESET
 ?: GOODBYE
