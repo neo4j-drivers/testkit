@@ -278,8 +278,10 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.UntrustedServerException",
-                e.errorType)
+                e.errorType
+            )
         if get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::UntrustedServerException",
-                e.errorType)
+                e.errorType
+            )

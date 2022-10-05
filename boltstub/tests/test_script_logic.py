@@ -158,52 +158,48 @@ def _assert_accepted_messages_after_reset(block, messages):
 class TestAlternativeBlock:
     @pytest.fixture()
     def block_read(self):
-        return AlternativeBlock(
-            [
-                BlockList([ClientBlock([
-                    ClientLine(2, "C: MSG1", "MSG1")
-                ], 2)], 2),
-                BlockList([ClientBlock([
-                    ClientLine(3, "C: MSG2", "MSG2")
-                ], 3)], 3),
-            ], 1
-        )
+        return AlternativeBlock([  # noqa: PAR101
+            BlockList([ClientBlock([  # noqa: PAR101
+                ClientLine(2, "C: MSG1", "MSG1")
+            ], 2)], 2),
+            BlockList([ClientBlock([  # noqa: PAR101
+                ClientLine(3, "C: MSG2", "MSG2")
+            ], 3)], 3),
+        ], 1)
 
     @pytest.fixture()
     def block_write(self):
-        return AlternativeBlock(
-            [
-                BlockList([
-                    ClientBlock([
-                        ClientLine(2, "C: MSG1", "MSG1"),
-                    ], 2),
-                    ServerBlock([
-                        ServerLine(3, "S: SMSG1", "SMSG1")
-                    ], 3),
+        return AlternativeBlock([  # noqa: PAR101
+            BlockList([  # noqa: PAR101
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(2, "C: MSG1", "MSG1"),
                 ], 2),
-                BlockList([
-                    ClientBlock([
-                        ClientLine(4, "C: MSG2", "MSG2"),
-                    ], 4),
-                    ServerBlock([
-                        ServerLine(5, "S: SMSG2", "SMSG2")
-                    ], 5),
+                ServerBlock([  # noqa: PAR101
+                    ServerLine(3, "S: SMSG1", "SMSG1")
+                ], 3),
+            ], 2),
+            BlockList([  # noqa: PAR101
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(4, "C: MSG2", "MSG2"),
+                ], 4),
+                ServerBlock([  # noqa: PAR101
+                    ServerLine(5, "S: SMSG2", "SMSG2")
                 ], 5),
-            ], 1
-        )
+            ], 5),
+        ], 1)
 
     @pytest.fixture()
     def block_with_non_det_end(self):
-        return AlternativeBlock([
-            BlockList([
+        return AlternativeBlock([  # noqa: PAR101
+            BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2),
                 ServerBlock([ServerLine(3, "S: SMSG1", "SMSG1")], 3),
-                OptionalBlock(BlockList([
+                OptionalBlock(BlockList([  # noqa: PAR101
                     ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
                     ServerBlock([ServerLine(6, "S: SMSG2", "SMSG2")], 6)
                 ], 5), 4),
             ], 2),
-            BlockList([
+            BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(8, "C: MSG3", "MSG3")], 8),
                 ServerBlock([ServerLine(9, "S: SMSG3", "SMSG3")], 9),
             ], 7)
@@ -211,14 +207,14 @@ class TestAlternativeBlock:
 
     @pytest.fixture()
     def block_with_non_det_block(self):
-        return AlternativeBlock([
-            BlockList([
-                OptionalBlock(BlockList([
+        return AlternativeBlock([  # noqa: PAR101
+            BlockList([  # noqa: PAR101
+                OptionalBlock(BlockList([  # noqa: PAR101
                     ClientBlock([ClientLine(3, "C: MSG1", "MSG1")], 3),
                     ServerBlock([ServerLine(4, "S: SMSG1", "SMSG1")], 4)
                 ], 3), 2),
             ], 2),
-            BlockList([
+            BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
                 ServerBlock([ServerLine(7, "S: SMSG2", "SMSG2")], 7),
             ], 5)
@@ -314,12 +310,12 @@ class TestAlternativeBlock:
 class TestBlockList:
     @pytest.fixture()
     def block_det(self):
-        return BlockList([
-            ClientBlock([
+        return BlockList([  # noqa: PAR101
+            ClientBlock([  # noqa: PAR101
                 ClientLine(1, "C: MSG1", "MSG1"),
                 ClientLine(2, "C: MSG2", "MSG2")
             ], 1),
-            ServerBlock([
+            ServerBlock([  # noqa: PAR101
                 ServerLine(3, "S: SMSG1", "SMSG1"),
                 ServerLine(4, "S: SMSG2", "SMSG2")
             ], 3),
@@ -328,11 +324,11 @@ class TestBlockList:
 
     @pytest.fixture()
     def block_non_det(self):
-        return BlockList([
-            OptionalBlock(BlockList([
+        return BlockList([  # noqa: PAR101
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
             ], 2), 1),
-            OptionalBlock(BlockList([
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5)
             ], 5), 4),
             ClientBlock([ClientLine(7, "C: MSG3", "MSG3")], 7),
@@ -340,14 +336,14 @@ class TestBlockList:
 
     @pytest.fixture()
     def block_only_non_det(self):
-        return BlockList([
-            OptionalBlock(BlockList([
+        return BlockList([  # noqa: PAR101
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
             ], 2), 1),
-            OptionalBlock(BlockList([
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5)
             ], 5), 4),
-            OptionalBlock(BlockList([
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(8, "C: MSG3", "MSG3")], 8)
             ], 8), 7),
         ], 1)
@@ -481,7 +477,7 @@ class TestBlockList:
 
 class TestOptionalBlock:
     def test_block_cant_skip_out(self):
-        block = OptionalBlock(BlockList([ClientBlock([
+        block = OptionalBlock(BlockList([ClientBlock([  # noqa: PAR101
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -498,7 +494,7 @@ class TestOptionalBlock:
 
     @pytest.mark.parametrize("reset_idx", range(1, 2))
     def test_block_reset(self, reset_idx):
-        block = OptionalBlock(BlockList([ClientBlock([
+        block = OptionalBlock(BlockList([ClientBlock([  # noqa: PAR101
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -506,13 +502,13 @@ class TestOptionalBlock:
                                                skippable={0})
 
     def test_block_can_skip_optional_end(self):
-        block = OptionalBlock(BlockList([
-            ClientBlock([
+        block = OptionalBlock(BlockList([  # noqa: PAR101
+            ClientBlock([  # noqa: PAR101
                 ClientLine(2, "C: MSG1", "MSG1"),
                 ClientLine(3, "C: MSG2", "MSG2")
             ], 2),
-            OptionalBlock(BlockList([
-                ClientBlock([
+            OptionalBlock(BlockList([  # noqa: PAR101
+                ClientBlock([  # noqa: PAR101
                     ClientLine(5, "C: MSG3", "MSG3")
                 ], 5)
             ], 5), 4)
@@ -534,7 +530,7 @@ class TestOptionalBlock:
         assert not block.can_consume(channel)
 
     def test_becomes_deterministic_when_started(self):
-        block = OptionalBlock(BlockList([ClientBlock([
+        block = OptionalBlock(BlockList([ClientBlock([  # noqa: PAR101
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -547,7 +543,7 @@ class TestOptionalBlock:
         assert block.done()
 
     def test_accepted_messages(self):
-        block = OptionalBlock(BlockList([ClientBlock([
+        block = OptionalBlock(BlockList([ClientBlock([  # noqa: PAR101
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -564,54 +560,50 @@ class TestOptionalBlock:
 class TestParallelBlock:
     @pytest.fixture()
     def block_read(self):
-        return ParallelBlock(
-            [
-                BlockList([ClientBlock([
-                    ClientLine(2, "C: MSG11", "MSG11"),
-                    ClientLine(2, "C: MSG12", "MSG12")
-                ], 2)], 2),
-                BlockList([ClientBlock([
-                    ClientLine(3, "C: MSG21", "MSG21"),
-                    ClientLine(3, "C: MSG21", "MSG22")
-                ], 3)], 3),
-            ], 1
-        )
+        return ParallelBlock([  # noqa: PAR101
+            BlockList([ClientBlock([  # noqa: PAR101
+                ClientLine(2, "C: MSG11", "MSG11"),
+                ClientLine(2, "C: MSG12", "MSG12")
+            ], 2)], 2),
+            BlockList([ClientBlock([  # noqa: PAR101
+                ClientLine(3, "C: MSG21", "MSG21"),
+                ClientLine(3, "C: MSG21", "MSG22")
+            ], 3)], 3),
+        ], 1)
 
     @pytest.fixture()
     def block_write(self):
-        return ParallelBlock(
-            [
-                BlockList([
-                    ClientBlock([
-                        ClientLine(2, "C: MSG1", "MSG1"),
-                    ], 2),
-                    ServerBlock([
-                        ServerLine(3, "S: SMSG1", "SMSG1")
-                    ], 3),
+        return ParallelBlock([  # noqa: PAR101
+            BlockList([  # noqa: PAR101
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(2, "C: MSG1", "MSG1"),
                 ], 2),
-                BlockList([
-                    ClientBlock([
-                        ClientLine(4, "C: MSG2", "MSG2"),
-                    ], 4),
-                    ServerBlock([
-                        ServerLine(5, "S: SMSG2", "SMSG2")
-                    ], 5),
+                ServerBlock([  # noqa: PAR101
+                    ServerLine(3, "S: SMSG1", "SMSG1")
+                ], 3),
+            ], 2),
+            BlockList([  # noqa: PAR101
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(4, "C: MSG2", "MSG2"),
+                ], 4),
+                ServerBlock([  # noqa: PAR101
+                    ServerLine(5, "S: SMSG2", "SMSG2")
                 ], 5),
-            ], 1
-        )
+            ], 5),
+        ], 1)
 
     @pytest.fixture()
     def block_with_non_det_end(self):
-        return ParallelBlock([
-            BlockList([
+        return ParallelBlock([  # noqa: PAR101
+            BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2),
                 ServerBlock([ServerLine(3, "S: SMSG1", "SMSG1")], 3),
-                OptionalBlock(BlockList([
+                OptionalBlock(BlockList([  # noqa: PAR101
                     ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
                     ServerBlock([ServerLine(6, "S: SMSG2", "SMSG2")], 6)
                 ], 5), 4),
             ], 2),
-            BlockList([
+            BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(8, "C: MSG3", "MSG3")], 8),
                 ServerBlock([ServerLine(9, "S: SMSG3", "SMSG3")], 9),
             ], 7)
@@ -619,14 +611,14 @@ class TestParallelBlock:
 
     @pytest.fixture()
     def block_with_non_det_block(self):
-        return ParallelBlock([
-            BlockList([
-                OptionalBlock(BlockList([
+        return ParallelBlock([  # noqa: PAR101
+            BlockList([  # noqa: PAR101
+                OptionalBlock(BlockList([  # noqa: PAR101
                     ClientBlock([ClientLine(3, "C: MSG1", "MSG1")], 3),
                     ServerBlock([ServerLine(4, "S: SMSG1", "SMSG1")], 4)
                 ], 3), 2),
             ], 2),
-            BlockList([
+            BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(5, "C: MSG2", "MSG2")], 5),
                 ServerBlock([ServerLine(7, "S: SMSG2", "SMSG2")], 7),
             ], 5)
@@ -723,7 +715,7 @@ class TestParallelBlock:
 class TestClientBlock:
     @pytest.fixture()
     def single_block(self):
-        return ClientBlock([
+        return ClientBlock([  # noqa: PAR101
             ClientLine(1, "C: MSG1", "MSG1"),
         ], 1)
 
@@ -733,7 +725,7 @@ class TestClientBlock:
 
     @pytest.fixture()
     def multi_block(self):
-        return ClientBlock([
+        return ClientBlock([  # noqa: PAR101
             ClientLine(1, "C: MSG1", "MSG1"),
             ClientLine(2, "C: MSG2", "MSG2"),
             ClientLine(3, "C: MSG3", "MSG3"),
@@ -828,7 +820,7 @@ class TestAutoBlock:
 class TestServerBlock:
     @pytest.fixture()
     def single_block(self):
-        return ServerBlock([
+        return ServerBlock([  # noqa: PAR101
             ServerLine(1, "S: SMSG1", "SMSG1"),
         ], 1)
 
@@ -838,7 +830,7 @@ class TestServerBlock:
 
     @pytest.fixture()
     def multi_block(self):
-        return ServerBlock([
+        return ServerBlock([  # noqa: PAR101
             ServerLine(1, "S: SMSG1", "SMSG1"),
             ServerLine(2, "S: SMSG2", "SMSG2"),
             ServerLine(3, "S: SMSG3", "SMSG3"),
@@ -855,7 +847,7 @@ class TestServerBlock:
         channel = channel_factory(["NOMATCH"],
                                   packstream_version=packstream_version)
         content = "SMSG1 " + content
-        block = ServerBlock([
+        block = ServerBlock([  # noqa: PAR101
             ServerLine(1, "S: " + content, content)
         ], 1)
         block.init(channel)
@@ -902,8 +894,8 @@ class _TestRepeatBlock:
 
     @pytest.fixture()
     def block_1(self):
-        return self.block_cls(BlockList([
-            ClientBlock([
+        return self.block_cls(BlockList([  # noqa: PAR101
+            ClientBlock([  # noqa: PAR101
                 ClientLine(2, "C: MSG1", "MSG1"),
             ], 2)
         ], 2), 1)
@@ -914,8 +906,8 @@ class _TestRepeatBlock:
 
     @pytest.fixture()
     def block_2(self):
-        return self.block_cls(BlockList([
-            ClientBlock([
+        return self.block_cls(BlockList([  # noqa: PAR101
+            ClientBlock([  # noqa: PAR101
                 ClientLine(2, "C: MSG1", "MSG1"),
                 ClientLine(3, "C: MSG2", "MSG2")
             ], 2)
@@ -927,12 +919,12 @@ class _TestRepeatBlock:
 
     @pytest.fixture()
     def block_optional_end(self):
-        return self.block_cls(BlockList([
-            ClientBlock([
+        return self.block_cls(BlockList([  # noqa: PAR101
+            ClientBlock([  # noqa: PAR101
                 ClientLine(2, "C: MSG1", "MSG1"),
                 ClientLine(3, "C: MSG2", "MSG2"),
             ], 2),
-            OptionalBlock(BlockList([
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(5, "C: MSG3", "MSG3")], 5)
             ], 5), 4),
         ], 2), 1)
@@ -943,11 +935,11 @@ class _TestRepeatBlock:
 
     @pytest.fixture()
     def block_all_optional(self):
-        return self.block_cls(BlockList([
-            OptionalBlock(BlockList([
+        return self.block_cls(BlockList([  # noqa: PAR101
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(3, "C: MSG1", "MSG1")], 3)
             ], 3), 2),
-            OptionalBlock(BlockList([
+            OptionalBlock(BlockList([  # noqa: PAR101
                 ClientBlock([ClientLine(6, "C: MSG2", "MSG2")], 6)
             ], 6), 5),
         ], 2), 1)

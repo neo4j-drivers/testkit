@@ -207,8 +207,8 @@ class TestWebSocket:
         payload = bytearray(125)
         mask = b"\x0A\x0B\x0C\x0C"
         frame = b"\x82\xFD" + mask
-        masked_payload = bytearray(
-            [payload[i] ^ mask[i % 4] for i in range(125)])
+        masked_payload = bytearray(payload[i] ^ mask[i % 4]
+                                   for i in range(125))
 
         framed_payload = frame + masked_payload
 

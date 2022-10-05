@@ -259,9 +259,10 @@ def cleanup(settings):
 
 def remove_dangling():
     print("Checking for dangling intermediate images")
-    images = subprocess.check_output([
-        "docker", "images", "-a", "--filter=dangling=true", "-q"
-    ], encoding="utf-8").splitlines()
+    images = subprocess.check_output(
+        ["docker", "images", "-a", "--filter=dangling=true", "-q"],
+        encoding="utf-8"
+    ).splitlines()
     if len(images):
         print("Cleaning up dangling images (docker rmi %s)" % " ".join(images))
         # Sometimes fails, do not fail build due to that

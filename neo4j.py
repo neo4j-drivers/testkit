@@ -52,7 +52,8 @@ class Standalone:
             self._image, self._hostname,
             mount_map={logs_path: "/logs"},
             env_map=env_map,
-            network=network)
+            network=network
+        )
 
     def addresses(self):
         return [(self._hostname, self._port)]
@@ -134,7 +135,7 @@ class Core:
         }
         # Config options renamed in 5.0 (old versions are deprecated and
         # still working; at lest they should be ;) )
-        for old_key, new_key in ({
+        for old_key, new_key in {
             "NEO4J_causal__clustering_transaction__advertised__address":
                 "NEO4J_server_cluster_advertised__address",
             "NEO4J_causal__clustering_transaction__listen__address":
@@ -153,7 +154,7 @@ class Core:
                 "NEO4J_dbms_cluster_discovery_type",
             "NEO4J_dbms_connector_bolt_advertised__address":
                 "NEO4J_server_bolt_advertised__address",
-        }).items():
+        }.items():
             env_map[new_key] = env_map[old_key]
         logs_path = join(self._artifacts_path, "logs")
         os.makedirs(logs_path, exist_ok=True)
