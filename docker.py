@@ -21,9 +21,11 @@ def _docker_path(path):
 def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
     class Runner:
         def __init__(self):
-            if log_path and "stdout" in kwargs or "stderr" in kwargs:
+            if log_path and ("stdout" in kwargs or "stderr" in kwargs):
                 raise ValueError("Cannot specify log_path with "
                                  "stdout or stderr")
+            kwargs.setdefault("stdout")
+            kwargs.setdefault("stderr")
             self.stopping = False
 
         def _process_run(self):
