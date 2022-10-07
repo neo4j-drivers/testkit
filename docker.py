@@ -28,9 +28,9 @@ def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
             kwargs.setdefault("stderr")
             self.stopping = False
 
-        def _process_run(self):
+        def _process_run(self, *args_, **kwargs_):
             try:
-                subprocess.run(cmd, *args, **kwargs)
+                subprocess.run(cmd, *args_, **kwargs_)
             except subprocess.CalledProcessError:
                 # ignore when shutting down anyway
                 if not self.stopping:
@@ -39,7 +39,7 @@ def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
         def run(self):
             if not log_path:
                 print(cmd)
-                self._process_run()
+                self._process_run(*args, **kwargs)
             else:
                 out_path = os.path.join(log_path, "out.log")
                 err_path = os.path.join(log_path, "err.log")
@@ -50,9 +50,11 @@ def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
                         out_fd.flush()
                         err_fd.write(str(cmd) + "\n")
                         err_fd.flush()
+                        kwargs_ = {**kwargs, "stdout": out_fd,
+                                   "stderr": err_fd}
                         print(cmd)
                         try:
-                            self._process_run()
+                            self._process_run(*args, **kwargs_)
                         finally:
                             out_fd.write("\n")
                             out_fd.flush()
