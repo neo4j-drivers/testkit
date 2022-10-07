@@ -21,11 +21,16 @@ def _docker_path(path):
 def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
     class Runner:
         def __init__(self):
+            if log_path and ("stdout" in kwargs or "stderr" in kwargs):
+                raise ValueError("Cannot specify log_path with "
+                                 "stdout or stderr")
+            kwargs.setdefault("stdout")
+            kwargs.setdefault("stderr")
             self.stopping = False
 
-        def _process_run(self):
+        def _process_run(self, *args_, **kwargs_):
             try:
-                subprocess.run(cmd, *args, stdout=None, stderr=None, **kwargs)
+                subprocess.run(cmd, *args_, **kwargs_)
             except subprocess.CalledProcessError:
                 # ignore when shutting down anyway
                 if not self.stopping:
@@ -34,19 +39,22 @@ def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
         def run(self):
             if not log_path:
                 print(cmd)
-                self._process_run()
+                self._process_run(*args, **kwargs)
             else:
                 out_path = os.path.join(log_path, "out.log")
                 err_path = os.path.join(log_path, "err.log")
                 with open(out_path, "a") as out_fd:
                     with open(err_path, "a") as err_fd:
+                        kwargs.update(stdout=out_fd, stderr=err_fd)
                         out_fd.write(str(cmd) + "\n")
                         out_fd.flush()
                         err_fd.write(str(cmd) + "\n")
                         err_fd.flush()
+                        kwargs_ = {**kwargs, "stdout": out_fd,
+                                   "stderr": err_fd}
                         print(cmd)
                         try:
-                            self._process_run()
+                            self._process_run(*args, **kwargs_)
                         finally:
                             out_fd.write("\n")
                             out_fd.flush()
