@@ -19,36 +19,62 @@ def _docker_path(path):
 
 
 def _subprocess_run(cmd, *args, log_path=None, background=False, **kwargs):
-    def run():
-        if not log_path:
-            print(cmd)
-            subprocess.run(cmd, *args, stdout=None, stderr=None, **kwargs)
-        else:
-            out_path = os.path.join(log_path, "out.log")
-            err_path = os.path.join(log_path, "err.log")
-            with open(out_path, "a") as out_fd:
-                with open(err_path, "a") as err_fd:
-                    out_fd.write(str(cmd) + "\n")
-                    out_fd.flush()
-                    err_fd.write(str(cmd) + "\n")
-                    err_fd.flush()
-                    print(cmd)
-                    subprocess.run(cmd, *args,
-                                   stdout=out_fd, stderr=err_fd, **kwargs)
-                    out_fd.write("\n")
-                    out_fd.flush()
-                    err_fd.write("\n")
-                    err_fd.flush()
+    class Runner:
+        def __init__(self):
+            if log_path and ("stdout" in kwargs or "stderr" in kwargs):
+                raise ValueError("Cannot specify log_path with "
+                                 "stdout or stderr")
+            kwargs.setdefault("stdout")
+            kwargs.setdefault("stderr")
+            self.stopping = False
 
+        def _process_run(self, *args_, **kwargs_):
+            try:
+                subprocess.run(cmd, *args_, **kwargs_)
+            except subprocess.CalledProcessError:
+                # ignore when shutting down anyway
+                if not self.stopping:
+                    raise
+
+        def run(self):
+            if not log_path:
+                print(cmd)
+                self._process_run(*args, **kwargs)
+            else:
+                out_path = os.path.join(log_path, "out.log")
+                err_path = os.path.join(log_path, "err.log")
+                with open(out_path, "a") as out_fd:
+                    with open(err_path, "a") as err_fd:
+                        kwargs.update(stdout=out_fd, stderr=err_fd)
+                        out_fd.write(str(cmd) + "\n")
+                        out_fd.flush()
+                        err_fd.write(str(cmd) + "\n")
+                        err_fd.flush()
+                        kwargs_ = {**kwargs, "stdout": out_fd,
+                                   "stderr": err_fd}
+                        print(cmd)
+                        try:
+                            self._process_run(*args, **kwargs_)
+                        finally:
+                            out_fd.write("\n")
+                            out_fd.flush()
+                            err_fd.write("\n")
+                            err_fd.flush()
+
+    runner = Runner()
     if not background:
-        run()
+        runner.run()
     else:
-        Thread(target=run, daemon=True).start()
+        Thread(target=runner.run, daemon=True).start()
+    return runner
 
 
 class Container:
-    def __init__(self, name):
+    def __init__(self, name, runners=None):
         self.name = name
+        if runners is None:
+            runners = []
+        self.runners = runners
 
     def _add(self, cmd, workdir, env_map):
         if workdir:
@@ -63,8 +89,11 @@ class Container:
         self._add(cmd, workdir, env_map)
         cmd.append(self.name)
         cmd.extend(command)
-        _subprocess_run(cmd, log_path=log_path, background=background,
-                        check=True)
+        self.runners.append(
+            _subprocess_run(
+                cmd, log_path=log_path, background=background, check=True
+            )
+        )
 
     def exec(self, command, workdir=None, env_map=None, log_path=None):
         self._exec(command, workdir=workdir, env_map=env_map,
@@ -76,6 +105,8 @@ class Container:
                    log_path=log_path, background=True)
 
     def rm(self):
+        for runner in self.runners:
+            runner.stopping = True
         cmd = ["docker", "rm", "-f", "-v", self.name]
         print(cmd)
         subprocess.run(cmd, check=False,
@@ -86,8 +117,10 @@ class Container:
 def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
                       port_map=None, env_map=None, working_folder=None,
                       network=None, aliases=None):
-    print(["docker", "rm", "-fv", name])
-    subprocess.run(["docker", "rm", "-fv", name], check=True)
+    if name in _running:
+        _running[name].rm()
+    else:
+        subprocess.run(["docker", "rm", "-fv", name], check=True)
     cmd = ["docker", "create", "--name", name]
     if mount_map is not None:
         for k in mount_map:
@@ -121,8 +154,8 @@ def create_or_replace(image, name, command=None, mount_map=None, host_map=None,
 def start(name):
     cmd = ["docker", "start", name]
     print(cmd)
-    subprocess.run(cmd, check=True)
-    container = Container(name)
+    runner = _subprocess_run(cmd, check=True)
+    container = Container(name, runners=[runner])
     _running[name] = container
     return container
 
@@ -162,8 +195,9 @@ def run(image, name, command=None, mount_map=None, host_map=None,
     cmd.append(image)
     if command:
         cmd.extend(command)
-    _subprocess_run(cmd, check=True, log_path=log_path, background=background)
-    container = Container(name)
+    runner = _subprocess_run(cmd, check=True, log_path=log_path,
+                             background=background)
+    container = Container(name, runners=[runner])
     _running[name] = container
     return container
 
@@ -222,11 +256,10 @@ def build_and_tag(tag_name, dockerfile_path, cwd=None,
     remove_dangling()
 
 
-def cleanup():
+def cleanup(settings):
     for c in list(_running.values()):
         c.rm()
-    if os.environ.get("TEST_DOCKER_RMI", "").lower() \
-            in ("true", "y", "yes", "1", "on"):
+    if settings.docker_rmi:
         for t in _created_tags:
             print("cleanup (docker rmi %s)" % t)
             subprocess.run(["docker", "rmi", t])

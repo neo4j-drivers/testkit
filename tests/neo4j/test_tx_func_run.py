@@ -202,19 +202,7 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-            server_is_affect_by_bug = get_server_info().version <= "4.4"
-            driver_has_fixed_bug = get_driver_name() not in ["javascript"]
-            if (server_is_affect_by_bug
-                and not driver_has_fixed_bug
-                and exc.code
-                    == "Neo.TransientError.Transaction.LockClientStopped"):
-                # This is the error we are looking for. Maybe there was  a
-                # leader election or so. Give the driver the chance to retry.
-                raise ApplicationCodeError("Stop, hammer time!")
-            elif ((not server_is_affect_by_bug or driver_has_fixed_bug)
-                    and exc.code
-                  == "Neo.ClientError.Transaction.LockClientStopped"):
+            if (exc.code == "Neo.ClientError.Transaction.LockClientStopped"):
                 # This is the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise ApplicationCodeError("Stop, hammer time!")
@@ -230,18 +218,9 @@ class TestTxFuncRun(TestkitTestCase):
         )
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        server_is_affect_by_bug = get_server_info().version <= "4.4"
-        if server_is_affect_by_bug and get_driver_name() in ["javascript"]:
-            self.assertEqual(
-                exc.code,
-                "Neo.TransientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(exc.errorType,
-                                 "<class 'neo4j.exceptions.TransientError'>")
-        else:
-            self.assertEqual(exc.code,
-                             "Neo.ClientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(exc.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
+
+        self.assertEqual(exc.code,
+                         "Neo.ClientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(exc.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")
