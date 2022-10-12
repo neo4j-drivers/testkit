@@ -151,7 +151,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "CREATE (p:Person{name:$name}) RETURN p.name AS name", {
                 "name": types.CypherString("the person")
             }, {
-                "bookmarkManager": None
+                "bookmarkManagerId": None
             })
 
         self.assertEqual(eager_result.keys, ["name"])
@@ -165,7 +165,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "MATCH (p:Person{name:$name}) RETURN p.name AS name", {
                 "name": types.CypherString("the person")
             }, {
-                "bookmarkManager": None
+                "bookmarkManagerId": None
             })
 
         self.assertEqual(eager_result2.keys, ["name"])
