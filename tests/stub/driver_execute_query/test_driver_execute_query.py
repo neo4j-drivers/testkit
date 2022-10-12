@@ -219,7 +219,19 @@ class TestDriverExecuteQuery(TestkitTestCase):
         bookmark_manager.close()
 
     def test_retry_on_retriable_error(self):
-        pass
+        self._start_server(
+            self._router, "router_invert_reader_and_writer_second_call.script")
+        self._start_server(
+            self._writer, "tx_return_1_disconnect_on_pull.script")
+        self._start_server(self._reader, "tx_return_1.script")
+        self._driver = self._new_driver()
+
+        eager_result = self._driver.execute_query("RETURN 1 AS n")
+
+        self.assertEqual(eager_result.keys, ["n"])
+        self.assertEqual(eager_result.records, [
+                         types.Record(values=[types.CypherInt(1)])])
+        self.assertIsNotNone(eager_result.summary)
 
     def test_thrown_non_retriable_error(self):
         pass
