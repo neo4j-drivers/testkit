@@ -141,7 +141,36 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self.assertIsNotNone(eager_result2.summary)
 
     def test_disable_bookmark_manager(self):
-        pass
+        self._start_server(self._router, "router.script")
+        self._start_server(
+            self._writer, "transaction_chaining.script")
+        self._driver = self._new_driver()
+
+        # CREATING NODE
+        eager_result = self._driver.execute_query(
+            "CREATE (p:Person{name:$name}) RETURN p.name AS name", {
+                "name": types.CypherString("the person")
+            }, {
+                "bookmarkManager": None
+            })
+
+        self.assertEqual(eager_result.keys, ["name"])
+        self.assertEqual(eager_result.records, [
+                         types.Record(values=[
+                             types.CypherString("the person")])])
+        self.assertIsNotNone(eager_result.summary)
+
+        # READING SAME NODE
+        eager_result2 = self._driver.execute_query(
+            "MATCH (p:Person{name:$name}) RETURN p.name AS name", {
+                "name": types.CypherString("the person")
+            }, {
+                "bookmarkManager": None
+            })
+
+        self.assertEqual(eager_result2.keys, ["name"])
+        self.assertEqual(eager_result2.records, [])
+        self.assertIsNotNone(eager_result2.summary)
 
     def test_configure_custom_bookmark_manager(self):
         pass
