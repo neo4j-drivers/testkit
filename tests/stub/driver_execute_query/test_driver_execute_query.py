@@ -8,6 +8,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
     required_features = (
         types.Feature.BOLT_5_0,
         types.Feature.API_BOOKMARK_MANAGER,
+        types.Feature.API_DRIVER_EXECUTE_QUERY
     )
 
     def setUp(self):
