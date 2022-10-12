@@ -218,6 +218,12 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         bookmark_manager.close()
 
+    def test_retry_on_retriable_error(self):
+        pass
+
+    def test_thrown_non_retriable_error(self):
+        pass
+
     def _start_server(self, server, script):
         server.start(self.script_path(script),
                      vars_={"#HOST#": self._router.host})
