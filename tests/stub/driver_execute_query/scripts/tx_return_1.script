@@ -1,0 +1,15 @@
+!: BOLT 5.0
+
+A: HELLO {"{}": "*"}
+*: RESET
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {"fields": ["n"], "qid": 1}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
+*: RESET
+?: GOODBYE

@@ -495,6 +495,18 @@ class ConnectionPoolMetrics:
         self.idle = idle
 
 
+class EagerResult:
+    def __init__(self, keys, records, summary):
+        self.keys = keys
+        record_list = []
+        if records is not None:
+            for record in records:
+                record_list.append(Record(values=record["values"]))
+
+        self.records = record_list
+        self.summary = Summary(**summary)
+
+
 class BaseError(Exception):
     """
     Base class for all types of errors, should not be sent from backend.

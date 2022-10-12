@@ -592,3 +592,19 @@ class CypherTypeField:
         self.recordKey = record_key
         self.type = type_name
         self.field = field_id
+
+
+class ExecuteQuery:
+    """
+    Request to execute a query in a retriable context.
+
+    Backend should return EagerResult or a Error response.
+    """
+
+    def __init__(self, driverId, cypher, params, config):
+        self.driverId = driverId
+        self.cypher = cypher
+        if params:
+            self.params = config
+        if config:
+            self.config = config
