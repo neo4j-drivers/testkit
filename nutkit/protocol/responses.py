@@ -498,12 +498,7 @@ class ConnectionPoolMetrics:
 class EagerResult:
     def __init__(self, keys, records, summary):
         self.keys = keys
-        record_list = []
-        if records is not None:
-            for record in records:
-                record_list.append(Record(values=record["values"]))
-
-        self.records = record_list
+        self.records = [Record(**record) for record in records or []]
         self.summary = Summary(**summary)
 
 
