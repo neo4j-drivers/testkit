@@ -74,7 +74,8 @@ class TestTxFuncRun(TestkitTestCase):
             for r0 in range(i0, n0 + 1):
                 rec = res0.next()
                 self.assertEqual(
-                    rec, types.Record(values=[types.CypherInt(r0)]))
+                    rec, types.Record(values=[types.CypherInt(r0)])
+                )
                 lasts[0] = rec.values[0].value
                 i1 = 7
                 n1 = 11
@@ -82,7 +83,8 @@ class TestTxFuncRun(TestkitTestCase):
                 for r1 in range(i1, n1 + 1):
                     rec = res1.next()
                     self.assertEqual(
-                        rec, types.Record(values=[types.CypherInt(r1)]))
+                        rec, types.Record(values=[types.CypherInt(r1)])
+                    )
                     lasts[1] = rec.values[0].value
                     i2 = 999
                     n2 = 1001
@@ -90,7 +92,8 @@ class TestTxFuncRun(TestkitTestCase):
                     for r2 in range(i2, n2 + 1):
                         rec = res2.next()
                         self.assertEqual(
-                            rec, types.Record(values=[types.CypherInt(r2)]))
+                            rec, types.Record(values=[types.CypherInt(r2)])
+                        )
                         lasts[2] = rec.values[0].value
                     self.assertEqual(res2.next(), types.NullRecord())
                 self.assertEqual(res1.next(), types.NullRecord())
@@ -202,7 +205,7 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            if (exc.code == "Neo.ClientError.Transaction.LockClientStopped"):
+            if exc.code == "Neo.ClientError.Transaction.LockClientStopped":
                 # This is the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise ApplicationCodeError("Stop, hammer time!")

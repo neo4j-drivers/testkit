@@ -182,13 +182,18 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.notifications, notifications)
 
     def test_multiple_notifications(self):
-        notifications = [{
-            "severity": "WARNING",
-            "description": "If a part of a query contains multiple "
-                           "disconnected patterns, ...",
-            "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
-            "title": "This query builds a cartesian product between... %i" % i
-        } for i in range(1, 4)]
+        notifications = [
+            {
+                "severity": "WARNING",
+                "description": "If a part of a query contains multiple "
+                               "disconnected patterns, ...",
+                "code":
+                    "Neo.ClientNotification.Statement.CartesianProductWarning",
+                "title":
+                    "This query builds a cartesian product between... %i" % i
+            }
+            for i in range(1, 4)
+        ]
         summary = self._get_summary(
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
@@ -309,7 +314,8 @@ class TestSummary(TestkitTestCase):
 
     def test_partial_summary_constraints_removed(self):
         summary = self._get_summary(
-            "partial_summary_constraints_removed.script")
+            "partial_summary_constraints_removed.script"
+        )
         self._assert_counters(
             summary, constraints_removed=1234, contains_updates=True
         )

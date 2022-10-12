@@ -22,7 +22,8 @@ class AuthorizationBase(TestkitTestCase):
         if driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.AuthorizationExpiredException",
-                error.errorType)
+                error.errorType
+            )
         elif driver in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.TransientError'>", error.errorType
@@ -35,7 +36,8 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
-                error.errorType)
+                error.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -54,12 +56,14 @@ class AuthorizationBase(TestkitTestCase):
         elif driver == "java":
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TokenExpiredException",
-                error.errorType)
+                error.errorType
+            )
             self.assertIn("Token expired", error.msg)
         elif driver == "ruby":
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::TokenExpiredException",
-                error.errorType)
+                error.errorType
+            )
             self.assertIn("Token expired", error.msg)
         elif driver == "dotnet":
             self.assertEqual("ClientError", error.errorType)
@@ -117,7 +121,8 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self._uri = "neo4j://%s:%d" % (self._routing_server1.host,
                                        self._routing_server1.port)
         self._auth = types.AuthorizationToken(
-            "basic", principal="p", credentials="c")
+            "basic", principal="p", credentials="c"
+        )
         self._userAgent = "007"
 
     def tearDown(self):
@@ -306,7 +311,8 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.start_server(
             self._read_server1,
             "reader_tx_yielding_error_on_commit_with_pull_or_discard.script",
-            vars_=vars_)
+            vars_=vars_
+        )
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
@@ -342,7 +348,8 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.start_server(
             self._read_server1,
             "reader_tx_yielding_error_on_rollback_with_pull_or_discard.script",
-            vars_=vars_)
+            vars_=vars_
+        )
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
@@ -777,7 +784,8 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         self._uri = "bolt://%s:%d" % (self._server.host,
                                       self._server.port)
         self._auth = types.AuthorizationToken(
-            "basic", principal="p", credentials="c")
+            "basic", principal="p", credentials="c"
+        )
         self._userAgent = "007"
 
     def tearDown(self):

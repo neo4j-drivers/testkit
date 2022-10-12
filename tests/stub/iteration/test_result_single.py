@@ -18,7 +18,8 @@ class TestResultSingle(IterationTestBase):
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::NoSuchRecordException",
-                error.errorType)
+                error.errorType
+            )
         elif driver in ["dotnet"]:
             self.assertEqual("InvalidOperationException", error.errorType)
         elif driver in ["java"]:
@@ -38,7 +39,8 @@ class TestResultSingle(IterationTestBase):
         elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ServiceUnavailableException",
-                error.errorType)
+                error.errorType
+            )
         elif driver in ["dotnet"]:
             self.assertEqual("ServiceUnavailableError", error.errorType)
         elif driver in ["java"]:
