@@ -31,7 +31,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 as n")
+        eager_result = self._driver.execute_query("RETURN 1 AS n")
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -43,7 +43,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 as n", {
+        eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
         })
 
@@ -57,9 +57,9 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 as n", {
+        eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
-        }, {"routing": "W"})
+        }, {"routing": "w"})
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -71,9 +71,9 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._reader, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 as n", {
+        eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
-        }, {"routing": "R"})
+        }, {"routing": "r"})
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -85,7 +85,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 as n", {
+        eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
         }, {"database": "neo4j"})
 
@@ -101,7 +101,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._driver = self._new_driver()
 
         eager_result = self._driver.execute_query(
-            "RETURN 1 as n",
+            "RETURN 1 AS n",
             config={"impersonatedUser": "that-other-dude"})
 
         self.assertEqual(eager_result.keys, ["n"])
