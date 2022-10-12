@@ -1,0 +1,31 @@
+!: BOLT 5.0
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+*: RESET
+{*
+    {{
+        C: BEGIN {"[db]": "*"}
+        S: SUCCESS {}
+        C: RUN "CREATE (p:Person{name:$name}) RETURN p.name AS name" { "name":"the person" } {}
+        S: SUCCESS {"fields": ["name"]}
+        C: PULL {"n": 1000}
+        S: RECORD ["the person"]
+           SUCCESS {"type": "w"}
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bm1"}
+    ----
+        C: BEGIN {"bookmarks": ["bm1"], "[db]": "*"}
+        S: SUCCESS {}
+        C: RUN "MATCH (p:Person{name:$name}) RETURN p.name AS name" { "name":"the person" } {}
+        S: SUCCESS {"fields": ["name"]}
+        C: PULL {"n": 1000}
+        S: RECORD ["the person"]
+           SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {"bookmark": "bm2"}
+   }}
+    *: RESET
+*}
+
+?: GOODBYE
