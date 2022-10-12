@@ -81,7 +81,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self.assertIsNotNone(eager_result.summary)
 
     def test_configure_database(self):
-        self._start_server(self._router, "router.script")
+        self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
@@ -95,7 +95,19 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self.assertIsNotNone(eager_result.summary)
 
     def test_configure_impersonated_user(self):
-        pass
+        self._start_server(self._router, "router_with_impersonation.script")
+        self._start_server(
+            self._writer, "tx_return_1_with_impersonation.script")
+        self._driver = self._new_driver()
+
+        eager_result = self._driver.execute_query(
+            "RETURN 1 as n",
+            config={"impersonatedUser": "that-other-dude"})
+
+        self.assertEqual(eager_result.keys, ["n"])
+        self.assertEqual(eager_result.records, [
+                         types.Record(values=[types.CypherInt(1)])])
+        self.assertIsNotNone(eager_result.summary)
 
     def test_causal_consistency_between_query_executions(self):
         pass
