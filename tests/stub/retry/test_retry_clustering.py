@@ -223,15 +223,17 @@ class TestRetryClustering(TestkitTestCase):
             self._routingServer.done()
             self._writeServer.done()  #
 
-        failures = []
-        failures.append(
-            ["Neo.TransientError.Transaction.Terminated",
-                "Neo.ClientError.Transaction.Terminated"])
-        failures.append(
-            ["Neo.TransientError.Transaction.LockClientStopped",
-                "Neo.ClientError.Transaction.LockClientStopped"])
+        failures = [
+            [
+                "Neo.TransientError.Transaction.Terminated",
+                "Neo.ClientError.Transaction.Terminated"
+            ], [
+                "Neo.TransientError.Transaction.LockClientStopped",
+                "Neo.ClientError.Transaction.LockClientStopped"
+            ]
+        ]
 
-        for failure in (failures):
+        for failure in failures:
             with self.subTest(failure=failure):
                 _test()
             self._routingServer.reset()

@@ -6,8 +6,9 @@ import socket
 
 import nutkit.protocol as protocol
 
-PROTOCOL_CLASSES = dict([
-    m for m in inspect.getmembers(protocol, inspect.isclass)])
+PROTOCOL_CLASSES = dict(
+    m for m in inspect.getmembers(protocol, inspect.isclass)
+)
 DEBUG_MESSAGES = os.environ.get("TEST_DEBUG_REQRES", "0").lower() in (
     "1", "y", "yes", "true", "t", "on"
 )

@@ -52,11 +52,10 @@ def initialise_configurations(settings):
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
+        image = "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
         return neo4j.Config(
             name=name,
-            image=(
-                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
-            ),
+            image=image,
             version=version,
             edition=edition,
             cluster=cluster,
@@ -196,7 +195,8 @@ def parse_command_line(configurations, argv):
         'TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") '
         'of the Neo4j server, default "enterprise"\n'
         "TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "
-        '"False"\n')
+        '"False"\n'
+    )
     servers_help = "Optional space separated list selected from: "
     for config in configurations:
         servers_help += config.name + ", "
@@ -207,14 +207,14 @@ def parse_command_line(configurations, argv):
     )
 
     # add arguments
-    parser.add_argument(
-        "--tests", nargs="*", required=False, help=tests_help)
-    parser.add_argument(
-        "--configs", nargs="*", required=False, help=servers_help)
-    parser.add_argument(
-        "--external-integration", action="store_true", help=external_help)
-    parser.add_argument(
-        "--run-only-selected", nargs=1, required=False, help=run_only_help)
+    parser.add_argument("--tests", nargs="*", required=False,
+                        help=tests_help)
+    parser.add_argument("--configs", nargs="*", required=False,
+                        help=servers_help)
+    parser.add_argument("--external-integration", action="store_true",
+                        help=external_help)
+    parser.add_argument("--run-only-selected", nargs=1, required=False,
+                        help=run_only_help)
 
     # parse the arguments
     args = parser.parse_args()

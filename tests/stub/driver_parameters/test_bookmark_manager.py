@@ -562,30 +562,36 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s2.close()
 
         if len(get_bookmarks_calls) == 5:
-            self.assertEqual([
-                # acquire connection
-                ["system"],
-                # first tx
-                [None],
-                # name resolution
-                ["system"],
-                # acquire connection
-                ["system"],
-                # second tx
-                [None]
-            ], get_bookmarks_calls)
+            self.assertEqual(
+                [
+                    # acquire connection
+                    ["system"],
+                    # first tx
+                    [None],
+                    # name resolution
+                    ["system"],
+                    # acquire connection
+                    ["system"],
+                    # second tx
+                    [None]
+                ],
+                get_bookmarks_calls
+            )
         else:
             self.assertEqual(4, len(get_bookmarks_calls))
-            self.assertEqual([
-                # acquire connection
-                ["system"],
-                # first tx
-                [None],
-                # name resolution
-                ["system"],
-                # second tx
-                [None]
-            ], get_bookmarks_calls)
+            self.assertEqual(
+                [
+                    # acquire connection
+                    ["system"],
+                    # first tx
+                    [None],
+                    # name resolution
+                    ["system"],
+                    # second tx
+                    [None]
+                ],
+                get_bookmarks_calls
+            )
 
     def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
         self._start_server(self._router, "router_with_db_name.script")
@@ -679,12 +685,15 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s2.close()
 
         self.assertEqual(2, len(bookmarks_consumer_calls))
-        self.assertEqual([
-            # first tx
-            ["neo4j", ["bm1"]],
-            # second tx
-            ["adb", ["adb:bm4"]],
-        ], bookmarks_consumer_calls)
+        self.assertEqual(
+            [
+                # first tx
+                ["neo4j", ["bm1"]],
+                # second tx
+                ["adb", ["adb:bm4"]],
+            ],
+            bookmarks_consumer_calls
+        )
 
     def test_should_call_bookmarks_consumer_for_default_db(self):
         self._start_server(self._router, "router.script")

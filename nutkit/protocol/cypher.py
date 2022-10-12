@@ -162,7 +162,8 @@ class Node:
 
     def __str__(self):
         return "Node(id={}, labels={}, props={}, elementId={})".format(
-            self.id, self.labels, self.props, self.elementId)
+            self.id, self.labels, self.props, self.elementId
+        )
 
     def __repr__(self):
         return "<{}(id={}, labels={}, props={}, elementId={})>".format(

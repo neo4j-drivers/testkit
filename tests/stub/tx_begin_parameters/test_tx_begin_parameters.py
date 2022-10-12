@@ -234,9 +234,7 @@ class TestTxBeginParameters(TestkitTestCase):
                         "Neo4j::Driver::Exceptions::ClientException"
                     )
                 elif self._driver_name in ["dotnet"]:
-                    self.assertEqual(
-                        exc.exception.errorType,
-                        "ArgumentError")
+                    self.assertEqual(exc.exception.errorType, "ArgumentError")
 
     @driver_feature(types.Feature.IMPERSONATION,
                     types.Feature.BOLT_4_4)

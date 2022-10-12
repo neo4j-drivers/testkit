@@ -144,8 +144,8 @@ class JoltRelationTransformer(JoltRelationTransformer):
             raise JOLTValueError("Relationship's start_node_element_id must "
                                  "be str")
         if not isinstance(end_node_element_id, str):
-            raise JOLTValueError(
-                "Relationship's end_node_element_id must be str")
+            raise JOLTValueError("Relationship's end_node_element_id must "
+                                 "be str")
 
         return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
                                 properties, element_id, start_node_element_id,
