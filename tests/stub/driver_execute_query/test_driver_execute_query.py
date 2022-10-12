@@ -39,7 +39,18 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self.assertIsNotNone(eager_result.summary)
 
     def test_execute_query_without_config(self):
-        pass
+        self._start_server(self._router, "router.script")
+        self._start_server(self._writer, "tx_return_1_with_params.script")
+        self._driver = self._new_driver()
+
+        eager_result = self._driver.execute_query("RETURN 1 as n", {
+            "a": types.CypherInt(1)
+        })
+
+        self.assertEqual(eager_result.keys, ["n"])
+        self.assertEqual(eager_result.records, [
+                         types.Record(values=[types.CypherInt(1)])])
+        self.assertIsNotNone(eager_result.summary)
 
     def test_configure_routing_to_writers(self):
         pass

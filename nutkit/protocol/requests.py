@@ -605,6 +605,6 @@ class ExecuteQuery:
         self.driverId = driverId
         self.cypher = cypher
         if params:
-            self.params = config
+            self.params = params
         if config:
             self.config = config
