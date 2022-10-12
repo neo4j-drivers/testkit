@@ -234,7 +234,18 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self.assertIsNotNone(eager_result.summary)
 
     def test_thrown_non_retriable_error(self):
-        pass
+        self._start_server(
+            self._router, "router.script")
+        self._start_server(
+            self._writer, "tx_return_1_transaction_terminated_on_pull.script")
+
+        self._driver = self._new_driver()
+
+        with self.assertRaises(types.DriverError) as exc:
+            self._driver.execute_query("RETURN 1 AS n")
+
+        self.assertEqual(exc.exception.code,
+                         "Neo.ClientError.Transaction.Terminated")
 
     def _start_server(self, server, script):
         server.start(self.script_path(script),
