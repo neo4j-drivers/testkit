@@ -15,7 +15,7 @@ class Feature(Enum):
         "Feature:API:ConnectionAcquisitionTimeout"
     # The driver offers a method for run a query in a retriable context at the
     # driver object level
-    API_DRIVER_EXECUTE_QUERY = "Feature:API:Driver:ExecuteQuery"
+    API_DRIVER_EXECUTE_QUERY = "Feature:API:Driver.ExecuteQuery"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established and retrieve the server info of the
     # reached remote.
