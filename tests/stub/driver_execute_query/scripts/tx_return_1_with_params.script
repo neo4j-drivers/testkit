@@ -8,7 +8,7 @@ C: RUN "RETURN $a AS n" { "a": 1 } {}
 S: SUCCESS {"fields": ["n"], "qid": 1}
 C: PULL {"n": 1000}
 S: RECORD [1]
-   SUCCESS {"type": "r"}
+   SUCCESS {"type": "r", "db": "#DB#"}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
 *: RESET

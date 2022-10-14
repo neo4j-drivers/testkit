@@ -599,6 +599,18 @@ class ExecuteQuery:
     Request to execute a query in a retriable context.
 
     Backend should return EagerResult or a Error response.
+
+    :param driverId: The id of the driver where the cypher query has to run.
+    :param cypher: The cypher query which to run.
+    :param params: The cypher query params.
+    :param config: The configuration
+    :param config.database: The database where the query will run.
+    :param config.routing: The type of routing ("w" for Writers,
+         "r" for "Readers")
+    :param config.impersonatedUser: The user which will be impersonated
+    :param config.bookmarkManagerId: The id of the bookmark manager
+        used in the query. None or not define for using the default,
+        -1 for disabling the BookmarkManager
     """
 
     def __init__(self, driverId, cypher, params, config):
