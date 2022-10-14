@@ -64,7 +64,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
-        }, {"routing": "w"})
+        }, routing="w")
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -78,7 +78,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
-        }, {"routing": "r"})
+        }, routing="r")
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -92,7 +92,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         eager_result = self._driver.execute_query("RETURN 1 AS n", {
             "a": types.CypherInt(1)
-        }, {"database": "neo4j"})
+        }, database="neo4j")
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -107,7 +107,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         eager_result = self._driver.execute_query(
             "RETURN 1 AS n",
-            config={"impersonatedUser": "that-other-dude"})
+            impersonated_user="that-other-dude")
 
         self.assertEqual(eager_result.keys, ["n"])
         self.assertEqual(eager_result.records, [
@@ -154,9 +154,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         eager_result = self._driver.execute_query(
             "CREATE (p:Person{name:$name}) RETURN p.name AS name", {
                 "name": types.CypherString("the person")
-            }, {
-                "bookmarkManagerId": None
-            })
+            }, bookmark_manager=None)
 
         self.assertEqual(eager_result.keys, ["name"])
         self.assertEqual(eager_result.records, [
@@ -192,9 +190,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         eager_result = self._driver.execute_query(
             "CREATE (p:Person{name:$name}) RETURN p.name AS name", {
                 "name": types.CypherString("a person")
-            }, {
-                "bookmarkManagerId": bookmark_manager.id
-            })
+            }, bookmark_manager=bookmark_manager)
 
         self.assertEqual(eager_result.keys, ["name"])
         self.assertEqual(eager_result.records, [
@@ -206,9 +202,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         eager_result2 = self._driver.execute_query(
             "MATCH (p:Person{name:$name}) RETURN p.name AS name", {
                 "name": types.CypherString("a person")
-            }, {
-                "bookmarkManagerId": bookmark_manager.id
-            })
+            }, bookmark_manager=bookmark_manager)
 
         self.assertEqual(eager_result2.keys, ["name"])
         self.assertEqual(eager_result.records, [
