@@ -48,7 +48,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 AS n", {
+        eager_result = self._driver.execute_query("RETURN $a AS n", {
             "a": types.CypherInt(1)
         })
 
@@ -62,7 +62,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 AS n", {
+        eager_result = self._driver.execute_query("RETURN $a AS n", {
             "a": types.CypherInt(1)
         }, routing="w")
 
@@ -76,7 +76,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._reader, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 AS n", {
+        eager_result = self._driver.execute_query("RETURN $a AS n", {
             "a": types.CypherInt(1)
         }, routing="r")
 
@@ -90,7 +90,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN 1 AS n", {
+        eager_result = self._driver.execute_query("RETURN $a AS n", {
             "a": types.CypherInt(1)
         }, database="neo4j")
 
