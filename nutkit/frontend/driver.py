@@ -70,13 +70,11 @@ class Driver:
     def execute_query(self, cypher, params=None,
                       routing=None, database=None,
                       impersonated_user=None, bookmark_manager=...):
-        config = {}
-        if routing:
-            config["routing"] = routing
-        if database:
-            config["database"] = database
-        if impersonated_user:
-            config["impersonatedUser"] = impersonated_user
+        config = {
+            "routing": routing,
+            "database": database,
+            "impersonatedUser": impersonated_user
+        }
 
         if bookmark_manager is None:
             config["bookmarkManagerId"] = -1
