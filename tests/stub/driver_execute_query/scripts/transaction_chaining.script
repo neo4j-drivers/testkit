@@ -13,7 +13,7 @@ A: HELLO {"{}": "*"}
             C: PULL {"n": 1000}
             S: RECORD ["the person"]
                SUCCESS {"type": "w"}
-          ----
+        ----
             C: RUN "MATCH (p:Person{name:$name}) RETURN p.name AS name" { "name":"the person" } {}
             S: SUCCESS {"fields": ["name"]}
             C: PULL {"n": 1000}
