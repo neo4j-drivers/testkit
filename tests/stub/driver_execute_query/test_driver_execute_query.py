@@ -38,14 +38,14 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         eager_result = self._driver.execute_query("RETURN 1 AS n")
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("r", summary.query_type)
 
     def test_execute_query_without_config(self):
         self._start_server(self._router, "router.script")
@@ -56,14 +56,14 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "a": types.CypherInt(1)
         })
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("r", summary.query_type)
 
     def test_configure_routing_to_writers(self):
         self._start_server(self._router, "router.script")
@@ -74,14 +74,14 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "a": types.CypherInt(1)
         }, routing="w")
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("r", summary.query_type)
 
     def test_configure_routing_to_readers(self):
         self._start_server(self._router, "router.script")
@@ -92,14 +92,14 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "a": types.CypherInt(1)
         }, routing="r")
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("r", summary.query_type)
 
     def test_configure_database(self):
         self._start_server(self._router, "router_with_db_name.script")
@@ -111,15 +111,15 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "a": types.CypherInt(1)
         }, database="neo4j")
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "r")
-        self.assertEqual(summary.database, "neo4j")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("r", summary.query_type)
+        self.assertEqual("neo4j", summary.database)
 
     def test_configure_impersonated_user(self):
         self._start_server(self._router, "router_with_impersonation.script")
@@ -131,14 +131,14 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "RETURN 1 AS n",
             impersonated_user="that-other-dude")
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("r", summary.query_type)
 
     def test_causal_consistency_between_query_executions(self):
         self._start_server(self._router, "router.script")
@@ -152,15 +152,16 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 "name": types.CypherString("the person")
             })
 
-        self.assertEqual(eager_result.keys, ["name"])
-        self.assertEqual(eager_result.records, [
+        self.assertEqual(["name"], eager_result.keys)
+        self.assertEqual([
                          types.Record(values=[
-                             types.CypherString("the person")])])
+                             types.CypherString("the person")])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "w")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("w", summary.query_type)
 
         # READING SAME NODE
         eager_result2 = self._driver.execute_query(
@@ -168,15 +169,15 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 "name": types.CypherString("the person")
             })
 
-        self.assertEqual(eager_result2.keys, ["name"])
+        self.assertEqual(["name"], eager_result2.keys)
         self.assertEqual(eager_result2.records, [
                          types.Record(values=[
                              types.CypherString("the person")])])
         self.assertIsNotNone(eager_result2.summary)
         summary2 = eager_result2.summary
-        self.assertEqual(summary2.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary2.server_info.protocol_version, "5.0")
-        self.assertEqual(summary2.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary2.server_info.agent)
+        self.assertEqual("5.0", summary2.server_info.protocol_version)
+        self.assertEqual("r", summary2.query_type)
 
     def test_disable_bookmark_manager(self):
         self._start_server(self._router, "router.script")
@@ -190,15 +191,16 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 "name": types.CypherString("the person")
             }, bookmark_manager=None)
 
-        self.assertEqual(eager_result.keys, ["name"])
-        self.assertEqual(eager_result.records, [
+        self.assertEqual(["name"], eager_result.keys)
+        self.assertEqual([
                          types.Record(values=[
-                             types.CypherString("the person")])])
+                             types.CypherString("the person")])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "w")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("w", summary.query_type)
 
         # READING SAME NODE
         eager_result2 = self._driver.execute_query(
@@ -208,13 +210,13 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 "bookmarkManagerId": None
             })
 
-        self.assertEqual(eager_result2.keys, ["name"])
-        self.assertEqual(eager_result2.records, [])
+        self.assertEqual(["name"], eager_result2.keys)
+        self.assertEqual([], eager_result2.records)
         self.assertIsNotNone(eager_result2.summary)
         summary2 = eager_result2.summary
-        self.assertEqual(summary2.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary2.server_info.protocol_version, "5.0")
-        self.assertEqual(summary2.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary2.server_info.agent)
+        self.assertEqual("5.0", summary2.server_info.protocol_version)
+        self.assertEqual("r", summary2.query_type)
 
     def test_configure_custom_bookmark_manager(self):
         self._start_server(self._router, "router.script")
@@ -234,15 +236,16 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 "name": types.CypherString("a person")
             }, bookmark_manager=bookmark_manager)
 
-        self.assertEqual(eager_result.keys, ["name"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[
-                             types.CypherString("a person")])])
+        self.assertEqual(["name"], eager_result.keys)
+        self.assertEqual([
+            types.Record(values=[
+                types.CypherString("a person")])],
+            eager_result.records)
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
-        self.assertEqual(summary.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary.server_info.protocol_version, "5.0")
-        self.assertEqual(summary.query_type, "w")
+        self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
+        self.assertEqual("5.0", summary.server_info.protocol_version)
+        self.assertEqual("w", summary.query_type)
 
         # READING SAME NODE
         eager_result2 = self._driver.execute_query(
@@ -250,15 +253,16 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 "name": types.CypherString("a person")
             }, bookmark_manager=bookmark_manager)
 
-        self.assertEqual(eager_result2.keys, ["name"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[
-                             types.CypherString("a person")])])
+        self.assertEqual(["name"], eager_result2.keys)
+        self.assertEqual([
+            types.Record(values=[
+                types.CypherString("a person")])],
+            eager_result2.records)
         self.assertIsNotNone(eager_result2.summary)
         summary2 = eager_result2.summary
-        self.assertEqual(summary2.server_info.agent, "Neo4j/5.0.0")
-        self.assertEqual(summary2.server_info.protocol_version, "5.0")
-        self.assertEqual(summary2.query_type, "r")
+        self.assertEqual("Neo4j/5.0.0", summary2.server_info.agent)
+        self.assertEqual("5.0", summary2.server_info.protocol_version)
+        self.assertEqual("r", summary2.query_type)
 
         bookmark_manager.close()
 
@@ -272,9 +276,9 @@ class TestDriverExecuteQuery(TestkitTestCase):
 
         eager_result = self._driver.execute_query("RETURN 1 AS n")
 
-        self.assertEqual(eager_result.keys, ["n"])
-        self.assertEqual(eager_result.records, [
-                         types.Record(values=[types.CypherInt(1)])])
+        self.assertEqual(["n"], eager_result.keys)
+        self.assertEqual([types.Record(values=[types.CypherInt(1)])],
+                         eager_result.records)
         self.assertIsNotNone(eager_result.summary)
 
     def test_thrown_non_retriable_error(self):
