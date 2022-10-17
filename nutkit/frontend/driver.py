@@ -67,15 +67,15 @@ class Driver:
         return self.receive(timeout=timeout, hooks=hooks,
                             allow_resolution=allow_resolution)
 
-    def execute_query(self, cypher, params=None, config=None,
+    def execute_query(self, cypher, params=None,
                       routing=None, database=None,
                       impersonated_user=None, bookmark_manager=...):
         config = {}
-        if (routing):
+        if routing:
             config["routing"] = routing
-        if (database):
+        if database:
             config["database"] = database
-        if (impersonated_user):
+        if impersonated_user:
             config["impersonatedUser"] = impersonated_user
 
         if bookmark_manager is None:

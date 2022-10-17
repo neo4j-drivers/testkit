@@ -600,7 +600,7 @@ class ExecuteQuery:
 
     Backend should return EagerResult or a Error response.
 
-    :param driverId: The id of the driver where the cypher query has to run.
+    :param driver_id: The id of the driver where the cypher query has to run.
     :param cypher: The cypher query which to run.
     :param params: The cypher query params.
     :param config: The configuration
@@ -613,8 +613,8 @@ class ExecuteQuery:
         -1 for disabling the BookmarkManager
     """
 
-    def __init__(self, driverId, cypher, params, config):
-        self.driverId = driverId
+    def __init__(self, driver_id, cypher, params, config):
+        self.driverId = driver_id
         self.cypher = cypher
         if params:
             self.params = params
