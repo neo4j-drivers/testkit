@@ -153,10 +153,10 @@ class TestDriverExecuteQuery(TestkitTestCase):
             })
 
         self.assertEqual(["name"], eager_result.keys)
-        self.assertEqual([
-                         types.Record(values=[
-                             types.CypherString("the person")])],
-                         eager_result.records)
+        self.assertEqual(
+            [types.Record(values=[types.CypherString("the person")])],
+            eager_result.records
+        )
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
         self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
@@ -170,9 +170,10 @@ class TestDriverExecuteQuery(TestkitTestCase):
             })
 
         self.assertEqual(["name"], eager_result2.keys)
-        self.assertEqual(eager_result2.records, [
-                         types.Record(values=[
-                             types.CypherString("the person")])])
+        self.assertEqual(
+            eager_result2.records,
+            [types.Record(values=[types.CypherString("the person")])]
+        )
         self.assertIsNotNone(eager_result2.summary)
         summary2 = eager_result2.summary
         self.assertEqual("Neo4j/5.0.0", summary2.server_info.agent)
@@ -192,10 +193,10 @@ class TestDriverExecuteQuery(TestkitTestCase):
             }, bookmark_manager=None)
 
         self.assertEqual(["name"], eager_result.keys)
-        self.assertEqual([
-                         types.Record(values=[
-                             types.CypherString("the person")])],
-                         eager_result.records)
+        self.assertEqual(
+            [types.Record(values=[types.CypherString("the person")])],
+            eager_result.records
+        )
         self.assertIsNotNone(eager_result.summary)
         summary = eager_result.summary
         self.assertEqual("Neo4j/5.0.0", summary.server_info.agent)
