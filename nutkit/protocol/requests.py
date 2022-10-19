@@ -616,7 +616,6 @@ class ExecuteQuery:
     def __init__(self, driver_id, cypher, params, config):
         self.driverId = driver_id
         self.cypher = cypher
-        if params:
-            self.params = params
+        self.params = params
         if config:
             self.config = config
