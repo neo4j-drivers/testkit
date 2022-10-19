@@ -5,7 +5,6 @@ A: HELLO {"{}": "*"}
 
 C: BEGIN {"[db]": "*"}
 S: SUCCESS {}
-<<<<<<< HEAD
 C: RUN "CREATE (p:Person {name:$name}) RETURN p.name AS name" {"name": "the person"} {}
 S: SUCCESS {"fields": ["name"]}
 C: PULL {"n": 1000}
