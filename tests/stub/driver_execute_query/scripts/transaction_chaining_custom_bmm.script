@@ -12,6 +12,7 @@ S: RECORD ["a person"]
    SUCCESS {"type": "w"}
 C: COMMIT
 S: SUCCESS {"bookmark": "bm1"}
+*: RESET
 
 {{
     C: BEGIN {"bookmarks": ["other_db:bm1"], "[db]": "*"}
