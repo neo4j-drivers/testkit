@@ -5,7 +5,8 @@ A: HELLO {"{}": "*"}
 
 C: BEGIN {"[db]": "*"}
 S: SUCCESS {}
-C: RUN "CREATE (p:Person{name:$name}) RETURN p.name AS name" {"name": "the person"} {}
+<<<<<<< HEAD
+C: RUN "CREATE (p:Person {name:$name}) RETURN p.name AS name" {"name": "the person"} {}
 S: SUCCESS {"fields": ["name"]}
 C: PULL {"n": 1000}
 S: RECORD ["the person"]
@@ -17,7 +18,7 @@ S: SUCCESS {"bookmark": "bm1"}
 {{
     C: BEGIN {"[db]": "*"}
     S: SUCCESS {}
-    C: RUN "MATCH (p:Person{name:$name}) RETURN p.name AS name" {"name": "the person"} {}
+    C: RUN "MATCH (p:Person {name:$name}) RETURN p.name AS name" {"name": "the person"} {}
     S: SUCCESS {"fields": ["name"]}
     C: PULL {"n": 1000}
     S: SUCCESS {"type": "r"}
@@ -26,7 +27,7 @@ S: SUCCESS {"bookmark": "bm1"}
 ----
     C: BEGIN {"bookmarks": ["bm1"], "[db]": "*"}
     S: SUCCESS {}
-    C: RUN "MATCH (p:Person{name:$name}) RETURN p.name AS name" {"name": "the person"} {}
+    C: RUN "MATCH (p:Person {name:$name}) RETURN p.name AS name" {"name": "the person"} {}
     S: SUCCESS {"fields": ["name"]}
     C: PULL {"n": 1000}
     S: RECORD ["the person"]

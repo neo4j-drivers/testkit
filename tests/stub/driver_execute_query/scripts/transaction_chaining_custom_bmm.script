@@ -1,38 +1,38 @@
 !: BOLT 5.0
-!: ALLOW CONCURRENT
 
 A: HELLO {"{}": "*"}
 *: RESET
-{*
-    {{
-        C: BEGIN {"bookmarks": ["other_db:bm1"], "[db]": "*"}
-        S: SUCCESS {}
-        {{
-            C: RUN "CREATE (p:Person{name:$name}) RETURN p.name AS name" { "name":"a person" } {}
-            S: SUCCESS {"fields": ["name"]}
-            C: PULL {"n": 1000}
-            S: RECORD ["a person"]
-               SUCCESS {"type": "w"}
-        ----
-            C: RUN "MATCH (p:Person{name:$name}) RETURN p.name AS name" { "name":"a person" } {}
-            S: SUCCESS {"fields": ["name"]}
-            C: PULL {"n": 1000}
-            S: SUCCESS {"type": "r"}
-        }}
-        C: COMMIT
-        S: SUCCESS {"bookmark": "bm1"}
-    ----
-        C: BEGIN {"bookmarks{}": ["bm1", "other_db:bm1"], "[db]": "*"}
-        S: SUCCESS {}
-        C: RUN "MATCH (p:Person{name:$name}) RETURN p.name AS name" { "name":"a person" } {}
-        S: SUCCESS {"fields": ["name"]}
-        C: PULL {"n": 1000}
-        S: RECORD ["a person"]
-           SUCCESS {"type": "r"}
-        C: COMMIT
-        S: SUCCESS {"bookmark": "bm2"}
-   }}
-    *: RESET
-*}
+
+C: BEGIN {"bookmarks": ["other_db:bm1"], "[db]": "*"}
+S: SUCCESS {}
+C: RUN "CREATE (p:Person {name:$name}) RETURN p.name AS name" {"name": "a person"} {}
+S: SUCCESS {"fields": ["name"]}
+C: PULL {"n": 1000}
+S: RECORD ["a person"]
+   SUCCESS {"type": "w"}
+C: COMMIT
+S: SUCCESS {"bookmark": "bm1"}
+
+{{
+    C: BEGIN {"bookmarks": ["other_db:bm1"], "[db]": "*"}
+    S: SUCCESS {}
+    C: RUN "MATCH (p:Person {name:$name}) RETURN p.name AS name" {"name": "a person"} {}
+    S: SUCCESS {"fields": ["name"]}
+    C: PULL {"n": 1000}
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bm1"}
+----
+    C: BEGIN {"bookmarks{}": ["bm1", "other_db:bm1"], "[db]": "*"}
+    S: SUCCESS {}
+    C: RUN "MATCH (p:Person {name:$name}) RETURN p.name AS name" {"name": "a person"} {}
+    S: SUCCESS {"fields": ["name"]}
+    C: PULL {"n": 1000}
+    S: RECORD ["a person"]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {"bookmark": "bm2"}
+}}
+*: RESET
 
 ?: GOODBYE
