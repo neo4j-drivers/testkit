@@ -520,7 +520,8 @@ class PackstreamV1StructureValidator:
                 raise ValueError(
                     f"Invalid {type_name} struct received.\n"
                     f"validation failed: {inspect.getsource(validation)}"
-                    f" {structure}")
+                    f" {structure}"
+                )
 
     @classmethod
     def _verify_node(cls, structure, fields):
@@ -666,9 +667,9 @@ class PackstreamV2StructureValidator(PackstreamV1StructureValidator):
     def _verify_relationship(cls, structure, fields):
         validations = [
             lambda f: len(f) == 8,
-            lambda f: (isinstance(f[0], int) or f[0] is None),
-            lambda f: (isinstance(f[1], int) or f[1] is None),
-            lambda f: (isinstance(f[2], int) or f[2] is None),
+            lambda f: isinstance(f[0], int) or f[0] is None,
+            lambda f: isinstance(f[1], int) or f[1] is None,
+            lambda f: isinstance(f[2], int) or f[2] is None,
             lambda f: isinstance(f[3], str),
             lambda f: isinstance(f[4], dict),
             lambda f: all(isinstance(k, str) for k in f[4].keys()),

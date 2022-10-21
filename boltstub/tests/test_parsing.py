@@ -392,7 +392,7 @@ def test_simple_bang_line(bang, extra_ws, unverified_script):
 
 @pytest.mark.parametrize("bang", INVALID_BANGS)
 def test_invalid_bangs_raise(bang, unverified_script):
-    script = (bang + "\n\nC: MSG")
+    script = bang + "\n\nC: MSG"
     with pytest.raises(lark.GrammarError):
         parsing.parse(script)
 
@@ -470,7 +470,8 @@ def test_nested_blocks(outer, inner, unverified_script):
     ("S: NOPE", True, None),
 ))
 def test_line_after_nondeterministic_end_block(
-        block_parts, end_line, fail, unverified_script, last_block_assert):
+    block_parts, end_line, fail, unverified_script, last_block_assert
+):
     script = """C: MSG1
     %s
         C: MSG2

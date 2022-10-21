@@ -77,7 +77,8 @@ class TestAuthenticationBasic(TestkitTestCase):
             "basic",
             realm="native",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass"))
+            credentials=os.environ.get(env_neo4j_pass, "pass")
+        )
         self.verify_connectivity(auth_token)
 
     @cluster_unsafe_test
@@ -85,5 +86,6 @@ class TestAuthenticationBasic(TestkitTestCase):
         auth_token = types.AuthorizationToken(
             "basic",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass"))
+            credentials=os.environ.get(env_neo4j_pass, "pass")
+        )
         self.verify_connectivity(auth_token)

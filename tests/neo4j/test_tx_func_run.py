@@ -74,7 +74,8 @@ class TestTxFuncRun(TestkitTestCase):
             for r0 in range(i0, n0 + 1):
                 rec = res0.next()
                 self.assertEqual(
-                    rec, types.Record(values=[types.CypherInt(r0)]))
+                    rec, types.Record(values=[types.CypherInt(r0)])
+                )
                 lasts[0] = rec.values[0].value
                 i1 = 7
                 n1 = 11
@@ -82,7 +83,8 @@ class TestTxFuncRun(TestkitTestCase):
                 for r1 in range(i1, n1 + 1):
                     rec = res1.next()
                     self.assertEqual(
-                        rec, types.Record(values=[types.CypherInt(r1)]))
+                        rec, types.Record(values=[types.CypherInt(r1)])
+                    )
                     lasts[1] = rec.values[0].value
                     i2 = 999
                     n2 = 1001
@@ -90,7 +92,8 @@ class TestTxFuncRun(TestkitTestCase):
                     for r2 in range(i2, n2 + 1):
                         rec = res2.next()
                         self.assertEqual(
-                            rec, types.Record(values=[types.CypherInt(r2)]))
+                            rec, types.Record(values=[types.CypherInt(r2)])
+                        )
                         lasts[2] = rec.values[0].value
                     self.assertEqual(res2.next(), types.NullRecord())
                 self.assertEqual(res1.next(), types.NullRecord())
@@ -202,19 +205,7 @@ class TestTxFuncRun(TestkitTestCase):
             with self.assertRaises(types.DriverError) as e:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
             exc = e.exception
-            # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-            server_is_affect_by_bug = get_server_info().version <= "4.4"
-            driver_has_fixed_bug = get_driver_name() not in ["javascript"]
-            if (server_is_affect_by_bug
-                and not driver_has_fixed_bug
-                and exc.code
-                    == "Neo.TransientError.Transaction.LockClientStopped"):
-                # This is the error we are looking for. Maybe there was  a
-                # leader election or so. Give the driver the chance to retry.
-                raise ApplicationCodeError("Stop, hammer time!")
-            elif ((not server_is_affect_by_bug or driver_has_fixed_bug)
-                    and exc.code
-                  == "Neo.ClientError.Transaction.LockClientStopped"):
+            if exc.code == "Neo.ClientError.Transaction.LockClientStopped":
                 # This is the error we are looking for. Maybe there was  a
                 # leader election or so. Give the driver the chance to retry.
                 raise ApplicationCodeError("Stop, hammer time!")
@@ -230,18 +221,9 @@ class TestTxFuncRun(TestkitTestCase):
         )
         self._session1.write_transaction(update1)
         self.assertIsInstance(exc, types.DriverError)
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        server_is_affect_by_bug = get_server_info().version <= "4.4"
-        if server_is_affect_by_bug and get_driver_name() in ["javascript"]:
-            self.assertEqual(
-                exc.code,
-                "Neo.TransientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(exc.errorType,
-                                 "<class 'neo4j.exceptions.TransientError'>")
-        else:
-            self.assertEqual(exc.code,
-                             "Neo.ClientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(exc.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
+
+        self.assertEqual(exc.code,
+                         "Neo.ClientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(exc.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")

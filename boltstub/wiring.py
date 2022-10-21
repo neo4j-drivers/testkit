@@ -146,7 +146,7 @@ class RegularSocket:
         return getattr(self._socket, item)
 
     def recv(self, bufsize) -> bytes:
-        if (self._cache):
+        if self._cache:
             buff = self._cache
             self._cache = None
             return buff
@@ -210,7 +210,7 @@ class WebSocket:
         """Send the payload over the socket inside a Websocket frame."""
         frame = [0b1000_0010]
         payload_len = len(payload)
-        if (payload_len < 126):
+        if payload_len < 126:
             frame += [payload_len]
         elif payload_len < 0x10000:
             frame += [126]
@@ -371,12 +371,12 @@ def negotiate_socket(socket_):
                 key = h.split(" ")[1]
         key = key + MAGIC_WS_STRING
         encoded_key = key.encode(encoding)
-        encrypeted_key = hashlib.sha1(encoded_key).digest()
-        base64_key = base64.standard_b64encode(encrypeted_key).decode(encoding)
+        encrypted_key = hashlib.sha1(encoded_key).digest()
+        base64_key = base64.standard_b64encode(encrypted_key).decode(encoding)
         response = ("HTTP/1.1 101 Switching Protocols\r\n"
                     + "Upgrade: websocket\r\n"
                     + "Connection: Upgrade\r\n"
-                    + "Sec-WebSocket-Accept: %s\r\n\r\n") % (base64_key)
+                    + "Sec-WebSocket-Accept: %s\r\n\r\n") % base64_key
         encoded_response = response.encode(encoding)
         socket__.sendall(encoded_response)
         return True

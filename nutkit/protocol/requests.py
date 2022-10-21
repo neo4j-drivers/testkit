@@ -68,7 +68,6 @@ class NewDriver:
     def __init__(
         self, uri, authToken, userAgent=None, resolverRegistered=False,
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
-        sessionConnectionTimeoutMs=None, updateRoutingTableTimeoutMs=None,
         fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
         trustedCertificates=None, liveness_check_timeout_ms=None,
         max_connection_pool_size=None,
@@ -83,8 +82,6 @@ class NewDriver:
         self.resolverRegistered = resolverRegistered
         self.domainNameResolverRegistered = domainNameResolverRegistered
         self.connectionTimeoutMs = connectionTimeoutMs
-        self.sessionConnectionTimeoutMs = sessionConnectionTimeoutMs
-        self.updateRoutingTableTimeoutMs = updateRoutingTableTimeoutMs
         self.fetchSize = fetchSize
         self.maxTxRetryTimeMs = maxTxRetryTimeMs
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
@@ -195,6 +192,56 @@ class ResolverResolutionCompleted:
         self.addresses = addresses
 
 
+class BookmarksSupplierCompleted:
+    """
+    Results of a bookmark manager's bookmark supplier call.
+
+    Pushes bookmarks for a given database to the Bookmark Manager.
+    """
+
+    def __init__(self, request_id, bookmarks):
+        self.requestId = request_id
+        self.bookmarks = bookmarks
+
+
+class BookmarksConsumerCompleted:
+    """
+    Results of a bookmark manager's bookmarks consumer call.
+
+    Signal the method call has finished
+    """
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class NewBookmarkManager:
+    """Instantiates a bookmark manager by calling the default factory.
+
+    Backend should respond with a BookmarkManager response.
+    """
+
+    def __init__(self, initial_bookmarks,
+                 bookmarks_supplier_registered, bookmarks_consumer_registered):
+        self.initialBookmarks = initial_bookmarks
+        self.bookmarksSupplierRegistered = bookmarks_supplier_registered
+        self.bookmarksConsumerRegistered = bookmarks_consumer_registered
+
+
+class BookmarkManagerClose:
+    """Destroy the bookmark manager in the backend and free the resources.
+
+    The driver-provided BookmarkManager implementation does not have a close
+    method. This message is an instruction solely for the backend to be able to
+    destroy the bookmark manager object when done testing it to free resources.
+
+    Backend should respond with a BookmarkManager response.
+    """
+
+    def __init__(self, id):
+        self.id = id
+
+
 class DomainNameResolutionCompleted:
     """
     Results of a DNS resolution.
@@ -234,7 +281,8 @@ class NewSession:
     """
 
     def __init__(self, driverId, accessMode, bookmarks=None,
-                 database=None, fetchSize=None, impersonatedUser=None):
+                 database=None, fetchSize=None, impersonatedUser=None,
+                 bookmark_manager=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -244,6 +292,8 @@ class NewSession:
         self.database = database
         self.fetchSize = fetchSize
         self.impersonatedUser = impersonatedUser
+        if bookmark_manager is not None:
+            self.bookmarkManagerId = bookmark_manager.id
 
 
 class SessionClose:
