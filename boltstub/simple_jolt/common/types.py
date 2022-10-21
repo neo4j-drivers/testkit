@@ -23,6 +23,7 @@ class _JoltParsedType(JoltType, abc.ABC):
     # to be overridden in subclasses (this re never matches)
     _parse_re = re.compile(r"^(?= )$")
 
+    @abc.abstractmethod
     def __init__(self, value: str):
         match = self._parse_re.match(value)
         if not match:

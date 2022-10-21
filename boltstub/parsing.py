@@ -188,6 +188,7 @@ class MessageLine(Line, abc.ABC):
     allow_jolt_wildcard = False
     always_parse = True
 
+    @abc.abstractmethod
     def __new__(cls, line_number: int, raw_line, content: str):
         obj = super().__new__(cls, line_number, raw_line, content)
         if cls.always_parse:
