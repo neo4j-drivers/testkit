@@ -33,7 +33,7 @@ class TeamCityTestResult(unittest.TextTestResult):
     def addFailure(self, test, err):  # noqa: N802
         print("##teamcity[testFailed name='%s' message='%s' details='%s']"
               % (escape(str(test)), escape(str(err[1])), escape(str(err[2]))))
-        time.sleep(0.5)
+        time.sleep(0.5)   # test
         return super().addFailure(test, err)
 
     def addSkip(self, test, reason):  # noqa: N802
