@@ -1,6 +1,5 @@
 import time
 import unittest
-import time
 
 
 def escape(s):
