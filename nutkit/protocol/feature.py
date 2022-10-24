@@ -64,6 +64,8 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
+    # The driver supports notification filters.
+    NOTIFICATION_FILTERS = "Feature:API:NotificationFilters"
     # The driver supports Bolt protocol version 3
     BOLT_3_0 = "Feature:Bolt:3.0"
     # The driver supports Bolt protocol version 4.1
@@ -76,6 +78,8 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
+    # The driver supports Bolt protocol version 5.1
+    BOLT_5_1 = "Feature:Bolt:5.1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation

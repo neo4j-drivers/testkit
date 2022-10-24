@@ -71,7 +71,8 @@ class NewDriver:
         fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
         trustedCertificates=None, liveness_check_timeout_ms=None,
         max_connection_pool_size=None,
-        connection_acquisition_timeout_ms=None
+        connection_acquisition_timeout_ms=None,
+        notification_filters=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -87,6 +88,7 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        self.notificationFilters = notification_filters
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
