@@ -8,7 +8,7 @@ from tests.stub.shared import StubServer
 
 class TestNotificationFilters(TestkitTestCase):
     required_features = (types.Feature.BOLT_5_1,
-                         types.Feature.NOTIFICATION_FILTERS)
+                         types.Feature.API_DRIVER_NOTIFICATION_FILTERS)
 
     map_data = None
     _auth = types.AuthorizationToken("basic", principal="neo4j",
