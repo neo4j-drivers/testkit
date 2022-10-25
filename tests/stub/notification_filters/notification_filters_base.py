@@ -25,9 +25,8 @@ class NotificationFiltersBase(TestkitTestCase):
                       notification_filters=notifications)
 
     def _run_test_get_summary(self, filters, script_params,
-                              script_name="driver_notification_filters.script"
-                              ):
-        self._server.start(self.script_path(script_name),
+                              script="driver_notification_filters.script"):
+        self._server.start(self.script_path(script),
                            vars_=script_params)
         self._driver = self._new_driver(filters)
         session = self._driver.session("w", database="neo4j")
