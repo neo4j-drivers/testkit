@@ -1,7 +1,7 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import TestkitTestCase
-from tests.stub.session_notification_filters.notification_filters_base import (
+from tests.stub.notification_filters.notification_filters_base import (
     NotificationFiltersBase,
 )
 from tests.stub.shared import StubServer
