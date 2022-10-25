@@ -284,7 +284,7 @@ class NewSession:
 
     def __init__(self, driverId, accessMode, bookmarks=None,
                  database=None, fetchSize=None, impersonatedUser=None,
-                 bookmark_manager=None):
+                 bookmark_manager=None, notification_filters=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -296,6 +296,8 @@ class NewSession:
         self.impersonatedUser = impersonatedUser
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
+        if notification_filters is not None:
+            self.notificationFilters = notification_filters
 
 
 class SessionClose:

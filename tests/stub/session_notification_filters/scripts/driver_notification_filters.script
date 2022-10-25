@@ -5,6 +5,6 @@ A: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agen
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["t"]}
 C: PULL {"n": 1000}
-S: SUCCESS {"type": "w", "notifications": #EMIT#}
+S: SUCCESS {"type": "w"}
 *: RESET
 ?: GOODBYE

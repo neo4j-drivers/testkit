@@ -1,0 +1,14 @@
+!: BOLT 5.1
+
+A: HELLO {"{}": "*"}
+?: RESET
+C: BEGIN {"[mode]": "*", "[db]": "*", "notifications": #FILTERS#}
+S: SUCCESS {}
+C: RUN "RETURN 1 as n" {} {}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+*: RESET
+?: GOODBYE

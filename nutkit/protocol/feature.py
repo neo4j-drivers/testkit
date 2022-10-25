@@ -44,6 +44,9 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
+    # The session supports notification filters configuration.
+    API_SESSION_NOTIFICATION_FILTERS = \
+        "Feature:API:Session.NotificationFilters"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all

@@ -104,12 +104,13 @@ class Driver:
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
-                bookmark_manager=None):
+                bookmark_manager=None, notification_filters=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
-            bookmark_manager=bookmark_manager
+            bookmark_manager=bookmark_manager,
+            notification_filters=notification_filters
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
