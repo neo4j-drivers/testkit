@@ -75,73 +75,85 @@ class TestNotificationFilters(TestkitTestCase):
         self._server.done()
 
     def test_filter_notifications(self):
-        cfgs = [{
-            "name": "all",
-            "tk_filters": ["ALL.ALL"],
-            "in_sev": "WARNING",
-            "in_cat": "DEPRECATION",
-            "bolt_filters": '["*.*"]',
-        }, {
-            "name": "all.query",
-            "tk_filters": ["ALL.QUERY"],
-            "in_sev": "WARNING",
-            "in_cat": "QUERY",
-            "bolt_filters": '["*.QUERY"]',
-        }, {
-            "name": "warning.all",
-            "tk_filters": ["WARNING.ALL"],
-            "in_sev": "WARNING",
-            "in_cat": "DEPRECATION",
-            "bolt_filters": '["WARNING.*"]',
-        }, {
-            "name": "warning.deprecation",
-            "tk_filters": ["WARNING.DEPRECATION"],
-            "in_sev": "WARNING",
-            "in_cat": "DEPRECATION",
-            "bolt_filters": '["WARNING.DEPRECATION"]',
-        }, {
-            "name": "warning.hint",
-            "tk_filters": ["WARNING.HINT"],
-            "in_sev": "WARNING",
-            "in_cat": "HINT",
-            "bolt_filters": '["WARNING.HINT"]',
-        }, {
-            "name": "warning.query",
-            "tk_filters": ["WARNING.QUERY"],
-            "in_sev": "WARNING",
-            "in_cat": "QUERY",
-            "bolt_filters": '["WARNING.QUERY"]',
-        }, {
-            "name": "warning.unsupported",
-            "tk_filters": ["WARNING.UNSUPPORTED"],
-            "in_sev": "WARNING",
-            "in_cat": "UNSUPPORTED",
-            "bolt_filters": '["WARNING.UNSUPPORTED"]',
-        }, {
-            "name": "info.all",
-            "tk_filters": ["INFORMATION.ALL"],
-            "in_sev": "INFORMATION",
-            "in_cat": "DEPRECATION",
-            "bolt_filters": '["INFORMATION.*"]',
-        }, {
-            "name": "info.runtime",
-            "tk_filters": ["INFORMATION.RUNTIME"],
-            "in_sev": "INFORMATION",
-            "in_cat": "RUNTIME",
-            "bolt_filters": '["INFORMATION.RUNTIME"]',
-        }, {
-            "name": "info.query",
-            "tk_filters": ["INFORMATION.QUERY"],
-            "in_sev": "INFORMATION",
-            "in_cat": "QUERY",
-            "bolt_filters": '["INFORMATION.QUERY"]',
-        }, {
-            "name": "info.performance",
-            "tk_filters": ["INFORMATION.PERFORMANCE"],
-            "in_sev": "INFORMATION",
-            "in_cat": "PERFORMANCE",
-            "bolt_filters": '["INFORMATION.PERFORMANCE"]',
-        }]
+        cfgs = [
+            {
+                "name": "all",
+                "tk_filters": ["ALL.ALL"],
+                "in_sev": "WARNING",
+                "in_cat": "DEPRECATION",
+                "bolt_filters": '["*.*"]',
+            },
+            {
+                "name": "all.query",
+                "tk_filters": ["ALL.QUERY"],
+                "in_sev": "WARNING",
+                "in_cat": "QUERY",
+                "bolt_filters": '["*.QUERY"]',
+            },
+            {
+                "name": "warning.all",
+                "tk_filters": ["WARNING.ALL"],
+                "in_sev": "WARNING",
+                "in_cat": "DEPRECATION",
+                "bolt_filters": '["WARNING.*"]',
+            },
+            {
+                "name": "warning.deprecation",
+                "tk_filters": ["WARNING.DEPRECATION"],
+                "in_sev": "WARNING",
+                "in_cat": "DEPRECATION",
+                "bolt_filters": '["WARNING.DEPRECATION"]',
+            },
+            {
+                "name": "warning.hint",
+                "tk_filters": ["WARNING.HINT"],
+                "in_sev": "WARNING",
+                "in_cat": "HINT",
+                "bolt_filters": '["WARNING.HINT"]',
+            },
+            {
+                "name": "warning.query",
+                "tk_filters": ["WARNING.QUERY"],
+                "in_sev": "WARNING",
+                "in_cat": "QUERY",
+                "bolt_filters": '["WARNING.QUERY"]',
+            },
+            {
+                "name": "warning.unsupported",
+                "tk_filters": ["WARNING.UNSUPPORTED"],
+                "in_sev": "WARNING",
+                "in_cat": "UNSUPPORTED",
+                "bolt_filters": '["WARNING.UNSUPPORTED"]',
+            },
+            {
+                "name": "info.all",
+                "tk_filters": ["INFORMATION.ALL"],
+                "in_sev": "INFORMATION",
+                "in_cat": "DEPRECATION",
+                "bolt_filters": '["INFORMATION.*"]',
+            },
+            {
+                "name": "info.runtime",
+                "tk_filters": ["INFORMATION.RUNTIME"],
+                "in_sev": "INFORMATION",
+                "in_cat": "RUNTIME",
+                "bolt_filters": '["INFORMATION.RUNTIME"]',
+            },
+            {
+                "name": "info.query",
+                "tk_filters": ["INFORMATION.QUERY"],
+                "in_sev": "INFORMATION",
+                "in_cat": "QUERY",
+                "bolt_filters": '["INFORMATION.QUERY"]',
+            },
+            {
+                "name": "info.performance",
+                "tk_filters": ["INFORMATION.PERFORMANCE"],
+                "in_sev": "INFORMATION",
+                "in_cat": "PERFORMANCE",
+                "bolt_filters": '["INFORMATION.PERFORMANCE"]',
+            }
+        ]
         for cfg in cfgs:
             with self.subTest(name=cfg["name"]):
                 self._test_notification_filters_config(cfg)
