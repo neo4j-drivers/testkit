@@ -12,7 +12,7 @@ class TestNotificationFilters(TestkitTestCase):
 
     map_data = None
     _auth = types.AuthorizationToken("basic", principal="neo4j",
-                                    credentials="pass")
+                                     credentials="pass")
 
     def setUp(self):
         super().setUp()
@@ -40,7 +40,7 @@ class TestNotificationFilters(TestkitTestCase):
         cursor = session.run("CREATE (:node)")
         return cursor.consume()
 
-    def _test_single_notification_filter(self, cfg):
+    def _test_notification_filters_config(self, cfg):
         notifications = json.dumps([{
             "severity": cfg["in_sev"],
             "category": cfg["in_cat"],
@@ -60,9 +60,9 @@ class TestNotificationFilters(TestkitTestCase):
             "tk_filters": ["None"],
             "in_sev": "WARNING",
             "in_cat": "DEPRECATION",
-            "bolt_filters": '[]',
+            "bolt_filters": "[]",
         }
-        self._test_single_notification_filter(cfg)
+        self._test_notification_filters_config(cfg)
 
     def test_default_server_filters(self):
         no_filter_script = "default_notification_filters.script"
@@ -117,25 +117,25 @@ class TestNotificationFilters(TestkitTestCase):
             "in_sev": "WARNING",
             "in_cat": "UNSUPPORTED",
             "bolt_filters": '["WARNING.UNSUPPORTED"]',
-        },{
+        }, {
             "name": "info.all",
             "tk_filters": ["INFORMATION.ALL"],
             "in_sev": "INFORMATION",
             "in_cat": "DEPRECATION",
             "bolt_filters": '["INFORMATION.*"]',
-        },{
+        }, {
             "name": "info.runtime",
             "tk_filters": ["INFORMATION.RUNTIME"],
             "in_sev": "INFORMATION",
             "in_cat": "RUNTIME",
             "bolt_filters": '["INFORMATION.RUNTIME"]',
-        },{
+        }, {
             "name": "info.query",
             "tk_filters": ["INFORMATION.QUERY"],
             "in_sev": "INFORMATION",
             "in_cat": "QUERY",
             "bolt_filters": '["INFORMATION.QUERY"]',
-        },{
+        }, {
             "name": "info.performance",
             "tk_filters": ["INFORMATION.PERFORMANCE"],
             "in_sev": "INFORMATION",
@@ -144,6 +144,15 @@ class TestNotificationFilters(TestkitTestCase):
         }]
         for cfg in cfgs:
             with self.subTest(name=cfg["name"]):
-                self._test_single_notification_filter(cfg)
+                self._test_notification_filters_config(cfg)
 
-
+    def test_can_configure_multiple_filters(self):
+        cfg = {
+            "tk_filters": ["INFORMATION.PERFORMANCE", "ALL.QUERY",
+                           "WARNING.ALL"],
+            "in_sev": "WARNING",
+            "in_cat": "DEPRECATION",
+            "bolt_filters": '["INFORMATION.PERFORMANCE", '
+                            '"*.QUERY", "WARNING.*"]',
+        }
+        self._test_notification_filters_config(cfg)
