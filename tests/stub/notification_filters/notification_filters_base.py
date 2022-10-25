@@ -1,5 +1,43 @@
-class NotificationFiltersBase:
-    def configs(self):
+from nutkit.frontend import Driver
+import nutkit.protocol as types
+from tests.shared import TestkitTestCase
+from tests.stub.shared import StubServer
+
+
+class NotificationFiltersBase(TestkitTestCase):
+    _auth = types.AuthorizationToken("basic", principal="neo4j",
+                                     credentials="pass")
+
+    def setUp(self):
+        super().setUp()
+        self._server = StubServer(9010)
+        self._uri = "bolt://%s" % self._server.address
+        self._driver = None
+
+    def tearDown(self):
+        self._server.reset()
+        if self._driver:
+            self._driver.close()
+        return super().tearDown()
+
+    def _new_driver(self, notifications):
+        return Driver(self._backend, self._uri, self._auth,
+                      notification_filters=notifications)
+
+    def _run_test_get_summary(self, filters, script_params,
+                              script_name="driver_notification_filters.script"
+                              ):
+        self._server.start(self.script_path(script_name),
+                           vars_=script_params)
+        self._driver = self._new_driver(filters)
+        session = self._driver.session("w", database="neo4j")
+        cursor = session.run("CREATE (:node)")
+        result = cursor.consume()
+        self._server.done()
+        return result
+
+    @staticmethod
+    def configs():
         return [
             {
                 "filters": ["None"],
