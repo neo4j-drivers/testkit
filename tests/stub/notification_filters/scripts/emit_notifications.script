@@ -1,0 +1,10 @@
+!: BOLT 5.1
+
+A: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*", "[routing]": "*", "notifications": ["*.*"]}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["t"]}
+C: PULL {"n": 1000}
+S: SUCCESS {"type": "w", "notifications": #EMIT#}
+*: RESET
+?: GOODBYE
