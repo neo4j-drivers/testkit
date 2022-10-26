@@ -25,8 +25,13 @@ class TestSessionNotificationFilters(NotificationFiltersBase):
             with self.subTest(name=config["filters"]):
                 self._tx_test(config["filters"], config["params"])
 
+    def test_read_tx_notification_filter(self):
+        for config in super().configs():
+            with self.subTest(name=config["filters"]):
+                self._tx_func_test(config["filters"], config["params"])
+
     def _open_session(self, filters, script, script_params):
-        self._server.start(self.script_path(script, vars_=script_params))
+        self._server.start(self.script_path(script), vars_=script_params)
         self._driver = Driver(self._backend, self._uri, super()._auth)
         session = self._driver.session("r", database="neo4j",
                                        notification_filters=filters)
@@ -37,6 +42,17 @@ class TestSessionNotificationFilters(NotificationFiltersBase):
         session = self._open_session(filters, script, script_params)
         cursor = session.run("RETURN 1 as n")
         cursor.consume()
+        self._server.done()
+
+    def _tx_func_test(self, filters, script_params,
+                      script="begin_notification_filters.script"):
+        session = self._open_session(filters, script, script_params)
+
+        def tx_func(tx):
+            cursor = tx.run("RETURN 1 as n")
+            cursor.consume()
+
+        session.read_transaction(tx_func)
         self._server.done()
 
     def _tx_test(self, filters, script_params,
