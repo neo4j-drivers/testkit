@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 ?: RESET
-C: BEGIN {"[mode]": "*", "[db]": "*", "notifications": #FILTERS#}
+C: BEGIN {"[mode]": "*", "[db]": "*", "notifications{}": #FILTERS#}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
