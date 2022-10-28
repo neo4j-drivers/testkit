@@ -21,7 +21,7 @@ class Feature(Enum):
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
     # The driver supports notification filters configuration.
-    API_DRIVER_NOTIFICATION_FILTERS = "Feature:API:Driver.NotificationFilters"
+    API_DRIVER_NOTIFICATION_FILTERS = "Feature:API:Driver:NotificationFilters"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
