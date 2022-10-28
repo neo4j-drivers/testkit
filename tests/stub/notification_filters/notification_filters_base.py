@@ -39,7 +39,7 @@ class NotificationFiltersBase(TestkitTestCase):
     def configs():
         return [
             {
-                "filters": ["None"],
+                "filters": ["NONE"],
                 "params": {"#FILTERS#": "[]"}
             },
             {
