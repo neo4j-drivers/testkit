@@ -10,9 +10,9 @@ class TestDriverNotificationFilters(NotificationFiltersBase):
 
     def test_default_server_filters(self):
         no_filter_script = "driver_default_notification_filters.script"
-        super()._run_test_get_summary(None, None, no_filter_script)
+        self._run_test_get_summary(None, None, no_filter_script)
 
     def test_filter_notifications(self):
-        for cfg in super().configs():
+        for cfg in self.configs():
             with self.subTest(name=cfg["filters"]):
-                super()._run_test_get_summary(cfg["filters"], cfg["params"])
+                self._run_test_get_summary(cfg["filters"], cfg["params"])

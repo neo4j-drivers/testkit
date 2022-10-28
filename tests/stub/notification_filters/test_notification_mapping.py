@@ -20,7 +20,7 @@ class TestNotificationMapping(NotificationFiltersBase):
         params = {
             "#EMIT#": emit
         }
-        summary = super()._run_test_get_summary(["ALL.ALL"], params, script)
+        summary = self._run_test_get_summary(["ALL.ALL"], params, script)
         notifications = self._reduce_notifications(summary.notifications)
         self.assertListEqual(config["expect"], notifications)
 

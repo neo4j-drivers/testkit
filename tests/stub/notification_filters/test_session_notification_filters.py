@@ -16,23 +16,23 @@ class TestSessionNotificationFilters(NotificationFiltersBase):
         self._tx_test(None, None, "begin_default_notification_filters.script")
 
     def test_run_notification_filter(self):
-        for config in super().configs():
+        for config in self.configs():
             with self.subTest(name=config["filters"]):
                 self._run_test(config["filters"], config["params"])
 
     def test_begin_notification_filter(self):
-        for config in super().configs():
+        for config in self.configs():
             with self.subTest(name=config["filters"]):
                 self._tx_test(config["filters"], config["params"])
 
     def test_read_tx_notification_filter(self):
-        for config in super().configs():
+        for config in self.configs():
             with self.subTest(name=config["filters"]):
                 self._tx_func_test(config["filters"], config["params"])
 
     def _open_session(self, filters, script, script_params):
         self._server.start(self.script_path(script), vars_=script_params)
-        self._driver = Driver(self._backend, self._uri, super()._auth)
+        self._driver = Driver(self._backend, self._uri, self._auth)
         session = self._driver.session("r", database="neo4j",
                                        notification_filters=filters)
         return session
