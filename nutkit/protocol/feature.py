@@ -46,7 +46,7 @@ class Feature(Enum):
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
     # The session supports notification filters configuration.
     API_SESSION_NOTIFICATION_FILTERS = \
-        "Feature:API:Session.NotificationFilters"
+        "Feature:API:Session:NotificationFilters"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
