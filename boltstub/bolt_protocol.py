@@ -445,7 +445,7 @@ class Bolt4x4Protocol(Bolt4x3Protocol):
 class Bolt5x0Protocol(Bolt4x4Protocol):
 
     protocol_version = (5, 0)
-    version_aliases = set()
+    version_aliases = {(5,)}
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
