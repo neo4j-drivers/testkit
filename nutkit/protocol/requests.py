@@ -294,10 +294,9 @@ class NewSession:
         self.database = database
         self.fetchSize = fetchSize
         self.impersonatedUser = impersonatedUser
+        self.notificationFilters = notification_filters
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
-        if notification_filters is not None:
-            self.notificationFilters = notification_filters
 
 
 class SessionClose:
