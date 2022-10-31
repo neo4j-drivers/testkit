@@ -1,4 +1,4 @@
-!: BOLT 4.3
+!: BOLT #VERSION#
 
 A: HELLO {"user_agent": "*", "scheme": "bearer", "credentials": "QmFuYW5hIQ==", "[patch_bolt]": "*"}
 *: RESET
