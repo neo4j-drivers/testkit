@@ -1,6 +1,6 @@
 !: BOLT #VERSION#
 
-A: HELLO {"user_agent": "*", "scheme": "bearer", "credentials": "QmFuYW5hIQ==", "[principal]": "", "[routing]": null, "[realm]": "", "[patch_bolt]": "*"}
+A: HELLO {"{}": "*"} {"scheme": "bearer", "credentials": "QmFuYW5hIQ==", "[principal]": "", "[realm]": ""}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

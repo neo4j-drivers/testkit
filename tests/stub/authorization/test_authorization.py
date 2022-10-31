@@ -758,6 +758,21 @@ class TestAuthorizationV5x0(TestAuthorizationV4x3):
         }
 
 
+class TestAuthorizationV5x1(TestAuthorizationV5x0):
+
+    required_features = types.Feature.BOLT_5_1,
+
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routing_server1.host
+        return {
+            "#VERSION#": "5.1",
+            "#HOST#": host,
+            "#ROUTINGMODE#": '"mode": "r", ',
+            "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
+        }
+
+
 class TestAuthorizationV3(TestAuthorizationV4x3):
     required_features = types.Feature.BOLT_3_0,
 
@@ -914,9 +929,7 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
 
-class TestAuthenticationSchemes(AuthorizationBase):
-
-    required_features = types.Feature.BOLT_4_3,
+class AuthenticationSchemesBase(AuthorizationBase):
 
     def get_vars(self):
         return {
@@ -933,7 +946,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         self._server.reset()
         super().tearDown()
 
-    def test_basic_scheme(self):
+    def _test_basic_scheme(self):
         def test():
             implicit_defaults = self.driver_supports_features(
                 types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
@@ -965,7 +978,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
             self._server.reset()
 
     @driver_feature(types.Feature.AUTH_BEARER)
-    def test_bearer_scheme(self):
+    def _test_bearer_scheme(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -982,7 +995,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         self._server.done()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
-    def test_custom_scheme(self):
+    def _test_custom_scheme(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1007,7 +1020,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         self._server.done()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
-    def test_custom_scheme_empty(self):
+    def _test_custom_scheme_empty(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1028,7 +1041,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         self._server.done()
 
     @driver_feature(types.Feature.AUTH_KERBEROS)
-    def test_kerberos_scheme(self):
+    def _test_kerberos_scheme(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1043,3 +1056,48 @@ class TestAuthenticationSchemes(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
+
+
+class TestAuthenticationSchemesV4x4(AuthenticationSchemesBase):
+
+    required_features = types.Feature.BOLT_4_4,
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "4.4"
+        }
+
+    def test_basic_scheme(self):
+        super()._test_basic_scheme()
+
+    def test_bearer_scheme(self):
+        super()._test_bearer_scheme()
+
+    def test_custom_scheme(self):
+        super()._test_custom_scheme()
+
+    def test_custom_scheme_empty(self):
+        super()._test_custom_scheme_empty()
+
+    def test_kerberos_scheme(self):
+        super()._test_kerberos_scheme()
+
+
+class TestAuthenticationSchemesV5x0(TestAuthenticationSchemesV4x4):
+
+    required_features = types.Feature.BOLT_5_0,
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "5.0"
+        }
+
+
+class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV5x0):
+
+    required_features = types.Feature.BOLT_5_1,
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "5.1"
+        }

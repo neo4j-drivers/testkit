@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
 
 ?: GOODBYE
-C: HELLO {"{}": "*"} {"{}": "*"}
+C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
 *: RESET
 ?: GOODBYE

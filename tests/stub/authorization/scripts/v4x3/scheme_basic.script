@@ -1,4 +1,4 @@
-!: BOLT 4.3
+!: BOLT #VERSION#
 
 A: HELLO {"user_agent": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[routing]": null, "[realm]": "", "[patch_bolt]": "*"}
 *: RESET
