@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
 
 # Server versions pre 4.4 require empty principal field. So for backwards compatibility, we expect the driver to send it.
-A: HELLO {"{}": "*"} {"scheme": "minimal-scheme", "principal": ""}
+A: HELLO {"scheme": "minimal-scheme", "principal": ""} {"{}": "*"}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

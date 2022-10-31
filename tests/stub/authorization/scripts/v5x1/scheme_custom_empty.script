@@ -1,6 +1,6 @@
 !: BOLT #VERSION#
 
-A: HELLO {"{}": "*"} {"scheme": "minimal-scheme", "principal": "", "[credentials]": "", "[realm]": "", "[parameters]": {}}
+A: HELLO {"scheme": "minimal-scheme", "principal": "", "[credentials]": "", "[realm]": "", "[parameters]": {}} {"{}": "*"}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

@@ -1,6 +1,6 @@
 !: BOLT #VERSION#
 
-A: HELLO {"user_agent": {"U": "*"}} {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "realm": "foobar"}
+A: HELLO {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "realm": "foobar"} {"user_agent": {"U": "*"}}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"
