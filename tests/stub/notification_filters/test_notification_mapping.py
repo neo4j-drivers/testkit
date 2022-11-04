@@ -54,14 +54,14 @@ class TestNotificationMapping(NotificationFiltersBase):
             {
                 "notifications": [
                     {
-                        "category": "RUNTIME",
+                        "category": "HINT",
                         "severity": "INFORMATION"
                     }
                 ],
                 "expect": [
                     {
-                        "category": "RUNTIME",
-                        "category_string": "RUNTIME",
+                        "category": "HINT",
+                        "category_string": "HINT",
                         "severity": "INFORMATION",
                         "severity_string": "INFORMATION",
                     }
@@ -86,6 +86,70 @@ class TestNotificationMapping(NotificationFiltersBase):
             {
                 "notifications": [
                     {
+                        "category": "UNRECOGNIZED",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "UNRECOGNIZED",
+                        "category_string": "UNRECOGNIZED",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
+                        "category": "UNSUPPORTED",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "UNSUPPORTED",
+                        "category_string": "UNSUPPORTED",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
+                        "category": "GENERIC",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "GENERIC",
+                        "category_string": "GENERIC",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
+                        "category": "PERFORMANCE",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "PERFORMANCE",
+                        "category_string": "PERFORMANCE",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
                         "category": "MADE_UP",
                         "severity": "WARNING"
                     }
@@ -118,14 +182,14 @@ class TestNotificationMapping(NotificationFiltersBase):
             {
                 "notifications": [
                     {
-                        "category": "RUNTIME",
+                        "category": "UNRECOGNIZED",
                         "severity": "ERROR"
                     }
                 ],
                 "expect": [
                     {
-                        "category": "RUNTIME",
-                        "category_string": "RUNTIME",
+                        "category": "UNRECOGNIZED",
+                        "category_string": "UNRECOGNIZED",
                         "severity": "UNKNOWN",
                         "severity_string": "ERROR",
                     }

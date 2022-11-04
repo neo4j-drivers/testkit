@@ -30,6 +30,18 @@ class TestSessionNotificationFilters(NotificationFiltersBase):
             with self.subTest(name=config["filters"]):
                 self._tx_func_test(config["filters"], config["params"])
 
+    def test_can_default_in_session(self):
+        script = "session_use_server_default.script"
+        self._server.start(self.script_path(script))
+
+        self._driver = Driver(self._backend, self._uri, self._auth,
+                              notification_filters=["NONE"])
+        session = self._driver.session("r", database="neo4j",
+                                       notification_filters=["SERVER_DEFAULT"])
+        cursor = session.run("RETURN 1 as n")
+        cursor.consume()
+        self._server.done()
+
     def _open_session(self, filters, script, script_params):
         self._server.start(self.script_path(script), vars_=script_params)
         self._driver = Driver(self._backend, self._uri, self._auth)

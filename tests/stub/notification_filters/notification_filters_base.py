@@ -43,53 +43,97 @@ class NotificationFiltersBase(TestkitTestCase):
                 "params": {"#FILTERS#": "[]"}
             },
             {
+                "filters": ["SERVER_DEFAULT"],
+                "params": {"#FILTERS#": "null"}
+            },
+            {
                 "filters": ["ALL.ALL"],
                 "params": {"#FILTERS#": '["*.*"]'}
             },
             {
-                "filters": ["ALL.QUERY"],
-                "params": {"#FILTERS#": '["*.QUERY"]'}
+                "filters": ["ALL.HINT"],
+                "params": {"#FILTERS#": '["*.HINT"]'}
+            },
+            {
+                "filters": ["ALL.UNRECOGNIZED"],
+                "params": {"#FILTERS#": '["*.UNRECOGNIZED"]'}
+            },
+            {
+                "filters": ["ALL.UNSUPPORTED"],
+                "params": {"#FILTERS#": '["*.UNSUPPORTED"]'}
+            },
+            {
+                "filters": ["ALL.PERFORMANCE"],
+                "params": {"#FILTERS#": '["*.PERFORMANCE"]'}
+            },
+            {
+                "filters": ["ALL.DEPRECATION"],
+                "params": {"#FILTERS#": '["*.DEPRECATION"]'}
+            },
+            {
+                "filters": ["ALL.GENERIC"],
+                "params": {"#FILTERS#": '["*.GENERIC"]'}
             },
             {
                 "filters": ["WARNING.ALL"],
                 "params": {"#FILTERS#": '["WARNING.*"]'}
             },
             {
-                "filters": ["WARNING.DEPRECATION"],
-                "params": {"#FILTERS#": '["WARNING.DEPRECATION"]'}
-            },
-            {
                 "filters": ["WARNING.HINT"],
                 "params": {"#FILTERS#": '["WARNING.HINT"]'}
             },
             {
-                "filters": ["WARNING.QUERY"],
-                "params": {"#FILTERS#": '["WARNING.QUERY"]'}
+                "filters": ["WARNING.UNRECOGNIZED"],
+                "params": {"#FILTERS#": '["WARNING.UNRECOGNIZED"]'}
             },
             {
                 "filters": ["WARNING.UNSUPPORTED"],
                 "params": {"#FILTERS#": '["WARNING.UNSUPPORTED"]'}
             },
             {
-                "filters": ["INFORMATION.ALL"],
-                "params": {"#FILTERS#": '["INFORMATION.*"]'}
+                "filters": ["WARNING.PERFORMANCE"],
+                "params": {"#FILTERS#": '["WARNING.PERFORMANCE"]'}
             },
             {
-                "filters": ["INFORMATION.RUNTIME"],
-                "params": {"#FILTERS#": '["INFORMATION.RUNTIME"]'}
+                "filters": ["WARNING.DEPRECATION"],
+                "params": {"#FILTERS#": '["WARNING.DEPRECATION"]'}
             },
             {
-                "filters": ["INFORMATION.QUERY"],
-                "params": {"#FILTERS#": '["INFORMATION.QUERY"]'}
+                "filters": ["WARNING.GENERIC"],
+                "params": {"#FILTERS#": '["WARNING.GENERIC"]'}
+            },
+            {
+                "filters": ["WARNING.ALL"],
+                "params": {"#FILTERS#": '["WARNING.*"]'}
+            },
+            {
+                "filters": ["INFORMATION.HINT"],
+                "params": {"#FILTERS#": '["INFORMATION.HINT"]'}
+            },
+            {
+                "filters": ["INFORMATION.UNRECOGNIZED"],
+                "params": {"#FILTERS#": '["INFORMATION.UNRECOGNIZED"]'}
+            },
+            {
+                "filters": ["INFORMATION.UNSUPPORTED"],
+                "params": {"#FILTERS#": '["INFORMATION.UNSUPPORTED"]'}
             },
             {
                 "filters": ["INFORMATION.PERFORMANCE"],
                 "params": {"#FILTERS#": '["INFORMATION.PERFORMANCE"]'}
             },
             {
+                "filters": ["INFORMATION.DEPRECATION"],
+                "params": {"#FILTERS#": '["INFORMATION.DEPRECATION"]'}
+            },
+            {
+                "filters": ["INFORMATION.GENERIC"],
+                "params": {"#FILTERS#": '["INFORMATION.GENERIC"]'}
+            },
+            {
                 "filters": ["INFORMATION.PERFORMANCE",
-                            "WARNING.ALL", "ALL.QUERY"],
+                            "WARNING.ALL", "ALL.DEPRECATION"],
                 "params": {"#FILTERS#": '["INFORMATION.PERFORMANCE", '
-                                        '"WARNING.*", "*.QUERY"]'}
+                                        '"WARNING.*", "*.DEPRECATION"]'}
             }
         ]
