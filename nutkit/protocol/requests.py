@@ -88,7 +88,8 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
-        self.notificationFilters = notification_filters
+        if notification_filters is not None:
+            self.notificationFilters = notification_filters
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -294,7 +295,8 @@ class NewSession:
         self.database = database
         self.fetchSize = fetchSize
         self.impersonatedUser = impersonatedUser
-        self.notificationFilters = notification_filters
+        if notification_filters is not None:
+            self.notificationFilters = notification_filters
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
 
