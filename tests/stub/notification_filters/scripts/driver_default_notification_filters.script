@@ -1,6 +1,6 @@
 !: BOLT 5.1
 
-A: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*"} {"[user_agent]": "*", "[routing]": "*"}
+A: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*"} {"[user_agent]": "*", "[routing]": "*", "[notifications]": null}
 *: RESET
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["t"]}

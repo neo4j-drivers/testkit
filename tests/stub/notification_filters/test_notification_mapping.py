@@ -13,6 +13,7 @@ class TestNotificationMapping(NotificationFiltersBase):
         for config in self._map_test_configs():
             with self.subTest(name=config["notifications"]):
                 self._run_test(config)
+            self._server.reset()
 
     def _run_test(self, config):
         script = "emit_notifications.script"

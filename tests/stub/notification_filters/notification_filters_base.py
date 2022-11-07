@@ -43,10 +43,6 @@ class NotificationFiltersBase(TestkitTestCase):
                 "params": {"#FILTERS#": "[]"}
             },
             {
-                "filters": ["SERVER_DEFAULT"],
-                "params": {"#FILTERS#": "null"}
-            },
-            {
                 "filters": ["ALL.ALL"],
                 "params": {"#FILTERS#": '["*.*"]'}
             },
