@@ -32,7 +32,7 @@ class TestNotificationMapping(NotificationFiltersBase):
                 "category": x["category"],
                 "category_string": x["rawCategory"],
                 "severity": x["severityLevel"],
-                "severity_string": x["severity"]
+                "severity_string": x["rawSeverityLevel"]
             } for x in notifications
         ]
 
