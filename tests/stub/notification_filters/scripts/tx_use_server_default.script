@@ -6,7 +6,11 @@ C: BEGIN {"[mode]": "*", "[db]": "*", "notifications": null}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
-C: PULL {"n": 1000}
+{{
+    C: PULL {"n": 1000}
+----
+    C: DISCARD "*"
+}}
 S: SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {}

@@ -5,7 +5,12 @@ A: HELLO {"{}": "*"} {"[user_agent]": "*", "[routing]": "*", "notifications": []
 C: RUN "*" {"{}": "*"} {"[mode]": "*", "[db]": "*", "notifications": null}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 1000}
-S: RECORD [1]
-   SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": 1000}
+    S: RECORD [1]
+----
+    C: DISCARD "*"
+}}
+S: SUCCESS {"type": "r"}
 *: RESET
 ?: GOODBYE

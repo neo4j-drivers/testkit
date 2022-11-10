@@ -4,7 +4,11 @@ A: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*"} {"[user_age
 *: RESET
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["t"]}
-C: PULL {"n": 1000}
+{{
+    C: PULL {"n": 1000}
+----
+    C: DISCARD "*"
+}}
 S: SUCCESS {"type": "w"}
 *: RESET
 ?: GOODBYE

@@ -4,8 +4,12 @@ A: HELLO {"{}": "*"} {"{}": "*"}
 ?: RESET
 C: RUN "RETURN 1 as n" {} {"[mode]": "*", "[db]": "*", "notifications{}": #FILTERS#}
 S: SUCCESS {"fields": ["n"]}
-C: PULL {"n": 1000}
-S: RECORD [1]
-   SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": 1000}
+    S: RECORD [1]
+----
+    C: DISCARD "*"
+}}
+S: SUCCESS {"type": "r"}
 *: RESET
 ?: GOODBYE
