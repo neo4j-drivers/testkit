@@ -2,10 +2,10 @@
 
 A: HELLO {"{}": "*"} {"{}": "*"}
 ?: RESET
-C: RUN "RETURN 1 as n" {} {"[mode]": "*", "[db]": "*"}
+C: RUN "RETURN 1 as n" {} {"[mode]": "*", "[db]": "*", "[notifications]": null}
 S: SUCCESS {"fields": ["n"]}
 {{
-    C: PULL {"n": 1000}
+    C: PULL "*"
     S: RECORD [1]
 ----
     C: DISCARD "*"
