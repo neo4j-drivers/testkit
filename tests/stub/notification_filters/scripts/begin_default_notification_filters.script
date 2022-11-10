@@ -7,7 +7,7 @@ S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
 {{
-    C: PULL {"n": 1000}
+    C: PULL "*"
 ----
     C: DISCARD "*"
 }}
