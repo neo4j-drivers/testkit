@@ -333,7 +333,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm1"]
         )
 
-    def test_should_send_all_db_bookmarks_and_replace_it_by_the_new_one(self):
+    def test_should_send_all_bookmarks_and_replace_it_by_the_new_one(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -484,7 +484,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm2"]
         )
 
-    def test_should_resolve_database_name_with_system_bookmarks(self):
+    def test_should_resolve_database_name_with_bookmarks(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
