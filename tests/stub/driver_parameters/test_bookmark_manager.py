@@ -560,7 +560,14 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
-        self.assertEqual(5, get_bookmarks_calls)
+        self.assertIn(get_bookmarks_calls, [
+            # multiple calls for name resolution
+            # and acquire connection
+            5,
+            # single call for name resolution
+            # and acquire connection
+            4
+        ])
 
     def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
         self._start_server(self._router, "router_with_db_name.script")
