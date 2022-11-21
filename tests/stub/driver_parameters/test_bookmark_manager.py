@@ -239,7 +239,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm3"]
         )
 
-    def test_should_ignore_bookmark_manager_not_set_in_a_sesssion(self):
+    def test_should_ignore_bookmark_manager_not_set_in_a_session(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -290,13 +290,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm1"]
         )
 
-    def test_should_use_initial_bookmark_set_in_the_fist_tx(self):
+    def test_should_use_initial_bookmark_set_in_the_first_tx(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks=["fist_bm"]
+                initial_bookmarks=["first_bm"]
             )
         )
 
@@ -326,7 +326,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self.assertEqual(len(begin_requests), 2)
         self.assert_begin(
             begin_requests[0],
-            bookmarks=["fist_bm"]
+            bookmarks=["first_bm"]
         )
         self.assert_begin(
             begin_requests[1],
@@ -339,7 +339,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks=["fist_bm", "adb:bm1"]
+                initial_bookmarks=["first_bm", "adb:bm1"]
             )
         )
 
@@ -369,7 +369,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self.assertEqual(len(begin_requests), 2)
         self.assert_begin(
             begin_requests[0],
-            bookmarks=["fist_bm", "adb:bm1"]
+            bookmarks=["first_bm", "adb:bm1"]
         )
         self.assert_begin(
             begin_requests[1],
@@ -533,7 +533,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         get_bookmarks_calls = 0
 
         def get_bookmarks():
-            global get_bookmarks_calls
+            nonlocal get_bookmarks_calls
             get_bookmarks_calls = get_bookmarks_calls + 1
             return []
 
@@ -597,6 +597,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s2.close()
 
         self._server.reset()
+        self._server._dump()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 2)
