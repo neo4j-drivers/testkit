@@ -296,7 +296,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["fist_bm"]}
+                initial_bookmarks=["fist_bm"]
             )
         )
 
@@ -339,7 +339,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["fist_bm"], "adb": ["adb:bm1"]}
+                initial_bookmarks=["fist_bm", "adb:bm1"]
             )
         )
 
@@ -490,7 +490,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"system": ["sys:bm1"]}
+                initial_bookmarks=["sys:bm1"]
             )
         )
 
@@ -530,17 +530,16 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self._start_server(self._server, "transaction_chaining.script")
 
         adb_bookmarks = ["adb:bm1"]
-        get_bookmarks_calls = []
+        get_bookmarks_calls = 0
 
-        def get_bookmarks(db):
-            get_bookmarks_calls.append([db])
+        def get_bookmarks():
+            global get_bookmarks_calls
+            get_bookmarks_calls = get_bookmarks_calls + 1
             return []
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={
-                    "adb": adb_bookmarks
-                },
+                initial_bookmarks=adb_bookmarks,
                 bookmarks_supplier=get_bookmarks
             )
         )
@@ -561,37 +560,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
-        if len(get_bookmarks_calls) == 5:
-            self.assertEqual(
-                [
-                    # acquire connection
-                    ["system"],
-                    # first tx
-                    [None],
-                    # name resolution
-                    ["system"],
-                    # acquire connection
-                    ["system"],
-                    # second tx
-                    [None]
-                ],
-                get_bookmarks_calls
-            )
-        else:
-            self.assertEqual(4, len(get_bookmarks_calls))
-            self.assertEqual(
-                [
-                    # acquire connection
-                    ["system"],
-                    # first tx
-                    [None],
-                    # name resolution
-                    ["system"],
-                    # second tx
-                    [None]
-                ],
-                get_bookmarks_calls
-            )
+        self.assertEqual(5, get_bookmarks_calls)
 
     def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
         self._start_server(self._router, "router_with_db_name.script")
@@ -600,21 +569,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         system_bookmarks = ["sys:bm3"]
         neo4j_bookmarks = ["neo4j:bm3"]
         adb_bookmarks = ["adb:bm1"]
-        bookmarks = {
-            "system": system_bookmarks,
-            "neo4j": neo4j_bookmarks
-        }
 
-        def get_bookmarks(db):
-            if db is None:
-                return system_bookmarks + neo4j_bookmarks
-            return bookmarks.get(db, [])
+        def get_bookmarks():
+            return system_bookmarks + neo4j_bookmarks
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={
-                    "adb": adb_bookmarks
-                },
+                initial_bookmarks=adb_bookmarks,
                 bookmarks_supplier=get_bookmarks
             )
         )
@@ -656,14 +617,12 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         adb_bookmarks = ["adb:bm1"]
         bookmarks_consumer_calls = []
 
-        def bookmarks_consumer(db, bookmarks):
-            bookmarks_consumer_calls.append([db, bookmarks])
+        def bookmarks_consumer(bookmarks):
+            bookmarks_consumer_calls.append(bookmarks)
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={
-                    "adb": adb_bookmarks
-                },
+                initial_bookmarks=adb_bookmarks,
                 bookmarks_consumer=bookmarks_consumer
             )
         )
@@ -688,9 +647,9 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         self.assertEqual(
             [
                 # first tx
-                ["neo4j", ["bm1"]],
+                ["bm1"],
                 # second tx
-                ["adb", ["adb:bm4"]],
+                ["adb:bm4"],
             ],
             bookmarks_consumer_calls
         )
@@ -702,14 +661,12 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         adb_bookmarks = ["adb:bm1"]
         bookmarks_consumer_calls = []
 
-        def bookmarks_consumer(db, bookmarks):
-            bookmarks_consumer_calls.append([db, bookmarks])
+        def bookmarks_consumer(bookmarks):
+            bookmarks_consumer_calls.append(bookmarks)
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={
-                    "adb": adb_bookmarks
-                },
+                initial_bookmarks=adb_bookmarks,
                 bookmarks_consumer=bookmarks_consumer
             )
         )
@@ -721,16 +678,10 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s1.close()
 
         self.assertEqual(1, len(bookmarks_consumer_calls))
-        self.assertIn(bookmarks_consumer_calls, [
-            # default is a ""
+        self.assertEquals(bookmarks_consumer_calls, [
             [
                 # first tx
-                ["", ["bm1"]]
-            ],
-            # OR default is None
-            [
-                # first tx
-                [None, ["bm1"]]
+                "bm1"
             ]
         ])
 
@@ -742,13 +693,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         manager1 = self._new_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["manager_01_initial_bm"]}
+                initial_bookmarks=["manager_01_initial_bm"]
             )
         )
 
         manager2 = self._new_bookmark_manager(
             Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"neo4j": ["manager_02_initial_bm"]}
+                initial_bookmarks=["manager_02_initial_bm"]
             )
         )
 

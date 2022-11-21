@@ -17,9 +17,9 @@ from .. import protocol
 
 @dataclass
 class Neo4jBookmarkManagerConfig:
-    initial_bookmarks: Optional[Dict[str, List[str]]] = None
-    bookmarks_supplier: Optional[Callable[[str], List[str]]] = None
-    bookmarks_consumer: Optional[Callable[[str, List[str]], None]] = None
+    initial_bookmarks: Optional[List[str]] = None
+    bookmarks_supplier: Optional[Callable[[], List[str]]] = None
+    bookmarks_consumer: Optional[Callable[[List[str]], None]] = None
 
 
 @dataclass
@@ -58,7 +58,7 @@ class BookmarkManager:
             manager = cls._registry[request.bookmark_manager_id]
             supply = manager.config.bookmarks_supplier
             if supply is not None:
-                bookmarks = supply(request.database)
+                bookmarks = supply()
                 return protocol.BookmarksSupplierCompleted(request.id,
                                                            bookmarks)
         if isinstance(request, protocol.BookmarksConsumerRequest):
@@ -70,7 +70,7 @@ class BookmarkManager:
             manager = cls._registry[request.bookmark_manager_id]
             consume = manager.config.bookmarks_consumer
             if consume is not None:
-                consume(request.database, request.bookmarks)
+                consume(request.bookmarks)
                 return protocol.BookmarksConsumerCompleted(request.id)
 
     def close(self, hooks=None):
