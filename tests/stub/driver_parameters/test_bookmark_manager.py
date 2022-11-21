@@ -522,7 +522,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["sys:bm1", "bm1"]
+            bookmarks=["bm1"]
         )
 
     def test_should_call_bookmark_supplier_for_all_get_bookmarks_calls(self):
