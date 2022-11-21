@@ -677,7 +677,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s1.close()
 
         self.assertEqual(1, len(bookmarks_consumer_calls))
-        self.assertEquals(bookmarks_consumer_calls, [
+        self.assertEqual(bookmarks_consumer_calls, [
             [
                 # first tx
                 "bm1"
