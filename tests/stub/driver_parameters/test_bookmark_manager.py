@@ -597,7 +597,6 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         s2.close()
 
         self._server.reset()
-        self._server._dump()
         begin_requests = self._server.get_requests("BEGIN")
 
         self.assertEqual(len(begin_requests), 2)
