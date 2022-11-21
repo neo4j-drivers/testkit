@@ -477,11 +477,11 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
         self.assert_run(
             run_requests[2],
-            bookmarks=["bm1", "adb:bm4"]
+            bookmarks=["adb:bm4"]
         )
         self.assert_run(
             run_requests[3],
-            bookmarks=["bm2", "adb:bm4"]
+            bookmarks=["bm2"]
         )
 
     def test_should_resolve_database_name_with_system_bookmarks(self):
