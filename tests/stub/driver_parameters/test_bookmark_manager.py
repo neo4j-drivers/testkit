@@ -606,8 +606,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["bm1", *system_bookmarks, *neo4j_bookmarks,
-                       *adb_bookmarks]
+            bookmarks=["bm1", *system_bookmarks, *neo4j_bookmarks]
         )
 
     def test_should_call_bookmarks_consumer_when_new_bookmarks_arrive(self):
