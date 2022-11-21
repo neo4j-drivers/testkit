@@ -333,7 +333,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm1"]
         )
 
-    def test_should_send_all_db_bookmarks_and_update_only_relevant(self):
+    def test_should_send_all_db_bookmarks_and_replace_it_by_the_new_one(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
@@ -373,7 +373,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["bm1", "adb:bm1"]
+            bookmarks=["bm1"]
         )
 
     def test_should_handle_database_redirection_in_tx(self):
