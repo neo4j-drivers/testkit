@@ -597,6 +597,68 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm1", "extra", "bookmarks3"]
         )
 
+    def test_should_not_change_bmm_state_with_supplied_bookmarks(self):
+        self._start_server(self._router, "router_with_db_name.script")
+        self._start_server(self._server, "transaction_chaining.script")
+
+        get_bookmarks_calls = 0
+
+        def get_bookmarks():
+            nonlocal get_bookmarks_calls
+            get_bookmarks_calls += 1
+            if get_bookmarks_calls == 2:
+                return ["extra"]
+            return []
+
+        self._driver, manager = self._new_driver_and_bookmark_manager(
+            Neo4jBookmarkManagerConfig(
+                bookmarks_supplier=get_bookmarks
+            )
+        )
+
+        s1 = self._driver.session(
+            "r",
+            database="neo4j",
+            bookmark_manager=manager
+        )
+        tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "empty"})
+        list(tx1.run("RETURN 1 as n"))
+        tx1.commit()
+        s1.close()
+
+        s2 = self._driver.session(
+            "w",
+            database="neo4j",
+            bookmark_manager=manager
+        )
+        tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm1"})
+        list(tx2.run("RETURN 1 as n"))
+        tx2.commit()
+        s2.close()
+
+        s3 = self._driver.session(
+            "w",
+            database="neo4j",
+            bookmark_manager=manager
+        )
+        tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm2"})
+        list(tx3.run("RETURN 1 as n"))
+        tx3.commit()
+        s3.close()
+
+        self._server.reset()
+        begin_requests = self._server.get_requests("BEGIN")
+
+        self.assertEqual(len(begin_requests), 3)
+        self.assert_begin(begin_requests[0], bookmarks=["extra"])
+        self.assert_begin(
+            begin_requests[1]
+        )
+        self.assert_begin(
+            begin_requests[2],
+            bookmarks=["bm1"]
+        )
+
     def test_should_call_bookmarks_consumer_when_new_bookmarks_arrive(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
