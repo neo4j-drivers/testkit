@@ -532,9 +532,6 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         adb_bookmarks = ["adb:bm1"]
         get_bookmarks_calls = 0
 
-        # TODO: return different bookmarks to check that the driver is
-        #       enriching with the correct bookmarks
-
         def get_bookmarks():
             nonlocal get_bookmarks_calls
             get_bookmarks_calls += 1
