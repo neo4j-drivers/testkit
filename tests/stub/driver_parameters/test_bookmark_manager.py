@@ -186,7 +186,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm1", "bm2"]
         )
 
-    def test_should_manage_explicity_session_bookmarks(self):
+    def test_should_manage_explicitly_session_bookmarks(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
