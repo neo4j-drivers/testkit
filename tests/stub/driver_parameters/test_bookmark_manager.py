@@ -79,19 +79,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
         s3 = self._driver.session("w", bookmark_manager=manager)
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
@@ -118,19 +118,19 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("r", bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "empty"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
         s3 = self._driver.session("w", bookmark_manager=manager)
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
@@ -157,11 +157,11 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
 
         s2 = self._driver.session("w", bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
 
         tx1.commit()
         s1.close()
@@ -170,7 +170,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s3 = self._driver.session("w", bookmark_manager=manager)
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
@@ -195,13 +195,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", bookmarks=[], bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -211,13 +211,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
         s4 = self._driver.session("w", bookmark_manager=manager)
         tx4 = s4.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx4.run("RETURN 1 as n"))
+        list(tx4.run("RETURN 1 AS n"))
         tx4.commit()
         s4.close()
 
@@ -248,13 +248,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w")
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -263,13 +263,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["unmanaged"]
         )
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
         s4 = self._driver.session("w", bookmark_manager=manager)
         tx4 = s4.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx4.run("RETURN 1 as n"))
+        list(tx4.run("RETURN 1 AS n"))
         tx4.commit()
         s4.close()
 
@@ -306,7 +306,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
@@ -316,7 +316,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -349,7 +349,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
@@ -359,7 +359,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -389,7 +389,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
@@ -399,7 +399,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx2 = s2.begin_transaction(tx_meta={"order": "adb"})
-        list(tx2.run("USE adb RETURN 1 as n"))
+        list(tx2.run("USE adb RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -409,7 +409,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
@@ -419,7 +419,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx4 = s4.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx4.run("RETURN 1 as n"))
+        list(tx4.run("RETURN 1 AS n"))
         tx4.commit()
         s4.close()
 
@@ -496,13 +496,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -550,13 +550,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -622,7 +622,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "empty"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
@@ -632,7 +632,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -642,7 +642,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx3 = s3.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         s3.close()
 
@@ -682,13 +682,13 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmark_manager=manager
         )
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
         s2 = self._driver.session("w", bookmark_manager=manager)
         tx2 = s2.begin_transaction(tx_meta={"order": "adb"})
-        list(tx2.run("USE adb RETURN 1 as n"))
+        list(tx2.run("USE adb RETURN 1 AS n"))
         tx2.commit()
         s2.close()
 
@@ -722,7 +722,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         s1 = self._driver.session("w", bookmark_manager=manager)
         tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         s1.close()
 
@@ -754,25 +754,25 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
 
         manager1_s1 = self._driver.session("w", bookmark_manager=manager1)
         tx1 = manager1_s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
+        list(tx1.run("RETURN 1 AS n"))
         tx1.commit()
         manager1_s1.close()
 
         manager2_s1 = self._driver.session("w", bookmark_manager=manager2)
         tx2 = manager2_s1.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
+        list(tx2.run("RETURN 1 AS n"))
         tx2.commit()
         manager2_s1.close()
 
         manager2_s2 = self._driver.session("w", bookmark_manager=manager2)
         tx3 = manager2_s2.begin_transaction(tx_meta={"return_bookmark": "bm3"})
-        list(tx3.run("RETURN 1 as n"))
+        list(tx3.run("RETURN 1 AS n"))
         tx3.commit()
         manager2_s2.close()
 
         manager1_s2 = self._driver.session("w", bookmark_manager=manager1)
         tx4 = manager1_s2.begin_transaction(tx_meta={"return_bookmark": "bm4"})
-        list(tx4.run("RETURN 1 as n"))
+        list(tx4.run("RETURN 1 AS n"))
         tx4.commit()
         manager1_s2.close()
 
