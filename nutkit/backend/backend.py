@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from datetime import datetime
 import inspect
 import json
 import os
@@ -76,7 +77,7 @@ class Backend:
                 hook(req)
         req_json = self._encoder.encode(req)
         if DEBUG_MESSAGES:
-            print("Request: %s" % req_json)
+            print("%s Request: %s" % (datetime.now(), req_json))
         self._writer.write("#request begin\n")
         self._writer.write(req_json + "\n")
         self._writer.write("#request end\n")
@@ -98,7 +99,7 @@ class Backend:
             elif line == "#response end":
                 if DEBUG_MESSAGES:
                     try:
-                        print("Response: %s" % response)
+                        print("%s Response: %s" % (datetime.now(), response))
                     except UnicodeEncodeError:
                         print("Response: <invalid unicode>")
                 try:
