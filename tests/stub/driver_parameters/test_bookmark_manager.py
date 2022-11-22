@@ -525,17 +525,20 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             bookmarks=["bm1"]
         )
 
-    def test_should_call_bookmark_supplier_for_all_get_bookmarks_calls(self):
+    def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
         self._start_server(self._router, "router_with_db_name.script")
         self._start_server(self._server, "transaction_chaining.script")
 
         adb_bookmarks = ["adb:bm1"]
         get_bookmarks_calls = 0
 
+        # TODO: return different bookmarks to check that the driver is
+        #       enriching with the correct bookmarks
+
         def get_bookmarks():
             nonlocal get_bookmarks_calls
-            get_bookmarks_calls = get_bookmarks_calls + 1
-            return []
+            get_bookmarks_calls += 1
+            return ["extra", f"bookmarks{get_bookmarks_calls}"]
 
         self._driver, manager = self._new_driver_and_bookmark_manager(
             Neo4jBookmarkManagerConfig(
@@ -560,60 +563,41 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         tx2.commit()
         s2.close()
 
-        self.assertIn(get_bookmarks_calls, [
-            # multiple calls for name resolution
-            # and acquire connection
-            5,
-            # single call for name resolution
-            # and acquire connection
-            4
-        ])
-
-    def test_should_enrich_bookmarks_with_bookmark_supplier_result(self):
-        self._start_server(self._router, "router_with_db_name.script")
-        self._start_server(self._server, "transaction_chaining.script")
-
-        system_bookmarks = ["sys:bm3"]
-        neo4j_bookmarks = ["neo4j:bm3"]
-        adb_bookmarks = ["adb:bm1"]
-
-        def get_bookmarks():
-            return system_bookmarks + neo4j_bookmarks
-
-        self._driver, manager = self._new_driver_and_bookmark_manager(
-            Neo4jBookmarkManagerConfig(
-                initial_bookmarks=adb_bookmarks,
-                bookmarks_supplier=get_bookmarks
-            )
+        self.assertIn(
+            get_bookmarks_calls,
+            [
+                # some drivers call the supplier for each time they acquire a
+                # connection from a routing pool as updating a routing table
+                # might be required
+                5,
+                # for drivers that only call the bookmarks supplier if a new
+                # routing table is really needed
+                4,
+            ]
         )
-
-        s1 = self._driver.session(
-            "w",
-            database="neo4j",
-            bookmark_manager=manager
-        )
-        tx1 = s1.begin_transaction(tx_meta={"return_bookmark": "bm1"})
-        list(tx1.run("RETURN 1 as n"))
-        tx1.commit()
-        s1.close()
-
-        s2 = self._driver.session("w", bookmark_manager=manager)
-        tx2 = s2.begin_transaction(tx_meta={"return_bookmark": "bm2"})
-        list(tx2.run("RETURN 1 as n"))
-        tx2.commit()
-        s2.close()
 
         self._server.reset()
         begin_requests = self._server.get_requests("BEGIN")
-
         self.assertEqual(len(begin_requests), 2)
         self.assert_begin(
             begin_requests[0],
-            bookmarks=system_bookmarks + neo4j_bookmarks + adb_bookmarks
+            bookmarks=[*adb_bookmarks, "extra", "bookmarks2"]
         )
         self.assert_begin(
             begin_requests[1],
-            bookmarks=["bm1", *system_bookmarks, *neo4j_bookmarks]
+            bookmarks=["bm1", "extra", f"bookmarks{get_bookmarks_calls}"]
+        )
+
+        self._router.reset()
+        route_requests = self._router.get_requests("ROUTE")
+        self.assertEqual(len(route_requests), 2)
+        self.assert_route(
+            route_requests[0],
+            bookmarks=[*adb_bookmarks, "extra", "bookmarks1"]
+        )
+        self.assert_route(
+            route_requests[1],
+            bookmarks=["bm1", "extra", "bookmarks3"]
         )
 
     def test_should_call_bookmarks_consumer_when_new_bookmarks_arrive(self):
