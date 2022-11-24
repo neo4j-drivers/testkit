@@ -2306,9 +2306,7 @@ class RoutingV5x0(RoutingBase):
             exc.exception.code
         )
 
-    def test_should_fail_with_invalid_route_statement_argument(
-        self
-    ):
+    def test_should_fail_with_invalid_route_statement_argument(self):
         exc = self._test_fast_fail_discover(
             "router_yielding_argument_error.script",
         )
@@ -2318,9 +2316,7 @@ class RoutingV5x0(RoutingBase):
             exc.exception.code
         )
 
-    def test_should_fail_with_invalid_routing_request(
-        self
-    ):
+    def test_should_fail_with_invalid_routing_request(self):
         exc = self._test_fast_fail_discover(
             "router_yielding_invalid_request.script",
         )
@@ -2330,9 +2326,7 @@ class RoutingV5x0(RoutingBase):
             exc.exception.code
         )
 
-    def test_should_fail_with_type_error_request(
-        self
-    ):
+    def test_should_fail_with_type_error_request(self):
         exc = self._test_fast_fail_discover(
             "router_yielding_type_error.script",
         )
