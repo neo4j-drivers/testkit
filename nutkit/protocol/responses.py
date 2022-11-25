@@ -88,11 +88,10 @@ class BookmarksSupplierRequest:
     bookmarks for all databases.
     """
 
-    def __init__(self, id, bookmarkManagerId, database=None):
+    def __init__(self, id, bookmarkManagerId):
         # id of the callback request
         self.id = id
         self.bookmark_manager_id = bookmarkManagerId
-        self.database = database
 
 
 class BookmarksConsumerRequest:
@@ -103,11 +102,10 @@ class BookmarksConsumerRequest:
     to send the new bookmark set for a given database.
     """
 
-    def __init__(self, id, bookmarkManagerId, database, bookmarks):
+    def __init__(self, id, bookmarkManagerId, bookmarks):
         # id of the callback request
         self.id = id
         self.bookmark_manager_id = bookmarkManagerId
-        self.database = database
         self.bookmarks = bookmarks
 
 
