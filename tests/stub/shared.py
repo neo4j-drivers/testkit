@@ -59,6 +59,7 @@ class StubServer:
         self._stderr_lines = []
         self._pipes_closed = False
         self._script_path = None
+        self._last_rewritten_path = None
 
     def start(self, path=None, script=None, vars_=None):
         if self._process:
@@ -74,8 +75,10 @@ class StubServer:
             raise ValueError("Specify either path or script.")
 
         script_fn = "temp.script"
+        self._last_rewritten_path = None
         if vars_:
             if path:
+                self._last_rewritten_path = path
                 script_fn = os.path.basename(path)
                 with open(path, "r") as f:
                     script = f.read()
@@ -159,6 +162,8 @@ class StubServer:
                 break
 
     def _dump(self):
+        if self._last_rewritten_path:
+            print(f"Original stub script file: {self._last_rewritten_path}")
         self._read_pipes()
         sys.stdout.flush()
         print(">>>> Captured stub server %s stdout" % self.address)
