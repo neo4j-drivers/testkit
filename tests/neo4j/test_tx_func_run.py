@@ -47,6 +47,30 @@ class TestTxFuncRun(TestkitTestCase):
             with self.subTest(consume=consume):
                 _test()
 
+    def test_parameter(self):
+        def work(tx):
+            result = tx.run("RETURN $x", {"x": types.CypherInt(1)})
+            self.assertEqual(list(result),
+                             [types.Record([types.CypherInt(1)])])
+
+        self._session1 = self._driver.session("r")
+        self._session1.execute_read(work)
+
+    def test_meta_data(self):
+        metadata = {"foo": types.CypherFloat(1.5),
+                    "bar": types.CypherString("baz")}
+
+        def work(tx):
+            result = tx.run("CALL tx.getMetaData")
+            record = result.next()
+            self.assertIsInstance(record, types.Record)
+            self.assertEqual(record.values, [types.CypherMap(metadata)])
+
+        self._session1 = self._driver.session("r")
+        self._session1.execute_read(
+            work, tx_meta={k: v.value for k, v in metadata.items()},
+        )
+
     def test_iteration_nested(self):
         # Verifies that it is possible to nest results with small fetch sizes
         # within a transaction function.

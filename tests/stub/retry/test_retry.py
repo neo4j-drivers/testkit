@@ -115,6 +115,7 @@ class TestRetry(TestkitTestCase):
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
             result.next()
+
         auth = types.AuthorizationToken("basic", principal="", credentials="")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
