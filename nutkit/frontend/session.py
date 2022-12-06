@@ -80,14 +80,14 @@ class Session:
                     "Should be RetryableTry or RetryableDone but was: %s" % res
                 )
 
-    def read_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
+    def execute_read(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionReadTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )
         return self.process_transaction(req, fn, hooks=hooks)
 
-    def write_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
+    def execute_write(self, fn, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionWriteTransaction(
             self._session.id, txMeta=tx_meta, **kwargs

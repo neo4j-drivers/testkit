@@ -176,7 +176,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
 
         self._start_server("1_second_exceeds_tx_retry.script")
-        self._session.write_transaction(work)
+        self._session.execute_write(work)
         self._server.done()
         self.assertEqual(retries, 2)
         self.assertIsInstance(record, types.Record)
@@ -230,7 +230,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
 
         self._start_server("2_seconds_in_time_tx_retry.script")
-        self._session.write_transaction(work)
+        self._session.execute_write(work)
         self._server.done()
         self.assertEqual(retries, 1)
         self.assertIsInstance(record, types.Record)

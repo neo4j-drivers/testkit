@@ -574,7 +574,7 @@ class NoRoutingV4x1(TestkitTestCase):
             result = tx.run("RETURN 1 as n")
             records = list(result)
 
-        session.read_transaction(work)
+        session.execute_read(work)
 
         session.close()
         driver.close()

@@ -118,7 +118,7 @@ class TestBookmarks(TestkitTestCase):
             result.next()
 
         with self.assertRaises(types.DriverError) as exc:
-            self._session.read_transaction(work)
+            self._session.execute_read(work)
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
@@ -151,7 +151,7 @@ class TestBookmarks(TestkitTestCase):
 
         for _ in range(expected_node_count):
             self._session = self._driver.session("w")
-            self._session.write_transaction(create_node)
+            self._session.execute_write(create_node)
             bookmarks.append(self._session.last_bookmarks())
             self._session.close()
 
@@ -167,7 +167,7 @@ class TestBookmarks(TestkitTestCase):
             record = result.next()
             return record.values[0]
 
-        count = self._session.read_transaction(get_node_count)
+        count = self._session.execute_read(get_node_count)
         self.assertEqual(types.CypherInt(expected_node_count), count)
 
     @cluster_unsafe_test

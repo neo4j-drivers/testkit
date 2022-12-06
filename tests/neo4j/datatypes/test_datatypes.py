@@ -146,7 +146,7 @@ class TestDataTypes(_TestTypesBase):
 
         self._create_driver_and_session()
 
-        record = self._session.write_transaction(work)
+        record = self._session.execute_write(work)
         self.assertIsInstance(record, types.Record)
 
         node = record.values[0]
@@ -173,7 +173,7 @@ class TestDataTypes(_TestTypesBase):
 
         self._create_driver_and_session()
 
-        record = self._session.write_transaction(work)
+        record = self._session.execute_write(work)
         self.assertIsInstance(record, types.Record)
         values = record.values
         self.assertEqual(len(values), 3)
@@ -205,7 +205,7 @@ class TestDataTypes(_TestTypesBase):
 
         self._create_driver_and_session()
 
-        record = self._session.write_transaction(work)
+        record = self._session.execute_write(work)
         self.assertIsInstance(record, types.Record)
         values = record.values
         self.assertEqual(len(values), 6)

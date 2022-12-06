@@ -132,7 +132,7 @@ class TestTxRun(TestkitTestCase):
         self._session = self._driver.session("w")
         exc = None
         try:
-            self._session.write_transaction(work)
+            self._session.execute_write(work)
         except types.DriverError as e:
             exc = e
 
@@ -233,7 +233,7 @@ class TestTxRun(TestkitTestCase):
         self._create_direct_driver()
         self._session = self._driver.session("r")
         with self.assertRaises(types.DriverError) as exc:
-            self._session.read_transaction(work)
+            self._session.execute_read(work)
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
 
     def _test_failed_tx_run(self, rollback):

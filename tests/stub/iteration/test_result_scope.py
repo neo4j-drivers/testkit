@@ -92,7 +92,7 @@ class TestResultScope(TestkitTestCase):
             with self._start_session(
                 "tx_inf_results_until_end.script"
             ) as session:
-                result = session.read_transaction(work)
+                result = session.execute_read(work)
                 with self.assertRaises(types.DriverError) as exc:
                     if result_method_ == "peek":
                         result.peek()
@@ -128,7 +128,7 @@ class TestResultScope(TestkitTestCase):
             with self._start_session(
                 "tx_inf_results_until_end.script"
             ) as session:
-                session.read_transaction(work)
+                session.execute_read(work)
                 self._server.done()
 
         for result_method in ("next", "peek"):

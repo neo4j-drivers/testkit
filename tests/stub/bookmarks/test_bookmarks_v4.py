@@ -155,9 +155,9 @@ class TestBookmarksV4(TestkitTestCase):
                                          sorted(bookmarks))
                     work = work_consume if consume_ else work_no_consume
                     if mode == "write":
-                        session.write_transaction(work)
+                        session.execute_write(work)
                     else:
-                        session.read_transaction(work)
+                        session.execute_read(work)
                     self.assertEqual(session.last_bookmarks(), ["bm:re"])
                     session.close()
                 server.done()

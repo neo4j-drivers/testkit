@@ -113,7 +113,7 @@ class TestResultSingleOptional(IterationTestBase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            optional_record = session.read_transaction(work)
+            optional_record = session.execute_read(work)
             record, warnings = optional_record.record, optional_record.warnings
             self.assertIsInstance(record, types.Record)
             self.assertEqual(record.values, [types.CypherInt(1)])

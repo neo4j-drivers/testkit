@@ -86,9 +86,9 @@ class TestTxBeginParameters(TestkitTestCase):
                 work(tx)
                 tx.commit()
             elif tx_func_access_mode == "w":
-                session.write_transaction(work, *tx_args, **tx_kwargs)
+                session.execute_write(work, *tx_args, **tx_kwargs)
             elif tx_func_access_mode == "r":
-                session.read_transaction(work, *tx_args, **tx_kwargs)
+                session.execute_read(work, *tx_args, **tx_kwargs)
             else:
                 raise ValueError(tx_func_access_mode)
             self._server.done()

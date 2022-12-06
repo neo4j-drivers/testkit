@@ -38,7 +38,7 @@ class TestRetry(TestkitTestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.read_transaction(once)
+        x = session.execute_read(once)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 1)
@@ -76,7 +76,7 @@ class TestRetry(TestkitTestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.write_transaction(twice)
+        x = session.execute_write(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -121,7 +121,7 @@ class TestRetry(TestkitTestCase):
         session = driver.session("w")
 
         with self.assertRaises(types.DriverError) as e:  # Check further...
-            session.write_transaction(once)
+            session.execute_write(once)
         if get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
@@ -199,7 +199,7 @@ class TestRetry(TestkitTestCase):
             session = driver.session("w")
 
             with self.assertRaises(types.DriverError) as exc:
-                session.write_transaction(once)
+                session.execute_write(once)
 
             self.assertEqual(exc.exception.code, failure[1])
 
