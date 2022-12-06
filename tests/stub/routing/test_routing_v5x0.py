@@ -2306,6 +2306,36 @@ class RoutingV5x0(RoutingBase):
             exc.exception.code
         )
 
+    def test_should_fail_with_invalid_route_statement_argument(self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_argument_error.script",
+        )
+
+        self.assertEqual(
+            "Neo.ClientError.Statement.ArgumentError",
+            exc.exception.code
+        )
+
+    def test_should_fail_with_invalid_routing_request(self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_invalid_request.script",
+        )
+
+        self.assertEqual(
+            "Neo.ClientError.Request.Invalid",
+            exc.exception.code
+        )
+
+    def test_should_fail_with_type_error_request(self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_type_error.script",
+        )
+
+        self.assertEqual(
+            "Neo.ClientError.Statement.TypeError",
+            exc.exception.code
+        )
+
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(  # noqa: E501
         self
     ):
