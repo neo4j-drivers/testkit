@@ -155,7 +155,9 @@ class TestTxBeginParameters(TestkitTestCase):
             with self.subTest(routing=routing):
                 self._run("tx_meta", routing,
                           session_args=("w",),
-                          tx_kwargs={"tx_meta": {"akey": "aval"}})
+                          tx_kwargs={
+                              "tx_meta": {"akey": types.CypherString("aval")}
+                          })
 
     @driver_feature(types.Feature.BOLT_4_4)
     def test_timeout(self):
@@ -249,4 +251,7 @@ class TestTxBeginParameters(TestkitTestCase):
                               "database": "adb",
                               "impersonated_user": "that-other-dude"
                           },
-                          tx_kwargs={"tx_meta": {"k": "v"}, "timeout": 11})
+                          tx_kwargs={
+                              "tx_meta": {"k": types.CypherString("v")},
+                              "timeout": 11
+                          })

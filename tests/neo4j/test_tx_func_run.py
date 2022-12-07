@@ -68,7 +68,7 @@ class TestTxFuncRun(TestkitTestCase):
 
         self._session1 = self._driver.session("r")
         self._session1.execute_read(
-            work, tx_meta={k: v.value for k, v in metadata.items()},
+            work, tx_meta=metadata,
         )
 
     def test_iteration_nested(self):
@@ -180,10 +180,6 @@ class TestTxFuncRun(TestkitTestCase):
         self._session1.execute_read(assertion_query)
 
     def test_tx_func_configuration(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["java"]:
-            self.skipTest("Does not send metadata")
-
         def run(tx):
             values = []
             result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
@@ -203,7 +199,7 @@ class TestTxFuncRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         res = self._session1.execute_read(
             run, timeout=3000,
-            tx_meta={k: v.value for k, v in metadata.items()}
+            tx_meta=metadata
         )
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 

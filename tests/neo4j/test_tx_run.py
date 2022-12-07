@@ -290,7 +290,7 @@ class TestTxRun(TestkitTestCase):
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
         tx = self._session1.begin_transaction(
-            tx_meta={k: v.value for k, v in metadata.items()}, timeout=3000
+            tx_meta=metadata, timeout=3000
         )
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
         values = []
