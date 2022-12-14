@@ -81,8 +81,10 @@ class TestTxFuncRun(TestkitTestCase):
             self.skipTest("Fails for some reason")
 
         def run(tx, i, n):
-            return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x",
-                          {"i": types.CypherInt(i), "n": types.CypherInt(n)})
+            return tx.run(
+                "UNWIND RANGE ($i, $n) AS x RETURN x",
+                params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
+            )
 
         self._session1 = self._driver.session("r", fetch_size=2)
 
@@ -197,10 +199,7 @@ class TestTxFuncRun(TestkitTestCase):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("w")
-        res = self._session1.execute_read(
-            run, timeout=3000,
-            tx_meta=metadata
-        )
+        res = self._session1.execute_read(run, timeout=3000, tx_meta=metadata)
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
     def test_tx_timeout(self):

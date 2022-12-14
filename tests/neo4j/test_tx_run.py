@@ -80,8 +80,8 @@ class TestTxRun(TestkitTestCase):
         tx.commit()
 
         # Check the property value
-        result = self._session1.run("MATCH (a) WHERE id(a) = $n "
-                                    "RETURN a.foo", {"n": node_id})
+        result = self._session1.run("MATCH (a) WHERE id(a) = $n RETURN a.foo",
+                                    params={"n": node_id})
         record = result.next()
         self.assertIsInstance(record, types.Record)
         self.assertEqual(len(record.values), 1)
@@ -109,8 +109,8 @@ class TestTxRun(TestkitTestCase):
         tx.rollback()
 
         # Check the property value
-        result = self._session1.run("MATCH (a) WHERE id(a) = $n "
-                                    "RETURN a.foo", {"n": node_id})
+        result = self._session1.run("MATCH (a) WHERE id(a) = $n RETURN a.foo",
+                                    params={"n": node_id})
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
 

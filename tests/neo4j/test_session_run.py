@@ -294,7 +294,7 @@ class TestSessionRun(TestkitTestCase):
         def run(i, n):
             return self._session1.run(
                 "UNWIND RANGE ($i, $n) AS x RETURN x",
-                {"i": types.CypherInt(i), "n": types.CypherInt(n)}
+                params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
             )
         i0 = 0
         n0 = 6
