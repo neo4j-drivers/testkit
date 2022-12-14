@@ -1,4 +1,4 @@
-!: BOLT 4.3
+!: BOLT #VERSION#
 
 A: HELLO {"user_agent": "*", "scheme": "minimal-scheme", "principal": "", "[credentials]": "", "[realm]": "", "[parameters]": {}, "[routing]": null, "[patch_bolt]": "*"}
 *: RESET

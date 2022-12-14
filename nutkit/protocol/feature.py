@@ -23,6 +23,9 @@ class Feature(Enum):
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
+    # The driver offers a method for checking if a protocol version negotiated
+    # with the remote supports re-authentication.
+    API_DRIVER_SUPPORTS_SESSION_AUTH = "Feature:API:Driver.SupportsSessionAuth"
     # The driver supports connection liveness check.
     API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver offers a method for the result to return all records as a list
@@ -42,6 +45,10 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
+    # The session configuration allows to switch the authentication context
+    # by supplying new credentials. This new context is only valid for the
+    # current session.
+    API_SESSION_AUTH_CONFIG = "Feature:API:Session:AuthConfig"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -76,6 +83,8 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
+    # The driver supports Bolt protocol version 5.1
+    BOLT_5_1 = "Feature:Bolt:5.1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
@@ -114,6 +123,10 @@ class Feature(Enum):
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
+    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO or LOGOFF
+    # but pipelines a LOGIN right afterwards and consumes two messages after.
+    # This saves a full round-trip.
+    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.

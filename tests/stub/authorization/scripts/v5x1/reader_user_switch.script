@@ -1,0 +1,44 @@
+!: BOLT #VERSION#
+
+A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}}
+A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+*: RESET
+
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+A: LOGOFF
+A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+*: RESET
+
+C: RUN "RETURN 2 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+
+C: RUN "RETURN 3 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+A: LOGOFF
+A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+*: RESET
+
+C: RUN "RETURN 4 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE

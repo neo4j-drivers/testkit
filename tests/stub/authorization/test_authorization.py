@@ -164,7 +164,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_yielding_error_on_pull.script", vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
-        result = session.run("RETURN 1 as n")
+        result = session.run("RETURN 1 AS n")
         with self.assertRaises(types.DriverError) as exc:
             result.next()
         error_assertion(exc.exception)
@@ -242,7 +242,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             # TODO remove consume() once all drivers report the error on run
             if get_driver_name() in ["javascript", "dotnet"]:
                 result.consume()
@@ -280,7 +280,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             result.next()
         error_assertion(exc.exception)
         tx.rollback()
@@ -316,7 +316,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
-        tx.run("RETURN 1 as n")
+        tx.run("RETURN 1 AS n")
         with self.assertRaises(types.DriverError) as exc:
             tx.commit()
         error_assertion(exc.exception)
@@ -353,7 +353,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
-        tx.run("RETURN 1 as n")
+        tx.run("RETURN 1 AS n")
         with self.assertRaises(types.DriverError) as exc:
             tx.rollback()
         error_assertion(exc.exception)
@@ -399,7 +399,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         session.read_transaction(work)
@@ -438,7 +438,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -479,7 +479,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         session.read_transaction(work, hooks={
@@ -519,7 +519,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -570,7 +570,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         session.read_transaction(work, hooks={
@@ -608,7 +608,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -659,7 +659,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         session.read_transaction(work, hooks={
@@ -698,7 +698,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 as n")
+            result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -914,14 +914,17 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
 
-class TestAuthenticationSchemes(AuthorizationBase):
+class TestAuthenticationSchemesV4x4(AuthorizationBase):
 
-    required_features = types.Feature.BOLT_4_3,
+    required_features = types.Feature.BOLT_4_4,
 
     def get_vars(self):
         return {
-            "#VERSION#": "4.3"
+            "#VERSION#": "4.4"
         }
+
+    def post_script_assertions(self):
+        pass
 
     def setUp(self):
         super().setUp()
@@ -958,6 +961,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
             session.close()
             driver.close()
             self._server.done()
+            self.post_script_assertions()
 
         for realm in (None, "", "foobar"):
             with self.subTest(realm=realm):
@@ -980,6 +984,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
+        self.post_script_assertions()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
     def test_custom_scheme(self):
@@ -1005,6 +1010,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
+        self.post_script_assertions()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
     def test_custom_scheme_empty(self):
@@ -1026,6 +1032,7 @@ class TestAuthenticationSchemes(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
+        self.post_script_assertions()
 
     @driver_feature(types.Feature.AUTH_KERBEROS)
     def test_kerberos_scheme(self):
@@ -1043,3 +1050,30 @@ class TestAuthenticationSchemes(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
+        self.post_script_assertions()
+
+
+class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV4x4):
+
+    required_features = types.Feature.BOLT_5_1,
+
+    has_logon = True
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "5.1"
+        }
+
+    def post_script_assertions(self):
+        # add assertion that HELLO and LOGON were pipelined
+        # (if driver claims to support this)
+        if not self.driver_supports_features(
+            types.Feature.OPT_AUTH_PIPELINING
+        ):
+            return
+
+        conversation = self._server.get_conversation()
+        for i, message in enumerate(conversation):
+            if message.startswith("C: HELLO "):
+                assert conversation[i + 1].startswith("C: LOGON ")
+        super().post_script_assertions()

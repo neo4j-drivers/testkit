@@ -1,7 +1,8 @@
-!: BOLT 4.3
+!: BOLT #VERSION#
 
 # Server versions pre 4.4 require empty principal field. So for backwards compatibility, we expect the driver to send it.
-A: HELLO {"user_agent": "*", "scheme": "kerberos", "principal": "", "credentials": "QmFuYW5hIQ==", "[routing]": null, "[realm]": "", "[patch_bolt]": "*"}
+A: HELLO {"user_agent": "*"}
+A: LOGON {"scheme": "kerberos", "principal": "", "credentials": "QmFuYW5hIQ==", "[routing]": null, "[realm]": ""}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

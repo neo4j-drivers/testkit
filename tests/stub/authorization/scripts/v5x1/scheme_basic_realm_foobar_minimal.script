@@ -1,6 +1,7 @@
-!: BOLT 4.3
+!: BOLT #VERSION#
 
-A: HELLO {"user_agent": "*", "scheme": "bearer", "credentials": "QmFuYW5hIQ==", "[patch_bolt]": "*"}
+A: HELLO {"user_agent": "*"}
+A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "realm": "foobar"}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

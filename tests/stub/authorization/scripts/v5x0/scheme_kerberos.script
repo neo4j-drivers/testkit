@@ -1,4 +1,4 @@
-!: BOLT 5.0
+!: BOLT #VERSION#
 
 # Server versions pre 4.4 require empty principal field. So for backwards compatibility, we expect the driver to send it.
 A: HELLO {"user_agent": "*", "scheme": "kerberos", "principal": "", "credentials": "QmFuYW5hIQ==", "[routing]": null, "[realm]": ""}

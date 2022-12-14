@@ -167,6 +167,17 @@ class CheckMultiDBSupport:
         self.driverId = driverId
 
 
+class CheckSessionAuthSupport:
+    """
+    Perform a check if the connected sever supports re-authentication.
+
+    Backend should respond with a SessionAuthSupport response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
 class CheckDriverIsEncrypted:
     """
     Perform a check if the driver is configured to enforce encryption.
@@ -282,7 +293,7 @@ class NewSession:
 
     def __init__(self, driverId, accessMode, bookmarks=None,
                  database=None, fetchSize=None, impersonatedUser=None,
-                 bookmark_manager=None):
+                 bookmark_manager=None, auth_token=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -294,6 +305,7 @@ class NewSession:
         self.impersonatedUser = impersonatedUser
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
+        self.authorizationToken = auth_token
 
 
 class SessionClose:

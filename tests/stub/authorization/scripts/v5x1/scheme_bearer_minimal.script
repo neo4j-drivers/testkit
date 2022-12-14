@@ -1,0 +1,14 @@
+!: BOLT #VERSION#
+
+A: HELLO {"user_agent": "*"}
+A: LOGON {"scheme": "bearer", "credentials": "QmFuYW5hIQ=="}
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE

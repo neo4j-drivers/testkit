@@ -126,10 +126,24 @@ class DomainNameResolutionRequired:
 
 class MultiDBSupport:
     """
-    Whether the driver is connection to a sever with supports multi-db-support.
+    Whether the driver is connection to a sever with multi-db support.
 
     Specifies whether the server or cluster the driver connects to supports
     multi-databases. It is sent in response to the CheckMultiDBSupport request.
+    """
+
+    def __init__(self, id, available):
+        self.id = id
+        self.available = available
+
+
+class SessionAuthSupport:
+    """
+    Whether the driver is connection to a sever with re-authentication support.
+
+    Specifies whether the server or cluster the driver connects to supports
+    re-authentication. It is sent in response to the CheckSessionAuthSupport
+    request.
     """
 
     def __init__(self, id, available):

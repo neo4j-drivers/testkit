@@ -87,6 +87,13 @@ class Driver:
             raise Exception("Should be MultiDBSupport")
         return res.available
 
+    def supports_session_auth(self):
+        req = protocol.CheckMultiDBSupport(self._driver.id)
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.MultiDBSupport):
+            raise Exception("Should be MultiDBSupport")
+        return res.available
+
     def is_encrypted(self):
         req = protocol.CheckDriverIsEncrypted(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
@@ -102,12 +109,13 @@ class Driver:
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
-                bookmark_manager=None):
+                bookmark_manager=None, auth_token=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
-            bookmark_manager=bookmark_manager
+            bookmark_manager=bookmark_manager,
+            auth_token=auth_token
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
