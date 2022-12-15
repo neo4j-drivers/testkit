@@ -35,7 +35,7 @@ class _TestTypesBase(TestkitTestCase):
             assert isinstance(result.next(), types.NullRecord)
             return record_
 
-        record = self._session.read_transaction(work)
+        record = self._session.execute_read(work)
         self.assertEqual(record, types.Record(values=[val]))
 
     def _read_query_values(self, query, params=None):
@@ -45,7 +45,7 @@ class _TestTypesBase(TestkitTestCase):
             assert isinstance(result.next(), types.NullRecord)
             return record_.values
 
-        return self._session.read_transaction(work)
+        return self._session.execute_read(work)
 
     def _write_query_values(self, query, params=None):
         values = []
@@ -60,5 +60,5 @@ class _TestTypesBase(TestkitTestCase):
             raise ApplicationCodeError
 
         with self.assertRaises(types.FrontendError):
-            self._session.write_transaction(work)
+            self._session.execute_write(work)
         return values

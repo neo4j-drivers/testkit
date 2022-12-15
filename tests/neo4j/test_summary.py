@@ -32,7 +32,7 @@ class TestSummary(TestkitTestCase):
             return summary
         params = {} if params is None else params
         self._session = self._driver.session("w")
-        return self._session.write_transaction(work)
+        return self._session.execute_write(work)
 
     def test_can_obtain_summary_after_consuming_result(self):
         summary = self.get_summary("CREATE (n) RETURN n")

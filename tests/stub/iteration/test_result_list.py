@@ -111,7 +111,7 @@ class TestResultList(IterationTestBase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            records = session.read_transaction(work)
+            records = session.execute_read(work)
             self.assertEqual(records, [
                 types.Record(values=[types.CypherInt(1)])
             ])
@@ -213,4 +213,4 @@ class TestResultList(IterationTestBase):
                                           next_first=next_first)
 
         with self._session(script, fetch_size=2) as session:
-            session.read_transaction(work)
+            session.execute_read(work)

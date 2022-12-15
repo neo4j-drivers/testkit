@@ -132,7 +132,7 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("r")
         result = self._session1.run(
             "CALL tx.getMetaData",
-            tx_meta={k: v.value for k, v in metadata.items()}
+            tx_meta=metadata
         )
         record = result.next()
         self.assertIsInstance(record, types.Record)
@@ -294,7 +294,7 @@ class TestSessionRun(TestkitTestCase):
         def run(i, n):
             return self._session1.run(
                 "UNWIND RANGE ($i, $n) AS x RETURN x",
-                {"i": types.CypherInt(i), "n": types.CypherInt(n)}
+                params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
             )
         i0 = 0
         n0 = 6

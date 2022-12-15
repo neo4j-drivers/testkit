@@ -39,13 +39,37 @@ class TestTxFuncRun(TestkitTestCase):
             self._driver.close()
             self._driver = get_driver(self._backend, user_agent="test")
             self._session1 = self._driver.session("r", fetch_size=2)
-            self._session1.read_transaction(work)
+            self._session1.execute_read(work)
             self._session1.close()
             self._session1 = None
 
         for consume in (True, False):
             with self.subTest(consume=consume):
                 _test()
+
+    def test_parameter(self):
+        def work(tx):
+            result = tx.run("RETURN $x", {"x": types.CypherInt(1)})
+            self.assertEqual(list(result),
+                             [types.Record([types.CypherInt(1)])])
+
+        self._session1 = self._driver.session("r")
+        self._session1.execute_read(work)
+
+    def test_meta_data(self):
+        metadata = {"foo": types.CypherFloat(1.5),
+                    "bar": types.CypherString("baz")}
+
+        def work(tx):
+            result = tx.run("CALL tx.getMetaData")
+            record = result.next()
+            self.assertIsInstance(record, types.Record)
+            self.assertEqual(record.values, [types.CypherMap(metadata)])
+
+        self._session1 = self._driver.session("r")
+        self._session1.execute_read(
+            work, tx_meta=metadata,
+        )
 
     def test_iteration_nested(self):
         # Verifies that it is possible to nest results with small fetch sizes
@@ -57,8 +81,10 @@ class TestTxFuncRun(TestkitTestCase):
             self.skipTest("Fails for some reason")
 
         def run(tx, i, n):
-            return tx.run("UNWIND RANGE ($i, $n) AS x RETURN x",
-                          {"i": types.CypherInt(i), "n": types.CypherInt(n)})
+            return tx.run(
+                "UNWIND RANGE ($i, $n) AS x RETURN x",
+                params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
+            )
 
         self._session1 = self._driver.session("r", fetch_size=2)
 
@@ -100,7 +126,7 @@ class TestTxFuncRun(TestkitTestCase):
             self.assertEqual(res0.next(), types.NullRecord())
             return "done"
 
-        x = self._session1.read_transaction(nested)
+        x = self._session1.execute_read(nested)
         self.assertEqual(lasts, {0: 6, 1: 11, 2: 1001})
         self.assertEqual(x, "done")
 
@@ -112,7 +138,7 @@ class TestTxFuncRun(TestkitTestCase):
             tx.run("CREATE (n:SessionNode) RETURN n")
 
         self._session1 = self._driver.session("w")
-        self._session1.write_transaction(run)
+        self._session1.execute_write(run)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
@@ -126,7 +152,7 @@ class TestTxFuncRun(TestkitTestCase):
 
         self._session1 = self._driver.session("w")
         with self.assertRaises(types.FrontendError):
-            self._session1.write_transaction(run)
+            self._session1.execute_write(run)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
@@ -151,15 +177,11 @@ class TestTxFuncRun(TestkitTestCase):
         self._session1 = self._driver.session("w")
         expected_exc = types.FrontendError
         with self.assertRaises(expected_exc):
-            self._session1.write_transaction(run)
+            self._session1.execute_write(run)
 
-        self._session1.read_transaction(assertion_query)
+        self._session1.execute_read(assertion_query)
 
     def test_tx_func_configuration(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["java"]:
-            self.skipTest("Does not send metadata")
-
         def run(tx):
             values = []
             result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
@@ -177,10 +199,7 @@ class TestTxFuncRun(TestkitTestCase):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("w")
-        res = self._session1.read_transaction(
-            run, timeout=3000,
-            tx_meta={k: v.value for k, v in metadata.items()}
-        )
+        res = self._session1.execute_read(run, timeout=3000, tx_meta=metadata)
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
     def test_tx_timeout(self):
@@ -198,7 +217,7 @@ class TestTxFuncRun(TestkitTestCase):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
 
             with self.assertRaises(types.FrontendError):
-                self._session2.write_transaction(update2, timeout=250)
+                self._session2.execute_write(update2, timeout=250)
 
         def update2(tx):
             nonlocal exc
@@ -215,11 +234,11 @@ class TestTxFuncRun(TestkitTestCase):
         exc = None
 
         self._session1 = self._driver.session("w")
-        db = self._session1.write_transaction(create)
+        db = self._session1.execute_write(create)
         self._session2 = self._driver.session(
             "w", bookmarks=self._session1.last_bookmarks(), database=db
         )
-        self._session1.write_transaction(update1)
+        self._session1.execute_write(update1)
         self.assertIsInstance(exc, types.DriverError)
 
         self.assertEqual(exc.code,
