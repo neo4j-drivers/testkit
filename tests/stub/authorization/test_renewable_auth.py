@@ -1,4 +1,7 @@
-from nutkit.frontend import Driver
+from nutkit.frontend import (
+    Driver,
+    FakeTime,
+)
 import nutkit.protocol as types
 from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
@@ -52,4 +55,49 @@ class TestRenewableAuth5x1(AuthorizationBase):
         session = self._driver.session("r")
         list(session.run("RETURN 1 AS n"))
 
+        session.close()
         self._reader.done()
+
+    def test_test2(self):
+        count = 0
+
+        def provider():
+            nonlocal count
+            count += 1
+            if count > 1:
+                credentials = "password"
+            else:
+                credentials = "pass"
+
+            return types.RenewableAuthToken(
+                types.AuthorizationToken(
+                    scheme="basic",
+                    principal="neo4j",
+                    credentials=credentials
+                ),
+                10_000
+            )
+
+        with FakeTime(self._backend) as time:
+            self.start_server(self._reader, "scheme_basic_reauth.script")
+            self._driver = Driver(self._backend, self._uri, provider)
+
+            session = self._driver.session("r")
+            list(session.run("RETURN 1 AS n"))
+            session.close()
+
+            session = self._driver.session("r")
+            list(session.run("RETURN 1 AS n"))
+            session.close()
+
+            self.assertEqual(1, count)
+
+            time.tick(10_001)
+
+            session = self._driver.session("r")
+            list(session.run("RETURN 1 AS n"))
+            session.close()
+
+            self.assertEqual(2, count)
+
+            self._reader.done()

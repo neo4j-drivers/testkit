@@ -530,6 +530,10 @@ class ConnectionPoolMetrics:
         self.idle = idle
 
 
+class FakeTimeAck:
+    pass
+
+
 class BaseError(Exception):
     """
     Base class for all types of errors, should not be sent from backend.

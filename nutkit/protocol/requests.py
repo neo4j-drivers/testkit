@@ -628,3 +628,16 @@ class CypherTypeField:
         self.recordKey = record_key
         self.type = type_name
         self.field = field_id
+
+
+class FakeTimeInstall:
+    pass
+
+
+class FakeTimeTick:
+    def __init__(self, increment_ms):
+        self.incrementMs = increment_ms
+
+
+class FakeTimeUninstall:
+    pass
