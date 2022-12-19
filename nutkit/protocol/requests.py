@@ -66,17 +66,19 @@ class NewDriver:
     """
 
     def __init__(
-        self, uri, authToken, userAgent=None, resolverRegistered=False,
-        domainNameResolverRegistered=False, connectionTimeoutMs=None,
-        fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
-        trustedCertificates=None, liveness_check_timeout_ms=None,
-        max_connection_pool_size=None,
+        self, uri, authToken, auth_token_provider_id, userAgent=None,
+        resolverRegistered=False, domainNameResolverRegistered=False,
+        connectionTimeoutMs=None, fetchSize=None, maxTxRetryTimeMs=None,
+        encrypted=None, trustedCertificates=None,
+        liveness_check_timeout_ms=None, max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
+        assert authToken is None or auth_token_provider_id is None
         self.authorizationToken = authToken
+        self.authTokenProviderId = auth_token_provider_id
         # Optional custom user agent string
         self.userAgent = userAgent
         self.resolverRegistered = resolverRegistered
@@ -127,6 +129,28 @@ class AuthorizationToken:
         self.scheme = scheme
         for attr, value in kwargs.items():
             setattr(self, attr, value)
+
+
+class NewAuthTokenProvider:
+    """TODO."""
+
+    def __init__(self):
+        pass
+
+
+class AuthTokenProviderCompleted:
+    """TODO."""
+
+    def __init__(self, request_id, auth):
+        self.requestId = request_id
+        self.auth = auth
+
+
+class AuthTokenProviderClose:
+    """TODO."""
+
+    def __init__(self, id):
+        self.id = id
 
 
 class VerifyConnectivity:

@@ -10,6 +10,8 @@ from tests.shared import (
 )
 from tests.stub.shared import StubServer
 
+# TODO: test what happens if one of the auth tokens is None (i.e., no auth)
+
 
 class TestUserSwitchingV5x1(TestkitTestCase):
 

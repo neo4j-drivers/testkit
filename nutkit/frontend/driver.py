@@ -1,4 +1,5 @@
 from .. import protocol
+from .auth_token_provider import AuthTokenProvider
 from .bookmark_manager import BookmarkManager
 from .session import Session
 
@@ -14,10 +15,19 @@ class Driver:
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
+        self._auth_token, self._auth_token_provider = None, None
+        if (
+            isinstance(auth_token, protocol.AuthorizationToken)
+            or auth_token is None
+        ):
+            self._auth_token = auth_token
+        else:
+            assert callable(auth_token)
+            self._auth_token_provider = AuthTokenProvider(backend, auth_token)
 
         req = protocol.NewDriver(
-            uri, auth_token, userAgent=user_agent,
-            resolverRegistered=resolver_fn is not None,
+            uri, self._auth_token, self._auth_token_provider.id,
+            userAgent=user_agent, resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
             fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
@@ -54,6 +64,11 @@ class Driver:
             bookmark_manager_response = BookmarkManager.process_callbacks(res)
             if bookmark_manager_response:
                 self._backend.send(bookmark_manager_response, hooks=hooks)
+                continue
+            auth_token_provider_response = \
+                AuthTokenProvider.process_callbacks(res)
+            if auth_token_provider_response:
+                self._backend.send(auth_token_provider_response, hooks=hooks)
                 continue
 
             return res
@@ -106,6 +121,8 @@ class Driver:
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be driver")
+        if self._auth_token_provider:
+            self._auth_token_provider.close()
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,

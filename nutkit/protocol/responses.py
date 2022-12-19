@@ -56,6 +56,29 @@ class Driver:
         self.id = id
 
 
+class AuthTokenProvider:
+    """TODO."""
+
+    def __init__(self, id):
+        self.id = id
+
+
+class AuthTokenProviderRequest:
+    """TODO."""
+
+    def __init__(self, id, authTokenProviderId):
+        self.id = id
+        self.auth_token_provider_id = authTokenProviderId
+
+
+class RenewableAuthToken:
+    """TODO."""
+
+    def __init__(self, auth, expires_in_ms=None):
+        self.auth = auth
+        self.expiresInMs = expires_in_ms
+
+
 class ResolverResolutionRequired:
     """
     Represents a need for new address resolution.
