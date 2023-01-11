@@ -16,6 +16,7 @@ class Driver:
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
         self._auth_token, self._auth_token_provider = None, None
+        auth_token_provider_id = None
         if (
             isinstance(auth_token, protocol.AuthorizationToken)
             or auth_token is None
@@ -24,9 +25,10 @@ class Driver:
         else:
             assert callable(auth_token)
             self._auth_token_provider = AuthTokenProvider(backend, auth_token)
+            auth_token_provider_id = self._auth_token_provider.id
 
         req = protocol.NewDriver(
-            uri, self._auth_token, self._auth_token_provider.id,
+            uri, self._auth_token, auth_token_provider_id,
             userAgent=user_agent, resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,

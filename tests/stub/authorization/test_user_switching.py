@@ -1,19 +1,13 @@
 from contextlib import contextmanager
-import inspect
-import os
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.shared import (
-    get_driver_name,
-    TestkitTestCase,
-)
+from tests.shared import get_driver_name
+from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
-# TODO: test what happens if one of the auth tokens is None (i.e., no auth)
 
-
-class TestUserSwitchingV5x1(TestkitTestCase):
+class TestUserSwitchingV5x1(AuthorizationBase):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.API_SESSION_AUTH_CONFIG)
@@ -47,51 +41,26 @@ class TestUserSwitchingV5x1(TestkitTestCase):
         else:
             uri = f"bolt://{self._reader.address}"
         driver = Driver(self._backend, uri, auth)
-        yield driver
-        driver.close()
+        try:
+            yield driver
+        finally:
+            driver.close()
 
     @contextmanager
     def session(self, auth=None, routing=False, driver=None):
         if driver is None:
             with self.driver(routing) as driver:
                 session = driver.session("r", auth_token=auth)
-                yield session
-                session.close()
+                try:
+                    yield session
+                finally:
+                    session.close()
         else:
             session = driver.session("r", auth_token=auth)
-            yield session
-            session.close()
-
-    def start_server(self, server, script_fn, vars_=None):
-        if vars_ is None:
-            vars_ = self.get_vars()
-        classes = (self.__class__, *inspect.getmro(self.__class__))
-        tried_locations = []
-        for cls in classes:
-            if hasattr(cls, "get_vars") and callable(cls.get_vars):
-                try:
-                    cls_vars = cls.get_vars(self)
-                except NotImplementedError:
-                    pass
-                if "#VERSION#" in cls_vars:
-                    version_folder = \
-                        "v{}".format(cls_vars["#VERSION#"].replace(".", "x"))
-                    script_path = self.script_path(version_folder, script_fn)
-                    tried_locations.append(script_path)
-                    if os.path.exists(script_path):
-                        server.start(path=script_path, vars_=vars_)
-                        return
-        raise FileNotFoundError("{!r} tried {!r}".format(
-            script_fn, ", ".join(tried_locations)
-        ))
-
-    def script_fn_with_minimal(self, script_fn):
-        if not self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        ):
-            return script_fn
-        parts = script_fn.rsplit(".", 1)
-        return f"{parts[0]}_minimal.{parts[1]}"
+            try:
+                yield session
+            finally:
+                session.close()
 
     def post_test_assertions(self):
         if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
@@ -112,7 +81,7 @@ class TestUserSwitchingV5x1(TestkitTestCase):
             with self.session(driver=driver, auth=self._auth2) as session:
                 # same auth token, no re-auth
                 session.run("RETURN 3 AS n").consume()
-            with self.session(driver=driver, auth=self._auth1) as session:
+            with self.session(driver=driver) as session:
                 # back to original auth token, re-auth required
                 session.run("RETURN 4 AS n").consume()
         self._reader.done()

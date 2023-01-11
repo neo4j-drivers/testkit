@@ -158,6 +158,10 @@ class Feature(Enum):
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
 
     # === BACKEND FEATURES FOR TESTING ===
+    # The backend understands the FakeTimeInstall, FakeTimeUninstall and
+    # FakeTimeTick protocol messages and provides a way to mock the system
+    # time. This is mainly used for testing various timeouts.
+    BACKEND_MOCK_TIME = "Backend:MockTime"
     # The backend understands the GetRoutingTable protocol message and provides
     # a way for TestKit to request the routing table (for testing only, should
     # not be exposed to the user).

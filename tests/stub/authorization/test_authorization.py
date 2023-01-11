@@ -71,28 +71,46 @@ class AuthorizationBase(TestkitTestCase):
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
+    def _find_version_script(self, script_fns):
+        if isinstance(script_fns, str):
+            script_fns = [script_fns]
+        classes = (self.__class__, *inspect.getmro(self.__class__))
+        tried_locations = []
+        for script_fn in script_fns:
+            for cls in classes:
+                if hasattr(cls, "get_vars") and callable(cls.get_vars):
+                    try:
+                        cls_vars = cls.get_vars(self)
+                    except NotImplementedError:
+                        continue
+                    if "#VERSION#" in cls_vars:
+                        version_folder = "v{}".format(
+                            cls_vars["#VERSION#"].replace(".", "x")
+                        )
+                        script_path = self.script_path(version_folder,
+                                                       script_fn)
+                        tried_locations.append(script_path)
+                        if os.path.exists(script_path):
+                            return script_path
+        raise FileNotFoundError("{!r} tried {!r}".format(
+            script_fns, ", ".join(tried_locations)
+        ))
+
     def start_server(self, server, script_fn, vars_=None):
         if vars_ is None:
             vars_ = self.get_vars()
-        classes = (self.__class__, *inspect.getmro(self.__class__))
-        tried_locations = []
-        for cls in classes:
-            if hasattr(cls, "get_vars") and callable(cls.get_vars):
-                try:
-                    cls_vars = cls.get_vars(self)
-                except NotImplementedError:
-                    pass
-                if "#VERSION#" in cls_vars:
-                    version_folder = \
-                        "v{}".format(cls_vars["#VERSION#"].replace(".", "x"))
-                    script_path = self.script_path(version_folder, script_fn)
-                    tried_locations.append(script_path)
-                    if os.path.exists(script_path):
-                        server.start(path=script_path, vars_=vars_)
-                        return
-        raise FileNotFoundError("{!r} tried {!r}".format(
-            script_fn, ", ".join(tried_locations)
-        ))
+        script_path = self._find_version_script(script_fn)
+        server.start(path=script_path, vars_=vars_)
+
+    def script_fn_with_minimal(self, script_fn, allow_missing_minimal=False):
+        if not self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+        ):
+            return script_fn
+        parts = script_fn.rsplit(".", 1)
+        if allow_missing_minimal:
+            return f"{parts[0]}_minimal.{parts[1]}", script_fn
+        return f"{parts[0]}_minimal.{parts[1]}"
 
     def get_vars(self):
         raise NotImplementedError
