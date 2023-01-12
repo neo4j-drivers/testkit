@@ -57,26 +57,32 @@ class Driver:
 
 
 class AuthTokenProvider:
-    """TODO."""
+    """
+    Represents a new auth token provider function.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this auth token provider function.
+    """
 
     def __init__(self, id):
         self.id = id
 
 
 class AuthTokenProviderRequest:
-    """TODO."""
+    """
+    Represents the need for a fresh auth token.
+
+    This message may be sent by the backend at any time should the driver call
+    an auth token provider function that was previously created in response to
+    `NewAuthTokenProvider`.
+    """
 
     def __init__(self, id, authTokenProviderId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `AuthTokenProviderCompleted` response.
         self.id = id
+        # Id of the auth token provider function that was called.
         self.auth_token_provider_id = authTokenProviderId
-
-
-class RenewableAuthToken:
-    """TODO."""
-
-    def __init__(self, auth, expires_in_ms=None):
-        self.auth = auth
-        self.expiresInMs = expires_in_ms
 
 
 class ResolverResolutionRequired:
@@ -531,6 +537,13 @@ class ConnectionPoolMetrics:
 
 
 class FakeTimeAck:
+    """
+    Acknowledge any received fake time request.
+
+    This is sent from the backend to the driver on receipt of
+    `FakeTimeInstall`, `FakeTimeTick`, and `FakeTimeUninstall` requests.
+    """
+
     pass
 
 

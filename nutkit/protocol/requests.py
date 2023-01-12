@@ -106,7 +106,7 @@ class NewDriver:
 
 class AuthorizationToken:
     """
-    Not a request but used in NewDriver request.
+    Not a request but used in `NewDriver` and `RenewableAuthToken`.
 
     The fields depend on the chosen scheme:
     scheme == "basic"
@@ -131,23 +131,48 @@ class AuthorizationToken:
             setattr(self, attr, value)
 
 
+class RenewableAuthToken:
+    """Not a request but used in `AuthTokenProviderCompleted`."""
+
+    def __init__(self, auth, expires_in_ms=None):
+        assert isinstance(auth, AuthorizationToken)
+        self.auth = auth
+        # how long the token is valid for, in milliseconds
+        # `None` means the token never expires
+        self.expiresInMs = expires_in_ms
+
+
 class NewAuthTokenProvider:
-    """TODO."""
+    """
+    Create a new auth token provider function on the backend.
+
+    The backend should respond with `AuthTokenProvider`.
+    """
 
     def __init__(self):
         pass
 
 
 class AuthTokenProviderCompleted:
-    """TODO."""
+    """
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
 
     def __init__(self, request_id, auth):
         self.requestId = request_id
+        assert isinstance(auth, RenewableAuthToken)
         self.auth = auth
 
 
 class AuthTokenProviderClose:
-    """TODO."""
+    """
+    Request to remove an auth token provider function from the backend.
+
+    The backend may free any resources associated with the provider and respond
+    with `AuthTokenProvider` echoing back the given id.
+    """
 
     def __init__(self, id):
         self.id = id
@@ -631,13 +656,40 @@ class CypherTypeField:
 
 
 class FakeTimeInstall:
+    """
+    Request the backend to install a time mocker.
+
+    The backend should respond with a `FakeTimeAck` response.
+
+    From this moment, the system time should be frozen and only advance when
+    a `FakeTimeTick` request is received.
+
+    This request has no id because TestKit should never send it while twice
+    without a `FakeTimeUninstall` request in between.
+    """
+
     pass
 
 
 class FakeTimeTick:
+    """
+    Request the backend to advance the mocked time.
+
+    The backend should respond with a `FakeTimeAck` response.
+
+    This request will only be sent between a `FakeTimeInstall` and a
+    `FakeTimeUninstall` request.
+    """
+
     def __init__(self, increment_ms):
         self.incrementMs = increment_ms
 
 
 class FakeTimeUninstall:
+    """
+    Request the backend to uninstall the time mocker.
+
+    The backend should respond with a `FakeTimeAck` response.
+    """
+
     pass
