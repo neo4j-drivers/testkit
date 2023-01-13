@@ -74,24 +74,26 @@ class AuthorizationBase(TestkitTestCase):
     def _find_version_script(self, script_fns):
         if isinstance(script_fns, str):
             script_fns = [script_fns]
-        classes = (self.__class__, *inspect.getmro(self.__class__))
+        classes = inspect.getmro(self.__class__)
         tried_locations = []
-        for script_fn in script_fns:
-            for cls in classes:
-                if hasattr(cls, "get_vars") and callable(cls.get_vars):
-                    try:
-                        cls_vars = cls.get_vars(self)
-                    except NotImplementedError:
-                        continue
-                    if "#VERSION#" in cls_vars:
-                        version_folder = "v{}".format(
-                            cls_vars["#VERSION#"].replace(".", "x")
-                        )
-                        script_path = self.script_path(version_folder,
-                                                       script_fn)
-                        tried_locations.append(script_path)
-                        if os.path.exists(script_path):
-                            return script_path
+        for cls in classes:
+            cls_vars = None
+            if hasattr(cls, "get_vars") and callable(cls.get_vars):
+                try:
+                    cls_vars = cls.get_vars(self)
+                except NotImplementedError:
+                    pass
+            if not cls_vars or "#VERSION#" not in cls_vars:
+                continue
+            version_folder = "v{}".format(
+                cls_vars["#VERSION#"].replace(".", "x")
+            )
+            for script_fn in script_fns:
+                script_path = self.script_path(version_folder,
+                                               script_fn)
+                tried_locations.append(script_path)
+                if os.path.exists(script_path):
+                    return script_path
         raise FileNotFoundError("{!r} tried {!r}".format(
             script_fns, ", ".join(tried_locations)
         ))
@@ -102,15 +104,36 @@ class AuthorizationBase(TestkitTestCase):
         script_path = self._find_version_script(script_fn)
         server.start(path=script_path, vars_=vars_)
 
-    def script_fn_with_minimal(self, script_fn, allow_missing_minimal=False):
-        if not self.driver_supports_features(
+    def script_fn_with_features(self, script_fn):
+        minimal = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        ):
-            return script_fn
+        )
+        auth_pipeline = self.driver_supports_features(
+            types.Feature.OPT_AUTH_PIPELINING
+        )
         parts = script_fn.rsplit(".", 1)
-        if allow_missing_minimal:
-            return f"{parts[0]}_minimal.{parts[1]}", script_fn
-        return f"{parts[0]}_minimal.{parts[1]}"
+        if minimal and auth_pipeline:
+            return (
+                f"{parts[0]}_pipelined_minimal.{parts[1]}",
+                # pipelined is optional, as it makes little sense to have an
+                # extra script for it for protocol versions pre LOGOFF/LOGON
+                # message (there is nothing to pipeline there).
+                f"{parts[0]}_minimal.{parts[1]}",
+            )
+        elif auth_pipeline:
+            return (
+                f"{parts[0]}_pipelined.{parts[1]}",
+                f"{parts[0]}.{parts[1]}",
+            )
+        elif minimal:
+            raise RuntimeError(
+                "Tests for driver with "
+                "types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS but without "
+                "types.Feature.OPT_AUTH_PIPELINING are (currently) missing. "
+                "Feel free to add them when needed."
+            )
+        else:
+            return script_fn
 
     def get_vars(self):
         raise NotImplementedError
@@ -1083,15 +1106,8 @@ class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV4x4):
         }
 
     def post_script_assertions(self):
-        # add assertion that HELLO and LOGON were pipelined
-        # (if driver claims to support this)
-        if not self.driver_supports_features(
-            types.Feature.OPT_AUTH_PIPELINING
-        ):
-            return
+        # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
+        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self._server.count_requests("RESET", 0)
 
-        conversation = self._server.get_conversation()
-        for i, message in enumerate(conversation):
-            if message.startswith("C: HELLO "):
-                assert conversation[i + 1].startswith("C: LOGON ")
         super().post_script_assertions()

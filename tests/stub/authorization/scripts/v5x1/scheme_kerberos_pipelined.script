@@ -1,8 +1,10 @@
 !: BOLT #VERSION#
 
 # Server versions pre 4.4 require empty principal field. So for backwards compatibility, we expect the driver to send it.
-A: HELLO {"user_agent": "*"}
-A: LOGON {"scheme": "kerberos", "principal": "", "credentials": "QmFuYW5hIQ=="}
+C: HELLO {"user_agent": "*"}
+C: LOGON {"scheme": "kerberos", "principal": "", "credentials": "QmFuYW5hIQ==", "[routing]": null, "[realm]": ""}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
+S: SUCCESS {}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

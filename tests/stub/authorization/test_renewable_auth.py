@@ -60,20 +60,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
             session.close()
 
     def post_script_assertions(self, server):
-        # add assertion that HELLO and LOGON were pipelined
-        # (if driver claims to support this)
-        if not self.driver_supports_features(
-            types.Feature.OPT_AUTH_PIPELINING
-        ):
-            return
-
-        conversation = server.get_conversation()
-        for i, message in enumerate(conversation):
-            if message.startswith("C: HELLO "):
-                assert conversation[i + 1].startswith("C: LOGON ")
-            if message.startswith("C: LOGOFF"):
-                assert conversation[i + 1].startswith("C: LOGON ")
-
+        # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
         if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
             server.count_requests("RESET", 0)
 
@@ -93,7 +80,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
 
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_no_reauth.script")
+            self.script_fn_with_features("reader_no_reauth.script")
         )
         with self.driver(provider) as driver:
             with self.session(driver) as session:
@@ -120,7 +107,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
 
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_no_reauth.script")
+            self.script_fn_with_features("reader_no_reauth.script")
         )
 
         with FakeTime(self._backend) as time:
@@ -158,7 +145,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
             )
 
         self.start_server(self._reader,
-                          self.script_fn_with_minimal("reader_reauth.script"))
+                          self.script_fn_with_features("reader_reauth.script"))
         with FakeTime(self._backend) as time:
             with self.driver(provider) as driver:
                 with self.session(driver) as session:
@@ -203,12 +190,12 @@ class TestRenewableAuth5x1(AuthorizationBase):
 
             self.start_server(
                 self._reader,
-                self.script_fn_with_minimal(f"reader_reauth_{error_}.script")
+                self.script_fn_with_features(f"reader_reauth_{error_}.script")
             )
             if routing_:
                 self.start_server(
                     self._writer,
-                    self.script_fn_with_minimal(
+                    self.script_fn_with_features(
                         f"writer_reauth_{error_}.script"
                     )
                 )
@@ -282,10 +269,8 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 self._router.done()
                 self.post_script_assertions(self._router)
 
-        # for error in ("authorization_expired", "token_expired"):
-        for error in ("token_expired",):
-            # for routing in (False, True):
-            for routing in (False,):
+        for error in ("authorization_expired", "token_expired"):
+            for routing in (False, True):
                 with self.subTest(error=error, routing=routing):
                     try:
                         _test(error, routing)

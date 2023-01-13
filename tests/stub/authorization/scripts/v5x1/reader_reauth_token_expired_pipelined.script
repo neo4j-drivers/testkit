@@ -1,0 +1,101 @@
+!: BOLT #VERSION#
+!: ALLOW CONCURRENT
+
+C: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}}
+C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
+S: SUCCESS {}
+
+*: RESET
+
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+# Three concurrent connections
+{{
+    C: RUN "RETURN 1.1 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+
+    *: RESET
+
+    # now the second connection receives the token expired error => this connection needs to be re-authenticated
+    C: LOGOFF
+    C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+
+    {{
+        C: RESET
+        S: SUCCESS {}
+        S: SUCCESS {}
+        S: SUCCESS {}
+
+        C: BEGIN {"{}": "*"}
+    ----
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        S: SUCCESS {}
+    }}
+    S: SUCCESS {}
+
+    C: RUN "RETURN 1.2 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+----
+    C: RUN "RETURN 2.1 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+
+    C: RUN "RETURN 2.2 AS n" "*" "*"
+    S: FAILURE {"code": "Neo.ClientError.Security.TokenExpired", "message": "Token expired."}
+    S: <EXIT>
+----
+    C: RUN "RETURN 3.1 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+
+    *: RESET
+
+    # now the second connection receives the token expired error => this connection needs to be re-authenticated
+    C: LOGOFF
+    C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+
+    {{
+        C: RESET
+        S: SUCCESS {}
+        S: SUCCESS {}
+        S: SUCCESS {}
+
+        C: BEGIN {"{}": "*"}
+    ----
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        S: SUCCESS {}
+    }}
+    S: SUCCESS {}
+
+    C: RUN "RETURN 3.2 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+}}
+
+*: RESET
+?: GOODBYE

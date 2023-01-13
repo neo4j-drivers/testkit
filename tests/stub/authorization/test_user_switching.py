@@ -71,7 +71,7 @@ class TestUserSwitchingV5x1(AuthorizationBase):
     def test_read_with_switch(self):
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver() as driver:
             with self.session(driver=driver) as session:
@@ -90,7 +90,7 @@ class TestUserSwitchingV5x1(AuthorizationBase):
     def test_read_with_switch_inverse(self):
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver(auth=self._auth2) as driver:
             with self.session(driver=driver, auth=self._auth1) as session:
@@ -109,11 +109,11 @@ class TestUserSwitchingV5x1(AuthorizationBase):
     def test_read_with_switch_routing(self):
         self.start_server(
             self._router,
-            self.script_fn_with_minimal("router_user_switch.script")
+            self.script_fn_with_features("router_user_switch.script")
         )
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver(routing=True) as driver:
             with self.session(driver=driver) as session:
@@ -132,11 +132,11 @@ class TestUserSwitchingV5x1(AuthorizationBase):
     def test_read_with_switch_inverse_routing(self):
         self.start_server(
             self._router,
-            self.script_fn_with_minimal("router_user_switch.script")
+            self.script_fn_with_features("router_user_switch.script")
         )
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver(routing=True, auth=self._auth2) as driver:
             with self.session(driver=driver, auth=self._auth1) as session:
@@ -163,7 +163,7 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
             "#VERSION#": "5.0"
         }
 
-    def script_fn_with_minimal(self, script_fn):
+    def script_fn_with_features(self, script_fn):
         # no minimal scripts because we want them to be as permissive as
         # possible and expect them to still fail
         return script_fn
@@ -187,7 +187,7 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
     def test_read_with_switch(self):
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver() as driver:
             with self.session(driver=driver) as session:
@@ -200,7 +200,7 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
     def test_read_with_switch_inverse(self):
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver(auth=self._auth2) as driver:
             with self.assertRaises(types.DriverError) as exc:
@@ -211,11 +211,11 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
     def test_read_with_switch_routing(self):
         self.start_server(
             self._router,
-            self.script_fn_with_minimal("router_user_switch.script")
+            self.script_fn_with_features("router_user_switch.script")
         )
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver(routing=True) as driver:
             with self.session(driver=driver) as session:
@@ -228,11 +228,11 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
     def test_read_with_switch_inverse_routing(self):
         self.start_server(
             self._router,
-            self.script_fn_with_minimal("router_user_switch.script")
+            self.script_fn_with_features("router_user_switch.script")
         )
         self.start_server(
             self._reader,
-            self.script_fn_with_minimal("reader_user_switch.script")
+            self.script_fn_with_features("reader_user_switch.script")
         )
         with self.driver(routing=True, auth=self._auth2) as driver:
             with self.assertRaises(types.DriverError) as exc:
