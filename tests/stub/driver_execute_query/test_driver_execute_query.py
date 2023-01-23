@@ -205,7 +205,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         bookmark_manager = BookmarkManager(
             self._backend,
             config=Neo4jBookmarkManagerConfig(
-                initial_bookmarks={"other_db": ["other_db:bm1"]}
+                initial_bookmarks=["bm1"]
             )
         )
         self._driver = self._new_driver()
