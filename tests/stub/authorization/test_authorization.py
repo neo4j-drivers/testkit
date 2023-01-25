@@ -113,13 +113,16 @@ class AuthorizationBase(TestkitTestCase):
         )
         parts = script_fn.rsplit(".", 1)
         if minimal and auth_pipeline:
-            return (
-                f"{parts[0]}_pipelined_minimal.{parts[1]}",
-                # pipelined is optional, as it makes little sense to have an
-                # extra script for it for protocol versions pre LOGOFF/LOGON
-                # message (there is nothing to pipeline there).
-                f"{parts[0]}_minimal.{parts[1]}",
-            )
+            if not getattr(self, "has_logon", False):
+                return (
+                    f"{parts[0]}_pipelined_minimal.{parts[1]}",
+                    # pipelined is optional, as it makes little sense to have
+                    # an extra script for it for protocol versions pre
+                    # LOGOFF/LOGON message (there is nothing to pipeline
+                    # there).
+                    f"{parts[0]}_minimal.{parts[1]}",
+                )
+            return f"{parts[0]}_pipelined_minimal.{parts[1]}",
         elif auth_pipeline:
             return (
                 f"{parts[0]}_pipelined.{parts[1]}",
@@ -979,14 +982,11 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
 
     def test_basic_scheme(self):
         def test():
-            implicit_defaults = self.driver_supports_features(
-                types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-            )
             if realm == "foobar":
-                script_fn = "scheme_basic_realm_foobar%s.script"
+                script_fn = "scheme_basic_realm_foobar.script"
             else:
-                script_fn = "scheme_basic%s.script"
-            script_fn = script_fn % ("_minimal" if implicit_defaults else "")
+                script_fn = "scheme_basic.script"
+            script_fn = self.script_fn_with_features(script_fn)
             self.start_server(self._server, script_fn)
 
             if realm:
@@ -1011,11 +1011,8 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
 
     @driver_feature(types.Feature.AUTH_BEARER)
     def test_bearer_scheme(self):
-        implicit_defaults = self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        )
-        script_fn = "scheme_bearer%s.script"
-        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
+        script_fn = "scheme_bearer.script"
+        script_fn = self.script_fn_with_features(script_fn)
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("bearer", credentials="QmFuYW5hIQ==")
@@ -1029,11 +1026,8 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
     def test_custom_scheme(self):
-        implicit_defaults = self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        )
-        script_fn = "scheme_custom%s.script"
-        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
+        script_fn = "scheme_custom.script"
+        script_fn = self.script_fn_with_features(script_fn)
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("wild-scheme",
@@ -1055,11 +1049,8 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
     def test_custom_scheme_empty(self):
-        implicit_defaults = self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        )
-        script_fn = "scheme_custom_empty%s.script"
-        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
+        script_fn = "scheme_custom_empty.script"
+        script_fn = self.script_fn_with_features(script_fn)
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("minimal-scheme",
@@ -1077,11 +1068,8 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
 
     @driver_feature(types.Feature.AUTH_KERBEROS)
     def test_kerberos_scheme(self):
-        implicit_defaults = self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        )
-        script_fn = "scheme_kerberos%s.script"
-        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
+        script_fn = "scheme_kerberos.script"
+        script_fn = self.script_fn_with_features(script_fn)
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("kerberos", credentials="QmFuYW5hIQ==")
