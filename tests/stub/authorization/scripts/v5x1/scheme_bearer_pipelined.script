@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
 
-A: HELLO {"user_agent": "*", "[routing]": null}
-A: LOGON {"scheme": "bearer", "credentials": "QmFuYW5hIQ==", "[principal]": "", "[realm]": ""}
+C: HELLO {"user_agent": "*", "[routing]": null}
+C: LOGON {"scheme": "bearer", "credentials": "QmFuYW5hIQ==", "[principal]": "", "[realm]": ""}
 S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
 S: SUCCESS {}
 *: RESET
