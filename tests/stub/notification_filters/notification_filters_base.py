@@ -20,9 +20,10 @@ class NotificationFiltersBase(TestkitTestCase):
             self._driver.close()
         return super().tearDown()
 
-    def _new_driver(self, notifications):
+    def _new_driver(self, min_sev=None, disabled_cats=None):
         return Driver(self._backend, self._uri, self._auth,
-                      notification_filters=notifications)
+                      notification_min_severity=min_sev,
+                      notification_disabled_categories=disabled_cats)
 
     def _run_test_get_summary(self, filters, script_params,
                               script="driver_notification_filters.script"):
