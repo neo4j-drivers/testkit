@@ -38,7 +38,7 @@ class TestRetry(TestkitTestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.read_transaction(once)
+        x = session.execute_read(once)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 1)
@@ -76,7 +76,7 @@ class TestRetry(TestkitTestCase):
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("r")
-        x = session.write_transaction(twice)
+        x = session.execute_write(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -115,13 +115,14 @@ class TestRetry(TestkitTestCase):
             num_retries = num_retries + 1
             result = tx.run("RETURN 1")
             result.next()
+
         auth = types.AuthorizationToken("basic", principal="", credentials="")
         driver = Driver(self._backend,
                         "bolt://%s" % self._server.address, auth)
         session = driver.session("w")
 
         with self.assertRaises(types.DriverError) as e:  # Check further...
-            session.write_transaction(once)
+            session.execute_write(once)
         if get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
@@ -159,7 +160,7 @@ class TestRetry(TestkitTestCase):
             session = driver.session(mode[0])
 
             with self.assertRaises(types.DriverError):  # TODO: check further
-                getattr(session, mode + "_transaction")(once)
+                getattr(session, "execute_" + mode)(once)
             # TODO: remove the condition when go sends the error code
             if get_driver_name() not in ["go"]:
                 self.assertEqual(exception.code,
@@ -199,7 +200,7 @@ class TestRetry(TestkitTestCase):
             session = driver.session("w")
 
             with self.assertRaises(types.DriverError) as exc:
-                session.write_transaction(once)
+                session.execute_write(once)
 
             self.assertEqual(exc.exception.code, failure[1])
 

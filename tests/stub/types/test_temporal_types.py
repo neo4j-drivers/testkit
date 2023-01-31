@@ -86,7 +86,7 @@ class _TestTemporalTypes(TestkitTestCase):
         self._create_direct_driver()
         self._session = self._driver.session("w")
         with self.assertRaises(types.DriverError):
-            self._session.read_transaction(work)
+            self._session.execute_read(work)
         self._server.done()
         # TODO: Remove once all drivers roll back failed managed transactions
         if get_driver_name() not in ["go"]:
@@ -115,7 +115,7 @@ class _TestTemporalTypes(TestkitTestCase):
         self._start_server(script)
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        self._session.read_transaction(work)
+        self._session.execute_read(work)
 
 
 class TestTemporalTypesV3x0(_TestTemporalTypes):

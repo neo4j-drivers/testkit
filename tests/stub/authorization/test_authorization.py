@@ -446,7 +446,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -486,7 +486,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.read_transaction(work)
+            session.execute_read(work)
         self.assert_is_token_error(exc.exception)
         session.close()
         driver.close()
@@ -526,7 +526,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
-        session.read_transaction(work, hooks={
+        session.execute_read(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), "reader_tx.script"
             )
@@ -567,7 +567,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.read_transaction(work, hooks={
+            session.execute_read(work, hooks={
                 "on_send_RetryableNegative": lambda _:
                 self.switch_unused_servers(
                     (self._read_server1, self._read_server2),
@@ -617,7 +617,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
-        session.read_transaction(work, hooks={
+        session.execute_read(work, hooks={
             "on_send_RetryableNegative": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), "reader_tx.script"
             )
@@ -656,7 +656,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.read_transaction(work, hooks={
+            session.execute_read(work, hooks={
                 "on_send_RetryableNegative": lambda _:
                 self.switch_unused_servers(
                     (self._read_server1, self._read_server2),
@@ -706,7 +706,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             result = tx.run("RETURN 1 AS n")
             sequences.append(list(result))
 
-        session.read_transaction(work, hooks={
+        session.execute_read(work, hooks={
             "on_send_RetryablePositive": lambda _: self.switch_unused_servers(
                 (self._read_server1, self._read_server2), "reader_tx.script"
             )
@@ -746,7 +746,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
-            session.read_transaction(work, hooks={
+            session.execute_read(work, hooks={
                 "on_send_RetryableNegative": lambda _:
                 self.switch_unused_servers(
                     (self._read_server1, self._read_server2),

@@ -84,6 +84,26 @@ class Driver:
         return self.receive(timeout=timeout, hooks=hooks,
                             allow_resolution=allow_resolution)
 
+    def execute_query(self, cypher, params=None,
+                      routing=None, database=None,
+                      impersonated_user=None, bookmark_manager=...):
+        config = {
+            "routing": routing,
+            "database": database,
+            "impersonatedUser": impersonated_user
+        }
+
+        if bookmark_manager is None:
+            config["bookmarkManagerId"] = -1
+        elif bookmark_manager is not Ellipsis:
+            config["bookmarkManagerId"] = bookmark_manager.id
+
+        req = protocol.ExecuteQuery(self._driver.id, cypher, params, config)
+        res = self.send_and_receive(req, allow_resolution=True)
+        if not isinstance(res, protocol.EagerResult):
+            raise Exception("Should be EagerResult but was: %s" % res)
+        return res
+
     def verify_connectivity(self):
         req = protocol.VerifyConnectivity(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=True)

@@ -130,7 +130,7 @@ class TestHomeDb(TestkitTestCase):
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             query = "RETURN 1"
-            session1.read_transaction(work)
+            session1.execute_read(work)
             if not parallel_sessions:
                 session1.close()
 
@@ -138,7 +138,7 @@ class TestHomeDb(TestkitTestCase):
                 "r", bookmarks=["bookmark"], impersonated_user="the-imposter"
             )
             query = "RETURN 2"
-            session2.read_transaction(work)
+            session2.execute_read(work)
             session2.close()
             if parallel_sessions:
                 session1.close()
@@ -190,7 +190,7 @@ class TestHomeDb(TestkitTestCase):
         )
 
         session = driver.session("r", impersonated_user="the-imposter")
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
 
         driver.close()

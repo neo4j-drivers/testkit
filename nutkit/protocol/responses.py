@@ -536,6 +536,13 @@ class ConnectionPoolMetrics:
         self.idle = idle
 
 
+class EagerResult:
+    def __init__(self, keys, records, summary):
+        self.keys = keys
+        self.records = [Record(**record) for record in records or []]
+        self.summary = Summary(**summary)
+
+
 class FakeTimeAck:
     """
     Acknowledge any received fake time request.
