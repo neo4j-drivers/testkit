@@ -124,6 +124,6 @@ class TestResultSingle(IterationTestBase):
 
         with self._session("tx_error_on_pull.script",
                            vars_={"#ERROR#": err}) as session:
-            record = session.read_transaction(work)
+            record = session.execute_read(work)
             self.assertIsInstance(record, types.Record)
             self.assertEqual(record.values, [types.CypherInt(1)])

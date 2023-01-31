@@ -7,7 +7,7 @@ A: HELLO {"{}": "*"}
     {{
         C: BEGIN {"tx_metadata": {"return_bookmark": "bm1"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
-        C: RUN "RETURN 1 as n" {} {}
+        C: RUN "RETURN 1 AS n" {} {}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"type": "r"}
@@ -16,7 +16,7 @@ A: HELLO {"{}": "*"}
     ----
         C: BEGIN {"tx_metadata": {"return_bookmark": "bm2"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
-        C: RUN "RETURN 1 as n" {} {}
+        C: RUN "RETURN 1 AS n" {} {}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"type": "r"}
@@ -25,7 +25,7 @@ A: HELLO {"{}": "*"}
     ----
         C: BEGIN {"tx_metadata": {"return_bookmark": "empty"}, "[bookmarks]": "*", "[db]": "*", "mode": "r"}
         S: SUCCESS {}
-        C: RUN "RETURN 1 as n" {} {}
+        C: RUN "RETURN 1 AS n" {} {}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"type": "r"}
@@ -34,7 +34,7 @@ A: HELLO {"{}": "*"}
     ----
         C: BEGIN {"tx_metadata": {"return_bookmark": "bm3"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
-        C: RUN "RETURN 1 as n" {} {}
+        C: RUN "RETURN 1 AS n" {} {}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"type": "r"}
@@ -43,7 +43,7 @@ A: HELLO {"{}": "*"}
     ----
         C: BEGIN {"tx_metadata": {"return_bookmark": "bm4"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
-        C: RUN "RETURN 1 as n" {} {}
+        C: RUN "RETURN 1 AS n" {} {}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"type": "r"}
@@ -52,7 +52,7 @@ A: HELLO {"{}": "*"}
     ----
         C: BEGIN {"tx_metadata": {"order": "adb"}, "[bookmarks]": "*", "[db]": "*"}
         S: SUCCESS {}
-        C: RUN "USE adb RETURN 1 as n" {} {}
+        C: RUN "USE adb RETURN 1 AS n" {} {}
         S: SUCCESS {"fields": ["n"]}
         C: PULL {"n": 1000}
         S: SUCCESS {"type": "r"}

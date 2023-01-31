@@ -88,11 +88,10 @@ class BookmarksSupplierRequest:
     bookmarks for all databases.
     """
 
-    def __init__(self, id, bookmarkManagerId, database=None):
+    def __init__(self, id, bookmarkManagerId):
         # id of the callback request
         self.id = id
         self.bookmark_manager_id = bookmarkManagerId
-        self.database = database
 
 
 class BookmarksConsumerRequest:
@@ -103,11 +102,10 @@ class BookmarksConsumerRequest:
     to send the new bookmark set for a given database.
     """
 
-    def __init__(self, id, bookmarkManagerId, database, bookmarks):
+    def __init__(self, id, bookmarkManagerId, bookmarks):
         # id of the callback request
         self.id = id
         self.bookmark_manager_id = bookmarkManagerId
-        self.database = database
         self.bookmarks = bookmarks
 
 
@@ -493,6 +491,13 @@ class ConnectionPoolMetrics:
         """Sent from the backend in response to GetConnectionPoolMetrics."""
         self.in_use = inUse
         self.idle = idle
+
+
+class EagerResult:
+    def __init__(self, keys, records, summary):
+        self.keys = keys
+        self.records = [Record(**record) for record in records or []]
+        self.summary = Summary(**summary)
 
 
 class BaseError(Exception):

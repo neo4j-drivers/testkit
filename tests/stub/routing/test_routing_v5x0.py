@@ -201,7 +201,7 @@ class RoutingV5x0(RoutingBase):
             sequences.append(self.collect_records(result))
             summaries.append(result.consume())
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -344,7 +344,7 @@ class RoutingV5x0(RoutingBase):
             tx.commit()
 
         with self.assertRaises(types.DriverError) as exc:
-            session.read_transaction(work)
+            session.execute_read(work)
 
         session.close()
         driver.close()
@@ -400,7 +400,7 @@ class RoutingV5x0(RoutingBase):
             tx.commit()
 
         with self.assertRaises(types.DriverError) as exc:
-            session.write_transaction(work)
+            session.execute_write(work)
 
         session.close()
         driver.close()
@@ -497,7 +497,7 @@ class RoutingV5x0(RoutingBase):
             list(res)
             summary = res.consume()
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -538,7 +538,7 @@ class RoutingV5x0(RoutingBase):
                 # the tx function will be called 3 times in total
                 work_count = 2
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -578,7 +578,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -634,7 +634,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -1284,7 +1284,7 @@ class RoutingV5x0(RoutingBase):
                 self.start_server(working_reader, "reader_tx.script")
                 raise
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -1333,7 +1333,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         self._routingServer1.done()
         connection_counts = (
             self._readServer1.count_responses("<ACCEPT>"),
@@ -1347,7 +1347,7 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual([[1]], sequences)
         self.assertEqual(1, try_count)
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -1395,7 +1395,7 @@ class RoutingV5x0(RoutingBase):
                 self.start_server(working_writer, "writer_tx.script")
                 raise
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -1444,7 +1444,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.write_transaction(work)
+        session.execute_write(work)
         self._routingServer1.done()
         connection_counts = (
             self._writeServer1.count_responses("<ACCEPT>"),
@@ -1458,7 +1458,7 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual([[]], sequences)
         self.assertEqual(1, try_count)
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -1500,7 +1500,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -1560,7 +1560,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -1617,7 +1617,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -1656,7 +1656,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -1693,7 +1693,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -1727,7 +1727,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
 
         failed = False
         try:
@@ -1786,7 +1786,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
         list(session.run("RETURN 1 as n"))
         session.close()
         driver.close()
@@ -1913,7 +1913,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.write_transaction(work)
+        session.execute_write(work)
         session.close()
         driver.close()
 
@@ -1964,7 +1964,7 @@ class RoutingV5x0(RoutingBase):
                 )
             retried = True
 
-        session.write_transaction(work, hooks={
+        session.execute_write(work, hooks={
             "on_send_RetryableNegative": on_retryable_negative
         })
         session.close()
@@ -2011,8 +2011,8 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
-        session.read_transaction(work)
+        session.execute_read(work)
+        session.execute_read(work)
         session.close()
         driver.close()
 
@@ -2054,7 +2054,7 @@ class RoutingV5x0(RoutingBase):
             result = tx.run("RETURN 1 as n")
             sequences.append(self.collect_records(result))
 
-        session.read_transaction(work)
+        session.execute_read(work)
 
         session.close()
         driver.close()
@@ -2303,6 +2303,36 @@ class RoutingV5x0(RoutingBase):
             )
         self.assertEqual(
             "Neo.ClientError.Security.MadeUpSecurityError",
+            exc.exception.code
+        )
+
+    def test_should_fail_with_invalid_route_statement_argument(self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_argument_error.script",
+        )
+
+        self.assertEqual(
+            "Neo.ClientError.Statement.ArgumentError",
+            exc.exception.code
+        )
+
+    def test_should_fail_with_invalid_routing_request(self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_invalid_request.script",
+        )
+
+        self.assertEqual(
+            "Neo.ClientError.Request.Invalid",
+            exc.exception.code
+        )
+
+    def test_should_fail_with_type_error_request(self):
+        exc = self._test_fast_fail_discover(
+            "router_yielding_type_error.script",
+        )
+
+        self.assertEqual(
+            "Neo.ClientError.Statement.TypeError",
             exc.exception.code
         )
 
@@ -3005,8 +3035,8 @@ class RoutingV5x0(RoutingBase):
 
         session = driver.session("w", database=self.adb)
 
-        read_summary = session.read_transaction(read)
-        write_summary = session.write_transaction(write)
+        read_summary = session.execute_read(read)
+        write_summary = session.execute_write(write)
 
         self.assertNotEqual(read_summary.server_info.address,
                             write_summary.server_info.address)

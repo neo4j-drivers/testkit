@@ -13,6 +13,9 @@ class Feature(Enum):
     # is picked up instead or we need to wait until the full pool depletes.
     API_CONNECTION_ACQUISITION_TIMEOUT = \
         "Feature:API:ConnectionAcquisitionTimeout"
+    # The driver offers a method to run a query in a retryable context at the
+    # driver object level.
+    API_DRIVER_EXECUTE_QUERY = "Feature:API:Driver.ExecuteQuery"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established and retrieve the server info of the
     # reached remote.

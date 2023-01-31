@@ -37,7 +37,7 @@ class TestAuthenticationBasic(TestkitTestCase):
 
         self.create_driver_and_session(auth_token)
         if use_tx:
-            result = self._session.read_transaction(dummy_query)
+            result = self._session.execute_read(dummy_query)
         else:
             result = self._session.run("RETURN 2 as Number")
         self.assertEqual(
