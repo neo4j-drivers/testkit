@@ -101,48 +101,55 @@ class Driver:
         req = protocol.ExecuteQuery(self._driver.id, cypher, params, config)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.EagerResult):
-            raise Exception("Should be EagerResult but was: %s" % res)
+            raise Exception(f"Should be EagerResult but was: {res}")
         return res
 
     def verify_connectivity(self):
         req = protocol.VerifyConnectivity(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be Driver but was: %s" % res)
+            raise Exception(f"Should be Driver but was: {res}")
 
     def get_server_info(self):
         req = protocol.GetServerInfo(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.ServerInfo):
-            raise Exception("Should be ServerInfo but was: %s" % res)
+            raise Exception(f"Should be ServerInfo but was: {res}")
         return res
 
     def supports_multi_db(self):
         req = protocol.CheckMultiDBSupport(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.MultiDBSupport):
-            raise Exception("Should be MultiDBSupport")
+            raise Exception(f"Should be MultiDBSupport but was: {res}")
         return res.available
 
+    def verify_authentication(self, auth_token=None):
+        req = protocol.VerifyAuthentication(self._driver.id, auth_token)
+        res = self.send_and_receive(req, allow_resolution=True)
+        if not isinstance(res, protocol.DriverIsAuthenticated):
+            raise Exception(f"Should be DriverIsAuthenticated but was: {res}")
+        return res.authenticated
+
     def supports_session_auth(self):
-        req = protocol.CheckMultiDBSupport(self._driver.id)
+        req = protocol.CheckSessionAuthSupport(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
-        if not isinstance(res, protocol.MultiDBSupport):
-            raise Exception("Should be MultiDBSupport")
+        if not isinstance(res, protocol.SessionAuthSupport):
+            raise Exception(f"Should be SessionAuthSupport but was: {res}")
         return res.available
 
     def is_encrypted(self):
         req = protocol.CheckDriverIsEncrypted(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.DriverIsEncrypted):
-            raise Exception("Should be DriverIsEncrypted")
+            raise Exception(f"Should be DriverIsEncrypted but was {res}")
         return res.encrypted
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+            raise Exception(f"Should be Driver but was {res}")
         if self._auth_token_provider:
             self._auth_token_provider.close()
 
@@ -158,7 +165,7 @@ class Driver:
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
-            raise Exception("Should be session")
+            raise Exception(f"Should be Session but was {res}")
 
         return Session(self, res)
 
@@ -180,12 +187,12 @@ class Driver:
         req = protocol.GetRoutingTable(self._driver.id, database=database)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.RoutingTable):
-            raise Exception("Should be RoutingTable")
+            raise Exception(f"Should be RoutingTable but was {res}")
         return res
 
     def get_connection_pool_metrics(self, address):
         req = protocol.GetConnectionPoolMetrics(self._driver.id, address)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.ConnectionPoolMetrics):
-            raise Exception("Should be ConnectionPoolMetrics")
+            raise Exception(f"Should be ConnectionPoolMetrics but was {res}")
         return res

@@ -1,0 +1,9 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+*: RESET
+
+C: ROUTE {"{}": "*"} [] {"{}": {"db": "system"}}
+S: FAILURE {"code": "#ERROR#", "message": "These are not the credentials you're looking for."}
+   <EXIT>

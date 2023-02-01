@@ -216,6 +216,21 @@ class CheckMultiDBSupport:
         self.driverId = driverId
 
 
+class VerifyAuthentication:
+    """
+    Request to verify authentication on the driver.
+
+    instance corresponding to the specified driver id.
+    Backend should respond with a DriverIsAuthenticated response or an Error
+    response.
+    """
+
+    def __init__(self, driver_id, auth_token):
+        self.driverId = driver_id
+        if auth_token:
+            self.auth_token = auth_token
+
+
 class CheckSessionAuthSupport:
     """
     Perform a check if the connected sever supports re-authentication.

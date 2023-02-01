@@ -68,6 +68,19 @@ class TestUserSwitchingV5x1(AuthorizationBase):
         self.assertEqual(0, self._reader.count_requests("RESET"))
         self.assertEqual(0, self._router.count_requests("RESET"))
 
+    def test_supports_session_auth(self):
+        self.start_server(
+            self._router,
+            self.script_fn_with_features("router_user_switch.script")
+        )
+        self.start_server(
+            self._reader,
+            self.script_fn_with_features("reader_user_switch.script")
+        )
+        with self.driver() as driver:
+            res = driver.supports_session_auth()
+        self.assertIs(res, True)
+
     def test_read_with_switch(self):
         self.start_server(
             self._reader,
@@ -183,6 +196,19 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
             )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
+
+    def test_supports_session_auth(self):
+        self.start_server(
+            self._router,
+            self.script_fn_with_features("router_user_switch.script")
+        )
+        self.start_server(
+            self._reader,
+            self.script_fn_with_features("reader_user_switch.script")
+        )
+        with self.driver() as driver:
+            res = driver.supports_session_auth()
+        self.assertIs(res, False)
 
     def test_read_with_switch(self):
         self.start_server(

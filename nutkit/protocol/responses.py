@@ -166,6 +166,19 @@ class MultiDBSupport:
         self.available = available
 
 
+class DriverIsAuthenticated:
+    """
+    Whether the driver could authenticate with the server.
+
+    Specifies whether the server accepted the credentials provided by the
+    driver. It is sent in response to the VerifyAuthentication request.
+    """
+
+    def __init__(self, id, authenticated):
+        self.id = id
+        self.authenticated = authenticated
+
+
 class SessionAuthSupport:
     """
     Whether the driver is connection to a sever with re-authentication support.

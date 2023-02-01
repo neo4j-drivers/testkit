@@ -23,6 +23,10 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver offers a method for checking if the provided authentication
+    # information is accepted by the server.
+    API_DRIVER_VERIFY_AUTHENTICATION = \
+        "Feature:API:Driver.VerifyAuthentication"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
@@ -126,6 +130,12 @@ class Feature(Enum):
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
+    # The driver's VerifyAuthentication method is optimized. It
+    # * reuses connections from the pool
+    # * only issues a single LOGOFF/LOGON cycle
+    # * doesn't issue the cycle for newly established connections
+    OPT_MINIMAL_VERIFY_AUTHENTICATION = \
+        "Optimization:MinimalVerifyAuthentication"
     # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
     # pipelines a LOGIN right afterwards and consumes two messages after.
     # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
