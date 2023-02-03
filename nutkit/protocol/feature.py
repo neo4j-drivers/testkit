@@ -23,6 +23,8 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports notification filters configuration.
+    API_DRIVER_NOTIFICATION_CONFIG = "Feature:API:Driver:NotificationConfig"
     # The driver offers a method for checking if the provided authentication
     # information is accepted by the server.
     API_DRIVER_VERIFY_AUTHENTICATION = \
@@ -56,6 +58,9 @@ class Feature(Enum):
     # by supplying new credentials. This new context is only valid for the
     # current session.
     API_SESSION_AUTH_CONFIG = "Feature:API:Session:AuthConfig"
+    # The session supports notification filters configuration.
+    API_SESSION_NOTIFICATION_CONFIG = \
+        "Feature:API:Session:NotificationConfig"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -128,6 +133,9 @@ class Feature(Enum):
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
     # Driver should not send duplicated bookmarks to the server
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
+    # The driver does not send redundant configuration for notifications.
+    # Omits all values that match default or duplicate parent config.
+    OPT_MINIMAL_NOTIFICATION_CONFIG = "Optimization:MinimalNotificationConfig"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
     # The driver's VerifyAuthentication method is optimized. It

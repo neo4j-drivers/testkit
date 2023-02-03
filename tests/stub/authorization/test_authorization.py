@@ -71,72 +71,28 @@ class AuthorizationBase(TestkitTestCase):
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
-    def _find_version_script(self, script_fns):
-        if isinstance(script_fns, str):
-            script_fns = [script_fns]
-        classes = inspect.getmro(self.__class__)
+    def start_server(self, server, script_fn, vars_=None):
+        if vars_ is None:
+            vars_ = self.get_vars()
+        classes = (self.__class__, *inspect.getmro(self.__class__))
         tried_locations = []
         for cls in classes:
-            cls_vars = None
             if hasattr(cls, "get_vars") and callable(cls.get_vars):
                 try:
                     cls_vars = cls.get_vars(self)
                 except NotImplementedError:
                     pass
-            if not cls_vars or "#VERSION#" not in cls_vars:
-                continue
-            version_folder = "v{}".format(
-                cls_vars["#VERSION#"].replace(".", "x")
-            )
-            for script_fn in script_fns:
-                script_path = self.script_path(version_folder,
-                                               script_fn)
-                tried_locations.append(script_path)
-                if os.path.exists(script_path):
-                    return script_path
+                if "#VERSION#" in cls_vars:
+                    version_folder = \
+                        "v{}".format(cls_vars["#VERSION#"].replace(".", "x"))
+                    script_path = self.script_path(version_folder, script_fn)
+                    tried_locations.append(script_path)
+                    if os.path.exists(script_path):
+                        server.start(path=script_path, vars_=vars_)
+                        return
         raise FileNotFoundError("{!r} tried {!r}".format(
-            script_fns, ", ".join(tried_locations)
+            script_fn, ", ".join(tried_locations)
         ))
-
-    def start_server(self, server, script_fn, vars_=None):
-        if vars_ is None:
-            vars_ = self.get_vars()
-        script_path = self._find_version_script(script_fn)
-        server.start(path=script_path, vars_=vars_)
-
-    def script_fn_with_features(self, script_fn):
-        minimal = self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
-        )
-        auth_pipeline = self.driver_supports_features(
-            types.Feature.OPT_AUTH_PIPELINING
-        )
-        parts = script_fn.rsplit(".", 1)
-        if minimal and auth_pipeline:
-            if not getattr(self, "has_logon", False):
-                return (
-                    f"{parts[0]}_pipelined_minimal.{parts[1]}",
-                    # pipelined is optional, as it makes little sense to have
-                    # an extra script for it for protocol versions pre
-                    # LOGOFF/LOGON message (there is nothing to pipeline
-                    # there).
-                    f"{parts[0]}_minimal.{parts[1]}",
-                )
-            return f"{parts[0]}_pipelined_minimal.{parts[1]}",
-        elif auth_pipeline:
-            return (
-                f"{parts[0]}_pipelined.{parts[1]}",
-                f"{parts[0]}.{parts[1]}",
-            )
-        elif minimal:
-            raise RuntimeError(
-                "Tests for driver with "
-                "types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS but without "
-                "types.Feature.OPT_AUTH_PIPELINING are (currently) missing. "
-                "Feel free to add them when needed."
-            )
-        else:
-            return script_fn
 
     def get_vars(self):
         raise NotImplementedError
@@ -208,7 +164,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
                           "reader_yielding_error_on_pull.script", vars_=vars_)
 
         session = driver.session("r", database=self.get_db())
-        result = session.run("RETURN 1 AS n")
+        result = session.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             result.next()
         error_assertion(exc.exception)
@@ -286,7 +242,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             # TODO remove consume() once all drivers report the error on run
             if get_driver_name() in ["javascript", "dotnet"]:
                 result.consume()
@@ -324,7 +280,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             result.next()
         error_assertion(exc.exception)
         tx.rollback()
@@ -360,7 +316,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
-        tx.run("RETURN 1 AS n")
+        tx.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             tx.commit()
         error_assertion(exc.exception)
@@ -397,7 +353,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
         session = driver.session("r", database=self.get_db())
         tx = session.begin_transaction()
-        tx.run("RETURN 1 AS n")
+        tx.run("RETURN 1 as n")
         with self.assertRaises(types.DriverError) as exc:
             tx.rollback()
         error_assertion(exc.exception)
@@ -443,7 +399,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         session.execute_read(work)
@@ -482,7 +438,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -523,7 +479,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         session.execute_read(work, hooks={
@@ -563,7 +519,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -614,7 +570,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         session.execute_read(work, hooks={
@@ -652,7 +608,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -703,7 +659,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         session.execute_read(work, hooks={
@@ -742,7 +698,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         def work(tx):
             nonlocal attempt_count
             attempt_count += 1
-            result = tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 as n")
             sequences.append(list(result))
 
         with self.assertRaises(types.DriverError) as exc:
@@ -796,6 +752,21 @@ class TestAuthorizationV5x0(TestAuthorizationV4x3):
             host = self._routing_server1.host
         return {
             "#VERSION#": "5.0",
+            "#HOST#": host,
+            "#ROUTINGMODE#": '"mode": "r", ',
+            "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
+        }
+
+
+class TestAuthorizationV5x1(TestAuthorizationV5x0):
+
+    required_features = types.Feature.BOLT_5_1,
+
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routing_server1.host
+        return {
+            "#VERSION#": "5.1",
             "#HOST#": host,
             "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
@@ -958,17 +929,12 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
 
-class TestAuthenticationSchemesV4x4(AuthorizationBase):
-
-    required_features = types.Feature.BOLT_4_4,
+class AuthenticationSchemesBase(AuthorizationBase):
 
     def get_vars(self):
         return {
-            "#VERSION#": "4.4"
+            "#VERSION#": "4.3"
         }
-
-    def post_script_assertions(self):
-        pass
 
     def setUp(self):
         super().setUp()
@@ -980,13 +946,16 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
         self._server.reset()
         super().tearDown()
 
-    def test_basic_scheme(self):
+    def _test_basic_scheme(self):
         def test():
+            implicit_defaults = self.driver_supports_features(
+                types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+            )
             if realm == "foobar":
-                script_fn = "scheme_basic_realm_foobar.script"
+                script_fn = "scheme_basic_realm_foobar%s.script"
             else:
-                script_fn = "scheme_basic.script"
-            script_fn = self.script_fn_with_features(script_fn)
+                script_fn = "scheme_basic%s.script"
+            script_fn = script_fn % ("_minimal" if implicit_defaults else "")
             self.start_server(self._server, script_fn)
 
             if realm:
@@ -1002,7 +971,6 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
             session.close()
             driver.close()
             self._server.done()
-            self.post_script_assertions()
 
         for realm in (None, "", "foobar"):
             with self.subTest(realm=realm):
@@ -1010,9 +978,12 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
             self._server.reset()
 
     @driver_feature(types.Feature.AUTH_BEARER)
-    def test_bearer_scheme(self):
-        script_fn = "scheme_bearer.script"
-        script_fn = self.script_fn_with_features(script_fn)
+    def _test_bearer_scheme(self):
+        implicit_defaults = self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+        )
+        script_fn = "scheme_bearer%s.script"
+        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("bearer", credentials="QmFuYW5hIQ==")
@@ -1022,12 +993,14 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
-        self.post_script_assertions()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
-    def test_custom_scheme(self):
-        script_fn = "scheme_custom.script"
-        script_fn = self.script_fn_with_features(script_fn)
+    def _test_custom_scheme(self):
+        implicit_defaults = self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+        )
+        script_fn = "scheme_custom%s.script"
+        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("wild-scheme",
@@ -1045,12 +1018,14 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
-        self.post_script_assertions()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
-    def test_custom_scheme_empty(self):
-        script_fn = "scheme_custom_empty.script"
-        script_fn = self.script_fn_with_features(script_fn)
+    def _test_custom_scheme_empty(self):
+        implicit_defaults = self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+        )
+        script_fn = "scheme_custom_empty%s.script"
+        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("minimal-scheme",
@@ -1064,12 +1039,14 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
-        self.post_script_assertions()
 
     @driver_feature(types.Feature.AUTH_KERBEROS)
-    def test_kerberos_scheme(self):
-        script_fn = "scheme_kerberos.script"
-        script_fn = self.script_fn_with_features(script_fn)
+    def _test_kerberos_scheme(self):
+        implicit_defaults = self.driver_supports_features(
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+        )
+        script_fn = "scheme_kerberos%s.script"
+        script_fn = script_fn % ("_minimal" if implicit_defaults else "")
         self.start_server(self._server, script_fn)
 
         auth = types.AuthorizationToken("kerberos", credentials="QmFuYW5hIQ==")
@@ -1079,23 +1056,48 @@ class TestAuthenticationSchemesV4x4(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
-        self.post_script_assertions()
 
 
-class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV4x4):
+class TestAuthenticationSchemesV4x4(AuthenticationSchemesBase):
+
+    required_features = types.Feature.BOLT_4_4,
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "4.4"
+        }
+
+    def test_basic_scheme(self):
+        super()._test_basic_scheme()
+
+    def test_bearer_scheme(self):
+        super()._test_bearer_scheme()
+
+    def test_custom_scheme(self):
+        super()._test_custom_scheme()
+
+    def test_custom_scheme_empty(self):
+        super()._test_custom_scheme_empty()
+
+    def test_kerberos_scheme(self):
+        super()._test_kerberos_scheme()
+
+
+class TestAuthenticationSchemesV5x0(TestAuthenticationSchemesV4x4):
+
+    required_features = types.Feature.BOLT_5_0,
+
+    def get_vars(self):
+        return {
+            "#VERSION#": "5.0"
+        }
+
+
+class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV5x0):
 
     required_features = types.Feature.BOLT_5_1,
-
-    has_logon = True
 
     def get_vars(self):
         return {
             "#VERSION#": "5.1"
         }
-
-    def post_script_assertions(self):
-        # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
-        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            self._server.count_requests("RESET", 0)
-
-        super().post_script_assertions()

@@ -445,7 +445,7 @@ class Bolt4x4Protocol(Bolt4x3Protocol):
 class Bolt5x0Protocol(Bolt4x4Protocol):
 
     protocol_version = (5, 0)
-    version_aliases = set()
+    version_aliases = {(5,)}
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
@@ -461,13 +461,6 @@ class Bolt5x1Protocol(Bolt5x0Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
-    server_agent = "Neo4j/5.4.0"  # TODO: finalize!
+    packstream_version = 2
 
-    messages = {
-        "C": {
-            **Bolt5x0Protocol.messages["C"],
-            b"\x6A": "LOGON",
-            b"\x6B": "LOGOFF",
-        },
-        "S": Bolt5x0Protocol.messages["S"],
-    }
+    server_agent = "Neo4j/5.1.0"

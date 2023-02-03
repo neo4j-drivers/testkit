@@ -1,7 +1,6 @@
 !: BOLT #VERSION#
 
-A: HELLO {"user_agent": "*", "[routing]": null}
-A: LOGON {"scheme": "wild-scheme", "principal": "I See Something", "credentials": "You Don't See!", "realm": "And it's blue.", "parameters": {"sky?": "no", "my eyes": 0.1, "da be dee da be daa?": true}}
+A: HELLO {"scheme": "wild-scheme", "principal": "I See Something", "credentials": "You Don't See!", "realm": "And it's blue.", "parameters": {"sky?": "no", "my eyes": 0.1, "da be dee da be daa?": true}} {"{}": "*"}
 *: RESET
 
 C: RUN "RETURN 1 AS n" "*" "*"

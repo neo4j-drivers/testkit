@@ -151,8 +151,9 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.notifications, notifications)
 
     def test_full_notification(self):
-        notifications = [{
+        in_notifications = [{
             "severity": "WARNING",
+            "category": "GENERIC",
             "description": "If a part of a query contains multiple "
                            "disconnected patterns, ...",
             "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
@@ -162,10 +163,22 @@ class TestSummary(TestkitTestCase):
         summary = self._get_summary(
             "summary_with_notifications.script",
             vars_={
-                "#NOTIFICATIONS#": json.dumps(notifications)
+                "#NOTIFICATIONS#": json.dumps(in_notifications)
             }
         )
-        self.assertEqual(summary.notifications, notifications)
+        out_notifications = [{
+            "severity": "WARNING",
+            "rawSeverityLevel": "WARNING",
+            "severityLevel": "WARNING",
+            "rawCategory": "GENERIC",
+            "category": "GENERIC",
+            "description": "If a part of a query contains multiple "
+                           "disconnected patterns, ...",
+            "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
+            "position": {"column": 9, "offset": 8, "line": 1},
+            "title": "This query builds a cartesian product between..."
+        }]
+        self.assertEqual(summary.notifications, out_notifications)
 
     def test_notifications_without_position(self):
         notifications = [{

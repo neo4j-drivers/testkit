@@ -1,0 +1,15 @@
+!: BOLT 5.1
+
+A: HELLO {#NOTIS#"[user_agent]": "*", "[routing]": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["t"]}
+{{
+    C: PULL "*"
+----
+    C: DISCARD "*"
+}}
+S: SUCCESS {"type": "w"}
+*: RESET
+?: GOODBYE
