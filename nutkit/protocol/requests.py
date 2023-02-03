@@ -71,7 +71,7 @@ class NewDriver:
         connectionTimeoutMs=None, fetchSize=None, maxTxRetryTimeMs=None,
         encrypted=None, trustedCertificates=None,
         liveness_check_timeout_ms=None, max_connection_pool_size=None,
-        connection_acquisition_timeout_ms=None
+        connection_acquisition_timeout_ms=None, backwards_compatible_auth=None,
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -89,6 +89,8 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        if backwards_compatible_auth is not None:
+            self.backwardsCompatibleAuth = backwards_compatible_auth
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -369,7 +371,8 @@ class NewSession:
         self.impersonatedUser = impersonatedUser
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
-        self.authorizationToken = auth_token
+        if auth_token is not None:
+            self.authorizationToken = auth_token
 
 
 class SessionClose:

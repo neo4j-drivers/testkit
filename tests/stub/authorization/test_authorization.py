@@ -71,6 +71,32 @@ class AuthorizationBase(TestkitTestCase):
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
+    def assert_re_auth_unsupported_error(self, error):
+        self.assertIsInstance(error, types.DriverError)
+        driver = get_driver_name()
+        if driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ConfigurationError'>",
+                error.errorType
+            )
+            self.assertIn(
+                "session level authentication is not supported for bolt "
+                "protocol version(5, 0)",
+                error.msg.lower()
+            )
+        elif driver in ["javascript"]:
+            self.assertEqual(
+                "N/A",
+                error.code
+            )
+            self.assertEqual(
+                "Driver is connected to a database that does not support "
+                "user switch.",
+                error.msg
+            )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+
     def _find_version_script(self, script_fns):
         if isinstance(script_fns, str):
             script_fns = [script_fns]

@@ -11,7 +11,8 @@ class Driver:
                  max_tx_retry_time_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None):
+                 connection_acquisition_timeout_ms=None,
+                 backwards_compatible_auth=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -40,6 +41,7 @@ class Driver:
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
+            backwards_compatible_auth=backwards_compatible_auth,
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -164,7 +166,7 @@ class Driver:
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
             bookmark_manager=bookmark_manager,
-            auth_token=auth_token
+            auth_token=auth_token,
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):

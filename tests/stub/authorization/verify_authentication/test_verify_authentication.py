@@ -14,9 +14,11 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
-class _TestVerifyAuthenticationBase(ABC, AuthorizationBase):
+class _TestVerifyAuthenticationBase(AuthorizationBase, ABC):
 
     required_features = types.Feature.API_DRIVER_VERIFY_AUTHENTICATION,
+
+    backwards_compatible_auth = None
 
     VERIFY_AUTH_NEGATIVE_ERRORS = (
         "Neo.ClientError.Security.CredentialsExpired",
@@ -61,7 +63,10 @@ class _TestVerifyAuthenticationBase(ABC, AuthorizationBase):
             uri = f"neo4j://{self._router.address}"
         else:
             uri = f"bolt://{self._reader.address}"
-        driver = Driver(self._backend, uri, auth)
+        driver = Driver(
+            self._backend, uri, auth,
+            backwards_compatible_auth=self.backwards_compatible_auth
+        )
         try:
             yield driver
         finally:
@@ -266,3 +271,101 @@ class TestVerifyAuthenticationSessionAuthV5x1(_TestVerifyAuthenticationBase):
 
     def test_reader_failure(self):
         super()._test_reader_failure()
+
+
+class TestVerifyAuthenticationV5x0(_TestVerifyAuthenticationBase):
+
+    required_features = (*_TestVerifyAuthenticationBase.required_features,
+                         types.Feature.BOLT_5_0)
+
+    session_auth = False
+
+    def get_vars(self):
+        return {
+            **super().get_vars(),
+            "#VERSION#": "5.0"
+        }
+
+    def test_is_not_supported(self):
+        def test(routing_, warm_):
+            if routing_:
+                self.start_server(self._router, "router.script")
+            self.start_server(self._reader, "reader.script")
+
+            with self.driver(routing=routing_) as driver:
+                if warm_:
+                    session = driver.session("r", database="system")
+                    list(session.run("RETURN 1"))
+                    session.close()
+                with self.assertRaises(types.DriverError) as exc:
+                    self.verify_authentication(driver)
+                self.assert_re_auth_unsupported_error(exc.exception)
+
+            self._router.reset()
+            self._reader.reset()
+
+        for routing in (False, True):
+            for warm in (False, True):
+                with self.subTest(routing=routing, warm=warm):
+                    test(routing, warm)
+                self._router.reset()
+                self._reader.reset()
+
+
+class _BackwardsCompatibilityBase(_TestVerifyAuthenticationBase, ABC):
+
+    required_features = (*_TestVerifyAuthenticationBase.required_features,
+                         types.Feature.BOLT_5_0)
+
+    backwards_compatible_auth = True
+
+    def get_vars(self):
+        return {
+            **super().get_vars(),
+            "#VERSION#": "5.0"
+        }
+
+    def start_server(self, server, script_fn, vars_=None):
+        parts = script_fn.split(".")
+        script_fn = f"{parts[0]}_backwards_compat.{parts[1]}"
+        super().start_server(server, script_fn, vars_)
+
+
+
+class TestVerifyAuthenticationDriverAuthV5x0BackwardsCompatibility(
+    _BackwardsCompatibilityBase
+):
+
+    session_auth = False
+
+    def test_successful_authentication(self):
+        super()._test_successful_authentication()
+
+    def test_router_failure(self):
+        super()._test_router_failure()
+
+    def test_warm_router_failure(self):
+        super()._test_warm_router_failure()
+
+    def test_reader_failure(self):
+        super()._test_reader_failure()
+
+
+class TestVerifyAuthenticationSessionAuthV5x0BackwardsCompatibility(
+    _BackwardsCompatibilityBase
+):
+
+    session_auth = True
+
+    def test_successful_authentication(self):
+        super()._test_successful_authentication()
+
+    def test_router_failure(self):
+        super()._test_router_failure()
+
+    def test_warm_router_failure(self):
+        super()._test_warm_router_failure()
+
+    def test_reader_failure(self):
+        super()._test_reader_failure()
+# TODO v5x0 with and without backwards compatibility config

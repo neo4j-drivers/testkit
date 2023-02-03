@@ -1,0 +1,5 @@
+!: BOLT #VERSION#
+
+C: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+S: FAILURE {"code": "#ERROR#", "message": "These are not the credentials you're looking for."}
+   <EXIT>

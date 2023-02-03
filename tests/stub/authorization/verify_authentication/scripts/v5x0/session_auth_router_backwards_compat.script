@@ -1,0 +1,10 @@
+!: BOLT #VERSION#
+
+A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+*: RESET
+
+C: ROUTE {"{}": "*"} [] {"{}": {"db": "system"}}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "system", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+?: GOODBYE
