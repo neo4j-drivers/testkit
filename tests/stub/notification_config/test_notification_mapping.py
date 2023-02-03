@@ -1,7 +1,7 @@
 import json
 
 import nutkit.protocol as types
-from tests.stub.notification_filters.notification_filters_base import (
+from tests.stub.notification_config.notification_filters_base import (
     NotificationFiltersBase,
 )
 
@@ -16,12 +16,17 @@ class TestNotificationMapping(NotificationFiltersBase):
             self._server.reset()
 
     def _run_test(self, config):
-        script = "emit_notifications.script"
+        script = "notifications_mapping.script"
         emit = json.dumps(self._create_emit_param(config["notifications"]))
-        params = {
+        script_params = {
             "#EMIT#": emit
         }
-        summary = self._run_test_get_summary(["ALL.ALL"], params, script)
+        driver_params = {
+            "min_sev": None,
+            "dis_cats": None
+        }
+        summary = self._run_test_get_summary(driver_params, script_params,
+                                             script)
         notifications = self._reduce_notifications(summary.notifications)
         self.assertListEqual(config["expect"], notifications)
 

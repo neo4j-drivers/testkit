@@ -1,8 +1,9 @@
 !: BOLT 5.1
 
-A: HELLO {"{}": "*"} {"{}": "*"}
-?: RESET
-C: BEGIN {"[mode]": "*", "[db]": "*", "[notifications]": null}
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: BEGIN {#NOTIS#"[mode]": "*", "[db]": "*"}
 S: SUCCESS {}
 C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
