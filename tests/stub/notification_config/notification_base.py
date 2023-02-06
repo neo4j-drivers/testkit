@@ -4,7 +4,7 @@ from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
-class NotificationFiltersBase(TestkitTestCase):
+class NotificationsBase(TestkitTestCase):
     _auth = types.AuthorizationToken("basic", principal="neo4j",
                                      credentials="pass")
 

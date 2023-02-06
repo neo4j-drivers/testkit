@@ -1,14 +1,12 @@
 import nutkit.protocol as types
-from tests.stub.notification_config.notification_filters_base import (
-    NotificationFiltersBase,
-)
+from tests.stub.notification_config.notification_base import NotificationsBase
 
 
-class TestDriverNotificationFilters(NotificationFiltersBase):
-    required_features = (types.Feature.BOLT_5_1,
+class TestDriverNotificationsConfig(NotificationsBase):
+    required_features = (types.Feature.BOLT_5_2,
                          types.Feature.API_DRIVER_NOTIFICATION_CONFIG)
 
-    def test_filter_notifications(self):
+    def test_driver_notifications_config_on_hello(self):
         for cfg in self.configs():
             with self.subTest(name=cfg["protocol"]):
                 self._run_test_get_summary(cfg["protocol"], cfg["script"])

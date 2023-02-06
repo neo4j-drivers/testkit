@@ -464,3 +464,15 @@ class Bolt5x1Protocol(Bolt5x0Protocol):
     packstream_version = 2
 
     server_agent = "Neo4j/5.1.0"
+
+
+class Bolt5x2Protocol(Bolt5x1Protocol):
+
+    protocol_version = (5, 2)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    packstream_version = 2
+
+    server_agent = "Neo4j/5.2.0"

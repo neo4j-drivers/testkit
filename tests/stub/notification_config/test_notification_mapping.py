@@ -1,13 +1,11 @@
 import json
 
 import nutkit.protocol as types
-from tests.stub.notification_config.notification_filters_base import (
-    NotificationFiltersBase,
-)
+from tests.stub.notification_config.notification_base import NotificationsBase
 
 
-class TestNotificationMapping(NotificationFiltersBase):
-    required_features = types.Feature.BOLT_5_1,
+class TestNotificationMapping(NotificationsBase):
+    required_features = types.Feature.BOLT_5_2,
 
     def test_mapping(self):
         for config in self._map_test_configs():

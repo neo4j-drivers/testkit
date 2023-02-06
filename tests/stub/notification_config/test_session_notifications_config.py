@@ -1,27 +1,25 @@
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.stub.notification_config.notification_filters_base import (
-    NotificationFiltersBase,
-)
+from tests.stub.notification_config.notification_base import NotificationsBase
 
 
-class TestSessionNotificationFilters(NotificationFiltersBase):
-    required_features = (types.Feature.BOLT_5_1,
+class TestSessionNotificationsConfig(NotificationsBase):
+    required_features = (types.Feature.BOLT_5_2,
                          types.Feature.API_SESSION_NOTIFICATION_CONFIG)
 
-    def test_run_notification_filter(self):
+    def test_session_config_on_run(self):
         for config in self.configs():
             with self.subTest(name=config["protocol"]):
                 self._run_test(config["protocol"], config["script"])
             self._server.reset()
 
-    def test_begin_notification_filter(self):
+    def test_session_config_on_begin(self):
         for config in self.configs():
             with self.subTest(name=config["protocol"]):
                 self._tx_test(config["protocol"], config["script"])
             self._server.reset()
 
-    def test_read_tx_notification_filter(self):
+    def test_session_config_on_read_tx(self):
         for config in self.configs():
             with self.subTest(name=config["protocol"]):
                 self._tx_func_test(config["protocol"], config["script"])
