@@ -194,6 +194,16 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
                 "protocol version(5, 0)",
                 error.msg.lower()
             )
+        elif driver in ["javascript"]:
+            self.assertEqual(
+                "N/A",
+                error.code
+            )
+            self.assertEqual(
+                "Driver is connected to a database that does not support "
+                "user switch.",
+                error.msg
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
