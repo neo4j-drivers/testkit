@@ -72,8 +72,8 @@ class NewDriver:
         encrypted=None, trustedCertificates=None,
         liveness_check_timeout_ms=None, max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None,
-        notification_min_severity=None,
-        notification_disabled_categories=None
+        notifications_min_severity=None,
+        notifications_disabled_categories=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -91,10 +91,10 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
-        if notification_min_severity is not None:
-            self.notification_min_severity = notification_min_severity
-        if notification_disabled_categories is not None:
-            self.notification_disabled_categories = notification_disabled_categories  # noqa: E501
+        if notifications_min_severity is not None:
+            self.notificationsMinSeverity = notifications_min_severity
+        if notifications_disabled_categories is not None:
+            self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -364,8 +364,8 @@ class NewSession:
     def __init__(self, driverId, accessMode, bookmarks=None,
                  database=None, fetchSize=None, impersonatedUser=None,
                  bookmark_manager=None, auth_token=None,
-                 notification_min_severity=None,
-                 notification_disabled_categories=None):
+                 notifications_min_severity=None,
+                 notifications_disabled_categories=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -375,10 +375,10 @@ class NewSession:
         self.database = database
         self.fetchSize = fetchSize
         self.impersonatedUser = impersonatedUser
-        if notification_min_severity is not None:
-            self.notification_min_severity = notification_min_severity
-        if notification_disabled_categories is not None:
-            self.notification_disabled_categories = notification_disabled_categories  # noqa: E501
+        if notifications_min_severity is not None:
+            self.notificationsMinSeverity = notifications_min_severity
+        if notifications_disabled_categories is not None:
+            self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
 
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id

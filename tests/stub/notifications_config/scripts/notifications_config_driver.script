@@ -3,7 +3,7 @@
 A: HELLO {#NOTIS#"[user_agent]": "*", "[routing]": "*"}
 A: LOGON {"{}": "*"}
 *: RESET
-C: RUN "*" "*" "*"
+C: RUN "*" "*" {"[db]": "*"}
 S: SUCCESS {"fields": ["t"]}
 {{
     C: PULL "*"
