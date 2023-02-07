@@ -29,6 +29,9 @@ class Driver:
             self._auth_token_provider = AuthTokenProvider(backend, auth_token)
             auth_token_provider_id = self._auth_token_provider.id
 
+        auth_token_provider_id = self._auth_token_provider.id \
+            if self._auth_token_provider else None
+
         req = protocol.NewDriver(
             uri, self._auth_token, auth_token_provider_id,
             userAgent=user_agent, resolverRegistered=resolver_fn is not None,
