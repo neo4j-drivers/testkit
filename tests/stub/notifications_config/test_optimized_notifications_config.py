@@ -36,3 +36,13 @@ class TestOptimizedNotificationsConfig(NotificationsBase):
             with self.subTest(name=config["protocol"]):
                 self._run_test(config["protocol"], config["script"])
             self._server.reset()
+
+    def test_omit_disabled_categories_when_notifications_disabled(self):
+        self._run_test({"min_sev": "OFF", "dis_cats": ["DEPRECATION"]},
+                       {"#NOTIS#": '"noti_min_sev":"OFF", '})
+        self._server.reset()
+
+    def test_omit_disabled_categories_when_empty(self):
+        self._run_test({"min_sev": "INFORMATION", "dis_cats": []},
+                       {"#NOTIS#": '"noti_min_sev":"INFORMATION", '})
+        self._server.reset()
