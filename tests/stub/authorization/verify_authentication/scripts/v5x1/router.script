@@ -1,6 +1,7 @@
 !: BOLT #VERSION#
 
-A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+A: HELLO {"{}": "*"}
+A: LOGON {"scheme": "basic", #VERIFY_AUTH#, "[realm]": ""}
 *: RESET
 
 C: ROUTE {"{}": "*"} [] {"{}": {"db": "system"}}

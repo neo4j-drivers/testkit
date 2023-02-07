@@ -1,6 +1,7 @@
 !: BOLT #VERSION#
 
-A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+A: HELLO {"{}": "*"}
+A: LOGON {"scheme": "basic", #DRIVER_AUTH#, "[realm]": ""}
 *: RESET
 
 # warmup query
@@ -12,7 +13,7 @@ S: RECORD [1]
 
 {{
     A: LOGOFF
-    C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+    C: LOGON {"scheme": "basic", #VERIFY_AUTH#, "[realm]": ""}
 ----
     C: RUN {"U": "*"} "*" "*"
 }}

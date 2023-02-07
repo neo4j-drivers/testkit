@@ -229,8 +229,7 @@ class VerifyAuthentication:
 
     def __init__(self, driver_id, auth_token):
         self.driverId = driver_id
-        if auth_token:
-            self.auth_token = auth_token
+        self.auth_token = auth_token
 
 
 class CheckSessionAuthSupport:

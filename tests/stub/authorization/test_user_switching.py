@@ -4,7 +4,6 @@ import re
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.shared import get_driver_name
 from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
@@ -204,7 +203,6 @@ class TestUserSwitchingV5x0BackwardsCompatibility(TestUserSwitchingV5x1):
         parts = script_fn.rsplit(".", 1)
         return f"{parts[0]}_inverse.{parts[1]}"
 
-
     def script_fn_with_features(self, script_fn):
         parts = script_fn.rsplit(".", 1)
         script_fn = f"{parts[0]}_backwards_compat.{parts[1]}"
@@ -222,11 +220,10 @@ class TestUserSwitchingV5x0BackwardsCompatibility(TestUserSwitchingV5x1):
         saw_run = False
         conversation = self._reader.get_conversation()
         for message in conversation:
-            if (message.startswith("S:  HELLO")
-                and (
-                    re.match(r'.*"principal": "([^"]*)".*', message).group(1)
+            if (
+                message.startswith("S:  HELLO")
+                and re.match(r'.*"principal": "([^"]*)".*', message).group(1)
                     == session_auth.principal
-                )
             ):
                 in_throwaway_connection = True
                 throwaway_connection_count += 1

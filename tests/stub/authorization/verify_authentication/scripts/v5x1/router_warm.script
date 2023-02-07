@@ -1,7 +1,7 @@
 !: BOLT #VERSION#
 
 A: HELLO {"{}": "*"}
-A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+A: LOGON {"scheme": "basic", #DRIVER_AUTH#, "[realm]": ""}
 *: RESET
 
 C: ROUTE {"{}": "*"} [] {"{}": {"db": "system"}}

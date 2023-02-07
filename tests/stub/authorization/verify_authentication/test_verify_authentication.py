@@ -1,7 +1,3 @@
-from abc import (
-    ABC,
-    abstractmethod,
-)
 from contextlib import contextmanager
 
 from nutkit.frontend import (
@@ -14,7 +10,7 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
-class _TestVerifyAuthenticationBase(AuthorizationBase, ABC):
+class _TestVerifyAuthenticationBase(AuthorizationBase):
 
     required_features = types.Feature.API_DRIVER_VERIFY_AUTHENTICATION,
 
@@ -72,37 +68,31 @@ class _TestVerifyAuthenticationBase(AuthorizationBase, ABC):
         finally:
             driver.close()
 
-    def verify_authentication(self, driver):
-        if self.session_auth:
-            return driver.verify_authentication(self._auth2)
-        else:
-            return driver.verify_authentication()
-
-    def start_server(self, server, script_fn, vars_=None):
-        if self.session_auth:
-            script_fn = f"session_auth_{script_fn}"
-        else:
-            script_fn = f"driver_auth_{script_fn}"
-        super().start_server(server, script_fn, vars_)
-
-    @property
-    @abstractmethod
-    def session_auth(self) -> bool:
-        ...
+    def vars_with_auth(self, driver_auth, verify_auth):
+        return {
+            **self.get_vars(),
+            "#DRIVER_AUTH#": f'"principal": "{driver_auth.principal}", '
+                             f'"credentials": "{driver_auth.credentials}"',
+            "#VERIFY_AUTH#": f'"principal": "{verify_auth.principal}", '
+                             f'"credentials": "{verify_auth.credentials}"',
+        }
 
     def _test_successful_authentication(self):
-        def test(routing_, warm_):
+        def test(routing_, warm_, auth_):
             suffix = "_warm" if warm_ else ""
+            vars_ = self.vars_with_auth(self._auth1, auth_)
             if routing_:
-                self.start_server(self._router, f"router{suffix}.script")
-            self.start_server(self._reader, f"reader{suffix}.script")
+                self.start_server(self._router, f"router{suffix}.script",
+                                  vars_=vars_)
+            self.start_server(self._reader, f"reader{suffix}.script",
+                              vars_=vars_)
 
             with self.driver(routing=routing_) as driver:
                 if warm_:
                     session = driver.session("r", database="system")
-                    list(session.run("RETURN 1"))
+                    list(session.run("TESTKIT WARMUP"))
                     session.close()
-                res = self.verify_authentication(driver)
+                res = driver.verify_authentication(auth_)
 
             self.assertIs(res, True)
 
@@ -122,143 +112,139 @@ class _TestVerifyAuthenticationBase(AuthorizationBase, ABC):
                 self.assertEqual(logon_count, expected_logon_count)
                 self.assertEqual(run_count, expected_run_count)
 
-        for routing in (False, True):
-            for warm in (False, True):
-                with self.subTest(routing=routing, warm=warm):
-                    test(routing, warm)
-                self._router.reset()
-                self._reader.reset()
+        for auth in (self._auth1, self._auth2):
+            for routing in (False, True):
+                for warm in (False, True):
+                    with self.subTest(routing=routing, warm=warm,
+                                      auth=auth.__dict__):
+                        test(routing, warm, auth)
+                    self._router.reset()
+                    self._reader.reset()
 
     def _test_router_failure(self):
         # only works with cold routing driver
 
-        def test(error_, raises_, router_script_):
-            self.start_server(self._router, router_script_,
-                              vars_={**self.get_vars(), "#ERROR#": error_})
+        def test(error_, raises_, router_script_, auth_):
+            vars_ = {
+                **self.vars_with_auth(self._auth1, auth_),
+                "#ERROR#": error_,
+            }
+            self.start_server(self._router, router_script_, vars_=vars_)
             with self.driver(routing=True) as driver:
                 if raises_:
                     with self.assertRaises(types.DriverError) as exc:
-                        self.verify_authentication(driver)
+                        driver.verify_authentication(auth_)
                     self.assertEqual(exc.exception.code, error_)
                 else:
-                    res = self.verify_authentication(driver)
+                    res = driver.verify_authentication(auth_)
                     self.assertIs(res, False)
             self._router.done()
 
-        for (error, raises) in (
-            *((e, False) for e in self.VERIFY_AUTH_NEGATIVE_ERRORS),
-            *((e, True) for e in self.VERIFY_AUTH_PROPAGATE_ERRORS),
-        ):
-            for router_script in ("router_error_logon.script",
-                                  "router_error_route.script"):
-                with self.subTest(error=error, raises=raises,
-                                  script=router_script):
-                    test(error, raises, router_script)
-                self._router.done()
-                self._router.reset()
+        for auth in (self._auth1, self._auth2):
+            for (error, raises) in (
+                *((e, False) for e in self.VERIFY_AUTH_NEGATIVE_ERRORS),
+                *((e, True) for e in self.VERIFY_AUTH_PROPAGATE_ERRORS),
+            ):
+                for router_script in ("router_error_logon.script",
+                                      "router_error_route.script"):
+                    with self.subTest(error=error, raises=raises,
+                                      script=router_script,
+                                      auth=auth.__dict__):
+                        test(error, raises, router_script, auth)
+                    self._router.done()
+                    self._router.reset()
 
     @driver_feature(types.Feature.BACKEND_MOCK_TIME)
     def _test_warm_router_failure(self):
         # only works with routing driver
 
-        def test(error_, raises_, router_script_):
+        def test(error_, raises_, router_script_, auth_):
             with FakeTime(self._backend) as time:
-                self.start_server(self._router, router_script_,
-                                  vars_={**self.get_vars(), "#ERROR#": error_})
-                self.start_server(self._reader, "reader_warm.script")
+                vars_ = {
+                    **self.vars_with_auth(self._auth1, auth_),
+                    "#ERROR#": error_,
+                }
+                self.start_server(self._router, router_script_, vars_=vars_)
+                self.start_server(self._reader, "reader_warm.script",
+                                  vars_=vars_)
                 with self.driver(routing=True) as driver:
                     # warm up driver
                     session = driver.session("r", database="system")
-                    list(session.run("RETURN 1"))
+                    list(session.run("TESTKIT WARMUP"))
                     session.close()
                     # make routing table expire
                     time.tick(1_001_000)
                     if raises_:
                         with self.assertRaises(types.DriverError) as exc:
-                            self.verify_authentication(driver)
+                            driver.verify_authentication(auth_)
                         self.assertEqual(exc.exception.code, error_)
                     else:
-                        res = self.verify_authentication(driver)
+                        res = driver.verify_authentication(auth_)
                         self.assertIs(res, False)
                 self._router.done()
 
         router_scripts = ["router_error_route_warm.script"]
-        if self.session_auth:
-            router_scripts.append("router_error_logon_warm.script")
-        for (error, raises) in (
-            *((e, False) for e in self.VERIFY_AUTH_NEGATIVE_ERRORS),
-            *((e, True) for e in self.VERIFY_AUTH_PROPAGATE_ERRORS),
-        ):
-            for router_script in router_scripts:
-                with self.subTest(error=error, raises=raises,
-                                  script=router_script):
-                    test(error, raises, router_script)
-                self._router.reset()
-                self._reader.reset()
+        for auth in (self._auth1, self._auth2):
+            for (error, raises) in (
+                *((e, False) for e in self.VERIFY_AUTH_NEGATIVE_ERRORS),
+                *((e, True) for e in self.VERIFY_AUTH_PROPAGATE_ERRORS),
+            ):
+                for router_script in router_scripts:
+                    with self.subTest(error=error, raises=raises,
+                                      script=router_script,
+                                      auth=auth.__dict__):
+                        test(error, raises, router_script, auth)
+                    self._router.reset()
+                    self._reader.reset()
 
     def _test_reader_failure(self):
-        def test(routing_, warm_, error_, raises_):
+        def test(routing_, warm_, error_, raises_, auth_):
             suffix = "_warm" if warm_ else ""
+            vars_ = {
+                **self.vars_with_auth(self._auth1, auth_),
+                "#ERROR#": error_,
+            }
             if routing_:
-                self.start_server(self._router, f"router{suffix}.script")
+                self.start_server(self._router, f"router{suffix}.script",
+                                  vars_=vars_)
             self.start_server(self._reader, f"reader_error{suffix}.script",
-                              vars_={**self.get_vars(), "#ERROR#": error_})
+                              vars_=vars_)
             with self.driver(routing=routing_) as driver:
                 if warm_:
                     session = driver.session("r", database="system")
-                    list(session.run("RETURN 1"))
+                    list(session.run("TESTKIT WARMUP"))
                     session.close()
                 if raises_:
                     with self.assertRaises(types.DriverError) as exc:
-                        self.verify_authentication(driver)
+                        driver.verify_authentication(auth_)
                     self.assertEqual(exc.exception.code, error_)
                 else:
-                    res = self.verify_authentication(driver)
+                    res = driver.verify_authentication(auth_)
                     self.assertIs(res, False)
             if routing_:
                 self._router.done()
             self._reader.done()
 
-        for (error, raises) in (
-            *((e, False) for e in self.VERIFY_AUTH_NEGATIVE_ERRORS),
-            *((e, True) for e in self.VERIFY_AUTH_PROPAGATE_ERRORS),
-            ("Neo.ClientError.Security.AuthorizationExpired", True),
-        ):
-            for routing in (False, True):
-                for warm in (False, True):
-                    with self.subTest(routing=routing, warm=warm, error=error,
-                                      raises=raises):
-                        test(routing, warm, error, raises)
-                    self._router.reset()
-                    self._reader.reset()
+        for auth in (self._auth1, self._auth2):
+            for (error, raises) in (
+                *((e, False) for e in self.VERIFY_AUTH_NEGATIVE_ERRORS),
+                *((e, True) for e in self.VERIFY_AUTH_PROPAGATE_ERRORS),
+                ("Neo.ClientError.Security.AuthorizationExpired", True),
+            ):
+                for routing in (False, True):
+                    for warm in (False, True):
+                        with self.subTest(routing=routing, warm=warm,
+                                          error=error, raises=raises,
+                                          auth=auth.__dict__):
+                            test(routing, warm, error, raises, auth)
+                        self._router.reset()
+                        self._reader.reset()
 
 
-class TestVerifyAuthenticationDriverAuthV5x1(_TestVerifyAuthenticationBase):
-
-    required_features = (*_TestVerifyAuthenticationBase.required_features,
-                         types.Feature.BOLT_5_1)
-
-    session_auth = False
-
-    def test_successful_authentication(self):
-        super()._test_successful_authentication()
-
-    def test_router_failure(self):
-        super()._test_router_failure()
-
-    def test_warm_router_failure(self):
-        super()._test_warm_router_failure()
-
-    def test_reader_failure(self):
-        super()._test_reader_failure()
-
-
-class TestVerifyAuthenticationSessionAuthV5x1(_TestVerifyAuthenticationBase):
+class TestVerifyAuthenticationV5x1(_TestVerifyAuthenticationBase):
 
     required_features = (*_TestVerifyAuthenticationBase.required_features,
                          types.Feature.BOLT_5_1)
-
-    session_auth = True
 
     def test_successful_authentication(self):
         super()._test_successful_authentication()
@@ -278,8 +264,6 @@ class TestVerifyAuthenticationV5x0(_TestVerifyAuthenticationBase):
     required_features = (*_TestVerifyAuthenticationBase.required_features,
                          types.Feature.BOLT_5_0)
 
-    session_auth = False
-
     def get_vars(self):
         return {
             **super().get_vars(),
@@ -295,10 +279,10 @@ class TestVerifyAuthenticationV5x0(_TestVerifyAuthenticationBase):
             with self.driver(routing=routing_) as driver:
                 if warm_:
                     session = driver.session("r", database="system")
-                    list(session.run("RETURN 1"))
+                    list(session.run("TESTKIT WARMUP"))
                     session.close()
                 with self.assertRaises(types.DriverError) as exc:
-                    self.verify_authentication(driver)
+                    driver.verify_authentication(self._auth1)
                 self.assert_re_auth_unsupported_error(exc.exception)
 
             self._router.reset()
@@ -312,7 +296,9 @@ class TestVerifyAuthenticationV5x0(_TestVerifyAuthenticationBase):
                 self._reader.reset()
 
 
-class _BackwardsCompatibilityBase(_TestVerifyAuthenticationBase, ABC):
+class TestVerifyAuthenticationV5x0BackwardsCompatibility(
+    _TestVerifyAuthenticationBase
+):
 
     required_features = (*_TestVerifyAuthenticationBase.required_features,
                          types.Feature.BOLT_5_0)
@@ -322,7 +308,7 @@ class _BackwardsCompatibilityBase(_TestVerifyAuthenticationBase, ABC):
     def get_vars(self):
         return {
             **super().get_vars(),
-            "#VERSION#": "5.0"
+            "#VERSION#": "5.0",
         }
 
     def start_server(self, server, script_fn, vars_=None):
@@ -330,14 +316,6 @@ class _BackwardsCompatibilityBase(_TestVerifyAuthenticationBase, ABC):
         script_fn = f"{parts[0]}_backwards_compat.{parts[1]}"
         super().start_server(server, script_fn, vars_)
 
-
-
-class TestVerifyAuthenticationDriverAuthV5x0BackwardsCompatibility(
-    _BackwardsCompatibilityBase
-):
-
-    session_auth = False
-
     def test_successful_authentication(self):
         super()._test_successful_authentication()
 
@@ -349,23 +327,3 @@ class TestVerifyAuthenticationDriverAuthV5x0BackwardsCompatibility(
 
     def test_reader_failure(self):
         super()._test_reader_failure()
-
-
-class TestVerifyAuthenticationSessionAuthV5x0BackwardsCompatibility(
-    _BackwardsCompatibilityBase
-):
-
-    session_auth = True
-
-    def test_successful_authentication(self):
-        super()._test_successful_authentication()
-
-    def test_router_failure(self):
-        super()._test_router_failure()
-
-    def test_warm_router_failure(self):
-        super()._test_warm_router_failure()
-
-    def test_reader_failure(self):
-        super()._test_reader_failure()
-# TODO v5x0 with and without backwards compatibility config

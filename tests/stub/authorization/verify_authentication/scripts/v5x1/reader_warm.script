@@ -1,14 +1,14 @@
 !: BOLT #VERSION#
 
 A: HELLO {"{}": "*"}
-A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+A: LOGON {"scheme": "basic", #DRIVER_AUTH#, "[realm]": ""}
 *: RESET
 
 # optionally, run more LOGOFF/LOGON cycles, and/or dummy queries
 {*
     {{
         A: LOGOFF
-        A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+        A: LOGON {"scheme": "basic", #VERIFY_AUTH#, "[realm]": ""}
     ----
         C: RUN {"U": "*"} "*" "*"
         S: SUCCESS {"fields": ["n"]}
