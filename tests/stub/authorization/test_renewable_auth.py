@@ -61,8 +61,8 @@ class TestRenewableAuth5x1(AuthorizationBase):
 
     def post_script_assertions(self, server):
         # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
-        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            server.count_requests("RESET", 0)
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self.assertEqual(server.count_requests("RESET"), 0)
 
     def test_static_provider(self):
         count = 0

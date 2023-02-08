@@ -1121,7 +1121,7 @@ class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV4x4):
 
     def post_script_assertions(self):
         # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
-        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            self._server.count_requests("RESET", 0)
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self.assertEqual(self._server.count_requests("RESET"), 0)
 
         super().post_script_assertions()
