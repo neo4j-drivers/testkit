@@ -135,10 +135,6 @@ class Feature(Enum):
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
     # Driver should not send duplicated bookmarks to the server
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
-    # The driver does not send redundant configuration for notifications.
-    # Omits all values that match default or duplicate parent config.
-    OPT_MINIMAL_NOTIFICATIONS_CONFIG = \
-        "Optimization:MinimalNotificationsConfig"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
     # The driver's VerifyAuthentication method is optimized. It

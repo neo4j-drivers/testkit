@@ -42,23 +42,34 @@ class NotificationsBase(TestkitTestCase):
         return [
             {
                 "protocol": {"min_sev": "OFF", "dis_cats": None},
-                "script": {"#NOTIS#": '"noti_min_sev":"OFF", '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity":"OFF", '
+                }
             },
             {
                 "protocol": {"min_sev": "INFORMATION", "dis_cats": None},
-                "script": {"#NOTIS#": '"noti_min_sev":"INFORMATION", '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity"'
+                               ':"INFORMATION", '
+                }
             },
             {
                 "protocol": {"min_sev": "WARNING", "dis_cats": None},
-                "script": {"#NOTIS#": '"noti_min_sev":"WARNING", '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                }
             },
             {
                 "protocol": {
                     "min_sev": "INFORMATION",
                     "dis_cats": ["UNRECOGNIZED"]
                 },
-                "script": {"#NOTIS#": '"noti_min_sev":"INFORMATION", '
-                                      '"noti_dis_cats":["UNRECOGNIZED"], '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity"'
+                               ':"INFORMATION", '
+                               '"notifications_disabled_categories"'
+                               ':["UNRECOGNIZED"], '
+                }
             },
             {
                 "protocol": {
@@ -66,8 +77,9 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["UNRECOGNIZED", "UNSUPPORTED"]
                 },
                 "script": {
-                    "#NOTIS#": '"noti_min_sev":"WARNING", '
-                               '"noti_dis_cats":["UNRECOGNIZED", "UNSUPPORTED"], '  # noqa: E501
+                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                               '"notifications_disabled_categories":'
+                               '["UNRECOGNIZED", "UNSUPPORTED"], '
                 }
             },
             {
@@ -75,31 +87,42 @@ class NotificationsBase(TestkitTestCase):
                     "min_sev": "WARNING",
                     "dis_cats": ["PERFORMANCE"]
                 },
-                "script": {"#NOTIS#": '"noti_min_sev":"WARNING", '
-                                      '"noti_dis_cats":["PERFORMANCE"], '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                               '"notifications_disabled_categories"'
+                               ':["PERFORMANCE"], '
+                }
             },
             {
                 "protocol": {
                     "min_sev": "WARNING",
                     "dis_cats": ["DEPRECATION"]
                 },
-                "script": {"#NOTIS#": '"noti_min_sev":"WARNING", '
-                                      '"noti_dis_cats":["DEPRECATION"], '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                               '"notifications_disabled_categories"'
+                               ':["DEPRECATION"], '
+                }
             },
             {
                 "protocol": {
                     "min_sev": "WARNING",
                     "dis_cats": ["GENERIC"]
                 },
-                "script": {"#NOTIS#": '"noti_min_sev":"WARNING", '
-                                      '"noti_dis_cats":["GENERIC"], '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                               '"notifications_disabled_categories"'
+                               ':["GENERIC"], '
+                }
             },
             {
                 "protocol": {
                     "min_sev": "WARNING",
                     "dis_cats": ["HINT"]
                 },
-                "script": {"#NOTIS#": '"noti_min_sev":"WARNING", '
-                                      '"noti_dis_cats":["HINT"], '}
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                               '"notifications_disabled_categories":["HINT"], '
+                }
             }
         ]
