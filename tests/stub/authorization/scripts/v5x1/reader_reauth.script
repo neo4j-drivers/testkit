@@ -32,4 +32,12 @@ S: RECORD [1]
    SUCCESS {"type": "r"}
 
 *: RESET
+
+C: RUN "RETURN 4 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
 ?: GOODBYE

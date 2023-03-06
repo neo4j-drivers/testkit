@@ -1,5 +1,8 @@
 from .. import protocol
-from .auth_token_provider import AuthTokenProvider
+from .auth_token_manager import (
+    AuthTokenManager,
+    TemporalAuthTokenManager,
+)
 from .bookmark_manager import BookmarkManager
 from .session import Session
 
@@ -16,23 +19,21 @@ class Driver:
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
-        self._auth_token, self._auth_token_provider = None, None
-        auth_token_provider_id = None
+        self._auth_token, self._auth_token_manager = None, None
+        auth_token_manager_id = None
         if (
             isinstance(auth_token, protocol.AuthorizationToken)
             or auth_token is None
         ):
             self._auth_token = auth_token
         else:
-            assert callable(auth_token)
-            self._auth_token_provider = AuthTokenProvider(backend, auth_token)
-            auth_token_provider_id = self._auth_token_provider.id
-
-        auth_token_provider_id = self._auth_token_provider.id \
-            if self._auth_token_provider else None
+            assert isinstance(auth_token,
+                              (AuthTokenManager, TemporalAuthTokenManager))
+            self._auth_token_manager = auth_token
+            auth_token_manager_id = auth_token.id
 
         req = protocol.NewDriver(
-            uri, self._auth_token, auth_token_provider_id,
+            uri, self._auth_token, auth_token_manager_id,
             userAgent=user_agent, resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
@@ -68,14 +69,16 @@ class Driver:
                         hooks=hooks
                     )
                     continue
-            bookmark_manager_response = BookmarkManager.process_callbacks(res)
-            if bookmark_manager_response:
-                self._backend.send(bookmark_manager_response, hooks=hooks)
-                continue
-            auth_token_provider_response = \
-                AuthTokenProvider.process_callbacks(res)
-            if auth_token_provider_response:
-                self._backend.send(auth_token_provider_response, hooks=hooks)
+            for cb_processor in (
+                BookmarkManager,
+                TemporalAuthTokenManager,
+                AuthTokenManager,
+            ):
+                cb_response = cb_processor.process_callbacks(res)
+                if cb_response is not None:
+                    self._backend.send(cb_response, hooks=hooks)
+                    break
+            if cb_response is not None:
                 continue
 
             return res
@@ -155,8 +158,8 @@ class Driver:
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Driver):
             raise Exception(f"Should be Driver but was {res}")
-        if self._auth_token_provider:
-            self._auth_token_provider.close()
+        if self._auth_token_manager:
+            self._auth_token_manager.close()
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,

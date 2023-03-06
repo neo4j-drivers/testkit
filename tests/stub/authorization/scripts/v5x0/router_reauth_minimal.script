@@ -1,0 +1,22 @@
+!: BOLT #VERSION#
+!: ALLOW RESTART
+
+{{
+    # connection 1 for session 1 and 2
+    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+----
+    # connection 2 for session 3 and 4
+    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo4j", "credentials": "password"}
+}}
+*: RESET
+
+C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+
+C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+?: GOODBYE

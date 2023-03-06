@@ -66,7 +66,7 @@ class NewDriver:
     """
 
     def __init__(
-        self, uri, authToken, auth_token_provider_id, userAgent=None,
+        self, uri, authToken, auth_token_manager_id, userAgent=None,
         resolverRegistered=False, domainNameResolverRegistered=False,
         connectionTimeoutMs=None, fetchSize=None, maxTxRetryTimeMs=None,
         encrypted=None, trustedCertificates=None,
@@ -76,9 +76,9 @@ class NewDriver:
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
-        assert authToken is None or auth_token_provider_id is None
+        assert authToken is None or auth_token_manager_id is None
         self.authorizationToken = authToken
-        self.authTokenProviderId = auth_token_provider_id
+        self.authTokenManagerId = auth_token_manager_id
         # Optional custom user agent string
         self.userAgent = userAgent
         self.resolverRegistered = resolverRegistered
@@ -132,9 +132,14 @@ class AuthorizationToken:
         for attr, value in kwargs.items():
             setattr(self, attr, value)
 
+    def __eq__(self, other):
+        if not isinstance(other, AuthorizationToken):
+            return NotImplemented
+        return vars(self) == vars(other)
 
-class RenewableAuthToken:
-    """Not a request but used in `AuthTokenProviderCompleted`."""
+
+class TemporalAuthToken:
+    """Not a request but used in `TemporalAuthTokenProviderCompleted`."""
 
     def __init__(self, auth, expires_in_ms=None):
         assert isinstance(auth, AuthorizationToken)
@@ -144,18 +149,18 @@ class RenewableAuthToken:
         self.expiresInMs = expires_in_ms
 
 
-class NewAuthTokenProvider:
+class NewAuthTokenManager:
     """
-    Create a new auth token provider function on the backend.
+    Create a new custom auth token provider function on the backend.
 
-    The backend should respond with `AuthTokenProvider`.
+    The backend should respond with `AuthTokenManager`.
     """
 
     def __init__(self):
         pass
 
 
-class AuthTokenProviderCompleted:
+class AuthTokenManagerGetAuthCompleted:
     """
     Result of a completed auth token provider function call.
 
@@ -164,20 +169,59 @@ class AuthTokenProviderCompleted:
 
     def __init__(self, request_id, auth):
         self.requestId = request_id
-        assert isinstance(auth, RenewableAuthToken)
+        assert isinstance(auth, AuthorizationToken)
         self.auth = auth
 
 
-class AuthTokenProviderClose:
+class AuthTokenManagerOnAuthExpiredCompleted:
     """
-    Request to remove an auth token provider function from the backend.
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class AuthTokenManagerClose:
+    """
+    Request to remove an auth token manager from the backend.
 
     The backend may free any resources associated with the provider and respond
-    with `AuthTokenProvider` echoing back the given id.
+    with `AuthTokenManager` echoing back the given id.
     """
 
     def __init__(self, id):
+        # Id of the auth token manager to close.
+        # This id might also point to a TemporalAuthTokenProvider.
         self.id = id
+
+
+class NewTemporalAuthTokenManager:
+    """
+    Create a new auth temporal token manager on the backend.
+
+    The manager will wrap a temporal token provider function on the backend.
+
+    The backend should respond with `TemporalAuthTokenManager`.
+    """
+
+    def __init__(self):
+        pass
+
+
+class TemporalAuthTokenProviderCompleted:
+    """
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id, auth):
+        self.requestId = request_id
+        assert isinstance(auth, TemporalAuthToken)
+        self.auth = auth
 
 
 class VerifyConnectivity:

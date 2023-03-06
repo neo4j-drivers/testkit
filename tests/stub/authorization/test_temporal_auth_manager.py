@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from nutkit.frontend import (
     Driver,
     FakeTime,
+    TemporalAuthTokenManager,
 )
 import nutkit.protocol as types
 from tests.shared import driver_feature
@@ -10,7 +11,7 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
-class TestRenewableAuth5x1(AuthorizationBase):
+class TestTemporalAuthManager5x1(AuthorizationBase):
 
     required_features = types.Feature.BOLT_5_1,
 
@@ -70,7 +71,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            return types.RenewableAuthToken(
+            return types.TemporalAuthToken(
                 types.AuthorizationToken(
                     scheme="basic",
                     principal="neo4j",
@@ -78,11 +79,13 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 )
             )
 
+        auth_manager = TemporalAuthTokenManager(self._backend, provider)
+
         self.start_server(
             self._reader,
             self.script_fn_with_features("reader_no_reauth.script")
         )
-        with self.driver(provider) as driver:
+        with self.driver(auth_manager) as driver:
             with self.session(driver) as session:
                 list(session.run("RETURN 1 AS n"))
 
@@ -97,7 +100,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            return types.RenewableAuthToken(
+            return types.TemporalAuthToken(
                 types.AuthorizationToken(
                     scheme="basic",
                     principal="neo4j",
@@ -105,13 +108,15 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 )
             )
 
+        auth_manager = TemporalAuthTokenManager(self._backend, provider)
+
         self.start_server(
             self._reader,
             self.script_fn_with_features("reader_no_reauth.script")
         )
 
         with FakeTime(self._backend) as time:
-            with self.driver(provider) as driver:
+            with self.driver(auth_manager) as driver:
                 with self.session(driver) as session:
                     list(session.run("RETURN 1 AS n"))
                 # just under 1 hour to make sure to not trip over the
@@ -135,7 +140,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
             count += 1
             credentials = "password" if count > 1 else "pass"
 
-            return types.RenewableAuthToken(
+            return types.TemporalAuthToken(
                 types.AuthorizationToken(
                     scheme="basic",
                     principal="neo4j",
@@ -144,10 +149,12 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 10_000
             )
 
+        auth_manager = TemporalAuthTokenManager(self._backend, provider)
+
         self.start_server(self._reader,
                           self.script_fn_with_features("reader_reauth.script"))
         with FakeTime(self._backend) as time:
-            with self.driver(provider) as driver:
+            with self.driver(auth_manager) as driver:
                 with self.session(driver) as session:
                     list(session.run("RETURN 1 AS n"))
 
@@ -163,6 +170,9 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 with self.session(driver) as session:
                     list(session.run("RETURN 3 AS n"))
 
+                with self.session(driver) as session:
+                    list(session.run("RETURN 4 AS n"))
+
                 self.assertEqual(2, count)
 
         self._reader.done()
@@ -177,7 +187,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 count += 1
                 credentials = "password" if count > 1 else "pass"
 
-                return types.RenewableAuthToken(
+                return types.TemporalAuthToken(
                     types.AuthorizationToken(
                         scheme="basic",
                         principal="neo4j",
@@ -185,6 +195,8 @@ class TestRenewableAuth5x1(AuthorizationBase):
                     ),
                     10_000
                 )
+
+            auth_manager = TemporalAuthTokenManager(self._backend, provider)
 
             expected_call_count = 2 if error_ == "token_expired" else 1
 
@@ -201,7 +213,7 @@ class TestRenewableAuth5x1(AuthorizationBase):
                 )
                 self.start_server(self._router, "router_single_reader.script")
 
-            with self.driver(provider, routing=routing_) as driver:
+            with self.driver(auth_manager, routing=routing_) as driver:
                 if routing_:
                     with self.session(driver, "w") as session_w:
                         list(session_w.run("RETURN 1 AS n"))
@@ -279,8 +291,12 @@ class TestRenewableAuth5x1(AuthorizationBase):
                         self._writer.reset()
                         self._router.reset()
 
+    @driver_feature(types.Feature.API_DRIVER_SUPPORTS_SESSION_AUTH)
+    def test_not_renewing_on_user_switch_expiration_error(self):
+        ...
 
-class TestRenewableAuth5x0(TestRenewableAuth5x1):
+
+class TestTemporalAuthManager5x0(TestTemporalAuthManager5x1):
 
     required_features = types.Feature.BOLT_5_0,
 
@@ -298,3 +314,6 @@ class TestRenewableAuth5x0(TestRenewableAuth5x1):
 
     def test_renewing_on_expiration_error(self):
         super().test_renewing_on_expiration_error()
+
+    def test_not_renewing_on_user_switch_expiration_error(self):
+        super().test_not_renewing_on_user_switch_expiration_error()
