@@ -4,6 +4,7 @@ import re
 
 from nutkit.frontend import Driver
 import nutkit.protocol as types
+from tests.shared import driver_feature
 from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
@@ -80,6 +81,7 @@ class TestUserSwitchingV5x1(AuthorizationBase):
         self.assertEqual(0, self._reader.count_requests("RESET"))
         self.assertEqual(0, self._router.count_requests("RESET"))
 
+    @driver_feature(types.Feature.API_DRIVER_SUPPORTS_SESSION_AUTH)
     def test_supports_session_auth(self):
         self.start_server(
             self._router,
