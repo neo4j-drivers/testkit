@@ -94,6 +94,11 @@ class AuthorizationBase(TestkitTestCase):
                 "user switch.",
                 error.msg
             )
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.UnsupportedFeatureException",
+                error.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
