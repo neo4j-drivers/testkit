@@ -301,7 +301,8 @@ class TestVerifyAuthenticationV5x0BackwardsCompatibility(
 ):
 
     required_features = (*_TestVerifyAuthenticationBase.required_features,
-                         types.Feature.BOLT_5_0)
+                         types.Feature.BOLT_5_0,
+                         types.Feature.INTERNAL_USER_SWITCH_POLYFILL)
 
     backwards_compatible_auth = True
 

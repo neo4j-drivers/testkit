@@ -186,3 +186,10 @@ class Feature(Enum):
     # and provides a way to force a routing table update (for testing only,
     # should not be exposed to the user).
     BACKEND_RT_FORCE_UPDATE = "Backend:RTForceUpdate"
+
+    # TODO: revisit when decision on backwards compatibility has been made
+    # Backends are not supposed to support this. it's just a quick way of
+    # disabling the affected tests for now.
+    # If we decide to implement this functionality, this should be promoted to
+    # a porper feature flag.
+    INTERNAL_USER_SWITCH_POLYFILL = "INTERNAL:UserSwitchPolyfill"

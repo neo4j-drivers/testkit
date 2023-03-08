@@ -189,7 +189,8 @@ class TestUserSwitchingV5x1(AuthorizationBase):
 class TestUserSwitchingV5x0BackwardsCompatibility(TestUserSwitchingV5x1):
 
     required_features = (types.Feature.BOLT_5_0,
-                         types.Feature.API_SESSION_AUTH_CONFIG)
+                         types.Feature.API_SESSION_AUTH_CONFIG,
+                         types.Feature.INTERNAL_USER_SWITCH_POLYFILL)
 
     supports_session_auth = False
     backwards_compatible_auth = True
