@@ -13,7 +13,8 @@ from tests.stub.shared import StubServer
 
 class TestTemporalAuthManager5x1(AuthorizationBase):
 
-    required_features = types.Feature.BOLT_5_1,
+    required_features = (types.Feature.BOLT_5_1,
+                         types.Feature.AUTH_MANAGED)
 
     def setUp(self):
         super().setUp()
@@ -298,7 +299,8 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
 
 class TestTemporalAuthManager5x0(TestTemporalAuthManager5x1):
 
-    required_features = types.Feature.BOLT_5_0,
+    required_features = (types.Feature.BOLT_5_0,
+                         types.Feature.AUTH_MANAGED)
 
     def get_vars(self):
         return {**super().get_vars(), "#VERSION#": "5.0"}

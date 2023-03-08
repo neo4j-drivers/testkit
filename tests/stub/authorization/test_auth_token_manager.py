@@ -52,7 +52,8 @@ class TrackingAuthTokenManager:
 
 class TestAuthTokenManager5x1(AuthorizationBase):
 
-    required_features = types.Feature.BOLT_5_1,
+    required_features = (types.Feature.BOLT_5_1,
+                         types.Feature.AUTH_MANAGED)
     backwards_compatible = False
 
     def setUp(self):
@@ -189,7 +190,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
             if self.backwards_compatible:
                 # each time the credentials change, the driver will issue an
                 # extra getAuth query to authenticate the new connection that
-                # replaces the one that got closed as a means of profividing
+                # replaces the one that got closed as a means of providing
                 # backwards compatibility with older servers
                 expected_get_auth_count += 1
             if routing_:
@@ -422,7 +423,8 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
 class TestAuthTokenManager5x0(TestAuthTokenManager5x1):
 
-    required_features = types.Feature.BOLT_5_0,
+    required_features = (types.Feature.BOLT_5_0,
+                         types.Feature.AUTH_MANAGED)
     backwards_compatible = True
 
     def get_vars(self):

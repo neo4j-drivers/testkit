@@ -78,6 +78,10 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
+    # The driver supports an auth token manager or similar mechanism for the
+    # user to provide (potentially changing) auth tokens and a way to get
+    # notified when the server reports a token expired.
+    AUTH_MANAGED = "Feature:Auth:Managed"
     # The driver supports Bolt protocol version 3
     BOLT_3_0 = "Feature:Bolt:3.0"
     # The driver supports Bolt protocol version 4.1
