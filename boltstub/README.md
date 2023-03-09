@@ -41,8 +41,8 @@ The following options are available:
    E.g. `!: HANDSHAKE FF 00 00 01`
  * `!: PY ${ARBITRATY PYTHON CODE}`  
    Executes the specified Python code once when the script is loaded regardless of how many times it is played (s. `!: ALLOW RESTART` and `!: ALLOW CONCURRENT` ).
-   Only a single lines are supported.
-   This particularly useful to initialize variables used later in the script (e.g., in Python lines or Conditional Blocks).
+   Only single lines are supported.
+   This is particularly useful to initialize variables used later in the script (e.g., in Python lines or Conditional Blocks).
 
 
 ## The Body
@@ -79,7 +79,7 @@ Client and server lines consist of three parts:
  * A whitespace separated list of data fields in JOLT format.
    E.g., `"RETURN 1 as n" {} {}`.
    Cf. [[DRV16] Jolt](https://docs.google.com/document/u/0/d/1QK4OcC0tZ08lKqVr-3-z8HpPY9jFeEh6zZPhMm15D-w/edit) (internal document).
-   Note, that stubscript took the liberty to support a simple representation of dictionaries (whenever unambiguous) for improved backwards compatibility, brevity, and readability of stubscripts.
+   Note, that Stubscript took the liberty to support a simple representation of dictionaries (whenever unambiguous) for improved backwards compatibility, brevity, and readability of Stubscripts.
    * By default, the Stubserver derives the appropriate PackStream version to use from the specified Bolt version.
      However, you can manually overwrite this by appending a version to the JOLT object keys.
      Given some JOLT key `"T"`, you can append a `"vX"` giving `"TvX"`, where `X` is the version of PackStream you wish to overwrite.
@@ -267,7 +267,7 @@ S: ALWAYS_THIS_RESPONSE
 As you might expect, you can have any number of `ELIF`s (including 0) and the `ELSE` is optional.
 
 Note in the above example, that the two server lines in the `ELSE` branch are one block because they use the implicit block syntax.
-Generally, stubscript is whitespace insensitive and that also applies here.
+Generally, Stubscript is whitespace insensitive and that also applies here.
 To avoid confusion or to group multiple blocks together, use Simple Blocks (s. above) or other grouping blocks.
 
 Example:
@@ -349,16 +349,18 @@ are internally expanded to
 Whenever there is ambiguity in the path of the script, the first option (top to bottom) will be chosen.
 Furthermore, each block that might or might not be executed due to ambiguity must not start with a Server Block, neither can it start with another block that potentially starts with a Server Block.
 
-| Type of Block     | Inner Block List(s) can start with a Server Block | Can be followed by a Server or Python Block |
-|-------------------|---------------------------------------------------|---------------------------------------------|
-| Block List        | —                                                 | Depends on the last block                   |
-| Client Block      | —                                                 | ✅                                           |
-| Server Block      | —                                                 | ✅                                           |
-| Python Block      | —                                                 | ✅                                           |
-| Alternative Block | ❌                                                 | ✅                                           |
-| Optional Block    | ❌                                                 | ❌                                           |
-| Repeat 0 Block    | ❌                                                 | ❌                                           |
-| Repeat 1 Block    | ❌                                                 | ❌                                           |
+| Type of Block     | Inner Block List(s) can start with a Server/Python Block | Can be followed by a Server/Python Block |
+|-------------------|----------------------------------------------------------|------------------------------------------|
+| Block List        | ✅                                                        | Depends on the last inner block          |
+| Client Block      | —                                                        | ✅                                        |
+| Server Block      | —                                                        | ✅                                        |
+| Python Block      | —                                                        | ✅                                        |
+| Alternative Block | ❌                                                        | ✅                                        |
+| Optional Block    | ❌                                                        | ❌                                        |
+| Repeat 0 Block    | ❌                                                        | ❌                                        |
+| Repeat 1 Block    | ❌                                                        | ❌                                        |
+| Simple Block      | ✅                                                        | Depends on the last inner block          |
+| Conditional Block | ✅                                                        | If last inner block of each branch can   |
 
 
 ## Whitespace
