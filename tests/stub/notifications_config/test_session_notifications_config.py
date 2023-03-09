@@ -67,9 +67,11 @@ class TestSessionNotificationsConfig(NotificationsBase):
     def _open_session(self, filters, script, script_params, driver_params):
         self._server.start(self.script_path(script), vars_=script_params)
         if driver_params is not None:
+            sev = driver_params["min_severity"]
+            cats = driver_params["disabled_categories"]
             self._driver = Driver(self._backend, self._uri, self._auth,
-                                  notifications_min_severity=driver_params["min_severity"],  # noqa: E501
-                                  notifications_disabled_categories=driver_params["disabled_categories"])  # noqa: E501
+                                  notifications_min_severity=sev,
+                                  notifications_disabled_categories=cats)
         else:
             self._driver = Driver(self._backend, self._uri, self._auth)
         return self._session(self._driver, filters)

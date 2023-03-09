@@ -60,6 +60,12 @@ class NotificationsBase(TestkitTestCase):
                 }
             },
             {
+                "protocol": {"min_sev": None, "dis_cats": []},
+                "script": {
+                    "#NOTIS#": '"notifications_disabled_categories:[], '
+                }
+            },
+            {
                 "protocol": {
                     "min_sev": "INFORMATION",
                     "dis_cats": ["UNRECOGNIZED"]
