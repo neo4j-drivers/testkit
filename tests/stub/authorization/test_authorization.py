@@ -19,57 +19,59 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
+        expected_type = None
         if driver in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.AuthorizationExpiredException",
-                error.errorType
-            )
+            expected_type = \
+                "org.neo4j.driver.exceptions.AuthorizationExpiredException"
         elif driver in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.TransientError'>", error.errorType
-            )
+            expected_type = "<class 'neo4j.exceptions.TransientError'>"
         elif driver in ["javascript"]:
-            # only test for code
-            pass
+            pass  # only test for code
         elif driver in ["dotnet"]:
-            self.assertEqual("AuthorizationExpired", error.errorType)
+            expected_type = "AuthorizationExpired"
         elif driver in ["ruby"]:
-            self.assertEqual(
-                "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
-                error.errorType
-            )
+            expected_type = \
+                "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
+        self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
-        self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                         error.code)
+        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
+        self.assertIn("Token expired", error.msg)
+
+        expected_type = None
         if driver in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
-            )
+            expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
         elif driver in ["go", "javascript"]:
-            self.assertIn(
-                "Token expired", error.msg
-            )
+            pass  # code and msg check are enough
         elif driver == "java":
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.TokenExpiredException",
-                error.errorType
-            )
-            self.assertIn("Token expired", error.msg)
+            expected_type = "org.neo4j.driver.exceptions.TokenExpiredException"
         elif driver == "ruby":
-            self.assertEqual(
-                "Neo4j::Driver::Exceptions::TokenExpiredException",
-                error.errorType
-            )
-            self.assertIn("Token expired", error.msg)
+            expected_type = "Neo4j::Driver::Exceptions::TokenExpiredException"
         elif driver == "dotnet":
-            self.assertEqual("ClientError", error.errorType)
-            self.assertIn("Token expired", error.msg)
+            expected_type = "ClientError"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
+        self.assertEqual(expected_type, error.errorType)
+
+    def assert_is_retryable_token_error(self, error):
+        driver = get_driver_name()
+        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
+        self.assertIn("Token expired", error.msg)
+
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
+        elif driver in ["go", "javascript"]:
+            pass  # code and msg check are enough
+        elif driver == "java":
+            expected_type = \
+                "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        self.assertEqual(expected_type, error.errorType)
 
     def assert_re_auth_unsupported_error(self, error):
         self.assertIsInstance(error, types.DriverError)

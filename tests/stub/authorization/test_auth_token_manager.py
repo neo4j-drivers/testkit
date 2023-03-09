@@ -285,7 +285,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     def test_notify_on_token_expired_pull_using_session_run(self):
         self._notify_on_failed_pull_using_session_run(
-            self._TOKEN_EXPIRED, self.assert_is_token_error
+            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
     def _notify_on_failed_begin_using_tx_run(self, error, error_assertion):
@@ -318,7 +318,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     def test_notify_on_token_expired_begin_using_tx_run(self):
         self._notify_on_failed_begin_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_token_error
+            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
     def _notify_on_failed_run_using_tx_run(self, error, error_assertion):
@@ -345,7 +345,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     def test_notify_on_token_expired_run_using_tx_run(self):
         self._notify_on_failed_run_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_token_error
+            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
     def _notify_on_failed_pull_using_tx_run(self, error, error_assertion):
@@ -369,7 +369,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     def test_notify_on_token_expired_pull_using_tx_run(self):
         self._notify_on_failed_pull_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_token_error
+            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
     def _notify_on_failed_commit_using_tx_run(self, error, error_assertion):
@@ -393,7 +393,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     def test_notify_on_token_expired_commit_using_tx_run(self):
         self._notify_on_failed_commit_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_token_error
+            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
     def _notify_on_failed_rollback_using_tx_run(self, error, error_assertion):
@@ -417,7 +417,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     def test_notify_on_token_expired_rollback_using_tx_run(self):
         self._notify_on_failed_rollback_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_token_error
+            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
 

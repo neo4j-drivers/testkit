@@ -244,7 +244,9 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
                                 # connection 2 fails, gets closed
                                 list(session_r2.run("RETURN 2.2 AS n"))
                             if error_ == "token_expired":
-                                self.assert_is_token_error(exc.exception)
+                                self.assert_is_retryable_token_error(
+                                    exc.exception
+                                )
                             elif error_ == "authorization_expired":
                                 self.assert_is_authorization_error(
                                     exc.exception
