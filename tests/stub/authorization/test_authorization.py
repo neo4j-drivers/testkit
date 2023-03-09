@@ -19,55 +19,88 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
+        expected_type = None
         if driver in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.AuthorizationExpiredException",
-                error.errorType
-            )
+            expected_type = \
+                "org.neo4j.driver.exceptions.AuthorizationExpiredException"
         elif driver in ["python"]:
-            self.assertEqual(
-                "<class 'neo4j.exceptions.TransientError'>", error.errorType
-            )
+            expected_type = "<class 'neo4j.exceptions.TransientError'>"
         elif driver in ["javascript"]:
-            # only test for code
-            pass
+            pass  # only test for code
         elif driver in ["dotnet"]:
-            self.assertEqual("AuthorizationExpired", error.errorType)
+            expected_type = "AuthorizationExpired"
         elif driver in ["ruby"]:
-            self.assertEqual(
-                "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
-                error.errorType
-            )
+            expected_type = \
+                "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
+        self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
-        self.assertEqual("Neo.ClientError.Security.TokenExpired",
-                         error.code)
+        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
+        self.assertIn("Token expired", error.msg)
+
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
+        elif driver in ["go", "javascript"]:
+            pass  # code and msg check are enough
+        elif driver == "java":
+            expected_type = "org.neo4j.driver.exceptions.TokenExpiredException"
+        elif driver == "ruby":
+            expected_type = "Neo4j::Driver::Exceptions::TokenExpiredException"
+        elif driver == "dotnet":
+            expected_type = "ClientError"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        self.assertEqual(expected_type, error.errorType)
+
+    def assert_is_retryable_token_error(self, error):
+        driver = get_driver_name()
+        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
+        self.assertIn("Token expired", error.msg)
+
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
+        elif driver in ["go", "javascript"]:
+            pass  # code and msg check are enough
+        elif driver == "java":
+            expected_type = \
+                "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        self.assertEqual(expected_type, error.errorType)
+
+    def assert_re_auth_unsupported_error(self, error):
+        self.assertIsInstance(error, types.DriverError)
+        driver = get_driver_name()
         if driver in ["python"]:
             self.assertEqual(
-                "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
+                "<class 'neo4j.exceptions.ConfigurationError'>",
+                error.errorType
             )
-        elif driver in ["go", "javascript"]:
             self.assertIn(
-                "Token expired", error.msg
+                "session level authentication is not supported for bolt "
+                "protocol version(5, 0)",
+                error.msg.lower()
             )
-        elif driver == "java":
+        elif driver in ["javascript"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.TokenExpiredException",
+                "N/A",
+                error.code
+            )
+            self.assertEqual(
+                "Driver is connected to a database that does not support "
+                "user switch.",
+                error.msg
+            )
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.UnsupportedFeatureException",
                 error.errorType
             )
-            self.assertIn("Token expired", error.msg)
-        elif driver == "ruby":
-            self.assertEqual(
-                "Neo4j::Driver::Exceptions::TokenExpiredException",
-                error.errorType
-            )
-            self.assertIn("Token expired", error.msg)
-        elif driver == "dotnet":
-            self.assertEqual("ClientError", error.errorType)
-            self.assertIn("Token expired", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -1091,6 +1124,11 @@ class TestAuthenticationSchemesV5x0(TestAuthenticationSchemesV4x4):
         return {
             "#VERSION#": "5.0"
         }
+
+    def post_script_assertions(self):
+        # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            self.assertEqual(self._server.count_requests("RESET"), 0)
 
 
 class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV5x0):

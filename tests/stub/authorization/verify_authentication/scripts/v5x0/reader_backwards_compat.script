@@ -1,0 +1,18 @@
+!: BOLT #VERSION#
+
+A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", #VERIFY_AUTH#, "[realm]": ""}
+*: RESET
+
+# optionally, dummy queries
+{*
+    C: RUN {"U": "*"} "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": {"Z": "*"}}
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+
+    *: RESET
+*}
+
+# enforce GOODBYE as this is a throwaway connection
+A: GOODBYE

@@ -142,7 +142,7 @@ class TestProtocolVersions(TestkitTestCase):
         self._run("5x1")
 
     def test_server_version(self):
-        for version in ("5x0", "5x1", "4x4", "4x3", "4x2", "4x1", "3"):
+        for version in ("5x1", "5x0", "4x4", "4x3", "4x2", "4x1", "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version=version):
@@ -212,7 +212,9 @@ class TestProtocolVersions(TestkitTestCase):
         # TODO remove this block once fixed
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
-        self._test_should_reject_server_using_verify_connectivity(version="3")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="3", script="v3_optional_hello.script"
+        )
 
     @driver_feature(types.Feature.BOLT_4_1)
     def test_should_reject_server_using_verify_connectivity_bolt_4x1(self):
@@ -220,7 +222,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.1"
+            version="4.1", script="v3_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_2)
@@ -229,7 +231,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.2"
+            version="4.2", script="v3_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_3)
@@ -238,7 +240,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.3"
+            version="4.3", script="v3_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_4)
@@ -247,7 +249,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.4"
+            version="4.4", script="v3_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_0)
@@ -256,7 +258,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.0"
+            version="5.0", script="v3_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_1)
@@ -265,18 +267,16 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.1"
+            version="5.1", script="v5x1_optional_hello.script"
         )
 
-    def _test_should_reject_server_using_verify_connectivity(self, version):
+    def _test_should_reject_server_using_verify_connectivity(
+        self, version, script
+    ):
         uri = "bolt://%s" % self._server.address
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        if tuple(version.split(".")) < ("5", "1"):
-            script = "optional_hello_pre_v5x1.script"
-        else:
-            script = "optional_hello.script"
         script_path = self.script_path(script)
         variables = {
             "#VERSION#": version,

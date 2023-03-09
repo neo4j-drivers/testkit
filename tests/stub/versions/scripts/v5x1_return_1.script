@@ -1,15 +1,8 @@
 !: BOLT 5.1
 
-{{
-    C: HELLO {"{}": "*"} {"user_agent": {"U": "*"}, "routing": {"{}": "*"}, "notifications": {"[]": "*"}}
-----
-    C: HELLO {"{}": "*"} {"user_agent": {"U": "*"}, "[routing]": null, "notifications": {"[]": "*"}}
-----
-    C: HELLO {"{}": "*"} {"user_agent": {"U": "*"}, "routing": {"{}": "*"}, "[notifications]": null}
-----
-    C: HELLO {"{}": "*"} {"user_agent": {"U": "*"}, "[routing]": null, "[notifications]": null}
-}}
+C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+A: LOGON {"{}": "*"}
 *: RESET
 {?
     C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}

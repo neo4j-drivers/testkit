@@ -83,6 +83,10 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
+    # The driver supports an auth token manager or similar mechanism for the
+    # user to provide (potentially changing) auth tokens and a way to get
+    # notified when the server reports a token expired.
+    AUTH_MANAGED = "Feature:Auth:Managed"
     # The driver supports Bolt protocol version 3
     BOLT_3_0 = "Feature:Bolt:3.0"
     # The driver supports Bolt protocol version 4.1
@@ -193,3 +197,10 @@ class Feature(Enum):
     # and provides a way to force a routing table update (for testing only,
     # should not be exposed to the user).
     BACKEND_RT_FORCE_UPDATE = "Backend:RTForceUpdate"
+
+    # TODO: revisit when decision on backwards compatibility has been made
+    # Backends are not supposed to support this. it's just a quick way of
+    # disabling the affected tests for now.
+    # If we decide to implement this functionality, this should be promoted to
+    # a porper feature flag.
+    INTERNAL_USER_SWITCH_POLYFILL = "INTERNAL:UserSwitchPolyfill"
