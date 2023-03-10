@@ -153,7 +153,8 @@ class Node:
         if elementId is None:
             import warnings
             warnings.warn(
-                "Backend needs to support new style IDs for nodes"
+                "Backend needs to support new style IDs for nodes",
+                stacklevel=2
             )
         self.id = id
         self.labels = labels
@@ -190,7 +191,8 @@ class Relationship:
         if None in (elementId, startNodeElementId, endNodeElementId):
             import warnings
             warnings.warn(
-                "Backend needs to support new style IDs for relationships"
+                "Backend needs to support new style IDs for relationships",
+                stacklevel=2
             )
         self.id = id
         self.startNodeId = startNodeId

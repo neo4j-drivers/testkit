@@ -154,7 +154,8 @@ class BangLine(Line):
         if self._type == BangLine.TYPE_AUTO:
             if self._arg in ctx.auto:
                 warnings.warn(
-                    'Specified AUTO for "{}" multiple times'.format(self._arg)
+                    'Specified AUTO for "{}" multiple times'.format(self._arg),
+                    stacklevel=2
                 )
             ctx.auto.add(self._arg)
             ctx.bang_lines["auto"][self._arg] = self
@@ -165,23 +166,33 @@ class BangLine(Line):
             ctx.bang_lines["bolt_version"] = self
         elif self._type == BangLine.TYPE_RESTART:
             if ctx.restarting:
-                warnings.warn('Specified "!: ALLOW RESTART" multiple times')
+                warnings.warn(
+                    'Specified "!: ALLOW RESTART" multiple times',
+                    stacklevel=2
+                )
             ctx.restarting = True
             ctx.bang_lines["restarting"] = self
         elif self._type == BangLine.TYPE_CONCURRENT:
             if ctx.concurrent:
-                warnings.warn('Specified "!: ALLOW CONCURRENT" multiple times')
+                warnings.warn(
+                    'Specified "!: ALLOW CONCURRENT" multiple times',
+                    stacklevel=2
+                )
             ctx.concurrent = True
             ctx.bang_lines["concurrent"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE:
             if ctx.handshake:
-                warnings.warn('Specified "!: HANDSHAKE" multiple times')
+                warnings.warn(
+                    'Specified "!: HANDSHAKE" multiple times',
+                    stacklevel=2
+                )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
         if ctx.restarting and ctx.concurrent:
             warnings.warn(
                 'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
-                "(concurrent scripts are implicitly restarting)"
+                "(concurrent scripts are implicitly restarting)",
+                stacklevel=2
             )
 
 

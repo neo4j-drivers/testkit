@@ -312,7 +312,8 @@ class Summary:
                 import warnings
                 warnings.warn(
                     "Backend supports address field in Summary.serverInfo. "
-                    "Remove the backwards compatibility check!"
+                    "Remove the backwards compatibility check!",
+                    stacklevel=2
                 )
             else:
                 data["serverInfo"]["address"] = AnyAddress()
@@ -328,14 +329,16 @@ class Summary:
                 import warnings
                 warnings.warn(
                     "Backend supports well-formatted counter. "
-                    "Remove the backwards compatibility check!"
+                    "Remove the backwards compatibility check!",
+                    stacklevel=2
                 )
         if get_driver_name() in ["javascript", "go", "dotnet"]:
             if "counters" in data:
                 import warnings
                 warnings.warn(
                     "Backend supports counters field in Summary. "
-                    "Remove the backwards compatibility check!"
+                    "Remove the backwards compatibility check!",
+                    stacklevel=2
                 )
             else:
                 data["counters"] = {
@@ -358,7 +361,8 @@ class Summary:
                 import warnings
                 warnings.warn(
                     "Backend supports query field in Summary. "
-                    "Remove the backwards compatibility check!"
+                    "Remove the backwards compatibility check!",
+                    stacklevel=2
                 )
             else:
                 data["query"] = {
@@ -373,7 +377,8 @@ class Summary:
                     import warnings
                     warnings.warn(
                         "Backend supports %s field in Summary. "
-                        "Remove the backwards compatibility check!" % field
+                        "Remove the backwards compatibility check!" % field,
+                        stacklevel=2
                     )
                 else:
                     data[field] = None
