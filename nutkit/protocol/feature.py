@@ -79,6 +79,8 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
+    # The driver supports Bolt protocol version 5.1
+    BOLT_5_1 = "Feature:Bolt:5.1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
@@ -117,6 +119,13 @@ class Feature(Enum):
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
+    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
+    # pipelines a LOGIN right afterwards and consumes two messages after.
+    # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
+    # LOGON but pipelines it with the next message and consumes all three
+    # responses at once.
+    # Each saves a full round-trip.
+    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.

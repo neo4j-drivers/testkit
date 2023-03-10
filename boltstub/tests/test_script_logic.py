@@ -1,3 +1,21 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import contextlib
 import itertools
 from typing import Iterable
@@ -13,6 +31,7 @@ from ..parsing import (
     BlockList,
     ClientBlock,
     ClientLine,
+    ConditionalBlock,
     OptionalBlock,
     ParallelBlock,
     Repeat0Block,
@@ -22,6 +41,7 @@ from ..parsing import (
 )
 from ..simple_jolt import v1 as jolt_v1
 from ..simple_jolt import v2 as jolt_v2
+from ..util import EvalContext
 
 
 class MockChannel:
@@ -32,6 +52,7 @@ class MockChannel:
         self.raw_buffer = bytearray()
         self.msg_buffer = []
         self.packstream_version = packstream_version
+        self.eval_context = EvalContext()
         if self.packstream_version == 1:
             self.jolt_package = jolt_v1
         elif self.packstream_version == 2:
@@ -109,16 +130,16 @@ def channel_factory(msg_names, packstream_version=1):
 def _test_block_reset_deterministic_end(block, channel, reset_idx):
     assert block.has_deterministic_end()
     for _ in range(reset_idx):
-        assert not block.done()
+        assert not block.done(channel)
         with channel.assert_consume():
             assert block.try_consume(channel)
     block.reset()
     channel.reset()
     for _ in range(len(channel.messages) - 1):
-        assert not block.done()
+        assert not block.done(channel)
         with channel.assert_consume():
             assert block.try_consume(channel)
-    assert block.done()
+    assert block.done(channel)
 
 
 def _test_block_reset_nondeterministic_end(block, channel, reset_idx,
@@ -127,9 +148,9 @@ def _test_block_reset_nondeterministic_end(block, channel, reset_idx,
         if skippable is None:
             return
         if step in skippable:
-            assert block.can_be_skipped()
+            assert block.can_be_skipped(channel)
         else:
-            assert not block.can_be_skipped()
+            assert not block.can_be_skipped(channel)
 
     assert not block.has_deterministic_end()
     for i in range(reset_idx):
@@ -142,17 +163,17 @@ def _test_block_reset_nondeterministic_end(block, channel, reset_idx,
         assert_skippability(step)
         with channel.assert_consume():
             assert block.try_consume(channel)
-    assert block.can_be_skipped()
+    assert block.can_be_skipped(channel)
 
 
-def _assert_accepted_messages(block, messages):
+def _assert_accepted_messages(channel, block, messages):
     assert list(map(lambda line: line.content,
-                    block.accepted_messages())) == messages
+                    block.accepted_messages(channel))) == messages
 
 
-def _assert_accepted_messages_after_reset(block, messages):
+def _assert_accepted_messages_after_reset(channel, block, messages):
     assert list(map(lambda line: line.content,
-                    block.accepted_messages_after_reset())) == messages
+                    block.accepted_messages_after_reset(channel))) == messages
 
 
 class TestAlternativeBlock:
@@ -225,20 +246,23 @@ class TestAlternativeBlock:
         msg1_channel = channel_factory(["MSG1", "NOMATCH"])
         msg2_channel = channel_factory(["MSG2", "NOMATCH"])
         branch_channel = (msg1_channel, msg2_channel)[branch]
-        assert not block_read.done()
+        assert not block_read.done(branch_channel)
         assert block_read.can_consume(msg1_channel)
         assert block_read.can_consume(msg2_channel)
-        _assert_accepted_messages(block_read, ["MSG1", "MSG2"])
-        _assert_accepted_messages_after_reset(block_read, ["MSG1", "MSG2"])
+        _assert_accepted_messages(branch_channel, block_read,
+                                  ["MSG1", "MSG2"])
+        _assert_accepted_messages_after_reset(branch_channel, block_read,
+                                              ["MSG1", "MSG2"])
         with branch_channel.assert_consume():
             assert block_read.try_consume(branch_channel)
-        assert block_read.done()
+        assert block_read.done(branch_channel)
         assert not block_read.can_consume(msg1_channel)
         assert not block_read.can_consume(msg2_channel)
         branch_channel.reset()
         assert not block_read.can_consume(branch_channel)
-        _assert_accepted_messages(block_read, [])
-        _assert_accepted_messages_after_reset(block_read, ["MSG1", "MSG2"])
+        _assert_accepted_messages(branch_channel, block_read, [])
+        _assert_accepted_messages_after_reset(branch_channel, block_read,
+                                              ["MSG1", "MSG2"])
 
     @pytest.mark.parametrize("branch", range(2))
     def test_block_write(self, block_write, branch):
@@ -246,20 +270,24 @@ class TestAlternativeBlock:
         msg2_channel = channel_factory(["MSG2", "NOMATCH"])
         expected_message = ("SMSG1", "SMSG2")[branch]
         branch_channel = (msg1_channel, msg2_channel)[branch]
-        _assert_accepted_messages(block_write, ["MSG1", "MSG2"])
-        _assert_accepted_messages_after_reset(block_write, ["MSG1", "MSG2"])
+        _assert_accepted_messages(branch_channel, block_write,
+                                  ["MSG1", "MSG2"])
+        _assert_accepted_messages_after_reset(branch_channel, block_write,
+                                              ["MSG1", "MSG2"])
         with branch_channel.assert_consume():
             assert block_write.try_consume(branch_channel)
-        _assert_accepted_messages(block_write, [])
-        _assert_accepted_messages_after_reset(block_write, ["MSG1", "MSG2"])
+        _assert_accepted_messages(branch_channel, block_write, [])
+        _assert_accepted_messages_after_reset(branch_channel, block_write,
+                                              ["MSG1", "MSG2"])
         assert branch_channel.msg_buffer_names() == [expected_message]
-        assert block_write.done()
+        assert block_write.done(branch_channel)
         assert not block_write.can_consume(msg1_channel)
         assert not block_write.can_consume(msg2_channel)
         branch_channel.reset()
         assert not block_write.can_consume(branch_channel)
-        _assert_accepted_messages(block_write, [])
-        _assert_accepted_messages_after_reset(block_write, ["MSG1", "MSG2"])
+        _assert_accepted_messages(branch_channel, block_write, [])
+        _assert_accepted_messages_after_reset(branch_channel, block_write,
+                                              ["MSG1", "MSG2"])
 
     @pytest.mark.parametrize("branch", range(2))
     def test_block_reset(self, block_read, branch):
@@ -269,13 +297,13 @@ class TestAlternativeBlock:
         with branch_channel.assert_consume():
             assert block_read.try_consume(branch_channel)
         block_read.reset()
-        assert not block_read.done()
+        assert not block_read.done(branch_channel)
         branch_channel.reset()
         assert block_read.can_consume(msg1_channel)
         assert block_read.can_consume(msg2_channel)
         with branch_channel.assert_consume():
             assert block_read.try_consume(branch_channel)
-        assert block_read.done()
+        assert block_read.done(branch_channel)
 
     @pytest.mark.parametrize("messages", (("1", "2"), ("1",), ("3",)))
     def test_non_det_ending_alternative(self, block_with_non_det_end,
@@ -288,9 +316,9 @@ class TestAlternativeBlock:
         assert len(channel.msg_buffer) == len(messages)
         assert not block_with_non_det_end.can_consume(channel)
         if block_with_non_det_end.has_deterministic_end():
-            assert block_with_non_det_end.done()
+            assert block_with_non_det_end.done(channel)
         else:
-            assert block_with_non_det_end.can_be_skipped()
+            assert block_with_non_det_end.can_be_skipped(channel)
 
     @pytest.mark.parametrize("messages", (("1",), ("2",), ()))
     def test_non_det_alternative(self, block_with_non_det_block, messages):
@@ -302,9 +330,9 @@ class TestAlternativeBlock:
         assert len(channel.msg_buffer) == len(messages)
         assert not block_with_non_det_block.can_consume(channel)
         if block_with_non_det_block.has_deterministic_end():
-            assert block_with_non_det_block.done()
+            assert block_with_non_det_block.done(channel)
         else:
-            assert block_with_non_det_block.can_be_skipped()
+            assert block_with_non_det_block.can_be_skipped(channel)
 
 
 class TestBlockList:
@@ -364,10 +392,11 @@ class TestBlockList:
         assert block_det.has_deterministic_end()
         assert not channel.msg_buffer
         for i in range(3):
-            assert not block_det.done()
-            assert not block_det.can_be_skipped()
-            _assert_accepted_messages(block_det, [messages[i]])
-            _assert_accepted_messages_after_reset(block_det, [messages[0]])
+            assert not block_det.done(channel)
+            assert not block_det.can_be_skipped(channel)
+            _assert_accepted_messages(channel, block_det, [messages[i]])
+            _assert_accepted_messages_after_reset(channel, block_det,
+                                                  [messages[0]])
             with channel.assert_consume():
                 assert block_det.try_consume(channel)
             assert not block_det.can_consume(channel_factory(messages[i:]))
@@ -375,10 +404,11 @@ class TestBlockList:
                 assert not channel.msg_buffer
             else:
                 assert channel.msg_buffer_names() == ["SMSG1", "SMSG2"]
-        assert block_det.done()
-        assert block_det.can_be_skipped()
-        _assert_accepted_messages(block_det, [])
-        _assert_accepted_messages_after_reset(block_det, [messages[0]])
+        assert block_det.done(channel)
+        assert block_det.can_be_skipped(channel)
+        _assert_accepted_messages(channel, block_det, [])
+        _assert_accepted_messages_after_reset(channel, block_det,
+                                              [messages[0]])
 
     @pytest.mark.parametrize("skip1", (True, False))
     @pytest.mark.parametrize("skip2", (True, False))
@@ -389,20 +419,21 @@ class TestBlockList:
         assert block_non_det.has_deterministic_end()
         accepted = all_messages[:-1]
         for i in range(len(messages) - 1):
-            assert not block_non_det.done()
-            assert not block_non_det.can_be_skipped()
-            _assert_accepted_messages(block_non_det, accepted)
-            _assert_accepted_messages_after_reset(block_non_det,
+            assert not block_non_det.done(channel)
+            assert not block_non_det.can_be_skipped(channel)
+            _assert_accepted_messages(channel, block_non_det, accepted)
+            _assert_accepted_messages_after_reset(channel, block_non_det,
                                                   all_messages[:-1])
             accepted = all_messages[(all_messages.index(messages[i]) + 1):-1]
-            assert not block_non_det.done()
+            assert not block_non_det.done(channel)
             with channel.assert_consume():
                 assert block_non_det.try_consume(channel)
             assert not block_non_det.can_consume(channel_factory(messages[i:]))
-        assert block_non_det.can_be_skipped()
-        assert block_non_det.done()
-        _assert_accepted_messages(block_non_det, [])
-        _assert_accepted_messages_after_reset(block_non_det, all_messages[:-1])
+        assert block_non_det.can_be_skipped(channel)
+        assert block_non_det.done(channel)
+        _assert_accepted_messages(channel, block_non_det, [])
+        _assert_accepted_messages_after_reset(channel, block_non_det,
+                                              all_messages[:-1])
 
     @pytest.mark.parametrize(
         ("skip1", "skip2", "skip3"),
@@ -417,26 +448,26 @@ class TestBlockList:
         assert not block_only_non_det.has_deterministic_end()
         accepted = all_messages[:-1]
         for i in range(len(messages) - 1):
-            _assert_accepted_messages(block_only_non_det, accepted)
-            _assert_accepted_messages_after_reset(block_only_non_det,
+            _assert_accepted_messages(channel, block_only_non_det, accepted)
+            _assert_accepted_messages_after_reset(channel, block_only_non_det,
                                                   all_messages[:-1])
             accepted = all_messages[(all_messages.index(messages[i]) + 1):-1]
             with pytest.raises(RuntimeError):
-                assert not block_only_non_det.done()
-            assert block_only_non_det.can_be_skipped()
+                assert not block_only_non_det.done(channel)
+            assert block_only_non_det.can_be_skipped(channel)
             with channel.assert_consume():
                 assert block_only_non_det.try_consume(channel)
             assert not block_only_non_det.can_consume(channel_factory(
                 messages[i:]
             ))
-        assert block_only_non_det.can_be_skipped()
-        _assert_accepted_messages(block_only_non_det, accepted)
-        _assert_accepted_messages_after_reset(block_only_non_det,
+        assert block_only_non_det.can_be_skipped(channel)
+        _assert_accepted_messages(channel, block_only_non_det, accepted)
+        _assert_accepted_messages_after_reset(channel, block_only_non_det,
                                               all_messages[:-1])
         if not skip3:
             # consumed last message => block should be done
             assert block_only_non_det.has_deterministic_end()
-            assert block_only_non_det.done()
+            assert block_only_non_det.done(channel)
         else:
             assert not block_only_non_det.has_deterministic_end()
 
@@ -481,15 +512,15 @@ class TestOptionalBlock:
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
-        assert block.can_be_skipped()
+        assert block.can_be_skipped(channel)
 
         with channel.assert_consume():
             assert block.try_consume(channel)
-        assert not block.can_be_skipped()
+        assert not block.can_be_skipped(channel)
 
         with channel.assert_consume():
             assert block.try_consume(channel)
-        assert block.can_be_skipped()
+        assert block.can_be_skipped(channel)
         assert not block.can_consume(channel)
 
     @pytest.mark.parametrize("reset_idx", range(1, 2))
@@ -514,19 +545,19 @@ class TestOptionalBlock:
             ], 5), 4)
         ], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "MSG3", "NOMATCH"])
-        assert block.can_be_skipped()
+        assert block.can_be_skipped(channel)
 
         with channel.assert_consume():
             assert block.try_consume(channel)
-        assert not block.can_be_skipped()
+        assert not block.can_be_skipped(channel)
 
         with channel.assert_consume():
             assert block.try_consume(channel)
-        assert block.can_be_skipped()
+        assert block.can_be_skipped(channel)
 
         with channel.assert_consume():
             assert block.try_consume(channel)
-        assert block.can_be_skipped()
+        assert block.can_be_skipped(channel)
         assert not block.can_consume(channel)
 
     def test_becomes_deterministic_when_started(self):
@@ -537,24 +568,24 @@ class TestOptionalBlock:
         assert not block.has_deterministic_end()
         assert block.try_consume(channel)
         assert block.has_deterministic_end()
-        assert not block.done()
+        assert not block.done(channel)
         assert block.try_consume(channel)
         assert block.has_deterministic_end()
-        assert block.done()
+        assert block.done(channel)
 
     def test_accepted_messages(self):
         block = OptionalBlock(BlockList([ClientBlock([  # noqa: PAR101
             ClientLine(2, "C: MSG1", "MSG1"), ClientLine(3, "C: MSG2", "MSG2")
         ], 2)], 2), 1)
         channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
-        _assert_accepted_messages(block, ["MSG1"])
-        _assert_accepted_messages_after_reset(block, ["MSG1"])
+        _assert_accepted_messages(channel, block, ["MSG1"])
+        _assert_accepted_messages_after_reset(channel, block, ["MSG1"])
         assert block.try_consume(channel)
-        _assert_accepted_messages(block, ["MSG2"])
-        _assert_accepted_messages_after_reset(block, ["MSG1"])
+        _assert_accepted_messages(channel, block, ["MSG2"])
+        _assert_accepted_messages_after_reset(channel, block, ["MSG1"])
         assert block.try_consume(channel)
-        _assert_accepted_messages(block, [])
-        _assert_accepted_messages_after_reset(block, ["MSG1"])
+        _assert_accepted_messages(channel, block, [])
+        _assert_accepted_messages_after_reset(channel, block, ["MSG1"])
 
 
 class TestParallelBlock:
@@ -636,16 +667,17 @@ class TestParallelBlock:
         for i in range(4):
             accepted = (msg1[idxs[0]:(idxs[0] + 1)]
                         + msg2[idxs[1]:(idxs[1] + 1)])
-            _assert_accepted_messages(block_read, accepted)
-            _assert_accepted_messages_after_reset(block_read,
+            _assert_accepted_messages(channel, block_read, accepted)
+            _assert_accepted_messages_after_reset(channel, block_read,
                                                   [msg1[0], msg2[0]])
             idxs[order[i]] += 1
-            assert not block_read.done()
+            assert not block_read.done(channel)
             with channel.assert_consume():
                 assert block_read.try_consume(channel)
-        _assert_accepted_messages(block_read, [])
-        _assert_accepted_messages_after_reset(block_read, [msg1[0], msg2[0]])
-        assert block_read.done()
+        _assert_accepted_messages(channel, block_read, [])
+        _assert_accepted_messages_after_reset(channel, block_read,
+                                              [msg1[0], msg2[0]])
+        assert block_read.done(channel)
         channel.reset()
         assert not block_read.can_consume(channel)
 
@@ -660,13 +692,13 @@ class TestParallelBlock:
 
         for i in range(2):
             assert len(channel.msg_buffer) == i
-            assert not block_write.done()
+            assert not block_write.done(channel)
             with channel.assert_consume():
                 assert block_write.try_consume(channel)
-        assert block_write.done()
+        assert block_write.done(channel)
         assert channel.msg_buffer_names() == expected_sends
         channel.reset()
-        assert block_write.done()
+        assert block_write.done(channel)
         assert not block_write.can_consume(channel)
 
     @pytest.mark.parametrize("order", itertools.permutations((0, 0, 1, 1), 4))
@@ -691,9 +723,9 @@ class TestParallelBlock:
         assert len(channel.msg_buffer) == len(messages)
         assert not block_with_non_det_end.can_consume(channel)
         if block_with_non_det_end.has_deterministic_end():
-            assert block_with_non_det_end.done()
+            assert block_with_non_det_end.done(channel)
         else:
-            assert block_with_non_det_end.can_be_skipped()
+            assert block_with_non_det_end.can_be_skipped(channel)
 
     @pytest.mark.parametrize("messages", (
         ("1", "2"), ("2",),
@@ -707,9 +739,9 @@ class TestParallelBlock:
         assert len(channel.msg_buffer) == len(messages)
         assert not block_with_non_det_block.can_consume(channel)
         if block_with_non_det_block.has_deterministic_end():
-            assert block_with_non_det_block.done()
+            assert block_with_non_det_block.done(channel)
         else:
-            assert block_with_non_det_block.can_be_skipped()
+            assert block_with_non_det_block.can_be_skipped(channel)
 
 
 class TestClientBlock:
@@ -737,46 +769,52 @@ class TestClientBlock:
 
     def test_single_block(self, single_block, single_channel):
         assert single_block.can_consume(single_channel)
-        assert not single_block.done()
+        assert not single_block.done(single_channel)
         assert not single_channel.msg_buffer
         assert single_block.can_consume(single_channel)
-        _assert_accepted_messages(single_block, ["MSG1"])
-        _assert_accepted_messages_after_reset(single_block, ["MSG1"])
+        _assert_accepted_messages(single_channel, single_block, ["MSG1"])
+        _assert_accepted_messages_after_reset(single_channel, single_block,
+                                              ["MSG1"])
         single_block.init(single_channel)
-        assert not single_block.done()
+        assert not single_block.done(single_channel)
         assert not single_channel.msg_buffer
-        _assert_accepted_messages(single_block, ["MSG1"])
-        _assert_accepted_messages_after_reset(single_block, ["MSG1"])
+        _assert_accepted_messages(single_channel, single_block, ["MSG1"])
+        _assert_accepted_messages_after_reset(single_channel, single_block,
+                                              ["MSG1"])
         assert single_block.can_consume(single_channel)
         with single_channel.assert_consume():
             assert single_block.try_consume(single_channel)
-        _assert_accepted_messages(single_block, [])
-        _assert_accepted_messages_after_reset(single_block, ["MSG1"])
+        _assert_accepted_messages(single_channel, single_block, [])
+        _assert_accepted_messages_after_reset(single_channel, single_block,
+                                              ["MSG1"])
         assert not single_channel.msg_buffer
-        assert single_block.done()
+        assert single_block.done(single_channel)
         assert not single_block.can_consume(single_channel)
         assert not single_block.try_consume(single_channel)
 
     def test_multi_block(self, multi_block, multi_channel):
         assert multi_block.can_consume(multi_channel)
-        assert not multi_block.done()
+        assert not multi_block.done(multi_channel)
         assert not multi_channel.msg_buffer
-        _assert_accepted_messages(multi_block, ["MSG1"])
-        _assert_accepted_messages_after_reset(multi_block, ["MSG1"])
+        _assert_accepted_messages(multi_channel, multi_block, ["MSG1"])
+        _assert_accepted_messages_after_reset(multi_channel, multi_block,
+                                              ["MSG1"])
         multi_block.init(multi_channel)
-        assert not multi_block.done()
+        assert not multi_block.done(multi_channel)
         assert not multi_channel.msg_buffer
         for i in range(3):
-            _assert_accepted_messages(multi_block,
+            _assert_accepted_messages(multi_channel, multi_block,
                                       ["MSG1", "MSG2", "MSG3"][i:(i + 1)])
-            _assert_accepted_messages_after_reset(multi_block, ["MSG1"])
+            _assert_accepted_messages_after_reset(multi_channel, multi_block,
+                                                  ["MSG1"])
             assert multi_block.can_consume(multi_channel)
             with multi_channel.assert_consume():
                 assert multi_block.try_consume(multi_channel)
-        _assert_accepted_messages(multi_block, [])
-        _assert_accepted_messages_after_reset(multi_block, ["MSG1"])
+        _assert_accepted_messages(multi_channel, multi_block, [])
+        _assert_accepted_messages_after_reset(multi_channel, multi_block,
+                                              ["MSG1"])
         assert not multi_channel.msg_buffer
-        assert multi_block.done()
+        assert multi_block.done(multi_channel)
         assert not multi_block.can_consume(multi_channel)
         assert not multi_block.try_consume(multi_channel)
 
@@ -792,22 +830,25 @@ class TestAutoBlock:
 
     def test_single_block(self, single_block, single_channel):
         assert single_block.can_consume(single_channel)
-        assert not single_block.done()
+        assert not single_block.done(single_channel)
         assert not single_channel.msg_buffer
         assert single_block.can_consume(single_channel)
-        _assert_accepted_messages(single_block, ["MSG1"])
-        _assert_accepted_messages_after_reset(single_block, ["MSG1"])
+        _assert_accepted_messages(single_channel, single_block, ["MSG1"])
+        _assert_accepted_messages_after_reset(single_channel, single_block,
+                                              ["MSG1"])
         single_block.init(single_channel)
-        assert not single_block.done()
+        assert not single_block.done(single_channel)
         assert not single_channel.msg_buffer
-        _assert_accepted_messages(single_block, ["MSG1"])
-        _assert_accepted_messages_after_reset(single_block, ["MSG1"])
+        _assert_accepted_messages(single_channel, single_block, ["MSG1"])
+        _assert_accepted_messages_after_reset(single_channel, single_block,
+                                              ["MSG1"])
         assert single_block.can_consume(single_channel)
         with single_channel.assert_consume():
             assert single_block.try_consume(single_channel)
-        _assert_accepted_messages(single_block, [])
-        _assert_accepted_messages_after_reset(single_block, ["MSG1"])
-        assert single_block.done()
+        _assert_accepted_messages(single_channel, single_block, [])
+        _assert_accepted_messages_after_reset(single_channel, single_block,
+                                              ["MSG1"])
+        assert single_block.done(single_channel)
         assert len(single_channel.msg_buffer) == 1
         msg = single_channel.msg_buffer[0]
         assert isinstance(msg, TranslatedStructure)
@@ -860,14 +901,14 @@ class TestServerBlock:
     def test_single_block(self, single_block, single_channel):
         assert not single_block.can_consume(single_channel)
         assert not single_block.try_consume(single_channel)
-        assert not single_block.done()
+        assert not single_block.done(single_channel)
         assert not single_channel.msg_buffer
-        _assert_accepted_messages(single_block, [])
-        _assert_accepted_messages_after_reset(single_block, [])
+        _assert_accepted_messages(single_channel, single_block, [])
+        _assert_accepted_messages_after_reset(single_channel, single_block, [])
         single_block.init(single_channel)
-        _assert_accepted_messages(single_block, [])
-        _assert_accepted_messages_after_reset(single_block, [])
-        assert single_block.done()
+        _assert_accepted_messages(single_channel, single_block, [])
+        _assert_accepted_messages_after_reset(single_channel, single_block, [])
+        assert single_block.done(single_channel)
         assert single_channel.msg_buffer_names() == ["SMSG1"]
         assert not single_block.can_consume(single_channel)
         assert not single_block.try_consume(single_channel)
@@ -875,14 +916,14 @@ class TestServerBlock:
     def test_multi_block(self, multi_block, multi_channel):
         assert not multi_block.can_consume(multi_channel)
         assert not multi_block.try_consume(multi_channel)
-        assert not multi_block.done()
+        assert not multi_block.done(multi_channel)
         assert not multi_channel.msg_buffer
-        _assert_accepted_messages(multi_block, [])
-        _assert_accepted_messages_after_reset(multi_block, [])
+        _assert_accepted_messages(multi_channel, multi_block, [])
+        _assert_accepted_messages_after_reset(multi_channel, multi_block, [])
         multi_block.init(multi_channel)
-        _assert_accepted_messages(multi_block, [])
-        _assert_accepted_messages_after_reset(multi_block, [])
-        assert multi_block.done()
+        _assert_accepted_messages(multi_channel, multi_block, [])
+        _assert_accepted_messages_after_reset(multi_channel, multi_block, [])
+        assert multi_block.done(multi_channel)
         assert multi_channel.msg_buffer_names() == ["SMSG1", "SMSG2", "SMSG3"]
         assert not multi_block.can_consume(multi_channel)
         assert not multi_block.try_consume(multi_channel)
@@ -976,46 +1017,47 @@ class _TestRepeatBlock:
             raise ValueError("Test code is not written for this.")
         for run in range(2):
             _assert_accepted_messages(
-                block,
+                channel, block,
                 self._accepted_messages(channel, expected_idx, skippable)
             )
             _assert_accepted_messages_after_reset(
-                block, self._accepted_messages(channel, 0, skippable)
+                channel, block, self._accepted_messages(channel, 0, skippable)
             )
             if run == 0 and self.must_run_once and 0 not in skippable:
-                assert not block.can_be_skipped()
+                assert not block.can_be_skipped(channel)
             else:
-                assert block.can_be_skipped()
+                assert block.can_be_skipped(channel)
             with channel.assert_consume():
                 assert block.try_consume(channel)
             expected_idx = 1
             for step in range(1, len(channel.messages) - 1):
                 _assert_accepted_messages(
-                    block, self._accepted_messages(channel, expected_idx,
-                                                   skippable)
+                    channel, block,
+                    self._accepted_messages(channel, expected_idx, skippable)
                 )
                 _assert_accepted_messages_after_reset(
-                    block, self._accepted_messages(channel, 0, skippable)
+                    channel, block,
+                    self._accepted_messages(channel, 0, skippable)
                 )
                 if step in skippable:
-                    assert block.can_be_skipped()
+                    assert block.can_be_skipped(channel)
                 else:
-                    assert not block.can_be_skipped()
+                    assert not block.can_be_skipped(channel)
                 if step in skip:
                     channel.consume(None)
                     continue
                 with channel.assert_consume():
                     assert block.try_consume(channel)
                 expected_idx += 1
-            assert block.can_be_skipped()
+            assert block.can_be_skipped(channel)
             _assert_accepted_messages(
-                block,
+                channel, block,
                 self._accepted_messages(channel, expected_idx, skippable)
             )
             _assert_accepted_messages_after_reset(
-                block, self._accepted_messages(channel, 0, skippable)
+                channel, block, self._accepted_messages(channel, 0, skippable)
             )
-            assert block.can_be_skipped()
+            assert block.can_be_skipped(channel)
             channel.reset()
 
     def _test_loop_run_with_skip(self, block, channel, skip_idx):
@@ -1026,7 +1068,7 @@ class _TestRepeatBlock:
             for _step in range(1, skip_idx):
                 with channel.assert_consume():
                     assert block.try_consume(channel)
-            assert block.can_be_skipped()
+            assert block.can_be_skipped(channel)
             channel.reset()
 
     def test_loop_1(self, block_1, channel_1):
@@ -1063,15 +1105,15 @@ class _TestRepeatBlock:
     def test_cant_skip_too_soon(self, block_optional_end,
                                 channel_optional_end):
         if self.must_run_once:
-            assert not block_optional_end.can_be_skipped()
+            assert not block_optional_end.can_be_skipped(channel_optional_end)
         else:
-            assert block_optional_end.can_be_skipped()
+            assert block_optional_end.can_be_skipped(channel_optional_end)
         assert block_optional_end.try_consume(channel_optional_end)
-        assert not block_optional_end.can_be_skipped()
+        assert not block_optional_end.can_be_skipped(channel_optional_end)
         channel_optional_end.reset()
-        assert not block_optional_end.can_be_skipped()
+        assert not block_optional_end.can_be_skipped(channel_optional_end)
         assert not block_optional_end.try_consume(channel_optional_end)
-        assert not block_optional_end.can_be_skipped()
+        assert not block_optional_end.can_be_skipped(channel_optional_end)
 
 
 class TestRepeat0Block(_TestRepeatBlock):
@@ -1082,3 +1124,118 @@ class TestRepeat0Block(_TestRepeatBlock):
 class TestRepeat1Block(_TestRepeatBlock):
     must_run_once = True
     block_cls = Repeat1Block
+
+
+class TestConditionalBlock:
+    @pytest.fixture()
+    def block(self):
+        return ConditionalBlock(
+            ["if_", "elif_"],
+            [
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(2, "C: MSG_IF_1", "MSG_IF_1"),
+                    ClientLine(3, "C: MSG_IF_2", "MSG_IF_2"),
+                ], 2),
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(5, "C: MSG_ELIF_1", "MSG_ELIF_1"),
+                    ClientLine(6, "C: MSG_ELIF_2", "MSG_ELIF_2"),
+                ], 5),
+            ],
+            1
+        )
+
+    @pytest.fixture()
+    def block_else(self):
+        return ConditionalBlock(
+            ["if_"],
+            [
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(2, "C: MSG_IF_1", "MSG_IF_1"),
+                    ClientLine(3, "C: MSG_IF_2", "MSG_IF_2"),
+                ], 2),
+                ClientBlock([  # noqa: PAR101
+                    ClientLine(5, "C: MSG_ELSE_1", "MSG_ELSE_1"),
+                    ClientLine(6, "C: MSG_ELSE_2", "MSG_ELSE_2"),
+                ], 5),
+            ],
+            1
+        )
+
+    @pytest.fixture()
+    def channel_if(self):
+        channel = channel_factory(["MSG_IF_1", "MSG_IF_2", "NOMATCH"])
+        channel.eval_context["if_"] = True
+        return channel
+
+    @pytest.fixture()
+    def channel_elif(self):
+        channel = channel_factory(["MSG_ELIF_1", "MSG_ELIF_2", "NOMATCH"])
+        channel.eval_context["if_"] = False
+        channel.eval_context["elif_"] = True
+        return channel
+
+    @pytest.fixture()
+    def channel_else(self):
+        channel = channel_factory(["MSG_ELSE_1", "MSG_ELSE_2", "NOMATCH"])
+        channel.eval_context["if_"] = False
+        return channel
+
+    @pytest.fixture()
+    def channel_none(self):
+        channel = channel_factory(["NOMATCH"])
+        channel.eval_context["if_"] = False
+        channel.eval_context["elif_"] = False
+        return channel
+
+    def test_if_branch(self, block, channel_if):
+        assert not block.can_be_skipped(channel_if)
+        assert not block.done(channel_if)
+        _assert_accepted_messages(channel_if, block, ["MSG_IF_1"])
+        _assert_accepted_messages_after_reset(channel_if, block, ["MSG_IF_1"])
+        assert block.try_consume(channel_if)
+        assert not block.can_be_skipped(channel_if)
+        assert not block.done(channel_if)
+        _assert_accepted_messages(channel_if, block, ["MSG_IF_2"])
+        _assert_accepted_messages_after_reset(channel_if, block, ["MSG_IF_1"])
+        assert block.try_consume(channel_if)
+        assert block.done(channel_if)
+        assert not block.try_consume(channel_if)
+
+    def test_elif_branch(self, block, channel_elif):
+        assert not block.can_be_skipped(channel_elif)
+        assert not block.done(channel_elif)
+        _assert_accepted_messages(channel_elif, block, ["MSG_ELIF_1"])
+        _assert_accepted_messages_after_reset(channel_elif, block,
+                                              ["MSG_ELIF_1"])
+        assert block.try_consume(channel_elif)
+        assert not block.can_be_skipped(channel_elif)
+        assert not block.done(channel_elif)
+        _assert_accepted_messages(channel_elif, block, ["MSG_ELIF_2"])
+        _assert_accepted_messages_after_reset(channel_elif, block,
+                                              ["MSG_ELIF_1"])
+        assert block.try_consume(channel_elif)
+        assert block.done(channel_elif)
+        assert not block.try_consume(channel_elif)
+
+    def test_else_branch(self, block_else, channel_else):
+        assert not block_else.can_be_skipped(channel_else)
+        assert not block_else.done(channel_else)
+        _assert_accepted_messages(channel_else, block_else, ["MSG_ELSE_1"])
+        _assert_accepted_messages_after_reset(channel_else, block_else,
+                                              ["MSG_ELSE_1"])
+        assert block_else.try_consume(channel_else)
+        assert not block_else.can_be_skipped(channel_else)
+        assert not block_else.done(channel_else)
+        _assert_accepted_messages(channel_else, block_else, ["MSG_ELSE_2"])
+        _assert_accepted_messages_after_reset(channel_else, block_else,
+                                              ["MSG_ELSE_1"])
+        assert block_else.try_consume(channel_else)
+        assert block_else.done(channel_else)
+        assert not block_else.try_consume(channel_else)
+
+    def test_no_branch(self, block, channel_none):
+        assert block.can_be_skipped(channel_none)
+        assert block.done(channel_none)
+        _assert_accepted_messages(channel_none, block, [])
+        _assert_accepted_messages_after_reset(channel_none, block, [])
+        assert not block.try_consume(channel_none)
