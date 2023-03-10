@@ -44,7 +44,9 @@ class AuthorizationBase(TestkitTestCase):
         expected_type = None
         if driver in ["python"]:
             expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
-        elif driver in ["go", "javascript"]:
+        elif driver in ["go"]:
+            expected_type = "TokenExpiredError"
+        elif driver in ["javascript"]:
             pass
         elif driver == "java":
             expected_type = "org.neo4j.driver.exceptions.TokenExpiredException"
