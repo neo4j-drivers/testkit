@@ -787,6 +787,21 @@ class TestAuthorizationV5x0(TestAuthorizationV4x3):
         }
 
 
+class TestAuthorizationV5x1(TestAuthorizationV4x3):
+
+    required_features = types.Feature.BOLT_5_1,
+
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routing_server1.host
+        return {
+            "#VERSION#": "5.1",
+            "#HOST#": host,
+            "#ROUTINGMODE#": '"mode": "r", ',
+            "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
+        }
+
+
 class TestAuthorizationV3(TestAuthorizationV4x3):
     required_features = types.Feature.BOLT_3_0,
 
