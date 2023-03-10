@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: RUN "RETURN 1 AS n" {} {"mode": "r", "db": "adb"}
+C: RUN "RETURN 1 as n" {} {"mode": "r", "db": "adb"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": 1000}
 S: FAILURE #ERROR#

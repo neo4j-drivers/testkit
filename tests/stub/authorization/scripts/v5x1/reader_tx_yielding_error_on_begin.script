@@ -1,7 +1,0 @@
-!: BOLT #VERSION#
-
-A: HELLO {"{}": "*"} {"{}": "*"}
-*: RESET
-C: BEGIN {"mode": "r", "db": "adb"}
-S: FAILURE #ERROR#
-S: <EXIT>

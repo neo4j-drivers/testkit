@@ -1,13 +1,12 @@
-# Copyright (c) "Neo4j,"
-# Neo4j Sweden AB [https://neo4j.com]
-#
-# This file is part of Neo4j.
+#!/usr/bin/env python
+
+# Copyright 2011-2020, Nigel Small
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,

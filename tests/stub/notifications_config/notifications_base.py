@@ -43,26 +43,26 @@ class NotificationsBase(TestkitTestCase):
             {
                 "protocol": {"min_sev": "OFF", "dis_cats": None},
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"OFF", '
+                    "#NOTIS#": '"notifications_minimum_severity": "OFF", '
                 }
             },
             {
                 "protocol": {"min_sev": "INFORMATION", "dis_cats": None},
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity"'
-                               ':"INFORMATION", '
+                    "#NOTIS#": '"notifications_minimum_severity": '
+                               '"INFORMATION", '
                 }
             },
             {
                 "protocol": {"min_sev": "WARNING", "dis_cats": None},
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
                 }
             },
             {
                 "protocol": {"min_sev": None, "dis_cats": []},
                 "script": {
-                    "#NOTIS#": '"notifications_disabled_categories:[], '
+                    "#NOTIS#": '"notifications_disabled_categories": [], '
                 }
             },
             {
@@ -71,10 +71,10 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["UNRECOGNIZED"]
                 },
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity"'
-                               ':"INFORMATION", '
-                               '"notifications_disabled_categories"'
-                               ':["UNRECOGNIZED"], '
+                    "#NOTIS#": '"notifications_minimum_severity": '
+                               '"INFORMATION", '
+                               '"notifications_disabled_categories": '
+                               '["UNRECOGNIZED"], '
                 }
             },
             {
@@ -83,8 +83,8 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["UNRECOGNIZED", "UNSUPPORTED"]
                 },
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
-                               '"notifications_disabled_categories":'
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
                                '["UNRECOGNIZED", "UNSUPPORTED"], '
                 }
             },
@@ -94,9 +94,9 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["PERFORMANCE"]
                 },
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
-                               '"notifications_disabled_categories"'
-                               ':["PERFORMANCE"], '
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
+                               '["PERFORMANCE"], '
                 }
             },
             {
@@ -105,9 +105,9 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["DEPRECATION"]
                 },
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
-                               '"notifications_disabled_categories"'
-                               ':["DEPRECATION"], '
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
+                               '["DEPRECATION"], '
                 }
             },
             {
@@ -116,9 +116,9 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["GENERIC"]
                 },
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
-                               '"notifications_disabled_categories"'
-                               ':["GENERIC"], '
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
+                               '["GENERIC"], '
                 }
             },
             {
@@ -127,8 +127,9 @@ class NotificationsBase(TestkitTestCase):
                     "dis_cats": ["HINT"]
                 },
                 "script": {
-                    "#NOTIS#": '"notifications_minimum_severity":"WARNING", '
-                               '"notifications_disabled_categories":["HINT"], '
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
+                               '["HINT"], '
                 }
             }
         ]

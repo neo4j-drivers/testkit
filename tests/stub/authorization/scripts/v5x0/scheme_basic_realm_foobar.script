@@ -1,4 +1,4 @@
-!: BOLT #VERSION#
+!: BOLT 5.0
 
 A: HELLO {"user_agent": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "realm": "foobar", "[routing]": null}
 *: RESET

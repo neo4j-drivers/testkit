@@ -4,6 +4,6 @@ A: HELLO {"{}": "*"}
 *: RESET
 C: BEGIN {"mode": "r", "db": "adb"}
 S: SUCCESS {}
-C: RUN "RETURN 1 AS n" {} {}
+C: RUN "RETURN 1 as n" {} {}
 S: FAILURE #ERROR#
    <EXIT>

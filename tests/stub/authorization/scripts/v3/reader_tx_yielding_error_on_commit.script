@@ -3,7 +3,7 @@
 A: HELLO {"{}": "*"}
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
-C: RUN "RETURN 1 AS n" {} {}
+C: RUN "RETURN 1 as n" {} {}
 S: SUCCESS {"fields": ["n"]}
 C: PULL_ALL
 S: RECORD [1]

@@ -25,16 +25,9 @@ class Feature(Enum):
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
     # The driver supports notification filters configuration.
     API_DRIVER_NOTIFICATIONS_CONFIG = "Feature:API:Driver:NotificationsConfig"
-    # The driver offers a method for checking if the provided authentication
-    # information is accepted by the server.
-    API_DRIVER_VERIFY_AUTHENTICATION = \
-        "Feature:API:Driver.VerifyAuthentication"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
-    # The driver offers a method for checking if a protocol version negotiated
-    # with the remote supports re-authentication.
-    API_DRIVER_SUPPORTS_SESSION_AUTH = "Feature:API:Driver.SupportsSessionAuth"
     # The driver supports connection liveness check.
     API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver offers a method for the result to return all records as a list
@@ -54,10 +47,6 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
-    # The session configuration allows to switch the authentication context
-    # by supplying new credentials. This new context is only valid for the
-    # current session.
-    API_SESSION_AUTH_CONFIG = "Feature:API:Session:AuthConfig"
     # The session supports notification filters configuration.
     API_SESSION_NOTIFICATIONS_CONFIG = \
         "Feature:API:Session:NotificationsConfig"
@@ -83,10 +72,6 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
-    # The driver supports an auth token manager or similar mechanism for the
-    # user to provide (potentially changing) auth tokens and a way to get
-    # notified when the server reports a token expired.
-    AUTH_MANAGED = "Feature:Auth:Managed"
     # The driver supports Bolt protocol version 3
     BOLT_3_0 = "Feature:Bolt:3.0"
     # The driver supports Bolt protocol version 4.1
@@ -141,19 +126,6 @@ class Feature(Enum):
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
-    # The driver's VerifyAuthentication method is optimized. It
-    # * reuses connections from the pool
-    # * only issues a single LOGOFF/LOGON cycle
-    # * doesn't issue the cycle for newly established connections
-    OPT_MINIMAL_VERIFY_AUTHENTICATION = \
-        "Optimization:MinimalVerifyAuthentication"
-    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
-    # pipelines a LOGIN right afterwards and consumes two messages after.
-    # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
-    # LOGON but pipelines it with the next message and consumes all three
-    # responses at once.
-    # Each saves a full round-trip.
-    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.
@@ -185,10 +157,6 @@ class Feature(Enum):
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
 
     # === BACKEND FEATURES FOR TESTING ===
-    # The backend understands the FakeTimeInstall, FakeTimeUninstall and
-    # FakeTimeTick protocol messages and provides a way to mock the system
-    # time. This is mainly used for testing various timeouts.
-    BACKEND_MOCK_TIME = "Backend:MockTime"
     # The backend understands the GetRoutingTable protocol message and provides
     # a way for TestKit to request the routing table (for testing only, should
     # not be exposed to the user).
@@ -197,10 +165,3 @@ class Feature(Enum):
     # and provides a way to force a routing table update (for testing only,
     # should not be exposed to the user).
     BACKEND_RT_FORCE_UPDATE = "Backend:RTForceUpdate"
-
-    # TODO: revisit when decision on backwards compatibility has been made
-    # Backends are not supposed to support this. it's just a quick way of
-    # disabling the affected tests for now.
-    # If we decide to implement this functionality, this should be promoted to
-    # a porper feature flag.
-    INTERNAL_USER_SWITCH_POLYFILL = "INTERNAL:UserSwitchPolyfill"

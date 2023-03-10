@@ -19,88 +19,55 @@ class AuthorizationBase(TestkitTestCase):
         driver = get_driver_name()
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
-        expected_type = None
         if driver in ["java"]:
-            expected_type = \
-                "org.neo4j.driver.exceptions.AuthorizationExpiredException"
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.AuthorizationExpiredException",
+                error.errorType
+            )
         elif driver in ["python"]:
-            expected_type = "<class 'neo4j.exceptions.TransientError'>"
+            self.assertEqual(
+                "<class 'neo4j.exceptions.TransientError'>", error.errorType
+            )
         elif driver in ["javascript"]:
-            pass  # only test for code
+            # only test for code
+            pass
         elif driver in ["dotnet"]:
-            expected_type = "AuthorizationExpired"
+            self.assertEqual("AuthorizationExpired", error.errorType)
         elif driver in ["ruby"]:
-            expected_type = \
-                "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::AuthorizationExpiredException",
+                error.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
-        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
-        self.assertIn("Token expired", error.msg)
-
-        expected_type = None
-        if driver in ["python"]:
-            expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
-        elif driver in ["go", "javascript"]:
-            pass  # code and msg check are enough
-        elif driver == "java":
-            expected_type = "org.neo4j.driver.exceptions.TokenExpiredException"
-        elif driver == "ruby":
-            expected_type = "Neo4j::Driver::Exceptions::TokenExpiredException"
-        elif driver == "dotnet":
-            expected_type = "ClientError"
-        else:
-            self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
-
-    def assert_is_retryable_token_error(self, error):
-        driver = get_driver_name()
-        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
-        self.assertIn("Token expired", error.msg)
-
-        expected_type = None
-        if driver in ["python"]:
-            expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
-        elif driver in ["go", "javascript"]:
-            pass  # code and msg check are enough
-        elif driver == "java":
-            expected_type = \
-                "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
-        else:
-            self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
-
-    def assert_re_auth_unsupported_error(self, error):
-        self.assertIsInstance(error, types.DriverError)
-        driver = get_driver_name()
+        self.assertEqual("Neo.ClientError.Security.TokenExpired",
+                         error.code)
         if driver in ["python"]:
             self.assertEqual(
-                "<class 'neo4j.exceptions.ConfigurationError'>",
-                error.errorType
+                "<class 'neo4j.exceptions.TokenExpired'>", error.errorType
             )
+        elif driver in ["go", "javascript"]:
             self.assertIn(
-                "session level authentication is not supported for bolt "
-                "protocol version(5, 0)",
-                error.msg.lower()
+                "Token expired", error.msg
             )
-        elif driver in ["javascript"]:
+        elif driver == "java":
             self.assertEqual(
-                "N/A",
-                error.code
-            )
-            self.assertEqual(
-                "Driver is connected to a database that does not support "
-                "user switch.",
-                error.msg
-            )
-        elif driver in ["java"]:
-            self.assertEqual(
-                "org.neo4j.driver.exceptions.UnsupportedFeatureException",
+                "org.neo4j.driver.exceptions.TokenExpiredException",
                 error.errorType
             )
+            self.assertIn("Token expired", error.msg)
+        elif driver == "ruby":
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::TokenExpiredException",
+                error.errorType
+            )
+            self.assertIn("Token expired", error.msg)
+        elif driver == "dotnet":
+            self.assertEqual("ClientError", error.errorType)
+            self.assertIn("Token expired", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -791,21 +758,6 @@ class TestAuthorizationV5x0(TestAuthorizationV4x3):
         }
 
 
-class TestAuthorizationV5x1(TestAuthorizationV5x0):
-
-    required_features = types.Feature.BOLT_5_1,
-
-    def get_vars(self, host=None):
-        if host is None:
-            host = self._routing_server1.host
-        return {
-            "#VERSION#": "5.1",
-            "#HOST#": host,
-            "#ROUTINGMODE#": '"mode": "r", ',
-            "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
-        }
-
-
 class TestAuthorizationV3(TestAuthorizationV4x3):
     required_features = types.Feature.BOLT_3_0,
 
@@ -962,7 +914,9 @@ class TestNoRoutingAuthorization(AuthorizationBase):
         self.assertEqual(hangup_count_pre + 1, hangup_count_post)
 
 
-class AuthenticationSchemesBase(AuthorizationBase):
+class TestAuthenticationSchemes(AuthorizationBase):
+
+    required_features = types.Feature.BOLT_4_3,
 
     def get_vars(self):
         return {
@@ -979,7 +933,7 @@ class AuthenticationSchemesBase(AuthorizationBase):
         self._server.reset()
         super().tearDown()
 
-    def _test_basic_scheme(self):
+    def test_basic_scheme(self):
         def test():
             implicit_defaults = self.driver_supports_features(
                 types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
@@ -1011,7 +965,7 @@ class AuthenticationSchemesBase(AuthorizationBase):
             self._server.reset()
 
     @driver_feature(types.Feature.AUTH_BEARER)
-    def _test_bearer_scheme(self):
+    def test_bearer_scheme(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1028,7 +982,7 @@ class AuthenticationSchemesBase(AuthorizationBase):
         self._server.done()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
-    def _test_custom_scheme(self):
+    def test_custom_scheme(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1053,7 +1007,7 @@ class AuthenticationSchemesBase(AuthorizationBase):
         self._server.done()
 
     @driver_feature(types.Feature.AUTH_CUSTOM)
-    def _test_custom_scheme_empty(self):
+    def test_custom_scheme_empty(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1074,7 +1028,7 @@ class AuthenticationSchemesBase(AuthorizationBase):
         self._server.done()
 
     @driver_feature(types.Feature.AUTH_KERBEROS)
-    def _test_kerberos_scheme(self):
+    def test_kerberos_scheme(self):
         implicit_defaults = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -1089,53 +1043,3 @@ class AuthenticationSchemesBase(AuthorizationBase):
         session.close()
         driver.close()
         self._server.done()
-
-
-class TestAuthenticationSchemesV4x4(AuthenticationSchemesBase):
-
-    required_features = types.Feature.BOLT_4_4,
-
-    def get_vars(self):
-        return {
-            "#VERSION#": "4.4"
-        }
-
-    def test_basic_scheme(self):
-        super()._test_basic_scheme()
-
-    def test_bearer_scheme(self):
-        super()._test_bearer_scheme()
-
-    def test_custom_scheme(self):
-        super()._test_custom_scheme()
-
-    def test_custom_scheme_empty(self):
-        super()._test_custom_scheme_empty()
-
-    def test_kerberos_scheme(self):
-        super()._test_kerberos_scheme()
-
-
-class TestAuthenticationSchemesV5x0(TestAuthenticationSchemesV4x4):
-
-    required_features = types.Feature.BOLT_5_0,
-
-    def get_vars(self):
-        return {
-            "#VERSION#": "5.0"
-        }
-
-    def post_script_assertions(self):
-        # add OPT_MINIMAL_RESETS assertion (if driver claims to support it)
-        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
-            self.assertEqual(self._server.count_requests("RESET"), 0)
-
-
-class TestAuthenticationSchemesV5x1(TestAuthenticationSchemesV5x0):
-
-    required_features = types.Feature.BOLT_5_1,
-
-    def get_vars(self):
-        return {
-            "#VERSION#": "5.1"
-        }

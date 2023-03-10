@@ -1,21 +1,3 @@
-# Copyright (c) "Neo4j,"
-# Neo4j Sweden AB [https://neo4j.com]
-#
-# This file is part of Neo4j.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
 import socket
 from struct import unpack as struct_unpack
 import threading
@@ -528,22 +510,19 @@ def test_lists_alternatives_on_unexpected_message(msg, restarting, concurrent,
     assert "(%3i) C: RESET" % (7 + line_offset) in str(server_exc)
 
 
-# @pytest.mark.parametrize("block_marker", ("{?", "{*", "{+", "{{"))
-@pytest.mark.parametrize("block_marker", ("{{",))
+@pytest.mark.parametrize("block_marker", ("?", "*", "+"))
 @pytest.mark.parametrize("msg", (b"\xb0\x11", b"\xb0\x13"))  # BEGIN, ROLLBACK
 def test_lists_alternatives_on_unexpected_message_with_non_det_block(
         msg, server_factory, connection_factory, block_marker):
-    start_marker = block_marker
-    end_marker = "".join(reversed(block_marker.replace("{", "}")))
     script = """
     !: BOLT 4.3
 
-    {}
+    {{{}
         C: RUN
-    {}
+    {}}}
     C: RESET
     S: SUCCESS
-    """.format(start_marker, end_marker)
+    """.format(block_marker, block_marker)
     server = server_factory(parse(script))
     con = connection_factory("localhost", 7687)
     con.write(b"\x60\x60\xb0\x17")
@@ -555,7 +534,7 @@ def test_lists_alternatives_on_unexpected_message_with_non_det_block(
     assert len(server.service.exceptions) == 1
     server_exc = server.service.exceptions[0]
     assert "(  5) C: RUN" in str(server_exc)
-    if block_marker in ("{?", "{*"):
+    if block_marker in ("?", "*"):
         assert "(  7) C: RESET" in str(server_exc)
     else:
         assert "(  7) C: RESET" not in str(server_exc)
