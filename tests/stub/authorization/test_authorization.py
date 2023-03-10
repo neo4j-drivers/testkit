@@ -92,6 +92,7 @@ class AuthorizationBase(TestkitTestCase):
         server.start(path=script_path, vars_=vars_)
 
     def script_fn_with_features(self, script_fn):
+        has_logon = getattr(self, "has_logon", False)
         minimal = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -99,16 +100,16 @@ class AuthorizationBase(TestkitTestCase):
             types.Feature.OPT_AUTH_PIPELINING
         )
         parts = script_fn.rsplit(".", 1)
-        if minimal and auth_pipeline:
-            if not getattr(self, "has_logon", False):
-                return (
-                    f"{parts[0]}_pipelined_minimal.{parts[1]}",
-                    # pipelined is optional, as it makes little sense to have
-                    # an extra script for it for protocol versions pre
-                    # LOGOFF/LOGON message (there is nothing to pipeline
-                    # there).
-                    f"{parts[0]}_minimal.{parts[1]}",
-                )
+        if minimal and not has_logon:
+            return (
+                f"{parts[0]}_pipelined_minimal.{parts[1]}",
+                # pipelined is optional, as it makes little sense to have
+                # an extra script for it for protocol versions pre
+                # LOGOFF/LOGON message (there is nothing to pipeline
+                # there).
+                f"{parts[0]}_minimal.{parts[1]}",
+            )
+        elif minimal and auth_pipeline:
             return f"{parts[0]}_pipelined_minimal.{parts[1]}",
         elif auth_pipeline:
             return (
@@ -119,7 +120,8 @@ class AuthorizationBase(TestkitTestCase):
             raise RuntimeError(
                 "Tests for driver with "
                 "types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS but without "
-                "types.Feature.OPT_AUTH_PIPELINING are (currently) missing. "
+                "types.Feature.OPT_AUTH_PIPELINING are (currently) missing "
+                "when logon is supported. "
                 "Feel free to add them when needed."
             )
         else:
