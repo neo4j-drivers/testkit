@@ -192,6 +192,13 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
+        for notification in notifications:
+            notification.update({
+                "rawSeverityLevel": "ANYTHING",
+                "severityLevel": "UNKNOWN",
+                "rawCategory": "",
+                "category": "UNKNOWN",
+            })
         self.assertEqual(summary.notifications, notifications)
 
     def test_multiple_notifications(self):
@@ -211,6 +218,13 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
+        for notification in notifications:
+            notification.update({
+                "rawSeverityLevel": "WARNING",
+                "severityLevel": "WARNING",
+                "rawCategory": "",
+                "category": "UNKNOWN",
+            })
         self.assertEqual(summary.notifications, notifications)
 
     def test_plan(self):
