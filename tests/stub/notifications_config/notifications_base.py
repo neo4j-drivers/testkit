@@ -84,7 +84,7 @@ class NotificationsBase(TestkitTestCase):
                 },
                 "script": {
                     "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
-                               '"notifications_disabled_categories": '
+                               '"notifications_disabled_categories{}": '
                                '["UNRECOGNIZED", "UNSUPPORTED"], '
                 }
             },

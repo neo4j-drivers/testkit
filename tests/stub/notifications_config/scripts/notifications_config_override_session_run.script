@@ -1,6 +1,6 @@
 !: BOLT 5.2
 
-A: HELLO {"[user_agent]": "*", "[routing]": "*", "notifications_minimum_severity": "WARNING", "notifications_disabled_categories":["UNSUPPORTED", "UNRECOGNIZED", "DEPRECATION", "HINT"]}
+A: HELLO {"[user_agent]": "*", "[routing]": "*", "notifications_minimum_severity": "WARNING", "notifications_disabled_categories{}":["UNSUPPORTED", "UNRECOGNIZED", "DEPRECATION", "HINT"]}
 A: LOGON {"{}": "*"}
 *: RESET
 C: RUN "RETURN 1 as n" {} {#NOTIS#"[mode]": "*", "[db]": "*"}
