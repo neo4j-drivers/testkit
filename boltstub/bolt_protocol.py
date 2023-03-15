@@ -1,3 +1,21 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 from .errors import (
     BoltMissingVersionError,
     BoltUnknownMessageError,
@@ -452,3 +470,22 @@ class Bolt5x0Protocol(Bolt4x4Protocol):
     packstream_version = 2
 
     server_agent = "Neo4j/5.0.0"
+
+
+class Bolt5x1Protocol(Bolt5x0Protocol):
+
+    protocol_version = (5, 1)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    server_agent = "Neo4j/5.4.0"  # TODO: finalize!
+
+    messages = {
+        "C": {
+            **Bolt5x0Protocol.messages["C"],
+            b"\x6A": "LOGON",
+            b"\x6B": "LOGOFF",
+        },
+        "S": Bolt5x0Protocol.messages["S"],
+    }

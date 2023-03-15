@@ -1,3 +1,21 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 from collections import defaultdict
 import itertools
 import re
@@ -40,6 +58,18 @@ def assert_client_block(block, lines=None):
         assert [line.canonical() for line in block.lines] == lines
 
 
+def assert_server_block(block, lines=None):
+    assert block.__class__ == parsing.ServerBlock
+    if lines is not None:
+        assert [line.canonical() for line in block.lines] == lines
+
+
+def assert_python_block(block, lines=None):
+    assert block.__class__ == parsing.PythonBlock
+    if lines is not None:
+        assert [line.canonical() for line in block.lines] == lines
+
+
 def assert_auto_block(block, lines=None):
     assert block.__class__ == parsing.AutoBlock
     if lines is not None:
@@ -64,16 +94,22 @@ def assert_repeat1_auto_block(block, lines=None):
     assert_auto_block(block.block_list.blocks[0], lines)
 
 
-def assert_server_block(block, lines=None):
-    assert block.__class__ == parsing.ServerBlock
-    if lines is not None:
-        assert [line.canonical() for line in block.lines] == lines
-
-
 def assert_client_block_block_list(block_list, lines=None):
     assert block_list.__class__ == parsing.BlockList
     assert len(block_list.blocks) == 1
     assert_client_block(block_list.blocks[0], lines=lines)
+
+
+def assert_server_block_block_list(block_list, lines=None):
+    assert block_list.__class__ == parsing.BlockList
+    assert len(block_list.blocks) == 1
+    assert_server_block(block_list.blocks[0], lines=lines)
+
+
+def assert_python_block_block_list(block_list, lines=None):
+    assert block_list.__class__ == parsing.BlockList
+    assert len(block_list.blocks) == 1
+    assert_python_block(block_list.blocks[0], lines=lines)
 
 
 def assert_auto_block_block_list(block_list, lines=None):
@@ -98,12 +134,6 @@ def assert_repeat1_auto_block_list(block_list, lines=None):
     assert block_list.__class__ == parsing.BlockList
     assert len(block_list.blocks) == 1
     assert_repeat1_auto_block(block_list.blocks[0], lines=lines)
-
-
-def assert_server_block_block_list(block_list, lines=None):
-    assert block_list.__class__ == parsing.BlockList
-    assert len(block_list.blocks) == 1
-    assert_server_block(block_list.blocks[0], lines=lines)
 
 
 def assert_dialogue_blocks_block_list(block_list, lines=None):
@@ -178,28 +208,29 @@ def whitespace_generator(n: int,
 
 VALID_BANGS = ("!: AUTO HELLO", "!: BOLT 4.0",
                "!: ALLOW RESTART", "!: ALLOW CONCURRENT",
-               "!: HANDSHAKE 00\tfF 0204")
+               "!: HANDSHAKE 00\tfF 0204", "!: PY foo = 'bar'")
 INVALID_BANGS = ("!: NOPE", "!: HANDSHAKE \x00\x00\x02\x04",
                  "!: BOLT", "!: BOLT a.b")
 BANG_DEFAULTS = {"auto": set(), "bolt_version": None,
                  "restarting": False, "concurrent": False,
-                 "handshake": None}
+                 "handshake": None, "python": []}
 BANG_EFFECTS = (
     ("auto", {"HELLO"}),
     ("bolt_version", (4, 0)),
     ("restarting", True),
     ("concurrent", True),
-    ("handshake", b"\x00\xff\x02\x04")
+    ("handshake", b"\x00\xff\x02\x04"),
+    ("python", ["foo = 'bar'"]),
 )
 
 
-@pytest.mark.parametrize("whitespaces", whitespace_generator(1, {0}, set()))
+@pytest.mark.parametrize("whitespaces", whitespace_generator(1, {0}, None))
 def test_empty_script_is_invalid(whitespaces, unverified_script):
     with pytest.raises(lark.ParseError):
         parsing.parse(whitespaces[0])
 
 
-@pytest.mark.parametrize("whitespaces", whitespace_generator(2, {0, 1}, set()))
+@pytest.mark.parametrize("whitespaces", whitespace_generator(2, {0, 1}, None))
 @pytest.mark.parametrize("bang", VALID_BANGS)
 def test_only_bang_script_is_invalid(whitespaces, bang, unverified_script):
     with pytest.raises(lark.ParseError):
@@ -232,7 +263,7 @@ bad_fields = (
     *(([bf, gf], True) for gf in good_fields for bf in bad_fields),
     *(([gf, gf], False) for gf in good_fields),
 ))
-@pytest.mark.parametrize("line_type", ("C:", "S:", "A:", "?:", "*:", "+:")[:1])
+@pytest.mark.parametrize("line_type", ("C:", "S:", "A:", "?:", "*:", "+:"))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, None, {0, 1, 2}))
 @pytest.mark.parametrize("jolt_package", (jolt_v1, jolt_v2))
 def test_message_fields(line_type, fields, fail, extra_ws, unverified_script,
@@ -246,7 +277,7 @@ def test_message_fields(line_type, fields, fail, extra_ws, unverified_script,
     script = script % extra_ws
     if fail:
         with pytest.raises(parsing.LineError):
-            script_parsed = parsing.parse(script)
+            parsing.parse(script)
     else:
         script_parsed = parsing.parse(script)
         block_assert_fns = {"C:": assert_client_block_block_list,
@@ -274,6 +305,14 @@ def test_simple_dialogue(order, extra_ws, unverified_script):
     script = parsing.parse(script)
     assert_dialogue_blocks_block_list(script.block_list,
                                       [lines[i] % " " for i in order])
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0, 2}, {1}))
+def test_python_line(extra_ws, unverified_script):
+    script = "%sPY:%ssome weird {} = wh4t'eve®%s" % extra_ws
+    script = parsing.parse(script)
+    assert_python_block_block_list(script.block_list,
+                                   ["PY: some weird {} = wh4t'eve®"])
 
 
 @pytest.mark.parametrize(("auto_marker", "wrapper_block_class"), (
@@ -321,7 +360,37 @@ def test_no_implicit_auto_lines(line_marker, extra_ws, unverified_script):
         parsing.parse(script)
 
 
-@pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, {1}))
+def test_no_python_auto_lines(extra_ws, unverified_script):
+    script = "%sPY:%sMSG1%sMSG2%s" % extra_ws
+    with pytest.raises(lark.UnexpectedCharacters):
+        parsing.parse(script)
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(5, {0, 4}, None))
+def test_simple_block(extra_ws, unverified_script):
+    script = "%s{{%sC:MSG1%sS:MSG2%s}}%s" % extra_ws
+    script = parsing.parse(script)
+    assert len(script.block_list.blocks) == 1
+    block = script.block_list.blocks[0]
+    assert isinstance(block, parsing.BlockList)
+    assert len(block.blocks) == 2
+    assert_client_block(block.blocks[0], ["C: MSG1"])
+    assert_server_block(block.blocks[1], ["S: MSG2"])
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, None))
+def test_simple_block_with_optional_block(extra_ws, unverified_script):
+    script = "%s{{%s{?%sC:MSG1%s?}%s}}%s" % extra_ws
+    script = parsing.parse(script)
+    assert len(script.block_list.blocks) == 1
+    block = script.block_list.blocks[0]
+    assert isinstance(block, parsing.BlockList)
+    assert len(block.blocks) == 1
+    assert block.blocks[0].__class__ == parsing.OptionalBlock
+
+
+@pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, None))
 def test_simple_alternative_block(extra_ws, unverified_script):
     script = "%s{{%sC:MSG1%s----%sC:MSG2%s}}%s" % extra_ws
     script = parsing.parse(script)
@@ -333,7 +402,7 @@ def test_simple_alternative_block(extra_ws, unverified_script):
     assert_client_block_block_list(block.block_lists[1], ["C: MSG2"])
 
 
-@pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, set()))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(6, {0, 5}, None))
 def test_simple_parallel_block(extra_ws, unverified_script):
     script = "%s{{%sC:MSG1%s++++%sC:MSG2%s}}%s" % extra_ws
     script = parsing.parse(script)
@@ -345,7 +414,7 @@ def test_simple_parallel_block(extra_ws, unverified_script):
     assert_client_block_block_list(block.block_lists[1], ["C: MSG2"])
 
 
-@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, None))
 def test_simple_optional_block(extra_ws, unverified_script):
     script = "%s{?%sC:MSG1%s?}%s" % extra_ws
     script = parsing.parse(script)
@@ -355,7 +424,7 @@ def test_simple_optional_block(extra_ws, unverified_script):
     assert_client_block_block_list(block.block_list, ["C: MSG1"])
 
 
-@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, None))
 def test_simple_0_loop(extra_ws, unverified_script):
     script = "%s{*%sC:MSG1%s*}%s" % extra_ws
     script = parsing.parse(script)
@@ -365,7 +434,7 @@ def test_simple_0_loop(extra_ws, unverified_script):
     assert_client_block_block_list(block.block_list, ["C: MSG1"])
 
 
-@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, set()))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(4, {0, 3}, None))
 def test_simple_1_loop(extra_ws, unverified_script):
     script = "%s{+%sC:MSG1%s+}%s" % extra_ws
     script = parsing.parse(script)
@@ -375,8 +444,42 @@ def test_simple_1_loop(extra_ws, unverified_script):
     assert_client_block_block_list(block.block_list, ["C: MSG1"])
 
 
+@pytest.mark.parametrize(
+    ("else_", "elif_", "extra_ws"),
+    (
+        (else_, elif_, extra_ws_)
+        for else_ in (True, False)
+        for elif_ in (0, 1, 2)
+        for extra_ws_ in whitespace_generator(
+            4 + 3 * elif_ + 2 * else_,
+            {0, 4 + 3 * elif_ + 2 * else_ - 1},
+            {1} | {4 + 3 * i for i in range(elif_)}
+        )
+    )
+)
+def test_conditional(else_, elif_, extra_ws, unverified_script):
+    script = "%sIF:%sif%sC:MSG_IF"
+    for i in range(elif_):
+        script += "%%sELIF:%%selif_%d%%sC:MSG_ELIF_%d" % (i, i)
+    if else_:
+        script += "%sELSE:%sC:MSG_ELSE"
+    script += "%s"
+    script = script % extra_ws
+    script = parsing.parse(script)
+    assert len(script.block_list.blocks) == 1
+    block = script.block_list.blocks[0]
+    assert isinstance(block, parsing.ConditionalBlock)
+    assert block.conditions == ["if", *(f"elif_{i}" for i in range(elif_))]
+    expected_messages = ["C: MSG_IF"]
+    expected_messages += [f"C: MSG_ELIF_{i}" for i in range(elif_)]
+    expected_messages += ["C: MSG_ELSE" for _ in range(else_)]
+    assert len(block.blocks) == len(expected_messages)
+    for inner_block, expected_message in zip(block.blocks, expected_messages):
+        assert_client_block(inner_block, [expected_message])
+
+
 @pytest.mark.parametrize("bang", zip(VALID_BANGS, BANG_EFFECTS))
-@pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0, 2}, set()))
+@pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0, 2}, None))
 def test_simple_bang_line(bang, extra_ws, unverified_script):
     bang, bang_effect = bang
     expected_context = BANG_DEFAULTS.copy()

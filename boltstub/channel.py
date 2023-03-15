@@ -1,23 +1,46 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 from typing import Iterable
 
 from .bolt_protocol import get_bolt_protocol
 from .errors import ServerExit
 from .packstream import PackStream
 from .parsing import ScriptFailure
-from .util import hex_repr
+from .util import (
+    EvalContext,
+    hex_repr,
+)
 
 
 class Channel:
     # This class is the glue between a stub script, the socket, and the bolt
     # protocol.
 
-    def __init__(self, wire, bolt_version, log_cb=None, handshake_data=None):
+    def __init__(self, wire, bolt_version, log_cb=None, handshake_data=None,
+                 eval_context=None):
         self.wire = wire
         self.bolt_protocol = get_bolt_protocol(bolt_version)
         self.stream = PackStream(wire, self.bolt_protocol.packstream_version)
         self.log = log_cb
         self.handshake_data = handshake_data
         self._buffered_msg = None
+        self.eval_context = eval_context or EvalContext()
 
     def _log(self, *args, **kwargs):
         if self.log:
