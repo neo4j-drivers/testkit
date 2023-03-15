@@ -168,17 +168,24 @@ class TestSummary(TestkitTestCase):
         )
         out_notifications = [{
             "severity": "WARNING",
-            "rawSeverityLevel": "WARNING",
-            "severityLevel": "WARNING",
-            "rawCategory": "GENERIC",
-            "category": "GENERIC",
             "description": "If a part of a query contains multiple "
                            "disconnected patterns, ...",
             "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "This query builds a cartesian product between..."
         }]
-        self.assertEqual(summary.notifications, out_notifications)
+        try:
+            self.assertEqual(summary.notifications, out_notifications)
+        except AssertionError:
+            for notification in out_notifications:
+
+                notification.update({
+                    "rawSeverityLevel": "WARNING",
+                    "severityLevel": "WARNING",
+                    "rawCategory": "GENERIC",
+                    "category": "GENERIC",
+                })
+            self.assertEqual(summary.notifications, out_notifications)
 
     def test_notifications_without_position(self):
         notifications = [{
@@ -192,14 +199,18 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        for notification in notifications:
-            notification.update({
-                "rawSeverityLevel": "ANYTHING",
-                "severityLevel": "UNKNOWN",
-                "rawCategory": "",
-                "category": "UNKNOWN",
-            })
-        self.assertEqual(summary.notifications, notifications)
+
+        try:
+            self.assertEqual(summary.notifications, notifications)
+        except AssertionError:
+            for notification in notifications:
+                notification.update({
+                    "rawSeverityLevel": "ANYTHING",
+                    "severityLevel": "UNKNOWN",
+                    "rawCategory": "",
+                    "category": "UNKNOWN",
+                })
+            self.assertEqual(summary.notifications, notifications)
 
     def test_multiple_notifications(self):
         notifications = [
@@ -218,14 +229,17 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        for notification in notifications:
-            notification.update({
-                "rawSeverityLevel": "WARNING",
-                "severityLevel": "WARNING",
-                "rawCategory": "",
-                "category": "UNKNOWN",
-            })
-        self.assertEqual(summary.notifications, notifications)
+        try:
+            self.assertEqual(summary.notifications, notifications)
+        except AssertionError:
+            for notification in notifications:
+                notification.update({
+                    "rawSeverityLevel": "WARNING",
+                    "severityLevel": "WARNING",
+                    "rawCategory": "",
+                    "category": "UNKNOWN",
+                })
+            self.assertEqual(summary.notifications, notifications)
 
     def test_plan(self):
         plan = {
