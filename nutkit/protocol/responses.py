@@ -310,7 +310,7 @@ class Summary:
         if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
             if "address" in data["serverInfo"]:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports address field in Summary.serverInfo. "
                     "Remove the backwards compatibility check!"
                 )
@@ -326,14 +326,14 @@ class Summary:
                 del data["counters"]
             else:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports well-formatted counter. "
                     "Remove the backwards compatibility check!"
                 )
         if get_driver_name() in ["javascript", "go", "dotnet"]:
             if "counters" in data:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports counters field in Summary. "
                     "Remove the backwards compatibility check!"
                 )
@@ -356,7 +356,7 @@ class Summary:
                 }
             if "query" in data:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports query field in Summary. "
                     "Remove the backwards compatibility check!"
                 )
@@ -371,7 +371,7 @@ class Summary:
             ):
                 if field in data:
                     import warnings
-                    warnings.warn(
+                    warnings.warn(  # noqa: B028
                         "Backend supports %s field in Summary. "
                         "Remove the backwards compatibility check!" % field
                     )
@@ -518,13 +518,13 @@ class DriverError(BaseError):
     serialize/deserialize errors or exceptions.
 
     The retry logic can be implemented by just referring to the error when
-    such occures and let the backend hide it's internal types if it chooses so.
+    such occurs and let the backend hide it's internal types if it chooses so.
 
     Over time there will be more specific driver errors if/when the generic
     test framework needs to check detailed error handling.
     """
 
-    def __init__(self, id=None, errorType="", msg="", code=""):
+    def __init__(self, id=None, errorType=None, msg="", code=""):
         self.id = id
         self.errorType = errorType
         self.msg = msg

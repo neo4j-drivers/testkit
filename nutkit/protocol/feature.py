@@ -126,6 +126,13 @@ class Feature(Enum):
     OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
+    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
+    # pipelines a LOGIN right afterwards and consumes two messages after.
+    # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
+    # LOGON but pipelines it with the next message and consumes all three
+    # responses at once.
+    # Each saves a full round-trip.
+    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.

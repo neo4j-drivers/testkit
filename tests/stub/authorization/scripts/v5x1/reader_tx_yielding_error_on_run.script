@@ -1,0 +1,10 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: BEGIN {"mode": "r", "db": "adb"}
+S: SUCCESS {}
+C: RUN "RETURN 1 AS n" {} {}
+S: FAILURE #ERROR#
+   <EXIT>
