@@ -14,6 +14,7 @@ from tests.stub.shared import StubServer
 class TestSummary(TestkitTestCase):
     """Test result summary contents."""
 
+    full_notifications = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
     required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
@@ -174,17 +175,17 @@ class TestSummary(TestkitTestCase):
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "This query builds a cartesian product between..."
         }]
-        try:
-            self.assertEqual(summary.notifications, out_notifications)
-        except AssertionError:
-            for notification in out_notifications:
 
+        if self.driver_supports_features(self.full_notifications):
+            for notification in out_notifications:
                 notification.update({
                     "rawSeverityLevel": "WARNING",
                     "severityLevel": "WARNING",
                     "rawCategory": "GENERIC",
                     "category": "GENERIC",
                 })
+            self.assertEqual(summary.notifications, out_notifications)
+        else:
             self.assertEqual(summary.notifications, out_notifications)
 
     def test_notifications_without_position(self):
@@ -199,10 +200,7 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-
-        try:
-            self.assertEqual(summary.notifications, notifications)
-        except AssertionError:
+        if self.driver_supports_features(self.full_notifications):
             for notification in notifications:
                 notification.update({
                     "rawSeverityLevel": "ANYTHING",
@@ -210,6 +208,8 @@ class TestSummary(TestkitTestCase):
                     "rawCategory": "",
                     "category": "UNKNOWN",
                 })
+            self.assertEqual(summary.notifications, notifications)
+        else:
             self.assertEqual(summary.notifications, notifications)
 
     def test_multiple_notifications(self):
@@ -229,9 +229,7 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        try:
-            self.assertEqual(summary.notifications, notifications)
-        except AssertionError:
+        if self.driver_supports_features(self.full_notifications):
             for notification in notifications:
                 notification.update({
                     "rawSeverityLevel": "WARNING",
@@ -239,6 +237,8 @@ class TestSummary(TestkitTestCase):
                     "rawCategory": "",
                     "category": "UNKNOWN",
                 })
+            self.assertEqual(summary.notifications, notifications)
+        else:
             self.assertEqual(summary.notifications, notifications)
 
     def test_plan(self):
