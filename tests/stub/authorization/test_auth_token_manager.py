@@ -205,15 +205,11 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                 assert '"credentials": "pass"' in hellos[0]
                 assert '"credentials": "password"' in hellos[1]
 
-        for routing in (
-            False,
-            # True,
-        ):
+        for routing in (False, True):
             with self.subTest(routing=routing):
                 try:
                     _test(routing)
                 finally:
-                    self._reader._dump()
                     self._reader.reset()
                     self._router.reset()
 
