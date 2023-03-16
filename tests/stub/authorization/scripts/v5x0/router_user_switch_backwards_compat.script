@@ -3,11 +3,7 @@
 
 {{
     # connection 1 for session 1 and 4 with driver level auth
-    {{
-        A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}}
-    ----
-        A: HELLO {"user_agent": "*", "routing": null}
-    }}
+    A: HELLO {"user_agent": "*", "[routing]": "*"}
     A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
     *: RESET
 
@@ -23,7 +19,7 @@
     ?: GOODBYE
 ----
     # connection 2 and 3 for session 2 and 3 with session level auth
-    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
     *: RESET
 
     C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}

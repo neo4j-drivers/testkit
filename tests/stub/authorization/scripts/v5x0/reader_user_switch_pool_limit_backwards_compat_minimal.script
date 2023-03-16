@@ -2,7 +2,7 @@
 !: ALLOW CONCURRENT
 
 {{
-    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
     *: RESET
 
     {{
@@ -37,7 +37,7 @@
     }}
 ----
     # connection 3 for session 3 with session auth
-    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
     *: RESET
 
     C: RUN "RETURN 3 AS n" {"{}": "*"} {"{}": "*"}

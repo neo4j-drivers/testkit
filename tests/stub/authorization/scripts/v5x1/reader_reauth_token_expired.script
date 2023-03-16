@@ -1,11 +1,7 @@
 !: BOLT #VERSION#
 !: ALLOW CONCURRENT
 
-{{
-    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}}
-----
-    A: HELLO {"user_agent": "*", "routing": null}
-}}
+A: HELLO {"user_agent": "*", "routing": null}
 A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 
 *: RESET

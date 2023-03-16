@@ -3,7 +3,7 @@
 
 {{
     # connection for sessions with driver level auth (re-using connection)
-    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
     *: RESET
 
     C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
@@ -18,7 +18,7 @@
     ?: GOODBYE
 ----
     # connections for sessions with session level auth
-    A: HELLO {"user_agent": "*", "[routing]": {"{}": "*"}, "scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
     *: RESET
 
     C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
