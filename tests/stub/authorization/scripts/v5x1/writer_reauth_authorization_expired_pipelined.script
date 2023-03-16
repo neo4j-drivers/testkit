@@ -1,6 +1,6 @@
 !: BOLT #VERSION#
 
-C: HELLO {"user_agent": "*", "routing": null}
+C: HELLO {"user_agent": "*", "[routing]": "*"}
 C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
 S: SUCCESS {}
