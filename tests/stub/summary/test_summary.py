@@ -154,13 +154,16 @@ class TestSummary(TestkitTestCase):
     def test_full_notification(self):
         in_notifications = [{
             "severity": "WARNING",
-            "category": "GENERIC",
+
             "description": "If a part of a query contains multiple "
                            "disconnected patterns, ...",
             "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "This query builds a cartesian product between..."
         }]
+        if self.driver_supports_features(self.full_notifications):
+            for n in in_notifications:
+                n.update({"category": "GENERIC"})
         summary = self._get_summary(
             "summary_with_notifications.script",
             vars_={
