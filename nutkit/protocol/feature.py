@@ -23,6 +23,8 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports notification filters configuration.
+    API_DRIVER_NOTIFICATIONS_CONFIG = "Feature:API:Driver:NotificationsConfig"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
@@ -45,6 +47,9 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
+    # The session supports notification filters configuration.
+    API_SESSION_NOTIFICATIONS_CONFIG = \
+        "Feature:API:Session:NotificationsConfig"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -81,6 +86,8 @@ class Feature(Enum):
     BOLT_5_0 = "Feature:Bolt:5.0"
     # The driver supports Bolt protocol version 5.1
     BOLT_5_1 = "Feature:Bolt:5.1"
+    # The driver supports Bolt protocol version 5.2
+    BOLT_5_2 = "Feature:Bolt:5.2"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation

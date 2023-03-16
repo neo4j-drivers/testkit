@@ -10,7 +10,9 @@ class Driver:
                  max_tx_retry_time_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
-                 connection_acquisition_timeout_ms=None):
+                 connection_acquisition_timeout_ms=None,
+                 notifications_min_severity=None,
+                 notifications_disabled_categories=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -25,6 +27,8 @@ class Driver:
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
+            notifications_min_severity=notifications_min_severity,
+            notifications_disabled_categories=notifications_disabled_categories
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -84,54 +88,58 @@ class Driver:
         req = protocol.ExecuteQuery(self._driver.id, cypher, params, config)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.EagerResult):
-            raise Exception("Should be EagerResult but was: %s" % res)
+            raise Exception(f"Should be EagerResult but was: {res}")
         return res
 
     def verify_connectivity(self):
         req = protocol.VerifyConnectivity(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be Driver but was: %s" % res)
+            raise Exception(f"Should be Driver but was: {res}")
 
     def get_server_info(self):
         req = protocol.GetServerInfo(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=True)
         if not isinstance(res, protocol.ServerInfo):
-            raise Exception("Should be ServerInfo but was: %s" % res)
+            raise Exception(f"Should be ServerInfo but was: {res}")
         return res
 
     def supports_multi_db(self):
         req = protocol.CheckMultiDBSupport(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.MultiDBSupport):
-            raise Exception("Should be MultiDBSupport")
+            raise Exception(f"Should be MultiDBSupport but was: {res}")
         return res.available
 
     def is_encrypted(self):
         req = protocol.CheckDriverIsEncrypted(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.DriverIsEncrypted):
-            raise Exception("Should be DriverIsEncrypted")
+            raise Exception(f"Should be DriverIsEncrypted but was {res}")
         return res.encrypted
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Driver):
-            raise Exception("Should be driver")
+            raise Exception(f"Should be Driver but was {res}")
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
-                bookmark_manager=None):
+                bookmark_manager=None,
+                notifications_min_severity=None,
+                notifications_disabled_categories=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
-            bookmark_manager=bookmark_manager
+            bookmark_manager=bookmark_manager,
+            notifications_min_severity=notifications_min_severity,
+            notifications_disabled_categories=notifications_disabled_categories
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):
-            raise Exception("Should be session")
+            raise Exception(f"Should be Session but was {res}")
 
         return Session(self, res)
 
@@ -153,12 +161,12 @@ class Driver:
         req = protocol.GetRoutingTable(self._driver.id, database=database)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.RoutingTable):
-            raise Exception("Should be RoutingTable")
+            raise Exception(f"Should be RoutingTable but was {res}")
         return res
 
     def get_connection_pool_metrics(self, address):
         req = protocol.GetConnectionPoolMetrics(self._driver.id, address)
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.ConnectionPoolMetrics):
-            raise Exception("Should be ConnectionPoolMetrics")
+            raise Exception(f"Should be ConnectionPoolMetrics but was {res}")
         return res
