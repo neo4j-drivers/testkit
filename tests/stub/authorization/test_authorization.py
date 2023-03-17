@@ -34,7 +34,8 @@ class AuthorizationBase(TestkitTestCase):
                 "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
@@ -54,7 +55,8 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "ClientError"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
 
     def assert_is_retryable_token_error(self, error):
         driver = get_driver_name()
@@ -101,6 +103,9 @@ class AuthorizationBase(TestkitTestCase):
                 "org.neo4j.driver.exceptions.UnsupportedFeatureException",
                 error.errorType
             )
+        elif driver in ["go"]:
+            self.assertEqual("feature not supported", error.errorType)
+            self.assertIn("session auth", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
