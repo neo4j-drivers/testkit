@@ -63,7 +63,8 @@ class _TestTokenExpiredRetryBase(AuthorizationBase):
             count += 1
             if count == 1:
                 with self.assertRaises(types.DriverError) as exc:
-                    tx.run("RETURN 1 AS n")
+                    res = tx.run("RETURN 1 AS n")
+                    list(res)
                 self.assert_is_retryable_token_error(exc.exception)
                 raise exc.exception
             else:
