@@ -14,6 +14,7 @@ from tests.stub.shared import StubServer
 class TestSummary(TestkitTestCase):
     """Test result summary contents."""
 
+    full_notifications = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
     required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
@@ -151,7 +152,25 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.notifications, notifications)
 
     def test_full_notification(self):
-        notifications = [{
+        in_notifications = [{
+            "severity": "WARNING",
+
+            "description": "If a part of a query contains multiple "
+                           "disconnected patterns, ...",
+            "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
+            "position": {"column": 9, "offset": 8, "line": 1},
+            "title": "This query builds a cartesian product between..."
+        }]
+        if self.driver_supports_features(self.full_notifications):
+            for n in in_notifications:
+                n.update({"category": "GENERIC"})
+        summary = self._get_summary(
+            "summary_with_notifications.script",
+            vars_={
+                "#NOTIFICATIONS#": json.dumps(in_notifications)
+            }
+        )
+        out_notifications = [{
             "severity": "WARNING",
             "description": "If a part of a query contains multiple "
                            "disconnected patterns, ...",
@@ -159,13 +178,18 @@ class TestSummary(TestkitTestCase):
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "This query builds a cartesian product between..."
         }]
-        summary = self._get_summary(
-            "summary_with_notifications.script",
-            vars_={
-                "#NOTIFICATIONS#": json.dumps(notifications)
-            }
-        )
-        self.assertEqual(summary.notifications, notifications)
+
+        if self.driver_supports_features(self.full_notifications):
+            for notification in out_notifications:
+                notification.update({
+                    "rawSeverityLevel": "WARNING",
+                    "severityLevel": "WARNING",
+                    "rawCategory": "GENERIC",
+                    "category": "GENERIC",
+                })
+            self.assertEqual(summary.notifications, out_notifications)
+        else:
+            self.assertEqual(summary.notifications, out_notifications)
 
     def test_notifications_without_position(self):
         notifications = [{
@@ -179,7 +203,17 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        self.assertEqual(summary.notifications, notifications)
+        if self.driver_supports_features(self.full_notifications):
+            for notification in notifications:
+                notification.update({
+                    "rawSeverityLevel": "ANYTHING",
+                    "severityLevel": "UNKNOWN",
+                    "rawCategory": "",
+                    "category": "UNKNOWN",
+                })
+            self.assertEqual(summary.notifications, notifications)
+        else:
+            self.assertEqual(summary.notifications, notifications)
 
     def test_multiple_notifications(self):
         notifications = [
@@ -198,7 +232,17 @@ class TestSummary(TestkitTestCase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        self.assertEqual(summary.notifications, notifications)
+        if self.driver_supports_features(self.full_notifications):
+            for notification in notifications:
+                notification.update({
+                    "rawSeverityLevel": "WARNING",
+                    "severityLevel": "WARNING",
+                    "rawCategory": "",
+                    "category": "UNKNOWN",
+                })
+            self.assertEqual(summary.notifications, notifications)
+        else:
+            self.assertEqual(summary.notifications, notifications)
 
     def test_plan(self):
         plan = {

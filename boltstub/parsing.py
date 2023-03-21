@@ -176,8 +176,8 @@ class BangLine(Line):
     def update_context(self, ctx: "ScriptContext"):
         if self._type == BangLine.TYPE_AUTO:
             if self._arg in ctx.auto:
-                warnings.warn(
-                    'Specified AUTO for "{}" multiple times'.format(self._arg)
+                warnings.warn(  # noqa: B028
+                    f'Specified AUTO for "{self._arg}" multiple times'
                 )
             ctx.auto.add(self._arg)
             ctx.bang_lines["auto"][self._arg] = self
@@ -188,24 +188,30 @@ class BangLine(Line):
             ctx.bang_lines["bolt_version"] = self
         elif self._type == BangLine.TYPE_RESTART:
             if ctx.restarting:
-                warnings.warn('Specified "!: ALLOW RESTART" multiple times')
+                warnings.warn(  # noqa: B028
+                    'Specified "!: ALLOW RESTART" multiple times'
+                )
             ctx.restarting = True
             ctx.bang_lines["restarting"] = self
         elif self._type == BangLine.TYPE_CONCURRENT:
             if ctx.concurrent:
-                warnings.warn('Specified "!: ALLOW CONCURRENT" multiple times')
+                warnings.warn(  # noqa: B028
+                    'Specified "!: ALLOW CONCURRENT" multiple times'
+                )
             ctx.concurrent = True
             ctx.bang_lines["concurrent"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE:
             if ctx.handshake:
-                warnings.warn('Specified "!: HANDSHAKE" multiple times')
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE" multiple times'
+                )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
         elif self._type == BangLine.TYPE_PYTHON:
             ctx.bang_lines["python"].append(self)
             ctx.python.append(self._arg)
         if ctx.restarting and ctx.concurrent:
-            warnings.warn(
+            warnings.warn(  # noqa: B028
                 'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
                 "(concurrent scripts are implicitly restarting)"
             )

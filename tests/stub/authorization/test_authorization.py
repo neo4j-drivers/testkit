@@ -26,7 +26,7 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["python"]:
             expected_type = "<class 'neo4j.exceptions.TransientError'>"
         elif driver in ["javascript"]:
-            pass  # only test for code
+            pass
         elif driver in ["dotnet"]:
             expected_type = "AuthorizationExpired"
         elif driver in ["ruby"]:
@@ -34,8 +34,7 @@ class AuthorizationBase(TestkitTestCase):
                 "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        if expected_type is not None:
-            self.assertEqual(expected_type, error.errorType)
+        self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
@@ -45,8 +44,10 @@ class AuthorizationBase(TestkitTestCase):
         expected_type = None
         if driver in ["python"]:
             expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
-        elif driver in ["go", "javascript"]:
-            pass  # code and msg check are enough
+        elif driver in ["go"]:
+            expected_type = "TokenExpiredError"
+        elif driver in ["javascript"]:
+            pass
         elif driver == "java":
             expected_type = "org.neo4j.driver.exceptions.TokenExpiredException"
         elif driver == "ruby":
@@ -143,6 +144,7 @@ class AuthorizationBase(TestkitTestCase):
         server.start(path=script_path, vars_=vars_)
 
     def script_fn_with_features(self, script_fn):
+        has_logon = getattr(self, "has_logon", False)
         minimal = self.driver_supports_features(
             types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
         )
@@ -150,16 +152,16 @@ class AuthorizationBase(TestkitTestCase):
             types.Feature.OPT_AUTH_PIPELINING
         )
         parts = script_fn.rsplit(".", 1)
-        if minimal and auth_pipeline:
-            if not getattr(self, "has_logon", False):
-                return (
-                    f"{parts[0]}_pipelined_minimal.{parts[1]}",
-                    # pipelined is optional, as it makes little sense to have
-                    # an extra script for it for protocol versions pre
-                    # LOGOFF/LOGON message (there is nothing to pipeline
-                    # there).
-                    f"{parts[0]}_minimal.{parts[1]}",
-                )
+        if minimal and not has_logon:
+            return (
+                f"{parts[0]}_pipelined_minimal.{parts[1]}",
+                # pipelined is optional, as it makes little sense to have
+                # an extra script for it for protocol versions pre
+                # LOGOFF/LOGON message (there is nothing to pipeline
+                # there).
+                f"{parts[0]}_minimal.{parts[1]}",
+            )
+        elif minimal and auth_pipeline:
             return f"{parts[0]}_pipelined_minimal.{parts[1]}",
         elif auth_pipeline:
             return (
@@ -170,7 +172,8 @@ class AuthorizationBase(TestkitTestCase):
             raise RuntimeError(
                 "Tests for driver with "
                 "types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS but without "
-                "types.Feature.OPT_AUTH_PIPELINING are (currently) missing. "
+                "types.Feature.OPT_AUTH_PIPELINING are (currently) missing "
+                "when logon is supported. "
                 "Feel free to add them when needed."
             )
         else:
@@ -834,6 +837,21 @@ class TestAuthorizationV5x0(TestAuthorizationV4x3):
             host = self._routing_server1.host
         return {
             "#VERSION#": "5.0",
+            "#HOST#": host,
+            "#ROUTINGMODE#": '"mode": "r", ',
+            "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
+        }
+
+
+class TestAuthorizationV5x1(TestAuthorizationV4x3):
+
+    required_features = types.Feature.BOLT_5_1,
+
+    def get_vars(self, host=None):
+        if host is None:
+            host = self._routing_server1.host
+        return {
+            "#VERSION#": "5.1",
             "#HOST#": host,
             "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'
