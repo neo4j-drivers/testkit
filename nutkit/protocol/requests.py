@@ -73,7 +73,6 @@ class NewDriver:
         encrypted=None, trustedCertificates=None,
         liveness_check_timeout_ms=None, max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None,
-        backwards_compatible_auth=None,
         notifications_min_severity=None,
         notifications_disabled_categories=None
     ):
@@ -93,8 +92,6 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
-        if backwards_compatible_auth is not None:
-            self.backwardsCompatibleAuth = backwards_compatible_auth
         if notifications_min_severity is not None:
             self.notificationsMinSeverity = notifications_min_severity
         if notifications_disabled_categories is not None:

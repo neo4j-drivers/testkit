@@ -14,8 +14,6 @@ class _TestVerifyAuthenticationBase(AuthorizationBase):
 
     required_features = types.Feature.API_DRIVER_VERIFY_AUTHENTICATION,
 
-    backwards_compatible_auth = None
-
     VERIFY_AUTH_NEGATIVE_ERRORS = (
         "Neo.ClientError.Security.CredentialsExpired",
         "Neo.ClientError.Security.Forbidden",
@@ -60,8 +58,7 @@ class _TestVerifyAuthenticationBase(AuthorizationBase):
         else:
             uri = f"bolt://{self._reader.address}"
         driver = Driver(
-            self._backend, uri, auth,
-            backwards_compatible_auth=self.backwards_compatible_auth
+            self._backend, uri, auth
         )
         try:
             yield driver
@@ -294,37 +291,3 @@ class TestVerifyAuthenticationV5x0(_TestVerifyAuthenticationBase):
                     test(routing, warm)
                 self._router.reset()
                 self._reader.reset()
-
-
-class TestVerifyAuthenticationV5x0BackwardsCompatibility(
-    _TestVerifyAuthenticationBase
-):
-
-    required_features = (*_TestVerifyAuthenticationBase.required_features,
-                         types.Feature.BOLT_5_0,
-                         types.Feature.INTERNAL_USER_SWITCH_POLYFILL)
-
-    backwards_compatible_auth = True
-
-    def get_vars(self):
-        return {
-            **super().get_vars(),
-            "#VERSION#": "5.0",
-        }
-
-    def start_server(self, server, script_fn, vars_=None):
-        parts = script_fn.split(".")
-        script_fn = f"{parts[0]}_backwards_compat.{parts[1]}"
-        super().start_server(server, script_fn, vars_)
-
-    def test_successful_authentication(self):
-        super()._test_successful_authentication()
-
-    def test_router_failure(self):
-        super()._test_router_failure()
-
-    def test_warm_router_failure(self):
-        super()._test_warm_router_failure()
-
-    def test_reader_failure(self):
-        super()._test_reader_failure()

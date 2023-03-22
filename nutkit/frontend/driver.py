@@ -15,7 +15,6 @@ class Driver:
                  trusted_certificates=None, liveness_check_timeout_ms=None,
                  max_connection_pool_size=None,
                  connection_acquisition_timeout_ms=None,
-                 backwards_compatible_auth=None,
                  notifications_min_severity=None,
                  notifications_disabled_categories=None):
         self._backend = backend
@@ -44,7 +43,6 @@ class Driver:
             liveness_check_timeout_ms=liveness_check_timeout_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
-            backwards_compatible_auth=backwards_compatible_auth,
             notifications_min_severity=notifications_min_severity,
             notifications_disabled_categories=notifications_disabled_categories
         )
