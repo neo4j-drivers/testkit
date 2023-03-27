@@ -105,6 +105,11 @@ def initialise_configurations(settings):
             ("4.4",    True,        False,    "bolt",   0),
             ("4.4",    True,        False,    "neo4j",  0),
             ("4.4",    True,        True,     "neo4j", 90),
+            # Selected 5.x versions
+            # oldest 5.x version (BOLT 5.0)
+            ("5.0",    True,        True,     "neo4j",  0),
+            # Bolt 5.1
+            ("5.5",    True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
@@ -113,13 +118,13 @@ def initialise_configurations(settings):
         for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
             # nightly build of official backwards-compatible version
-            ("4.4",    "4.4",      True,        True,     "neo4j",  60),
+            ("4.4",    "4.4",      True,        True,     "neo4j", 60),
             # latest version
-            ("5.0",    "5.0",      False,       False,    "bolt",    0),
-            ("5.0",    "5.0",      False,       False,    "neo4j",   0),
-            ("5.0",    "5.0",      True,        False,    "bolt",   90),
-            ("5.0",    "5.0",      True,        False,    "neo4j",   0),
-            ("5.0",    "5.0",      True,        True,     "neo4j",  90),
+            ("5.7",    "dev",      False,       False,    "bolt",   0),
+            ("5.7",    "dev",      False,       False,    "neo4j",  0),
+            ("5.7",    "dev",      True,        False,    "bolt",  90),
+            ("5.7",    "dev",      True,        False,    "neo4j",  0),
+            ("5.7",    "dev",      True,        True,     "neo4j", 90),
         )
     ]
 
