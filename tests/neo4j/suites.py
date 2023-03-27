@@ -40,22 +40,41 @@ suite_4x4 = suite_4x3
 #######################
 suite_5x0 = suite_4x3
 
+#######################
+# Suite for Neo4j 5.5 #
+#######################
+suite_5x5 = suite_5x0
+
+#######################
+# Suite for Neo4j 5.7 #
+#######################
+suite_5x7 = suite_5x5
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Missing suite name parameter")
         sys.exit(-10)
     name = sys.argv[1]
-    suite = None
-    if name == "4.2":
-        suite = suite_4x2
-    elif name == "4.3":
-        suite = suite_4x3
-    elif name == "4.4":
-        suite = suite_4x4
-    elif name == "5.0":
+    try:
+        version = tuple(int(i) for i in name.split("."))
+    except ValueError:
+        print(f"Invalid suite name: {name}. "
+              "Should be X.Y for X and Y integer.")
+        sys.exit(-2)
+    if version >= (5, 7):
+        suite = suite_5x7
+    elif version >= (5, 5):
+        suite = suite_5x5
+    elif version >= (5, 0):
         suite = suite_5x0
-
-    if not suite:
+    elif version >= (4, 4):
+        suite = suite_4x4
+    elif version >= (4, 3):
+        suite = suite_4x3
+    elif version >= (4, 2):
+        suite = suite_4x2
+    else:
         print("Unknown suite name: " + name)
         sys.exit(-1)
 
