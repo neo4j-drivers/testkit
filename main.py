@@ -52,7 +52,7 @@ def initialise_configurations(settings):
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
-        image = "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
+        image = f"neo4j:{version}{'-enterprise' if enterprise else ''}"
         return neo4j.Config(
             name=name,
             image=image,
@@ -105,6 +105,13 @@ def initialise_configurations(settings):
             ("4.4",    True,        False,    "bolt",   0),
             ("4.4",    True,        False,    "neo4j",  0),
             ("4.4",    True,        True,     "neo4j", 90),
+            # Selected 5.x versions
+            # Oldest 5.x version (BOLT 5.0) would be 5.0.
+            # However, that has no tag at dockerhub, so we use 5.1
+            # https://github.com/neo4j/docker-neo4j/issues/391
+            ("5.1",    True,        True,     "neo4j",  0),
+            # Bolt 5.1
+            ("5.5",    True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
@@ -113,13 +120,13 @@ def initialise_configurations(settings):
         for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
             # nightly build of official backwards-compatible version
-            ("4.4",    "4.4",      True,        True,     "neo4j",  60),
+            ("4.4",    "4.4",      True,        True,     "neo4j", 60),
             # latest version
-            ("5.0",    "5.0",      False,       False,    "bolt",    0),
-            ("5.0",    "5.0",      False,       False,    "neo4j",   0),
-            ("5.0",    "5.0",      True,        False,    "bolt",   90),
-            ("5.0",    "5.0",      True,        False,    "neo4j",   0),
-            ("5.0",    "5.0",      True,        True,     "neo4j",  90),
+            ("5.7",    "dev",      False,       False,    "bolt",   0),
+            ("5.7",    "dev",      False,       False,    "neo4j",  0),
+            ("5.7",    "dev",      True,        False,    "bolt",  90),
+            ("5.7",    "dev",      True,        False,    "neo4j",  0),
+            ("5.7",    "dev",      True,        True,     "neo4j", 90),
         )
     ]
 
@@ -409,13 +416,14 @@ def main(settings, configurations):
             print("\n    Starting neo4j cluster (%s)\n" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
-                                   neo4j_artifacts_path)
+                                   neo4j_artifacts_path,
+                                   neo4j_config.version)
         else:
             print("\n    Starting neo4j standalone server (%s)\n"
                   % server_name)
             server = neo4j.Standalone(
                 neo4j_config.image, server_name, neo4j_artifacts_path,
-                "neo4jserver", 7687, neo4j_config.edition
+                "neo4jserver", 7687, neo4j_config.version, neo4j_config.edition
             )
         server.start(networks[0])
         addresses = server.addresses()
