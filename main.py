@@ -416,13 +416,14 @@ def main(settings, configurations):
             print("\n    Starting neo4j cluster (%s)\n" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
-                                   neo4j_artifacts_path)
+                                   neo4j_artifacts_path,
+                                   neo4j_config.version)
         else:
             print("\n    Starting neo4j standalone server (%s)\n"
                   % server_name)
             server = neo4j.Standalone(
                 neo4j_config.image, server_name, neo4j_artifacts_path,
-                "neo4jserver", 7687, neo4j_config.edition
+                "neo4jserver", 7687, neo4j_config.version, neo4j_config.edition
             )
         server.start(networks[0])
         addresses = server.addresses()
