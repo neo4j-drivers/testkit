@@ -46,9 +46,7 @@ test_flags = {
 
 
 def initialise_configurations(settings):
-    def generate_config(
-        version, enterprise, cluster, scheme, stress_test
-    ):
+    def generate_config(version, enterprise, cluster, scheme, stress_test):
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
         edition = "enterprise" if enterprise else "community"
