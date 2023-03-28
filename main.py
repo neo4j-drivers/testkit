@@ -46,13 +46,15 @@ test_flags = {
 
 
 def initialise_configurations(settings):
-    def generate_config(version, enterprise, cluster, scheme, stress_test):
+    def generate_config(
+        version, enterprise, cluster, scheme, stress_test
+    ):
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
-        image = "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
+        image = f"neo4j:{version}{'-enterprise' if enterprise else ''}"
         return neo4j.Config(
             name=name,
             image=image,
@@ -106,8 +108,10 @@ def initialise_configurations(settings):
             ("4.4",    True,        False,    "neo4j",  0),
             ("4.4",    True,        True,     "neo4j", 90),
             # Selected 5.x versions
-            # oldest 5.x version (BOLT 5.0)
-            ("5.0",    True,        True,     "neo4j",  0),
+            # Oldest 5.x version (BOLT 5.0) would be 5.0.
+            # However, that has no tag at dockerhub, so we use 5.1
+            # https://github.com/neo4j/docker-neo4j/issues/391
+            ("5.1",    True,        True,     "neo4j",  0),
             # Bolt 5.1
             ("5.5",    True,        True,     "neo4j",  0),
         )
