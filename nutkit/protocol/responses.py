@@ -531,7 +531,7 @@ class DriverError(BaseError):
         self.code = code
 
     def __str__(self):
-        return "DriverError : " + self.errorType + " : " + self.msg
+        return f"DriverError(type={self.errorType}, msg={self.msg!r})"
 
     def __repr__(self):
         return self.__str__()
@@ -549,7 +549,10 @@ class FrontendError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return "FrontendError : " + self.msg
+        return f"FrontendError(msg={self.msg!r})"
+
+    def __repr__(self):
+        return self.__str__()
 
 
 # For backward compatibility
@@ -572,4 +575,7 @@ class BackendError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return "BackendError : " + self.msg
+        return f"BackendError(msg={self.msg!r})"
+
+    def __repr__(self):
+        return self.__str__()
