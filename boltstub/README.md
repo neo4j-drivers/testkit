@@ -39,6 +39,8 @@ The following options are available:
    By default the server automatically performs a handshake (incl. protocol version negotiation) with the client upon connection (https://7687.org/bolt/bolt-protocol-handshake-specification.html).
    This bang line allows for overwriting the response of the server that normally contains the protocol version which the server wants to speak with the client.  
    E.g. `!: HANDSHAKE FF 00 00 01`
+ * `!: HANDSHAKE_DELAY ${DELAY_IN_S}`
+    Wait for `${DELAY_IN_S}` (can be int or float) seconds before sending the handshake response.
  * `!: PY ${ARBITRATY PYTHON CODE}`  
    Executes the specified Python code once when the script is loaded regardless of how many times it is played (s. `!: ALLOW RESTART` and `!: ALLOW CONCURRENT` ).
    Only single lines are supported.

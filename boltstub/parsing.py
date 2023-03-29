@@ -128,6 +128,7 @@ class BangLine(Line):
     TYPE_RESTART = "restart"
     TYPE_CONCURRENT = "concurrent"
     TYPE_HANDSHAKE = "handshake"
+    TYPE_HANDSHAKE_DELAY = "handshake_delay"
     TYPE_PYTHON = "python"
 
     def __new__(cls, *args, **kwargs):
@@ -163,6 +164,23 @@ class BangLine(Line):
                     "'HANDSHAKE 00 FF 02 04 F0'"
                 )
             obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
+        elif re.match(r"^HANDSHAKE_DELAY\s", obj.content):
+            obj._type = BangLine.TYPE_HANDSHAKE_DELAY
+            raw_arg = obj.content[16:].strip()
+            try:
+                obj._arg = float(raw_arg)
+            except ValueError:
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake delay, must be a number "
+                    "number (e.g. 'HANDSHAKE_DELAY 0.5')"
+                )
+            if obj._arg < 0:
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake delay, must be a positive "
+                    "number (e.g. 'HANDSHAKE_DELAY 0.5')"
+                )
         elif re.match(r"^PY\s", obj.content):
             obj._type = BangLine.TYPE_PYTHON
             obj._arg = obj.content[3:].strip()
@@ -207,6 +225,13 @@ class BangLine(Line):
                 )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
+        elif self._type == BangLine.TYPE_HANDSHAKE_DELAY:
+            if ctx.handshake_delay is not None:
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE_DELAY" multiple times'
+                )
+            ctx.handshake_delay = self._arg
+            ctx.bang_lines["handshake_delay"] = self
         elif self._type == BangLine.TYPE_PYTHON:
             ctx.bang_lines["python"].append(self)
             ctx.python.append(self._arg)
@@ -1273,6 +1298,7 @@ class ScriptContext:
         self.restarting = False
         self.concurrent = False
         self.handshake = None
+        self.handshake_delay = None
         self.python = []
         self.bang_lines = {
             "bolt_version": None,
@@ -1280,6 +1306,7 @@ class ScriptContext:
             "restarting": None,
             "concurrent": None,
             "handshake": None,
+            "handshake_delay": None,
             "python": [],
         }
 
