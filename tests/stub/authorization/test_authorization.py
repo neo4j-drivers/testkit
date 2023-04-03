@@ -85,8 +85,8 @@ class AuthorizationBase(TestkitTestCase):
                 error.errorType
             )
             self.assertIn(
-                "session level authentication is not supported for bolt "
-                "protocol version(5, 0)",
+                "user switching is not supported for bolt protocol "
+                "version(5, 0)",
                 error.msg.lower()
             )
         elif driver in ["javascript"]:
