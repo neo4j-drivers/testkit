@@ -143,8 +143,8 @@ class AuthorizationToken:
         return vars(self) == vars(other)
 
 
-class TemporalAuthToken:
-    """Not a request but used in `TemporalAuthTokenProviderCompleted`."""
+class AuthTokenAndExpiration:
+    """Not a request; used in `ExpirationBasedAuthTokenProviderCompleted`."""
 
     def __init__(self, auth, expires_in_ms=None):
         assert isinstance(auth, AuthorizationToken)
@@ -199,24 +199,24 @@ class AuthTokenManagerClose:
 
     def __init__(self, id):
         # Id of the auth token manager to close.
-        # This id might also point to a TemporalAuthTokenProvider.
+        # This id might also point to a ExpirationBasedAuthTokenManager.
         self.id = id
 
 
-class NewTemporalAuthTokenManager:
+class NewExpirationBasedAuthTokenManager:
     """
     Create a new auth temporal token manager on the backend.
 
     The manager will wrap a temporal token provider function on the backend.
 
-    The backend should respond with `TemporalAuthTokenManager`.
+    The backend should respond with `ExpirationBasedAuthTokenManager`.
     """
 
     def __init__(self):
         pass
 
 
-class TemporalAuthTokenProviderCompleted:
+class ExpirationBasedAuthTokenProviderCompleted:
     """
     Result of a completed auth token provider function call.
 
@@ -225,7 +225,7 @@ class TemporalAuthTokenProviderCompleted:
 
     def __init__(self, request_id, auth):
         self.requestId = request_id
-        assert isinstance(auth, TemporalAuthToken)
+        assert isinstance(auth, AuthTokenAndExpiration)
         self.auth = auth
 
 

@@ -2,8 +2,8 @@ from contextlib import contextmanager
 
 from nutkit.frontend import (
     Driver,
+    ExpirationBasedAuthTokenManager,
     FakeTime,
-    TemporalAuthTokenManager,
 )
 import nutkit.protocol as types
 from tests.shared import driver_feature
@@ -11,7 +11,7 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
-class TestTemporalAuthManager5x1(AuthorizationBase):
+class TestExpirationBasedAuthManager5x1(AuthorizationBase):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.AUTH_MANAGED)
@@ -72,7 +72,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            return types.TemporalAuthToken(
+            return types.AuthTokenAndExpiration(
                 types.AuthorizationToken(
                     scheme="basic",
                     principal="neo4j",
@@ -80,7 +80,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
                 )
             )
 
-        auth_manager = TemporalAuthTokenManager(self._backend, provider)
+        auth_manager = ExpirationBasedAuthTokenManager(self._backend, provider)
 
         self.start_server(
             self._reader,
@@ -101,7 +101,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            return types.TemporalAuthToken(
+            return types.AuthTokenAndExpiration(
                 types.AuthorizationToken(
                     scheme="basic",
                     principal="neo4j",
@@ -109,7 +109,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
                 )
             )
 
-        auth_manager = TemporalAuthTokenManager(self._backend, provider)
+        auth_manager = ExpirationBasedAuthTokenManager(self._backend, provider)
 
         self.start_server(
             self._reader,
@@ -141,7 +141,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
             count += 1
             credentials = "password" if count > 1 else "pass"
 
-            return types.TemporalAuthToken(
+            return types.AuthTokenAndExpiration(
                 types.AuthorizationToken(
                     scheme="basic",
                     principal="neo4j",
@@ -150,7 +150,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
                 10_000
             )
 
-        auth_manager = TemporalAuthTokenManager(self._backend, provider)
+        auth_manager = ExpirationBasedAuthTokenManager(self._backend, provider)
 
         self.start_server(self._reader,
                           self.script_fn_with_features("reader_reauth.script"))
@@ -188,7 +188,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
                 count += 1
                 credentials = "password" if count > 1 else "pass"
 
-                return types.TemporalAuthToken(
+                return types.AuthTokenAndExpiration(
                     types.AuthorizationToken(
                         scheme="basic",
                         principal="neo4j",
@@ -197,7 +197,8 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
                     10_000
                 )
 
-            auth_manager = TemporalAuthTokenManager(self._backend, provider)
+            auth_manager = ExpirationBasedAuthTokenManager(self._backend,
+                                                           provider)
 
             expected_call_count = 2 if error_ == "token_expired" else 1
 
@@ -299,7 +300,7 @@ class TestTemporalAuthManager5x1(AuthorizationBase):
         ...
 
 
-class TestTemporalAuthManager5x0(TestTemporalAuthManager5x1):
+class TestExpirationBasedAuthManager5x0(TestExpirationBasedAuthManager5x1):
 
     required_features = (types.Feature.BOLT_5_0,
                          types.Feature.AUTH_MANAGED)

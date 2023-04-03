@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from nutkit.frontend import (
     AuthTokenManager,
     Driver,
-    TemporalAuthTokenManager,
+    ExpirationBasedAuthTokenManager,
 )
 import nutkit.protocol as types
 from tests.shared import driver_feature
@@ -123,12 +123,12 @@ class TestTokenExpiredRetryV5x1(_TestTokenExpiredRetryBase):
             nonlocal count
             count += 1
             if count == 1:
-                return types.TemporalAuthToken(self._auth1, None)
-            return types.TemporalAuthToken(self._auth2, None)
+                return types.AuthTokenAndExpiration(self._auth1, None)
+            return types.AuthTokenAndExpiration(self._auth2, None)
 
         for routing in (True, False):
             with self.subTest(routing=routing):
-                auth = TemporalAuthTokenManager(self._backend, provider)
+                auth = ExpirationBasedAuthTokenManager(self._backend, provider)
                 self._test_retry(auth, routing=routing)
                 self.assertEqual(count, 2)
             self._reader.reset()

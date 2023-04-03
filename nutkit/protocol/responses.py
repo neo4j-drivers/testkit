@@ -111,38 +111,39 @@ class AuthTokenManagerOnAuthExpiredRequest:
         self.auth = auth
 
 
-class TemporalAuthTokenManager:
+class ExpirationBasedAuthTokenManager:
     """
-    Represents a new temporal auth token manager.
+    Represents a new expiration based auth token manager.
 
     The passed id is used when creating a new driver (`NewDriver`) to refer to
     this auth token manager
     """
 
     def __init__(self, id):
-        # Id of TemporalAuthTokenManager instance on backend.
+        # Id of ExpirationBasedAuthTokenManager instance on backend.
         # Note that the id space needs to be shared with AuthTokenManager.
         self.id = id
 
 
-class TemporalAuthTokenProviderRequest:
+class ExpirationBasedAuthTokenProviderRequest:
     """
     Represents the need for a fresh auth token.
 
     This message may be sent by the backend at any time should the driver call
     a temporal auth token provider function that was previously created in
-    response to `NewTemporalAuthTokenManager`.
+    response to `NewExpirationBasedAuthTokenManager`.
 
-    TestKit will respond with `TemporalAuthTokenProviderCompleted`.
+    TestKit will respond with `ExpirationBasedAuthTokenProviderCompleted`.
     """
 
-    def __init__(self, id, temporalAuthTokenManagerId):
+    def __init__(self, id, expirationBasedAuthTokenManagerId):
         # Id of the request. TestKit will send the same id back as `requestId`
-        # in the `TemporalTemporalAuthTokenProviderCompleted` response.
+        # in the `ExpirationBasedAuthTokenProviderCompleted` response.
         self.id = id
         # Id of the temporal auth token manager that called its provider
         # function.
-        self.temporal_auth_token_manager_id = temporalAuthTokenManagerId
+        self.expiration_based_auth_token_manager_id = \
+            expirationBasedAuthTokenManagerId
 
 
 class ResolverResolutionRequired:

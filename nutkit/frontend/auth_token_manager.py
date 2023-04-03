@@ -74,20 +74,20 @@ class AuthTokenManager:
 
 
 @dataclass
-class TemporalAuthTokenManager:
-    _registry: ClassVar[Dict[Any, TemporalAuthTokenManager]] = {}
+class ExpirationBasedAuthTokenManager:
+    _registry: ClassVar[Dict[Any, ExpirationBasedAuthTokenManager]] = {}
 
     def __init__(
         self,
         backend: Backend,
-        callback: Callable[[], protocol.TemporalAuthToken]
+        callback: Callable[[], protocol.AuthTokenAndExpiration]
     ):
         self._backend = backend
         self._callback = callback
 
-        req = protocol.NewTemporalAuthTokenManager()
+        req = protocol.NewExpirationBasedAuthTokenManager()
         res = backend.send_and_receive(req)
-        if not isinstance(res, protocol.TemporalAuthTokenManager):
+        if not isinstance(res, protocol.ExpirationBasedAuthTokenManager):
             raise Exception(
                 f"Should be TemporalAuthTokenManager but was {res}"
             )
@@ -101,16 +101,23 @@ class TemporalAuthTokenManager:
 
     @classmethod
     def process_callbacks(cls, request):
-        if isinstance(request, protocol.TemporalAuthTokenProviderRequest):
-            if request.temporal_auth_token_manager_id not in cls._registry:
+        if isinstance(request,
+                      protocol.ExpirationBasedAuthTokenProviderRequest):
+            if (
+                request.expiration_based_auth_token_manager_id
+                not in cls._registry
+            ):
                 raise Exception(
-                    "Backend provided unknown Temporal Auth Token Manager "
-                    f"id: {request.temporal_auth_token_manager_id} not found"
+                    "Backend provided unknown ExpirationBasedAuthTokenManager "
+                    f"id: {request.expiration_based_auth_token_manager_id} "
+                    f"not found"
                 )
 
-            manager = cls._registry[request.temporal_auth_token_manager_id]
+            manager = cls._registry[
+                request.expiration_based_auth_token_manager_id
+            ]
             renewable_auth_token = manager._callback()
-            return protocol.TemporalAuthTokenProviderCompleted(
+            return protocol.ExpirationBasedAuthTokenProviderCompleted(
                 request.id, renewable_auth_token
             )
 
@@ -120,7 +127,5 @@ class TemporalAuthTokenManager:
             hooks=hooks
         )
         if not isinstance(res, protocol.AuthTokenManager):
-            raise Exception(
-                f"Should be AuthTokenManager but was {res}"
-            )
+            raise Exception(f"Should be AuthTokenManager but was {res}")
         del self._registry[self.id]
