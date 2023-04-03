@@ -44,6 +44,8 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 
+    *: RESET
+
     C: RUN "RETURN 2.2 AS n" "*" "*"
     S: FAILURE {"code": "Neo.ClientError.Security.TokenExpired", "message": "Token expired."}
     S: <EXIT>
