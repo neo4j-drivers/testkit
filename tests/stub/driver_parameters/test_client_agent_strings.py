@@ -85,7 +85,7 @@ class _ClientAgentStringsTestBase(TestkitTestCase, abc.ABC):
 
     def _test_default_user_agent(self):
         vars_ = {
-            "#USER_AGENT#": json.dumps(self.get_default_agent()),
+            "#USER_AGENT#": self.get_default_agent(),
         }
         self._start_server("user_agent_default.script", vars_=vars_)
         self._session_run_return_1()
@@ -96,10 +96,14 @@ class _ClientAgentStringsTestBase(TestkitTestCase, abc.ABC):
 
 
 class TestClientAgentStringsV5x2(_ClientAgentStringsTestBase):
+
     version_folder = "v5x2"
+    required_features = (types.Feature.BOLT_5_2,)
 
     def get_default_agent(self) -> Optional[str]:
-        return self. _extract_bolt_agent()
+        if self.driver_supports_features(types.Feature.BOLT_5_3):
+            return json.dumps(self._extract_bolt_agent())
+        return '{"U": "*"}'
 
     def test_default_user_agent(self):
         super()._test_default_user_agent()
@@ -109,7 +113,9 @@ class TestClientAgentStringsV5x2(_ClientAgentStringsTestBase):
 
 
 class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
+
     version_folder = "v5x3"
+    required_features = (types.Feature.BOLT_5_3,)
 
     def get_default_agent(self) -> Optional[str]:
         return None
