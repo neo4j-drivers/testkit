@@ -2,79 +2,96 @@
 !: ALLOW CONCURRENT
 
 A: HELLO {"user_agent": "*", "[routing]": "*"}
-A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
-
-*: RESET
-
-C: BEGIN {"{}": "*"}
-S: SUCCESS {}
-# Three concurrent connections
 {{
-    C: RUN "RETURN 1.1 AS n" "*" "*"
-    S: SUCCESS {"fields": ["n"]}
-    C: PULL "*"
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
-    C: COMMIT
-    S: SUCCESS {}
+    A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 
     *: RESET
 
-    # now the second connection receives the token expired error => this connection needs to be re-authenticated
-    A: LOGOFF
+    C: BEGIN {"{}": "*"}
+    S: SUCCESS {}
+    # Three concurrent connections
+    {{
+        C: RUN "RETURN 1.1 AS n" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL "*"
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+
+        *: RESET
+
+        # now the second connection receives the token expired error => this connection needs to be re-authenticated
+        A: LOGOFF
+        A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+
+        *: RESET
+
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        C: RUN "RETURN 1.2 AS n" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL "*"
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+    ----
+        C: RUN "RETURN 2.1 AS n" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL "*"
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+
+        *: RESET
+
+        C: RUN "RETURN 2.2 AS n" "*" "*"
+        S: FAILURE {"code": "Neo.ClientError.Security.TokenExpired", "message": "Token expired."}
+        S: <EXIT>
+    ----
+        C: RUN "RETURN 3.1 AS n" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL "*"
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+
+        *: RESET
+
+        # now the second connection receives the token expired error => this connection needs to be re-authenticated
+        A: LOGOFF
+        A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+
+        *: RESET
+
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        C: RUN "RETURN 3.2 AS n" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL "*"
+        S: RECORD [1]
+           SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+    }}
+----
     A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
 
     *: RESET
 
     C: BEGIN {"{}": "*"}
     S: SUCCESS {}
-    C: RUN "RETURN 1.2 AS n" "*" "*"
+    C: RUN "RETURN 2.3 AS n" "*" "*"
     S: SUCCESS {"fields": ["n"]}
     C: PULL "*"
     S: RECORD [1]
        SUCCESS {"type": "r"}
     C: COMMIT
     S: SUCCESS {}
-----
-    C: RUN "RETURN 2.1 AS n" "*" "*"
-    S: SUCCESS {"fields": ["n"]}
-    C: PULL "*"
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
-    C: COMMIT
-    S: SUCCESS {}
-
-    *: RESET
-
-    C: RUN "RETURN 2.2 AS n" "*" "*"
-    S: FAILURE {"code": "Neo.ClientError.Security.TokenExpired", "message": "Token expired."}
-    S: <EXIT>
-----
-    C: RUN "RETURN 3.1 AS n" "*" "*"
-    S: SUCCESS {"fields": ["n"]}
-    C: PULL "*"
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
-    C: COMMIT
-    S: SUCCESS {}
-
-    *: RESET
-
-    # now the second connection receives the token expired error => this connection needs to be re-authenticated
-    A: LOGOFF
-    A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
-
-    *: RESET
-
-    C: BEGIN {"{}": "*"}
-    S: SUCCESS {}
-    C: RUN "RETURN 3.2 AS n" "*" "*"
-    S: SUCCESS {"fields": ["n"]}
-    C: PULL "*"
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
-    C: COMMIT
-    S: SUCCESS {}
+}}
 }}
 
 *: RESET

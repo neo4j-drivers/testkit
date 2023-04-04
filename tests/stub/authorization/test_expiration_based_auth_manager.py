@@ -215,7 +215,7 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                 )
                 self.start_server(self._router, "router_single_reader.script")
 
-            with self.driver(auth_manager, routing=routing_) as driver:
+            with self.driver(auth_manager, routing=routing_, max_connection_pool_size=3) as driver:
                 if routing_:
                     with self.session(driver, "w") as session_w:
                         list(session_w.run("RETURN 1 AS n"))
@@ -254,7 +254,11 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                                 )
                             else:
                                 raise ValueError(f"Unknown error {error_}")
+
+                            # bind connection 2
+                            s2_tx = session_r2.begin_transaction()
                             self.assertEqual(expected_call_count, count)
+                            list(s2_tx.run("RETURN 2.3 AS n"))
 
                             # free connection 1
                             s1_tx.commit()
@@ -271,6 +275,7 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                             # free all connections
                             s3_tx.commit()
                             s1_tx.commit()
+                            s2_tx.commit()
 
                 if routing_:
                     with self.session(driver, "w") as session_w:

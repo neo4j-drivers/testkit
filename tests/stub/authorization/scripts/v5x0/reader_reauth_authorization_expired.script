@@ -42,6 +42,14 @@ S: SUCCESS {}
     S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired."}
     S: <EXIT>
 ----
+    C: RUN "RETURN 2.3 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+----
     C: RUN "RETURN 3.1 AS n" "*" "*"
     S: SUCCESS {"fields": ["n"]}
     C: PULL "*"
