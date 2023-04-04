@@ -1,0 +1,14 @@
+!: BOLT 5.3
+
+C: HELLO {"[routing]": null, "user_agent": "Hello, I'm a banana 🍌!", "bolt_agent": {"U": "*"}}
+S: SUCCESS {"server": "Neo4j/5.5.0", "connection_id": "bolt-1"}
+C: LOGON {"{}": "*"}
+S: SUCCESS {}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": "*"}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

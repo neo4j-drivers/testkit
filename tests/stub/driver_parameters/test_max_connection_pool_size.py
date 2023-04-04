@@ -19,7 +19,7 @@ class TestMaxConnectionPoolSize(TestkitTestCase):
         # test for security reasons.
         self._server = StubServer(9999)
         self._server.start(
-            self.script_path("tx_without_commit_or_rollback.script")
+            self.script_path("v5x0", "tx_without_commit_or_rollback.script")
         )
         self._driver = None
         self._sessions = []

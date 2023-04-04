@@ -73,7 +73,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
     def _start_server(self, server, script, vars_=None):
         if vars_ is None:
             vars_ = self._get_vars()
-        server.start(self.script_path(script), vars_=vars_)
+        server.start(self.script_path("v5x0", script), vars_=vars_)
 
     def test_should_work_when_every_step_is_done_in_time(self):
         """

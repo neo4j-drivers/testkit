@@ -837,7 +837,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
         )
 
     def _start_server(self, server, script):
-        server.start(self.script_path(script),
+        server.start(self.script_path("v5x0", script),
                      vars_={"#HOST#": self._router.host})
 
     def assert_begin(self, line: str, bookmarks=None):
