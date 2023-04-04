@@ -10,6 +10,7 @@ from tests.stub.shared import StubServer
 
 
 class _ClientAgentStringsTestBase(TestkitTestCase, abc.ABC):
+
     @property
     @abc.abstractmethod
     def version_folder(self) -> str:
