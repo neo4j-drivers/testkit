@@ -116,7 +116,6 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
     C: COMMIT
     S: SUCCESS {}
 }}
-}}
 
 *: RESET
 ?: GOODBYE
