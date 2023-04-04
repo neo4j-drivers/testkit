@@ -215,7 +215,8 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                 )
                 self.start_server(self._router, "router_single_reader.script")
 
-            with self.driver(auth_manager, routing=routing_, max_connection_pool_size=3) as driver:
+            with self.driver(auth_manager, routing=routing_,
+                             max_connection_pool_size=3) as driver:
                 if routing_:
                     with self.session(driver, "w") as session_w:
                         list(session_w.run("RETURN 1 AS n"))
