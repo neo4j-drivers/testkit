@@ -175,8 +175,8 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                 for i, auth in enumerate((
                     ("neo4j", "pass"),
                     ("neo4j", "pass"),
-                    ("neo4j", "password"),
-                    ("neo4j", "password"),
+                    ("neo5j", "pass++"),
+                    ("neo5j", "pass++"),
                 )):
                     current_auth = auth
                     # database=None to force home db resolution
@@ -203,7 +203,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                 hellos = self._router.get_requests(logon_message)
                 self.assertEqual(len(hellos), 2)
                 assert '"credentials": "pass"' in hellos[0]
-                assert '"credentials": "password"' in hellos[1]
+                assert '"credentials": "pass++"' in hellos[1]
 
         for routing in (False, True):
             with self.subTest(routing=routing):

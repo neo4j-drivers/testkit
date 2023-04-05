@@ -45,7 +45,7 @@
         # now the second connection receives the token expired error => this connection needs to be recreated
     }}
 ----
-    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "password"}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
 
     *: RESET
 

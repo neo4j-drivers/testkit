@@ -25,7 +25,7 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
 
         # now the second connection receives the token expired error => this connection needs to be re-authenticated
         C: LOGOFF
-        C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+        C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 
         {{
             C: RESET
@@ -75,7 +75,7 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
 
         # now the second connection receives the token expired error => this connection needs to be re-authenticated
         C: LOGOFF
-        C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+        C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 
         {{
             C: RESET
@@ -100,7 +100,7 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
         S: SUCCESS {}
     }}
 ----
-    C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+    C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
     S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
     S: SUCCESS {}
 

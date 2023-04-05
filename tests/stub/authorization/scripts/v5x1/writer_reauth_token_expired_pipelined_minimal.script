@@ -17,7 +17,7 @@ S: RECORD [1]
 
 # reader fails now with Neo.ClientError.Security.TokenExpired => this connection should also be re-authenticated
 C: LOGOFF
-C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password"}
+C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
 
 {{
     C: RESET

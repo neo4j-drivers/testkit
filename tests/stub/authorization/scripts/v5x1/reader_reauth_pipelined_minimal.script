@@ -24,7 +24,7 @@ S: RECORD [1]
 *: RESET
 
 C: LOGOFF
-C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "password"}
+C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
 
 {{
     C: RESET

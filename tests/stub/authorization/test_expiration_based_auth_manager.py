@@ -139,12 +139,13 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            credentials = "password" if count > 1 else "pass"
+            credentials = "pass++" if count > 1 else "pass"
+            principal = "neo5j" if count > 1 else "neo4j"
 
             return types.AuthTokenAndExpiration(
                 types.AuthorizationToken(
                     scheme="basic",
-                    principal="neo4j",
+                    principal=principal,
                     credentials=credentials
                 ),
                 10_000
@@ -186,12 +187,13 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
             def provider():
                 nonlocal count
                 count += 1
-                credentials = "password" if count > 1 else "pass"
+                credentials = "pass++" if count > 1 else "pass"
+                principal = "neo5j" if count > 1 else "neo4j"
 
                 return types.AuthTokenAndExpiration(
                     types.AuthorizationToken(
                         scheme="basic",
-                        principal="neo4j",
+                        principal=principal,
                         credentials=credentials
                     ),
                     10_000

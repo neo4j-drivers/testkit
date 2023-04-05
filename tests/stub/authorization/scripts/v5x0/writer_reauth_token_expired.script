@@ -14,7 +14,7 @@
 
     # reader fails now with Neo.ClientError.Security.TokenExpired => this connection should also be re-authenticated
 ----
-    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 
     *: RESET
 

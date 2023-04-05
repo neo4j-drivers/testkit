@@ -22,7 +22,7 @@
 
     # auth info expired, a new connection is required
 ----
-    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "password"}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
 
     *: RESET
 

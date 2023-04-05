@@ -6,7 +6,7 @@
     A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 ----
     # connection 2 for session 3 and 4
-    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "password", "[realm]": ""}
+    A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 }}
 *: RESET
 
