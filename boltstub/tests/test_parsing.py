@@ -37,9 +37,9 @@ from ..bolt_protocol import Bolt1Protocol
 from ..simple_jolt import v1 as jolt_v1
 from ..simple_jolt import v2 as jolt_v2
 from ._common import (
+    ALL_BOLT_VERSIONS,
     ALL_REQUESTS_PER_VERSION,
     ALL_RESPONSES_PER_VERSION,
-    ALL_SERVER_VERSIONS,
 )
 
 
@@ -208,18 +208,23 @@ def whitespace_generator(n: int,
 
 VALID_BANGS = ("!: AUTO HELLO", "!: BOLT 4.0",
                "!: ALLOW RESTART", "!: ALLOW CONCURRENT",
-               "!: HANDSHAKE 00\tfF 0204", "!: PY foo = 'bar'")
+               "!: HANDSHAKE 00\tfF 0204", "!: HANDSHAKE_DELAY 1",
+               "!: HANDSHAKE_DELAY 1.5",
+               "!: PY foo = 'bar'")
 INVALID_BANGS = ("!: NOPE", "!: HANDSHAKE \x00\x00\x02\x04",
-                 "!: BOLT", "!: BOLT a.b")
+                 "!: BOLT", "!: BOLT a.b", "!: HANDSHAKE_DELAY foo",
+                 "!: HANDSHAKE_DELAY -1")
 BANG_DEFAULTS = {"auto": set(), "bolt_version": None,
                  "restarting": False, "concurrent": False,
-                 "handshake": None, "python": []}
+                 "handshake": None, "handshake_delay": None, "python": []}
 BANG_EFFECTS = (
     ("auto", {"HELLO"}),
     ("bolt_version", (4, 0)),
     ("restarting", True),
     ("concurrent", True),
     ("handshake", b"\x00\xff\x02\x04"),
+    ("handshake_delay", 1.0),
+    ("handshake_delay", 1.5),
     ("python", ["foo = 'bar'"]),
 )
 
@@ -721,7 +726,7 @@ def test_expects_bolt_version():
 
 
 @pytest.mark.parametrize(("version", "exists"), (
-    *((v, True) for v in ALL_SERVER_VERSIONS),
+    *((v, True) for v in ALL_BOLT_VERSIONS),
     ((0,), False),
     ((0, 1), False),
     ((2, 1), False),
@@ -772,7 +777,7 @@ set_name_dicts()
         for v in server_msg_names
         for n in server_msg_names[v] - client_msg_names[v]
     ),
-    *((v, "C: FOOBAR", False) for v in ALL_SERVER_VERSIONS),
+    *((v, "C: FOOBAR", False) for v in ALL_BOLT_VERSIONS),
     *(
         (v, "S: " + n, True)
         for v in server_msg_names for n in server_msg_names[v]
@@ -782,7 +787,7 @@ set_name_dicts()
         for v in client_msg_names
         for n in client_msg_names[v] - server_msg_names[v]
     ),
-    *((v, "S: FOOBAR", False) for v in ALL_SERVER_VERSIONS),
+    *((v, "S: FOOBAR", False) for v in ALL_BOLT_VERSIONS),
 ))
 def test_message_tags_are_verified(version, message, exists):
     raw_script = """!: BOLT {}
@@ -798,7 +803,7 @@ def test_message_tags_are_verified(version, message, exists):
         assert isinstance(exc.value.__cause__, errors.BoltUnknownMessageError)
 
 
-@pytest.mark.parametrize("version", ALL_SERVER_VERSIONS)
+@pytest.mark.parametrize("version", ALL_BOLT_VERSIONS)
 @pytest.mark.parametrize(("command", "exists"), (
     ("<EXIT>", True),
     ("<NOOP>", True),

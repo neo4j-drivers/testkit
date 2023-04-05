@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+from contextlib import contextmanager
 import socket
 from struct import unpack as struct_unpack
 import threading
@@ -30,9 +31,9 @@ from ..parsing import (
 )
 from ..util import hex_repr
 from ._common import (
+    ALL_BOLT_VERSIONS,
     ALL_REQUESTS_PER_VERSION,
     ALL_RESPONSES_PER_VERSION,
-    ALL_SERVER_VERSIONS,
     cycle_zip,
 )
 
@@ -86,6 +87,21 @@ class Connection:
             chunk_header = self.read(2)
             chunk_size, = struct_unpack(">H", chunk_header)
         return res
+
+    def get_timeout(self):
+        return self._socket.gettimeout()
+
+    def set_timeout(self, timeout):
+        return self._socket.settimeout(timeout)
+
+    @contextmanager
+    def timeout(self, timeout):
+        old_timeout = self.get_timeout()
+        try:
+            self.set_timeout(timeout)
+            yield
+        finally:
+            self.set_timeout(old_timeout)
 
 
 class ThreadedServer(threading.Thread):
@@ -144,7 +160,7 @@ def connection_factory():
         con.close()
 
 
-@pytest.mark.parametrize("server_version", ALL_SERVER_VERSIONS)
+@pytest.mark.parametrize("server_version", ALL_BOLT_VERSIONS)
 @pytest.mark.parametrize(("magic_bytes", "fail"), [
     (b"\x60\x60\xb0\x16", True),
     (b"\x60\x60\xb0\x18", True),
@@ -251,7 +267,7 @@ def test_handshake_auto(client_version, server_version, negotiated_version,
 
 @pytest.mark.parametrize("custom_handshake", [b"\x00\x00\xFF\x00", b"foobar"])
 @pytest.mark.parametrize("client_version", [b"\x00\x00\x00\x01", b"crap"])
-@pytest.mark.parametrize("server_version", ALL_SERVER_VERSIONS)
+@pytest.mark.parametrize("server_version", ALL_BOLT_VERSIONS)
 def test_custom_handshake_auto(custom_handshake, client_version,
                                server_version, server_factory,
                                connection_factory):
@@ -271,6 +287,30 @@ def test_custom_handshake_auto(custom_handshake, client_version,
     assert con.read(len(custom_handshake)) == custom_handshake
     with pytest.raises(socket.timeout):
         con.read(1)
+    assert not server.service.exceptions
+
+
+@pytest.mark.parametrize("delay", [0.5, 1.0])
+@pytest.mark.parametrize("bound", ["upper", "lower"])
+def test_handshake_delay(delay, bound, server_factory, connection_factory):
+    script = parse("""
+    !: BOLT 5.2
+    !: HANDSHAKE_DELAY {}
+
+    C: RUN
+    """.format(delay))
+
+    server = server_factory(script)
+    con = connection_factory("localhost", 7687)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(b"\x00\x00\x02\x05" + b"\x00" * 12)
+    if bound == "upper":
+        with con.timeout(delay + 0.2):
+            assert con.read(4) == b"\x00\x00\x02\x05"
+    elif bound == "lower":
+        with con.timeout(delay - 0.2):
+            with pytest.raises(socket.timeout):
+                con.read(4)
     assert not server.service.exceptions
 
 
@@ -331,11 +371,28 @@ def test_auto_replies(server_version, request_tag, request_name,
           ('{"a": "b"}', b"\xD8\x01\x81a\x81b"),
           ('{"a": "b"}', b"\xD9\x00\x01\x81a\x81b"),
           ('{"a": "b"}', b"\xDA\x00\x00\x00\x01\x81a\x81b"),
-          ('{"()": [1, [], {}]}', b"\xB3\x4E\x01\x90\xA0"),
-          ('{"->": [1, 2, "a", 3, {}]}', b"\xB5\x52\x01\x02\x03\x81a\xA0"),
-          # enough structures tested. translation to Structs and checking
-          # equality is covered by unit tests
       ))),
+    *(
+        (version, tag, name, rep, fields)
+        for (version, tag, name) in ALL_REQUESTS_PER_VERSION
+        for (rep, fields) in (
+            (
+                ('{"()": [1, [], {}, "e1"]}', b"\xB4\x4E\x01\x90\xA0\x82e1"),
+                (
+                    '{"->": [1, 2, "a", 3, {}, "e1", "e2", "e3"]}',
+                    b"\xB8\x52\x01\x02\x03\x81a\xA0\x82e1\x82e2\x82e3"
+                ),
+            ) if version >= (5, 0) else (
+                ('{"()": [1, [], {}]}', b"\xB3\x4E\x01\x90\xA0"),
+                (
+                    '{"->": [1, 2, "a", 3, {}]}',
+                    b"\xB5\x52\x01\x02\x03\x81a\xA0"
+                ),
+            )
+        )
+    ),
+    # enough structures tested. translation to Structs and checking
+    # equality is covered by unit tests
 ))  # noqa: PAR101
 def test_plays_through(server_version, request_tag, request_name, field_rep,
                        field_bin, server_factory, connection_factory):
@@ -368,7 +425,7 @@ def test_plays_through(server_version, request_tag, request_name, field_rep,
      "response_tag",
      "response_name"),
     ((v, req_t, req_n, res_t, res_n)
-     for v in ALL_SERVER_VERSIONS
+     for v in ALL_BOLT_VERSIONS
      for req_v, req_t, req_n in ALL_REQUESTS_PER_VERSION if req_v == v
      for res_v, res_t, res_n in ALL_RESPONSES_PER_VERSION if res_v == v)
 )
@@ -404,7 +461,7 @@ def test_manual_replies(server_version, request_tag, request_name,
 @pytest.mark.parametrize(
     ("server_version", "response_tag", "response_name"),
     (next(r for r in ALL_RESPONSES_PER_VERSION if r[0] == v)
-     for v in ALL_SERVER_VERSIONS)
+     for v in ALL_BOLT_VERSIONS)
 )
 def test_initial_response(server_version, response_tag, response_name,
                           server_factory):

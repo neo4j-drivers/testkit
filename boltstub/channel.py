@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+from time import sleep
 from typing import Iterable
 
 from .bolt_protocol import get_bolt_protocol
@@ -33,12 +34,13 @@ class Channel:
     # protocol.
 
     def __init__(self, wire, bolt_version, log_cb=None, handshake_data=None,
-                 eval_context=None):
+                 handshake_delay=None, eval_context=None):
         self.wire = wire
         self.bolt_protocol = get_bolt_protocol(bolt_version)
         self.stream = PackStream(wire, self.bolt_protocol.packstream_version)
         self.log = log_cb
         self.handshake_data = handshake_data
+        self.handshake_delay = handshake_delay
         self._buffered_msg = None
         self.eval_context = eval_context or EvalContext()
 
@@ -91,6 +93,9 @@ class Channel:
                         "Driver sent handshake: {}".format(supported_version,
                                                            hex_repr(request))
                     )
+        if self.handshake_delay:
+            self._log("S: <HANDSHAKE DELAY> %s", self.handshake_delay)
+            sleep(self.handshake_delay)
         self.wire.write(response)
         self.wire.send()
         self._log("S: <HANDSHAKE> %s", hex_repr(response))
