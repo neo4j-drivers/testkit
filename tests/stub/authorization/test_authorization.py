@@ -29,12 +29,15 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "AuthorizationExpired"
+        elif driver in ["go"]:
+            expected_type = "Neo4jError"
         elif driver in ["ruby"]:
             expected_type = \
                 "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
@@ -54,6 +57,8 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "Neo4j::Driver::Exceptions::TokenExpiredException"
         elif driver == "dotnet":
             expected_type = "ClientError"
+        elif driver == "go":
+            expected_type = "TokenExpiredError"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -74,7 +79,8 @@ class AuthorizationBase(TestkitTestCase):
                 "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
 
     def assert_re_auth_unsupported_error(self, error):
         self.assertIsInstance(error, types.DriverError)
