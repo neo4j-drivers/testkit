@@ -1,4 +1,8 @@
 from .. import protocol
+from .auth_token_manager import (
+    AuthTokenManager,
+    ExpirationBasedAuthTokenManager,
+)
 from .bookmark_manager import BookmarkManager
 from .session import Session
 
@@ -16,10 +20,23 @@ class Driver:
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
+        self._auth_token, self._auth_token_manager = None, None
+        auth_token_manager_id = None
+        if (
+            isinstance(auth_token, protocol.AuthorizationToken)
+            or auth_token is None
+        ):
+            self._auth_token = auth_token
+        else:
+            assert isinstance(
+                auth_token, (AuthTokenManager, ExpirationBasedAuthTokenManager)
+            )
+            self._auth_token_manager = auth_token
+            auth_token_manager_id = auth_token.id
 
         req = protocol.NewDriver(
-            uri, auth_token, userAgent=user_agent,
-            resolverRegistered=resolver_fn is not None,
+            uri, self._auth_token, auth_token_manager_id,
+            userAgent=user_agent, resolverRegistered=resolver_fn is not None,
             domainNameResolverRegistered=domain_name_resolver_fn is not None,
             connectionTimeoutMs=connection_timeout_ms,
             fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
@@ -55,9 +72,16 @@ class Driver:
                         hooks=hooks
                     )
                     continue
-            bookmark_manager_response = BookmarkManager.process_callbacks(res)
-            if bookmark_manager_response:
-                self._backend.send(bookmark_manager_response, hooks=hooks)
+            for cb_processor in (
+                    BookmarkManager,
+                    ExpirationBasedAuthTokenManager,
+                    AuthTokenManager,
+            ):
+                cb_response = cb_processor.process_callbacks(res)
+                if cb_response is not None:
+                    self._backend.send(cb_response, hooks=hooks)
+                    break
+            if cb_response is not None:
                 continue
 
             return res
@@ -111,6 +135,20 @@ class Driver:
             raise Exception(f"Should be MultiDBSupport but was: {res}")
         return res.available
 
+    def verify_authentication(self, auth_token=None):
+        req = protocol.VerifyAuthentication(self._driver.id, auth_token)
+        res = self.send_and_receive(req, allow_resolution=True)
+        if not isinstance(res, protocol.DriverIsAuthenticated):
+            raise Exception(f"Should be DriverIsAuthenticated but was: {res}")
+        return res.authenticated
+
+    def supports_session_auth(self):
+        req = protocol.CheckSessionAuthSupport(self._driver.id)
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.SessionAuthSupport):
+            raise Exception(f"Should be SessionAuthSupport but was: {res}")
+        return res.available
+
     def is_encrypted(self):
         req = protocol.CheckDriverIsEncrypted(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)
@@ -123,10 +161,13 @@ class Driver:
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Driver):
             raise Exception(f"Should be Driver but was {res}")
+        if self._auth_token_manager:
+            self._auth_token_manager.close()
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
                 bookmark_manager=None,
+                auth_token=None,
                 notifications_min_severity=None,
                 notifications_disabled_categories=None):
         req = protocol.NewSession(
@@ -134,6 +175,7 @@ class Driver:
             database=database, fetchSize=fetch_size,
             impersonatedUser=impersonated_user,
             bookmark_manager=bookmark_manager,
+            auth_token=auth_token,
             notifications_min_severity=notifications_min_severity,
             notifications_disabled_categories=notifications_disabled_categories
         )

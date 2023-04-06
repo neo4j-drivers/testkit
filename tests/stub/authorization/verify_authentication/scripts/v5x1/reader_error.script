@@ -1,0 +1,6 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+C: LOGON {"scheme": "basic", #VERIFY_AUTH#, "[realm]": ""}
+S: FAILURE {"code": "#ERROR#", "message": "These are not the credentials you're looking for."}
+   <EXIT>

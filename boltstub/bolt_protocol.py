@@ -478,6 +478,7 @@ class Bolt5x1Protocol(Bolt5x0Protocol):
     version_aliases = set()
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
+    server_agent = "Neo4j/5.5.0"
 
     messages = {
         "C": {
@@ -488,8 +489,6 @@ class Bolt5x1Protocol(Bolt5x0Protocol):
         "S": Bolt5x0Protocol.messages["S"],
     }
 
-    server_agent = "Neo4j/5.1.0"
-
 
 class Bolt5x2Protocol(Bolt5x1Protocol):
     protocol_version = (5, 2)
@@ -497,4 +496,4 @@ class Bolt5x2Protocol(Bolt5x1Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
-    server_agent = "Neo4j/5.2.0"
+    server_agent = "Neo4j/5.7.0"
