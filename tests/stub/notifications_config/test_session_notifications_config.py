@@ -78,7 +78,7 @@ class TestSessionNotificationsConfig(NotificationsBase):
                     }
                     self._server.start(script_path, vars_=script_vars)
                     driver = Driver(self._backend, bolt, self._auth)
-                    session = driver.session("r",
+                    session = driver.session(None,
                                              notifications_min_severity="WARNING")  # noqa: E501
                     cursor = session.run("RETURN 1 as n")
                     cursor.consume()
