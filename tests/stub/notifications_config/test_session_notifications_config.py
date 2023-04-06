@@ -67,7 +67,6 @@ class TestSessionNotificationsConfig(NotificationsBase):
                 try:
                     host = os.environ.get("TEST_STUB_HOST",
                                           "127.0.0.1") + ":" + str(self._port)
-                    bolt = self._uri.replace("bolt", "neo4j")
                     script_path = self.script_path(
                         "notifications_config_session_router_run.script"
                     )
@@ -77,7 +76,7 @@ class TestSessionNotificationsConfig(NotificationsBase):
                         "#HOST#": host
                     }
                     self._server.start(script_path, vars_=script_vars)
-                    driver = Driver(self._backend, bolt, self._auth)
+                    driver = Driver(self._backend, uri, self._auth)
                     session = driver.session(None,
                                              notifications_min_severity="WARNING")  # noqa: E501
                     cursor = session.run("RETURN 1 as n")
@@ -85,6 +84,8 @@ class TestSessionNotificationsConfig(NotificationsBase):
                     self._server.done()
                 finally:
                     self._server.reset()
+                if driver is not None:
+                    driver.close()
 
     @staticmethod
     def _session(d, filters):
