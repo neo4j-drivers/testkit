@@ -29,12 +29,15 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "AuthorizationExpired"
+        elif driver in ["go"]:
+            expected_type = "Neo4jError"
         elif driver in ["ruby"]:
             expected_type = \
                 "Neo4j::Driver::Exceptions::AuthorizationExpiredException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
 
     def assert_is_token_error(self, error):
         driver = get_driver_name()
@@ -54,9 +57,64 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "Neo4j::Driver::Exceptions::TokenExpiredException"
         elif driver == "dotnet":
             expected_type = "ClientError"
+        elif driver == "go":
+            expected_type = "TokenExpiredError"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
-        self.assertEqual(expected_type, error.errorType)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+
+    def assert_is_retryable_token_error(self, error):
+        driver = get_driver_name()
+        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
+        self.assertIn("Token expired", error.msg)
+
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
+        elif driver in ["go", "javascript"]:
+            pass  # code and msg check are enough
+        elif driver == "java":
+            expected_type = \
+                "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+
+    def assert_re_auth_unsupported_error(self, error):
+        self.assertIsInstance(error, types.DriverError)
+        driver = get_driver_name()
+        if driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ConfigurationError'>",
+                error.errorType
+            )
+            self.assertIn(
+                "user switching is not supported for bolt protocol "
+                "version(5, 0)",
+                error.msg.lower()
+            )
+        elif driver in ["javascript"]:
+            self.assertEqual(
+                "N/A",
+                error.code
+            )
+            self.assertEqual(
+                "Driver is connected to a database that does not support "
+                "user switch.",
+                error.msg
+            )
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.UnsupportedFeatureException",
+                error.errorType
+            )
+        elif driver in ["go"]:
+            self.assertEqual("feature not supported", error.errorType)
+            self.assertIn("session auth", error.msg)
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
 
     def _find_version_script(self, script_fns):
         if isinstance(script_fns, str):

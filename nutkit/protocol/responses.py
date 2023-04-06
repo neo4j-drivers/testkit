@@ -56,6 +56,96 @@ class Driver:
         self.id = id
 
 
+class AuthTokenManager:
+    """
+    Represents a new auth token manager.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this auth token manager.
+    """
+
+    def __init__(self, id):
+        # Id of AuthTokenManager instance on backend.
+        # Note that the id space needs to be shared with AuthTokenManager.
+        self.id = id
+
+
+class AuthTokenManagerGetAuthRequest:
+    """
+    Represents the need for getting an auth token from the manager.
+
+    This message may be sent by the backend at any time should the driver call
+    GetAuth() on the manager that was previously created in response to
+    `NewAuthTokenManager`.
+    """
+
+    def __init__(self, id, authTokenManagerId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `TemporalTemporalAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the auth token manager that spawned this request.
+        self.auth_token_manager_id = authTokenManagerId
+
+
+class AuthTokenManagerOnAuthExpiredRequest:
+    """
+    Represents the need for getting an auth token from the manager.
+
+    This message may be sent by the backend at any time should the driver call
+    OnAuthExpired() on the manager that was previously created in response to
+    `NewAuthTokenManager`.
+
+    TestKit will respond with `TemporalAuthTokenProviderCompleted` with the
+    """
+
+    def __init__(self, id, authTokenManagerId, auth):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `TemporalTemporalAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the auth token manager that spawned this request.
+        self.auth_token_manager_id = authTokenManagerId
+        from .requests import AuthorizationToken
+
+        # The expired auth data.
+        assert isinstance(auth, AuthorizationToken)
+        self.auth = auth
+
+
+class ExpirationBasedAuthTokenManager:
+    """
+    Represents a new expiration based auth token manager.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this auth token manager
+    """
+
+    def __init__(self, id):
+        # Id of ExpirationBasedAuthTokenManager instance on backend.
+        # Note that the id space needs to be shared with AuthTokenManager.
+        self.id = id
+
+
+class ExpirationBasedAuthTokenProviderRequest:
+    """
+    Represents the need for a fresh auth token.
+
+    This message may be sent by the backend at any time should the driver call
+    a temporal auth token provider function that was previously created in
+    response to `NewExpirationBasedAuthTokenManager`.
+
+    TestKit will respond with `ExpirationBasedAuthTokenProviderCompleted`.
+    """
+
+    def __init__(self, id, expirationBasedAuthTokenManagerId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `ExpirationBasedAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the temporal auth token manager that called its provider
+        # function.
+        self.expiration_based_auth_token_manager_id = \
+            expirationBasedAuthTokenManagerId
+
+
 class ResolverResolutionRequired:
     """
     Represents a need for new address resolution.
@@ -126,10 +216,37 @@ class DomainNameResolutionRequired:
 
 class MultiDBSupport:
     """
-    Whether the driver is connection to a sever with supports multi-db-support.
+    Whether the driver is connection to a sever with multi-db support.
 
     Specifies whether the server or cluster the driver connects to supports
     multi-databases. It is sent in response to the CheckMultiDBSupport request.
+    """
+
+    def __init__(self, id, available):
+        self.id = id
+        self.available = available
+
+
+class DriverIsAuthenticated:
+    """
+    Whether the driver could authenticate with the server.
+
+    Specifies whether the server accepted the credentials provided by the
+    driver. It is sent in response to the VerifyAuthentication request.
+    """
+
+    def __init__(self, id, authenticated):
+        self.id = id
+        self.authenticated = authenticated
+
+
+class SessionAuthSupport:
+    """
+    Whether the driver is connection to a sever with re-authentication support.
+
+    Specifies whether the server or cluster the driver connects to supports
+    re-authentication. It is sent in response to the CheckSessionAuthSupport
+    request.
     """
 
     def __init__(self, id, available):
@@ -498,6 +615,17 @@ class EagerResult:
         self.keys = keys
         self.records = [Record(**record) for record in records or []]
         self.summary = Summary(**summary)
+
+
+class FakeTimeAck:
+    """
+    Acknowledge any received fake time request.
+
+    This is sent from the backend to the driver on receipt of
+    `FakeTimeInstall`, `FakeTimeTick`, and `FakeTimeUninstall` requests.
+    """
+
+    pass
 
 
 class BaseError(Exception):
