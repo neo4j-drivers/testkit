@@ -1,6 +1,8 @@
+import os
+
 from nutkit.frontend import Driver
 import nutkit.protocol as types
-from tests.stub.notifications_config.notifications_base import (  # noqa: E501
+from tests.stub.notifications_config.notifications_base import (
     NotificationsBase,
 )
 
@@ -57,6 +59,32 @@ class TestSessionNotificationsConfig(NotificationsBase):
                 self._tx_func_test(config["protocol"], config["script"],
                                    script, self.driver_params)
             self._server.reset()
+
+    def test_session_config_with_database_not_specified(self):
+        uris = [self._uri, self._uri.replace("bolt", "neo4j")]
+        for uri in uris:
+            with self.subTest(name=uri):
+                try:
+                    host = os.environ.get("TEST_STUB_HOST",
+                                          "127.0.0.1") + ":" + str(self._port)
+                    bolt = self._uri.replace("bolt", "neo4j")
+                    script_path = self.script_path(
+                        "notifications_config_session_router_run.script"
+                    )
+                    script_vars = {
+                        "#NOTIS#": '"notifications_minimum_severity"'
+                                   ': "WARNING", ',
+                        "#HOST#": host
+                    }
+                    self._server.start(script_path, vars_=script_vars)
+                    driver = Driver(self._backend, bolt, self._auth)
+                    session = driver.session("r",
+                                             notifications_min_severity="WARNING")  # noqa: E501
+                    cursor = session.run("RETURN 1 as n")
+                    cursor.consume()
+                    self._server.done()
+                finally:
+                    self._server.reset()
 
     @staticmethod
     def _session(d, filters):

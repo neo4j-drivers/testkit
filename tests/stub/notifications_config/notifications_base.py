@@ -7,10 +7,11 @@ from tests.stub.shared import StubServer
 class NotificationsBase(TestkitTestCase):
     _auth = types.AuthorizationToken("basic", principal="neo4j",
                                      credentials="pass")
+    _port = 9010
 
     def setUp(self):
         super().setUp()
-        self._server = StubServer(9010)
+        self._server = StubServer(self._port)
         self._uri = "bolt://%s" % self._server.address
         self._driver = None
 

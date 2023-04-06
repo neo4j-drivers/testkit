@@ -1,0 +1,23 @@
+!: BOLT 5.2
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+{?
+    C: ROUTE "*" "*" "*"
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "neo4j", "servers": [{"addresses": ["#HOST#"], "role": "ROUTE"}, {"addresses": ["#HOST#"], "role": "READ"}, {"addresses": ["#HOST#"], "role": "WRITE"}]}}
+    *: RESET
+    ?: GOODBYE
+?}
+C: RUN "RETURN 1 as n" {} {#NOTIS#"[mode]": "*", "[db]": "*"}
+S: SUCCESS {"fields": ["n"]}
+{{
+    C: PULL "*"
+    S: RECORD [1]
+----
+    C: DISCARD "*"
+}}
+S: SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE
