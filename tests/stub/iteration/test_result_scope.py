@@ -44,6 +44,11 @@ class TestResultScope(TestkitTestCase):
                 exc.errorType,
                 "org.neo4j.driver.exceptions.ResultConsumedException"
             )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                exc.errorType,
+                "Neo4j::Driver::Exceptions::ResultConsumedException"
+            )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
@@ -67,6 +72,11 @@ class TestResultScope(TestkitTestCase):
             self.assertEqual(
                 exc.errorType,
                 "org.neo4j.driver.exceptions.ResultConsumedException"
+            )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                exc.errorType,
+                "Neo4j::Driver::Exceptions::ResultConsumedException"
             )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")

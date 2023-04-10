@@ -77,6 +77,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver == "java":
             expected_type = \
                 "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
+        elif driver == "ruby":
+            expected_type = \
+                "Neo4j::Driver::Exceptions::TokenExpiredRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -108,6 +111,11 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.UnsupportedFeatureException",
+                error.errorType
+            )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::UnsupportedFeatureException",
                 error.errorType
             )
         elif driver in ["go"]:
