@@ -132,7 +132,7 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("r")
         result = self._session1.run(
             "CALL tx.getMetaData",
-            tx_meta=metadata
+            tx_meta={k: v.value for k, v in metadata.items()}
         )
         record = result.next()
         self.assertIsInstance(record, types.Record)
