@@ -109,6 +109,10 @@ class TestSummary(TestkitTestCase):
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
             self.assertTrue(version.startswith("Neo4j/"))
+        elif re.match(r"(\d+)\.dev", server_info.version):
+            self.assertTrue(version.startswith(
+                "Neo4j/" + server_info.version.split(".")[0]
+            ))
         else:
             version = ".".join(summary.server_info.agent.split(".")[:2])
             self.assertEqual(version, get_server_info().server_agent)
