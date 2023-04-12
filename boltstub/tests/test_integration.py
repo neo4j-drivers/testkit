@@ -236,7 +236,7 @@ def test_magic_bytes(server_version, magic_bytes, server_factory, fail,
     [b"\x00\x00\x01\x04", (4, 2), (4, 1)],
     [b"\x00\x00\x02\x04", (4, 1), None],
     [b"\x00\x00\x02\x04", (4, 3), None],
-])  # noqa: PAR101
+])  # noqa: PAR102
 def test_handshake_auto(client_version, server_version, negotiated_version,
                         server_factory, connection_factory):
     client_version = client_version + b"\x00" * (16 - len(client_version))
@@ -393,7 +393,7 @@ def test_auto_replies(server_version, request_tag, request_name,
     ),
     # enough structures tested. translation to Structs and checking
     # equality is covered by unit tests
-))  # noqa: PAR101
+))  # noqa: PAR102
 def test_plays_through(server_version, request_tag, request_name, field_rep,
                        field_bin, server_factory, connection_factory):
     script = parse("""
