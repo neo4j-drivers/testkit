@@ -94,6 +94,10 @@ class ServerInfo:
             raise ValueError(
                 "We can't predict the server's agent string for aura!"
             )
+        if re.match(r"(\d+)\.dev", self.version):
+            raise ValueError(
+                "We can't predict the server's agent string for dev versions!"
+            )
         return "Neo4j/" + self.version
 
     @property
@@ -102,7 +106,11 @@ class ServerInfo:
 
     @property
     def max_protocol_version(self):
-        version = tuple(int(i) for i in self.version.split(".")[:2])
+        match = re.match(r"(\d+)\.dev", self.version)
+        if match:
+            version = (int(match.group(1)), float("inf"))
+        else:
+            version = tuple(int(i) for i in self.version.split(".")[:2])
         if version >= (5, 7):
             return "5.2"
         if version >= (5, 5):
