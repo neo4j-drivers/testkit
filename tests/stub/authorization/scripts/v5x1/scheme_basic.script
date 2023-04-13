@@ -1,0 +1,14 @@
+!: BOLT #VERSION#
+
+A: HELLO {"user_agent": "*", "[routing]": null}
+A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE

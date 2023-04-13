@@ -29,7 +29,8 @@ class NoRoutingV4x1(TestkitTestCase):
         # TODO: "#ROUTING#": "" is the correct way to go
         #       (minimal data transmission)
         optimized = self.driver_supports_features(
-            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS)
+            types.Feature.OPT_IMPLICIT_DEFAULT_ARGUMENTS
+        )
 
         routing = ""
         if get_driver_name() in ["dotnet"] and not optimized:
@@ -162,7 +163,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_db_unavailable_error_on_rollback.script"),
+                "writer_yielding_db_unavailable_error_on_rollback.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -193,7 +195,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_db_unavailable_error_on_rollback.script"),
+                "writer_yielding_db_unavailable_error_on_rollback.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -219,7 +222,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_error_on_rollback_failure_using_session_close(
-            self):
+        self
+    ):
         # TODO There is a pending unification task to fix this.
         # Once fixed, this block should be removed.
         if get_driver_name() in ["javascript", "go"]:
@@ -229,7 +233,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_db_unavailable_error_on_rollback.script"),
+                "writer_yielding_db_unavailable_error_on_rollback.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -255,7 +260,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_accept_custom_fetch_size_using_driver_configuration(
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
@@ -282,7 +288,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_accept_custom_fetch_size_using_session_configuration(
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
@@ -310,7 +317,8 @@ class NoRoutingV4x1(TestkitTestCase):
 
     @driver_feature(types.Feature.API_RESULT_LIST)
     def test_should_pull_custom_size_and_then_all_using_session_configuration(
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         script = (
             "writer_with_custom_fetch_size_pull_all.script"
@@ -340,7 +348,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_pull_all_when_fetch_is_minus_one_using_driver_configuration(  # noqa: E501
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir,
@@ -369,7 +378,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_db_unavailable_error_on_commit.script"),
+                "writer_yielding_db_unavailable_error_on_commit.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -417,12 +427,14 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_accept_noop_during_records_streaming(
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_yielding_multiple_records_with_noops.script"),
+                "writer_yielding_multiple_records_with_noops.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -448,7 +460,8 @@ class NoRoutingV4x1(TestkitTestCase):
             path=self.script_path(
                 self.version_dir,
                 "writer_yielding_db_unavailable_error_"
-                "then_shut_down_on_commit.script"),
+                "then_shut_down_on_commit.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -469,7 +482,8 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self._assert_is_transient_commit_exception(
-            exc.exception, expected_msg="Database shut down.")
+            exc.exception, expected_msg="Database shut down."
+        )
         self.assertTrue(summary.server_info.address in
                         [get_dns_resolved_server_address(self._server),
                          self._server.address])
@@ -483,7 +497,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "writer_with_bookmark_yielding_error_on_run.script"),
+                "writer_with_bookmark_yielding_error_on_run.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -503,16 +518,19 @@ class NoRoutingV4x1(TestkitTestCase):
         driver.close()
 
         self._assert_is_transient_commit_exception(
-            exc.exception, expected_msg="Database shut down.")
+            exc.exception, expected_msg="Database shut down."
+        )
         self._server.done()
 
     def test_should_read_successfully_with_database_name_using_session_run(
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "reader_yielding_multiple_records.script"),
+                "reader_yielding_multiple_records.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -533,12 +551,14 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_read_successfully_with_database_name_using_tx_function(
-            self):
+        self
+    ):
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(
                 self.version_dir,
-                "reader_tx_yielding_multiple_records.script"),
+                "reader_tx_yielding_multiple_records.script"
+            ),
             vars_=self.get_vars()
         )
         driver = Driver(self._backend, uri,
@@ -554,7 +574,7 @@ class NoRoutingV4x1(TestkitTestCase):
             result = tx.run("RETURN 1 as n")
             records = list(result)
 
-        session.read_transaction(work)
+        session.execute_read(work)
 
         session.close()
         driver.close()
@@ -565,7 +585,8 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def _assert_is_transient_rollback_exception(
-            self, e, expected_msg="Unable to rollback"):
+        self, e, expected_msg="Unable to rollback"
+    ):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)
@@ -579,7 +600,8 @@ class NoRoutingV4x1(TestkitTestCase):
                          e.code)
 
     def _assert_is_transient_commit_exception(
-            self, e, expected_msg="Unable to commit"):
+        self, e, expected_msg="Unable to commit"
+    ):
         if get_driver_name() in ["java"]:
             self.assertEqual("org.neo4j.driver.exceptions.TransientException",
                              e.errorType)

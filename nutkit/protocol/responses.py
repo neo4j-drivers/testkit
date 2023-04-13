@@ -56,6 +56,96 @@ class Driver:
         self.id = id
 
 
+class AuthTokenManager:
+    """
+    Represents a new auth token manager.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this auth token manager.
+    """
+
+    def __init__(self, id):
+        # Id of AuthTokenManager instance on backend.
+        # Note that the id space needs to be shared with AuthTokenManager.
+        self.id = id
+
+
+class AuthTokenManagerGetAuthRequest:
+    """
+    Represents the need for getting an auth token from the manager.
+
+    This message may be sent by the backend at any time should the driver call
+    GetAuth() on the manager that was previously created in response to
+    `NewAuthTokenManager`.
+    """
+
+    def __init__(self, id, authTokenManagerId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `TemporalTemporalAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the auth token manager that spawned this request.
+        self.auth_token_manager_id = authTokenManagerId
+
+
+class AuthTokenManagerOnAuthExpiredRequest:
+    """
+    Represents the need for getting an auth token from the manager.
+
+    This message may be sent by the backend at any time should the driver call
+    OnAuthExpired() on the manager that was previously created in response to
+    `NewAuthTokenManager`.
+
+    TestKit will respond with `TemporalAuthTokenProviderCompleted` with the
+    """
+
+    def __init__(self, id, authTokenManagerId, auth):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `TemporalTemporalAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the auth token manager that spawned this request.
+        self.auth_token_manager_id = authTokenManagerId
+        from .requests import AuthorizationToken
+
+        # The expired auth data.
+        assert isinstance(auth, AuthorizationToken)
+        self.auth = auth
+
+
+class ExpirationBasedAuthTokenManager:
+    """
+    Represents a new expiration based auth token manager.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this auth token manager
+    """
+
+    def __init__(self, id):
+        # Id of ExpirationBasedAuthTokenManager instance on backend.
+        # Note that the id space needs to be shared with AuthTokenManager.
+        self.id = id
+
+
+class ExpirationBasedAuthTokenProviderRequest:
+    """
+    Represents the need for a fresh auth token.
+
+    This message may be sent by the backend at any time should the driver call
+    a temporal auth token provider function that was previously created in
+    response to `NewExpirationBasedAuthTokenManager`.
+
+    TestKit will respond with `ExpirationBasedAuthTokenProviderCompleted`.
+    """
+
+    def __init__(self, id, expirationBasedAuthTokenManagerId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `ExpirationBasedAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the temporal auth token manager that called its provider
+        # function.
+        self.expiration_based_auth_token_manager_id = \
+            expirationBasedAuthTokenManagerId
+
+
 class ResolverResolutionRequired:
     """
     Represents a need for new address resolution.
@@ -88,11 +178,10 @@ class BookmarksSupplierRequest:
     bookmarks for all databases.
     """
 
-    def __init__(self, id, bookmarkManagerId, database=None):
+    def __init__(self, id, bookmarkManagerId):
         # id of the callback request
         self.id = id
         self.bookmark_manager_id = bookmarkManagerId
-        self.database = database
 
 
 class BookmarksConsumerRequest:
@@ -103,11 +192,10 @@ class BookmarksConsumerRequest:
     to send the new bookmark set for a given database.
     """
 
-    def __init__(self, id, bookmarkManagerId, database, bookmarks):
+    def __init__(self, id, bookmarkManagerId, bookmarks):
         # id of the callback request
         self.id = id
         self.bookmark_manager_id = bookmarkManagerId
-        self.database = database
         self.bookmarks = bookmarks
 
 
@@ -128,10 +216,37 @@ class DomainNameResolutionRequired:
 
 class MultiDBSupport:
     """
-    Whether the driver is connection to a sever with supports multi-db-support.
+    Whether the driver is connection to a sever with multi-db support.
 
     Specifies whether the server or cluster the driver connects to supports
     multi-databases. It is sent in response to the CheckMultiDBSupport request.
+    """
+
+    def __init__(self, id, available):
+        self.id = id
+        self.available = available
+
+
+class DriverIsAuthenticated:
+    """
+    Whether the driver could authenticate with the server.
+
+    Specifies whether the server accepted the credentials provided by the
+    driver. It is sent in response to the VerifyAuthentication request.
+    """
+
+    def __init__(self, id, authenticated):
+        self.id = id
+        self.authenticated = authenticated
+
+
+class SessionAuthSupport:
+    """
+    Whether the driver is connection to a sever with re-authentication support.
+
+    Specifies whether the server or cluster the driver connects to supports
+    re-authentication. It is sent in response to the CheckSessionAuthSupport
+    request.
     """
 
     def __init__(self, id, available):
@@ -312,7 +427,7 @@ class Summary:
         if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
             if "address" in data["serverInfo"]:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports address field in Summary.serverInfo. "
                     "Remove the backwards compatibility check!"
                 )
@@ -328,14 +443,14 @@ class Summary:
                 del data["counters"]
             else:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports well-formatted counter. "
                     "Remove the backwards compatibility check!"
                 )
         if get_driver_name() in ["javascript", "go", "dotnet"]:
             if "counters" in data:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports counters field in Summary. "
                     "Remove the backwards compatibility check!"
                 )
@@ -358,7 +473,7 @@ class Summary:
                 }
             if "query" in data:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports query field in Summary. "
                     "Remove the backwards compatibility check!"
                 )
@@ -373,7 +488,7 @@ class Summary:
             ):
                 if field in data:
                     import warnings
-                    warnings.warn(
+                    warnings.warn(  # noqa: B028
                         "Backend supports %s field in Summary. "
                         "Remove the backwards compatibility check!" % field
                     )
@@ -495,6 +610,24 @@ class ConnectionPoolMetrics:
         self.idle = idle
 
 
+class EagerResult:
+    def __init__(self, keys, records, summary):
+        self.keys = keys
+        self.records = [Record(**record) for record in records or []]
+        self.summary = Summary(**summary)
+
+
+class FakeTimeAck:
+    """
+    Acknowledge any received fake time request.
+
+    This is sent from the backend to the driver on receipt of
+    `FakeTimeInstall`, `FakeTimeTick`, and `FakeTimeUninstall` requests.
+    """
+
+    pass
+
+
 class BaseError(Exception):
     """
     Base class for all types of errors, should not be sent from backend.
@@ -513,20 +646,20 @@ class DriverError(BaseError):
     serialize/deserialize errors or exceptions.
 
     The retry logic can be implemented by just referring to the error when
-    such occures and let the backend hide it's internal types if it chooses so.
+    such occurs and let the backend hide it's internal types if it chooses so.
 
     Over time there will be more specific driver errors if/when the generic
     test framework needs to check detailed error handling.
     """
 
-    def __init__(self, id=None, errorType="", msg="", code=""):
+    def __init__(self, id=None, errorType=None, msg="", code=""):
         self.id = id
         self.errorType = errorType
         self.msg = msg
         self.code = code
 
     def __str__(self):
-        return "DriverError : " + self.errorType + " : " + self.msg
+        return f"DriverError(type={self.errorType}, msg={self.msg!r})"
 
     def __repr__(self):
         return self.__str__()
@@ -544,7 +677,10 @@ class FrontendError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return "FrontendError : " + self.msg
+        return f"FrontendError(msg={self.msg!r})"
+
+    def __repr__(self):
+        return self.__str__()
 
 
 # For backward compatibility
@@ -567,4 +703,7 @@ class BackendError(BaseError):
         self.msg = msg
 
     def __str__(self):
-        return "BackendError : " + self.msg
+        return f"BackendError(msg={self.msg!r})"
+
+    def __repr__(self):
+        return self.__str__()

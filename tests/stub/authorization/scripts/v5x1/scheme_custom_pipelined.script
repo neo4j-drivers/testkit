@@ -1,0 +1,16 @@
+!: BOLT #VERSION#
+
+C: HELLO {"user_agent": "*", "[routing]": null}
+C: LOGON {"scheme": "wild-scheme", "principal": "I See Something", "credentials": "You Don't See!", "realm": "And it's blue.", "parameters": {"sky?": "no", "my eyes": 0.1, "da be dee da be daa?": true}}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
+S: SUCCESS {}
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE

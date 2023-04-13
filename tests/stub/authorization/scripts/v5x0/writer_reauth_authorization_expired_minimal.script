@@ -1,0 +1,25 @@
+!: BOLT #VERSION#
+
+A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+
+*: RESET
+
+C: RUN "RETURN 1 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "w"}
+
+*: RESET
+
+# reader fails now with Neo.ClientError.Security.AuthorizationExpired
+# => this connection to a different host should not be affected
+
+C: RUN "RETURN 2 AS n" "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL "*"
+S: RECORD [1]
+   SUCCESS {"type": "w"}
+
+*: RESET
+?: GOODBYE

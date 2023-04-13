@@ -82,7 +82,7 @@ class TestDirectDriver(TestkitTestCase):
 
         self._driver = get_driver(self._backend)
         self._session = self._driver.session("w")
-        summary = self._session.read_transaction(work)
+        summary = self._session.execute_read(work)
         result = self._driver.supports_multi_db()
 
         self.assertTrue(result)

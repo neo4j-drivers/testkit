@@ -153,8 +153,9 @@ class TestIterationSessionRun(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path(
-            "v4x4", "pull_1_nested_list.script"))
+        self._server.start(
+            path=self.script_path("v4x4", "pull_1_nested_list.script")
+        )
         session = driver.session("w", fetch_size=1)
         res1 = session.run("CYPHER")
         seq = []

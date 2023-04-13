@@ -1,3 +1,21 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 from itertools import cycle
 import math
 
@@ -12,7 +30,13 @@ def cycle_zip(*args):
                for i, arg in enumerate(args)))
 
 
-ALL_SERVER_VERSIONS = (1,), (2,), (3,), (4, 1), (4, 2), (4, 3)
+ALL_BOLT_VERSIONS = (
+    (1,),
+    (2,),
+    (3,),
+    (4, 1), (4, 2), (4, 3), (4, 4),
+    (5, 0), (5, 1), (5, 2),
+)
 
 
 ALL_REQUESTS_PER_VERSION = tuple((
@@ -41,7 +65,7 @@ ALL_REQUESTS_PER_VERSION = tuple((
 
     *(
         ((4, minor), tag, name)
-        for minor in range(4)
+        for minor in range(5)
         for (tag, name) in (
             (b"\x01", "HELLO"),
             (b"\x02", "GOODBYE"),
@@ -53,13 +77,41 @@ ALL_REQUESTS_PER_VERSION = tuple((
             (b"\x12", "COMMIT"),
             (b"\x13", "ROLLBACK"),
         )
-    )
+    ),
+
+
+    ((5, 0), b"\x01", "HELLO"),
+    ((5, 0), b"\x02", "GOODBYE"),
+    ((5, 0), b"\x0F", "RESET"),
+    ((5, 0), b"\x10", "RUN"),
+    ((5, 0), b"\x2F", "DISCARD"),
+    ((5, 0), b"\x3F", "PULL"),
+    ((5, 0), b"\x11", "BEGIN"),
+    ((5, 0), b"\x12", "COMMIT"),
+    ((5, 0), b"\x13", "ROLLBACK"),
+    *(
+        ((5, minor), tag, name)
+        for minor in range(1, 3)
+        for (tag, name) in (
+            (b"\x01", "HELLO"),
+            (b"\x6A", "LOGON"),
+            (b"\x6B", "LOGOFF"),
+            (b"\x02", "GOODBYE"),
+            (b"\x0F", "RESET"),
+            (b"\x10", "RUN"),
+            (b"\x2F", "DISCARD"),
+            (b"\x3F", "PULL"),
+            (b"\x11", "BEGIN"),
+            (b"\x12", "COMMIT"),
+            (b"\x13", "ROLLBACK"),
+        )
+    ),
 ))
 
 
 ALL_RESPONSES_PER_VERSION = tuple((*(
     (version, tag, name)
-    for version in ALL_SERVER_VERSIONS
+    for version in ALL_BOLT_VERSIONS
     for (tag, name) in (
         (b"\x70", "SUCCESS"),
         (b"\x7E", "IGNORED"),

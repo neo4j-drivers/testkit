@@ -66,17 +66,22 @@ class NewDriver:
     """
 
     def __init__(
-        self, uri, authToken, userAgent=None, resolverRegistered=False,
+        self, uri, authToken, auth_token_manager_id,
+        userAgent=None, resolverRegistered=False,
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
-        fetchSize=None, maxTxRetryTimeMs=None, encrypted=None,
-        trustedCertificates=None, liveness_check_timeout_ms=None,
-        max_connection_pool_size=None,
-        connection_acquisition_timeout_ms=None
+        fetchSize=None, maxTxRetryTimeMs=None,
+        encrypted=None, trustedCertificates=None,
+        liveness_check_timeout_ms=None, max_connection_pool_size=None,
+        connection_acquisition_timeout_ms=None,
+        notifications_min_severity=None,
+        notifications_disabled_categories=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
         # Authorization token used by driver when connecting to Neo4j
+        assert authToken is None or auth_token_manager_id is None
         self.authorizationToken = authToken
+        self.authTokenManagerId = auth_token_manager_id
         # Optional custom user agent string
         self.userAgent = userAgent
         self.resolverRegistered = resolverRegistered
@@ -87,6 +92,10 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        if notifications_min_severity is not None:
+            self.notificationsMinSeverity = notifications_min_severity
+        if notifications_disabled_categories is not None:
+            self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -104,7 +113,7 @@ class NewDriver:
 
 class AuthorizationToken:
     """
-    Not a request but used in NewDriver request.
+    Not a request but used in `NewDriver` and `RenewableAuthToken`.
 
     The fields depend on the chosen scheme:
     scheme == "basic"
@@ -127,6 +136,97 @@ class AuthorizationToken:
         self.scheme = scheme
         for attr, value in kwargs.items():
             setattr(self, attr, value)
+
+    def __eq__(self, other):
+        if not isinstance(other, AuthorizationToken):
+            return NotImplemented
+        return vars(self) == vars(other)
+
+
+class AuthTokenAndExpiration:
+    """Not a request; used in `ExpirationBasedAuthTokenProviderCompleted`."""
+
+    def __init__(self, auth, expires_in_ms=None):
+        assert isinstance(auth, AuthorizationToken)
+        self.auth = auth
+        # how long the token is valid for, in milliseconds
+        # `None` means the token never expires
+        self.expiresInMs = expires_in_ms
+
+
+class NewAuthTokenManager:
+    """
+    Create a new custom auth token provider function on the backend.
+
+    The backend should respond with `AuthTokenManager`.
+    """
+
+    def __init__(self):
+        pass
+
+
+class AuthTokenManagerGetAuthCompleted:
+    """
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id, auth):
+        self.requestId = request_id
+        assert isinstance(auth, AuthorizationToken)
+        self.auth = auth
+
+
+class AuthTokenManagerOnAuthExpiredCompleted:
+    """
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class AuthTokenManagerClose:
+    """
+    Request to remove an auth token manager from the backend.
+
+    The backend may free any resources associated with the provider and respond
+    with `AuthTokenManager` echoing back the given id.
+    """
+
+    def __init__(self, id):
+        # Id of the auth token manager to close.
+        # This id might also point to a ExpirationBasedAuthTokenManager.
+        self.id = id
+
+
+class NewExpirationBasedAuthTokenManager:
+    """
+    Create a new auth temporal token manager on the backend.
+
+    The manager will wrap a temporal token provider function on the backend.
+
+    The backend should respond with `ExpirationBasedAuthTokenManager`.
+    """
+
+    def __init__(self):
+        pass
+
+
+class ExpirationBasedAuthTokenProviderCompleted:
+    """
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id, auth):
+        self.requestId = request_id
+        assert isinstance(auth, AuthTokenAndExpiration)
+        self.auth = auth
 
 
 class VerifyConnectivity:
@@ -161,6 +261,31 @@ class CheckMultiDBSupport:
     multi-databases.
 
     Backend should respond with a MultiDBSupport response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
+class VerifyAuthentication:
+    """
+    Request to verify authentication on the driver.
+
+    instance corresponding to the specified driver id.
+    Backend should respond with a DriverIsAuthenticated response or an Error
+    response.
+    """
+
+    def __init__(self, driver_id, auth_token):
+        self.driverId = driver_id
+        self.authorizationToken = auth_token
+
+
+class CheckSessionAuthSupport:
+    """
+    Perform a check if the connected sever supports re-authentication.
+
+    Backend should respond with a SessionAuthSupport response.
     """
 
     def __init__(self, driverId):
@@ -282,7 +407,9 @@ class NewSession:
 
     def __init__(self, driverId, accessMode, bookmarks=None,
                  database=None, fetchSize=None, impersonatedUser=None,
-                 bookmark_manager=None):
+                 bookmark_manager=None, auth_token=None,
+                 notifications_min_severity=None,
+                 notifications_disabled_categories=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -292,8 +419,15 @@ class NewSession:
         self.database = database
         self.fetchSize = fetchSize
         self.impersonatedUser = impersonatedUser
+        if notifications_min_severity is not None:
+            self.notificationsMinSeverity = notifications_min_severity
+        if notifications_disabled_categories is not None:
+            self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
+
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
+        if auth_token is not None:
+            self.authorizationToken = auth_token
 
 
 class SessionClose:
@@ -592,3 +726,70 @@ class CypherTypeField:
         self.recordKey = record_key
         self.type = type_name
         self.field = field_id
+
+
+class ExecuteQuery:
+    """
+    Request to execute a query in a retriable context.
+
+    Backend should return EagerResult or a Error response.
+
+    :param driver_id: The id of the driver where the cypher query has to run.
+    :param cypher: The cypher query which to run.
+    :param params: The cypher query params.
+    :param config: The configuration
+    :param config.database: The database where the query will run.
+    :param config.routing: The type of routing ("w" for Writers,
+         "r" for "Readers")
+    :param config.impersonatedUser: The user which will be impersonated
+    :param config.bookmarkManagerId: The id of the bookmark manager
+        used in the query. None or not define for using the default,
+        -1 for disabling the BookmarkManager
+    """
+
+    def __init__(self, driver_id, cypher, params, config):
+        self.driverId = driver_id
+        self.cypher = cypher
+        self.params = params
+        if config:
+            self.config = config
+
+
+class FakeTimeInstall:
+    """
+    Request the backend to install a time mocker.
+
+    The backend should respond with a `FakeTimeAck` response.
+
+    From this moment, the system time should be frozen and only advance when
+    a `FakeTimeTick` request is received.
+
+    This request has no id because TestKit should never send it while twice
+    without a `FakeTimeUninstall` request in between.
+    """
+
+    pass
+
+
+class FakeTimeTick:
+    """
+    Request the backend to advance the mocked time.
+
+    The backend should respond with a `FakeTimeAck` response.
+
+    This request will only be sent between a `FakeTimeInstall` and a
+    `FakeTimeUninstall` request.
+    """
+
+    def __init__(self, increment_ms):
+        self.incrementMs = increment_ms
+
+
+class FakeTimeUninstall:
+    """
+    Request the backend to uninstall the time mocker.
+
+    The backend should respond with a `FakeTimeAck` response.
+    """
+
+    pass
