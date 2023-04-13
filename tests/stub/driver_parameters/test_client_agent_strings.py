@@ -126,3 +126,11 @@ class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
 
     def test_custom_user_agent(self):
         super()._test_custom_user_agent()
+
+    def test_user_agent_is_bolt_agent(self):
+        bolt_agent = self._extract_bolt_agent()
+        vars_ = {
+            "#AGENT_STRING#": json.dumps(bolt_agent),
+        }
+        self._start_server("user_agent_is_bolt_agent.script", vars_=vars_)
+        self._session_run_return_1(user_agent=bolt_agent)
