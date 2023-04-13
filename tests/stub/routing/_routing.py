@@ -26,9 +26,11 @@ class RoutingBase(TestkitTestCase):
         self._uri_template_with_context = \
             self._uri_template + "?region=china&policy=my_policy"
         self._uri_with_context = self._uri_template_with_context % (
-            self._routingServer1.host, self._routingServer1.port)
+            self._routingServer1.host, self._routingServer1.port
+        )
         self._auth = types.AuthorizationToken(
-            "basic", principal="p", credentials="c")
+            "basic", principal="p", credentials="c"
+        )
         self._userAgent = "007"
 
     def tearDown(self):
@@ -65,9 +67,9 @@ class RoutingBase(TestkitTestCase):
             "#VERSION#": self.bolt_version,
             "#HOST#": host,
             "#SERVER_AGENT#": self.server_agent,
-            "#ROUTINGCTX#": (
-                '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}'),
+            "#ROUTINGCTX#":
+                f'{{"address": "{host}:9000", '
+                f'"region": "china", "policy": "my_policy"}}',
         }
 
         return v

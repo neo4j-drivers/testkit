@@ -94,6 +94,10 @@ class ServerInfo:
             raise ValueError(
                 "We can't predict the server's agent string for aura!"
             )
+        if re.match(r"(\d+)\.dev", self.version):
+            raise ValueError(
+                "We can't predict the server's agent string for dev versions!"
+            )
         return "Neo4j/" + self.version
 
     @property
@@ -102,12 +106,32 @@ class ServerInfo:
 
     @property
     def max_protocol_version(self):
-        return {
-            "4.2": "4.2",
-            "4.3": "4.3",
-            "4.4": "4.4",
-            "5.0": "5.0",
-        }[".".join(self.version.split(".")[:2])]
+        match = re.match(r"(\d+)\.dev", self.version)
+        if match:
+            version = (int(match.group(1)), float("inf"))
+        else:
+            version = tuple(int(i) for i in self.version.split(".")[:2])
+        if version >= (5, 7):
+            return "5.2"
+        if version >= (5, 5):
+            return "5.1"
+        if version >= (5, 0):
+            return "5.0"
+        if version >= (4, 4):
+            return "4.4"
+        if version >= (4, 3):
+            return "4.3"
+        if version >= (4, 2):
+            return "4.2"
+        raise ValueError(f"Unsupported Neo4j version to test: {self.version}")
+
+    @property
+    def has_utc_patch(self):
+        if self.version >= "5":
+            return 1
+        if self.version >= "4.3":
+            return 0.5  # maybe
+        return 0
 
 
 def get_server_info():
@@ -178,3 +202,31 @@ def requires_min_bolt_version(min_version):
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
+
+
+class QueryBuilder:
+    @staticmethod
+    def escape_identifier(identifier):
+        identifier = identifier.replace("`", "``")
+        return "`{}`".format(identifier)
+
+    @staticmethod
+    def _wait_clause(version):
+        return " WAIT" if version >= "4.2" else ""
+
+    @staticmethod
+    def create_db(database, wait=True):
+        version = get_server_info().version
+        return "CREATE DATABASE {}{}".format(
+            QueryBuilder.escape_identifier(database),
+            QueryBuilder._wait_clause(version) if wait else ""
+        )
+
+    @staticmethod
+    def drop_db(database, if_exists=True, wait=True):
+        version = get_server_info().version
+        return "DROP  DATABASE {}{}{}".format(
+            QueryBuilder.escape_identifier(database),
+            " IF EXISTS" if if_exists else "",
+            QueryBuilder._wait_clause(version) if wait else ""
+        )

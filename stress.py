@@ -63,8 +63,8 @@ def run(settings):
         cluster=os.environ.get("TEST_NEO4J_IS_CLUSTER", True),
         suite="",
         scheme=scheme,
-        stress_test_duration=10 * 60,
-        download=None)
+        stress_test_duration=10 * 60
+    )
     print("Running stress test suite..")
     driver_container.run_stress_tests(host, port,
                                       user, password,

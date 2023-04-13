@@ -80,8 +80,8 @@ class TestTxRun(TestkitTestCase):
         tx.commit()
 
         # Check the property value
-        result = self._session1.run("MATCH (a) WHERE id(a) = $n "
-                                    "RETURN a.foo", {"n": node_id})
+        result = self._session1.run("MATCH (a) WHERE id(a) = $n RETURN a.foo",
+                                    params={"n": node_id})
         record = result.next()
         self.assertIsInstance(record, types.Record)
         self.assertEqual(len(record.values), 1)
@@ -109,8 +109,8 @@ class TestTxRun(TestkitTestCase):
         tx.rollback()
 
         # Check the property value
-        result = self._session1.run("MATCH (a) WHERE id(a) = $n "
-                                    "RETURN a.foo", {"n": node_id})
+        result = self._session1.run("MATCH (a) WHERE id(a) = $n RETURN a.foo",
+                                    params={"n": node_id})
         record = result.next()
         self.assertIsInstance(record, types.NullRecord)
 
@@ -290,7 +290,7 @@ class TestTxRun(TestkitTestCase):
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
         tx = self._session1.begin_transaction(
-            tx_meta={k: v.value for k, v in metadata.items()}, timeout=3000
+            tx_meta=metadata, timeout=3000
         )
         result = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
         values = []
@@ -320,22 +320,12 @@ class TestTxRun(TestkitTestCase):
         with self.assertRaises(types.DriverError) as e:
             result = tx2.run("MATCH (a:Node) SET a.property = 2")
             result.consume()
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        is_server_affected_with_bug = get_server_info().version <= "4.4"
-        if is_server_affected_with_bug and get_driver_name() in [
-                "javascript", "ruby", "python"]:
-            self.assertEqual(
-                e.exception.code,
-                "Neo.TransientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.TransientError'>")
-        else:
-            self.assertEqual(e.exception.code,
-                             "Neo.ClientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
+
+        self.assertEqual(e.exception.code,
+                         "Neo.ClientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(e.exception.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")
 
     @cluster_unsafe_test
     def test_consume_after_commit(self):

@@ -1,0 +1,54 @@
+!: BOLT #VERSION#
+
+C: HELLO {"user_agent": "*", "[routing]": "*"}
+C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
+S: SUCCESS {}
+*: RESET
+
+C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+C: LOGOFF
+C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+
+{{
+    C: RESET
+    S: SUCCESS {}
+    S: SUCCESS {}
+    S: SUCCESS {}
+
+    C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+----
+    C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+    S: SUCCESS {}
+    S: SUCCESS {}
+}}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+
+C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+C: LOGOFF
+C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+
+{{
+    C: RESET
+    S: SUCCESS {}
+    S: SUCCESS {}
+    S: SUCCESS {}
+
+    C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+----
+    C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+    S: SUCCESS {}
+    S: SUCCESS {}
+}}
+S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+
+*: RESET
+?: GOODBYE

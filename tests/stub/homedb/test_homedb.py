@@ -16,8 +16,8 @@ class TestHomeDb(TestkitTestCase):
         self._router = StubServer(9000)
         self._reader1 = StubServer(9010)
         self._reader2 = StubServer(9011)
-        self._authtoken = types.AuthorizationToken(
-            "basic", principal="p", credentials="c")
+        self._auth_token = types.AuthorizationToken("basic", principal="p",
+                                                    credentials="c")
         self._uri = "neo4j://%s" % self._router.address
 
     def tearDown(self):
@@ -38,7 +38,7 @@ class TestHomeDb(TestkitTestCase):
                 path=self.script_path("reader_change_homedb.script")
             )
 
-            driver = Driver(self._backend, self._uri, self._authtoken)
+            driver = Driver(self._backend, self._uri, self._auth_token)
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             result = session1.run("RETURN 1")
@@ -47,7 +47,8 @@ class TestHomeDb(TestkitTestCase):
                 session1.close()
 
             session2 = driver.session(
-                "r", bookmarks=["bookmark"], impersonated_user="the-imposter")
+                "r", bookmarks=["bookmark"], impersonated_user="the-imposter"
+            )
             result = session2.run("RETURN 2")
             result.consume()
             session2.close()
@@ -77,7 +78,7 @@ class TestHomeDb(TestkitTestCase):
                 path=self.script_path("reader_tx_change_homedb.script")
             )
 
-            driver = Driver(self._backend, self._uri, self._authtoken)
+            driver = Driver(self._backend, self._uri, self._auth_token)
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             tx = session1.begin_transaction()
@@ -88,7 +89,8 @@ class TestHomeDb(TestkitTestCase):
                 session1.close()
 
             session2 = driver.session(
-                "r", bookmarks=["bookmark"], impersonated_user="the-imposter")
+                "r", bookmarks=["bookmark"], impersonated_user="the-imposter"
+            )
             tx = session2.begin_transaction()
             result = tx.run("RETURN 2")
             result.consume()
@@ -124,18 +126,19 @@ class TestHomeDb(TestkitTestCase):
                 path=self.script_path("reader_tx_change_homedb.script")
             )
 
-            driver = Driver(self._backend, self._uri, self._authtoken)
+            driver = Driver(self._backend, self._uri, self._auth_token)
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             query = "RETURN 1"
-            session1.read_transaction(work)
+            session1.execute_read(work)
             if not parallel_sessions:
                 session1.close()
 
             session2 = driver.session(
-                "r", bookmarks=["bookmark"], impersonated_user="the-imposter")
+                "r", bookmarks=["bookmark"], impersonated_user="the-imposter"
+            )
             query = "RETURN 2"
-            session2.read_transaction(work)
+            session2.execute_read(work)
             session2.close()
             if parallel_sessions:
                 session1.close()
@@ -164,17 +167,19 @@ class TestHomeDb(TestkitTestCase):
                     return res.next()
                 self._router.done()
                 self._reader1.done()
-                self._router.start(path=self.script_path(
-                    "router_explicit_homedb.script"),
-                    vars_={"#HOST#": self._router.host})
-                self._reader2.start(path=self.script_path(
-                    "reader_tx_homedb.script"))
+                self._router.start(
+                    path=self.script_path("router_explicit_homedb.script"),
+                    vars_={"#HOST#": self._router.host}
+                )
+                self._reader2.start(
+                    path=self.script_path("reader_tx_homedb.script")
+                )
                 raise exc.exception
             else:
                 res = tx.run("RETURN 1")
                 return res.next()
 
-        driver = Driver(self._backend, self._uri, self._authtoken)
+        driver = Driver(self._backend, self._uri, self._auth_token)
 
         self._router.start(
             path=self.script_path("router_homedb.script"),
@@ -185,7 +190,7 @@ class TestHomeDb(TestkitTestCase):
         )
 
         session = driver.session("r", impersonated_user="the-imposter")
-        session.read_transaction(work)
+        session.execute_read(work)
         session.close()
 
         driver.close()

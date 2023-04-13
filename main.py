@@ -24,12 +24,7 @@ import driver
 import neo4j
 import runner
 import settings
-import teamcity
-from tests.testenv import (
-    begin_test_suite,
-    end_test_suite,
-    in_teamcity,
-)
+from tests.testenv import in_teamcity
 
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]
@@ -46,28 +41,28 @@ test_flags = {
 }
 
 
-def initialise_configurations():
+def initialise_configurations(settings):
     def generate_config(version, enterprise, cluster, scheme, stress_test):
         assert (cluster and scheme == "neo4j"
                 or not cluster and scheme in ("neo4j", "bolt"))
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
+        image = f"neo4j:{version}{'-enterprise' if enterprise else ''}"
         return neo4j.Config(
             name=name,
-            image=(
-                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
-            ),
+            image=image,
             version=version,
             edition=edition,
             cluster=cluster,
             suite=version,
             scheme=scheme,
-            download=None,
             stress_test_duration=stress_test
         )
 
-    def generate_tc_config(version, enterprise, cluster, scheme, stress_test):
+    def generate_tc_config(
+        version, enterprise, cluster, scheme, stress_test, docker_tag=None
+    ):
         if not in_teamcity:
             return None
         assert (cluster and scheme == "neo4j"
@@ -76,20 +71,23 @@ def initialise_configurations():
         name = "%s-tc-%s%s-%s" % (version, edition,
                                   "-cluster" if cluster else "", scheme)
         version_without_drop = ".".join(version.split(".")[:2])
+        if docker_tag is None:
+            docker_tag = version_without_drop
         return neo4j.Config(
             name=name,
-            image=(
-                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
-            ),
+            image=f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-nightly",
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
             suite=version_without_drop,
             scheme=scheme,
-            download=teamcity.DockerImage("neo4j-%s-%s" % (edition, version)),
             stress_test_duration=stress_test
         )
 
+    # ATTENTION: make sure to have all configs that use the same neo4j docker
+    # image (e.g., all configs with neo4j:4.4-community, then all with
+    # neo4j:4.4-enterprise, ...) grouped together. Else, TestKit will download
+    # the same image multiple times if `TEST_DOCKER_RMI` is set to `true`.
     configurations = [
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
@@ -103,20 +101,28 @@ def initialise_configurations():
             ("4.4",    True,        False,    "bolt",   0),
             ("4.4",    True,        False,    "neo4j",  0),
             ("4.4",    True,        True,     "neo4j", 90),
+            # Selected 5.x versions
+            # Oldest 5.x version (BOLT 5.0) would be 5.0.
+            # However, that has no tag at dockerhub, so we use 5.1
+            # https://github.com/neo4j/docker-neo4j/issues/391
+            ("5.1",    True,        True,     "neo4j",  0),
+            # Bolt 5.1
+            ("5.5",    True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
-        generate_tc_config(version_, enterprise_, cluster_, scheme_,
-                           stress_test_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+        generate_tc_config(version_, enterprise_, cluster_, scheme_, stress,
+                           docker_tag=docker_tag)
+        for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
+        in (
             # nightly build of official backwards-compatible version
-            ("4.4",    True,        True,     "neo4j", 60),
+            ("4.4",    "4.4",      True,        True,     "neo4j", 60),
             # latest version
-            ("5.0",    False,       False,    "bolt",   0),
-            ("5.0",    False,       False,    "neo4j",  0),
-            ("5.0",    True,        False,    "bolt",  90),
-            ("5.0",    True,        False,    "neo4j",  0),
-            ("5.0",    True,        True,     "neo4j", 90),
+            ("5.dev",  "dev",      False,       False,    "bolt",   0),
+            ("5.dev",  "dev",      False,       False,    "neo4j",  0),
+            ("5.dev",  "dev",      True,        False,    "bolt",  90),
+            ("5.dev",  "dev",      True,        False,    "neo4j",  0),
+            ("5.dev",  "dev",      True,        True,     "neo4j", 90),
         )
     ]
 
@@ -192,7 +198,8 @@ def parse_command_line(configurations, argv):
         'TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") '
         'of the Neo4j server, default "enterprise"\n'
         "TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "
-        '"False"\n')
+        '"False"\n'
+    )
     servers_help = "Optional space separated list selected from: "
     for config in configurations:
         servers_help += config.name + ", "
@@ -203,14 +210,14 @@ def parse_command_line(configurations, argv):
     )
 
     # add arguments
-    parser.add_argument(
-        "--tests", nargs="*", required=False, help=tests_help)
-    parser.add_argument(
-        "--configs", nargs="*", required=False, help=servers_help)
-    parser.add_argument(
-        "--external-integration", action="store_true", help=external_help)
-    parser.add_argument(
-        "--run-only-selected", nargs=1, required=False, help=run_only_help)
+    parser.add_argument("--tests", nargs="*", required=False,
+                        help=tests_help)
+    parser.add_argument("--configs", nargs="*", required=False,
+                        help=servers_help)
+    parser.add_argument("--external-integration", action="store_true",
+                        help=external_help)
+    parser.add_argument("--run-only-selected", nargs=1, required=False,
+                        help=run_only_help)
 
     # parse the arguments
     args = parser.parse_args()
@@ -223,14 +230,17 @@ def parse_command_line(configurations, argv):
     return configs
 
 
-def cleanup(*_, **__):
-    print("cleanup started")
-    docker.cleanup()
-    for n in networks:
-        print('docker network rm "%s"' % n)
-        subprocess.run(["docker", "network", "rm", n],
-                       check=False, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL)
+def build_cleanup(settings):
+    def cleanup(*_, **__):
+        print("cleanup started")
+        docker.cleanup(settings)
+        for n in networks:
+            print('docker network rm "%s"' % n)
+            subprocess.run(["docker", "network", "rm", n],
+                           check=False, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+
+    return cleanup
 
 
 def is_stub_test_selected_to_run():
@@ -299,6 +309,7 @@ def main(settings, configurations):
 
     # Important to stop all docker images upon exit
     # Also make sure that none of those images are running at this point
+    cleanup = build_cleanup(settings)
     atexit.register(cleanup)
     cleanup()
 
@@ -306,12 +317,10 @@ def main(settings, configurations):
     # The host running this will be gateway on that network, retrieve that
     # address to be able to start services on the network that the driver
     # connects to (stub server and TLS server).
-    subprocess.run([
-        "docker", "network", "create", networks[0]
-    ])
-    subprocess.run([
-        "docker", "network", "create", networks[1]
-    ])
+    for network in networks:
+        cmd = ["docker", "network", "create", network]
+        print(cmd)
+        subprocess.run(cmd)
 
     driver_container = driver.start_container(
         this_path, testkit_branch, driver_name, driver_repo,
@@ -323,9 +332,9 @@ def main(settings, configurations):
     print("Finished building driver and test backend")
 
     if test_flags["UNIT_TESTS"]:
-        begin_test_suite("Unit tests")
+        print(">>> Start test suite: driver's unit tests")
         run_fail_wrapper(driver_container.run_unit_tests)
-        end_test_suite("Unit tests")
+        print(">>> End test suite: driver's unit tests")
 
     print("Start test backend in driver container")
     driver_container.start_backend(backend_artifacts_path)
@@ -382,11 +391,17 @@ def main(settings, configurations):
     # time we start a database server we should use a different folder.
     neo4j_artifacts_path = os.path.join(artifacts_path, "neo4j")
     os.makedirs(neo4j_artifacts_path)
+    last_image = None
     for neo4j_config in configurations:
-        download = neo4j_config.download
-        if download:
-            print("Downloading Neo4j docker image")
-            neo4j_config.image = docker.load(download.get())
+        if (
+            last_image
+            and settings.docker_rmi
+            and neo4j_config.image != last_image
+        ):
+            cmd = ["docker", "rmi", last_image]
+            print(cmd)
+            subprocess.run(cmd)
+        last_image = neo4j_config.image
 
         cluster = neo4j_config.cluster
         server_name = neo4j_config.name
@@ -397,13 +412,14 @@ def main(settings, configurations):
             print("\n    Starting neo4j cluster (%s)\n" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
-                                   neo4j_artifacts_path)
+                                   neo4j_artifacts_path,
+                                   neo4j_config.version)
         else:
             print("\n    Starting neo4j standalone server (%s)\n"
                   % server_name)
             server = neo4j.Standalone(
                 neo4j_config.image, server_name, neo4j_artifacts_path,
-                "neo4jserver", 7687, neo4j_config.edition
+                "neo4jserver", 7687, neo4j_config.version, neo4j_config.edition
             )
         server.start(networks[0])
         addresses = server.addresses()
@@ -480,26 +496,30 @@ def main(settings, configurations):
 
         server.stop()
 
+    if last_image and settings.docker_rmi:
+        cmd = ["docker", "rmi", last_image]
+        print(cmd)
+        subprocess.run(cmd)
+
     return _exit()
 
 
 if __name__ == "__main__":
-    # setup the configurations that are available
-    configurations = initialise_configurations()
-    configurations = parse_command_line(configurations, sys.argv)
-
     # Retrieve path to the repository containing this script.
     # Use this path as base for locating a whole bunch of other stuff.
     # Add this path to python sys path to be able to invoke modules
     # from this repo
     this_path = os.path.dirname(os.path.abspath(__file__))
     os.environ["PYTHONPATH"] = this_path
-
     try:
         settings = settings.build(this_path)
     except settings.ArgumentError as e:
         print("")
         print(e)
         sys.exit(-1)
+
+    # setup the configurations that are available
+    configurations = initialise_configurations(settings)
+    configurations = parse_command_line(configurations, sys.argv)
 
     sys.exit(main(settings, configurations))

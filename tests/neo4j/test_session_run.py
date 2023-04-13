@@ -2,7 +2,6 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
-    get_server_info,
 )
 from tests.shared import (
     get_driver_name,
@@ -133,7 +132,7 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = self._driver.session("r")
         result = self._session1.run(
             "CALL tx.getMetaData",
-            tx_meta={k: v.value for k, v in metadata.items()}
+            tx_meta=metadata
         )
         record = result.next()
         self.assertIsInstance(record, types.Record)
@@ -156,22 +155,11 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        is_server_affected_with_bug = get_server_info().version <= "4.4"
-        if is_server_affected_with_bug and get_driver_name() in [
-                "ruby", "python", "javascript"]:
-            self.assertEqual(
-                e.exception.code,
-                "Neo.TransientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.TransientError'>")
-        else:
-            self.assertEqual(e.exception.code,
-                             "Neo.ClientError.Transaction.LockClientStopped")
-            if get_driver_name() in ["python"]:
-                self.assertEqual(e.exception.errorType,
-                                 "<class 'neo4j.exceptions.ClientError'>")
+        self.assertEqual(e.exception.code,
+                         "Neo.ClientError.Transaction.LockClientStopped")
+        if get_driver_name() in ["python"]:
+            self.assertEqual(e.exception.errorType,
+                             "<class 'neo4j.exceptions.ClientError'>")
 
     @cluster_unsafe_test
     def test_regex_in_parameter(self):
@@ -214,7 +202,8 @@ class TestSessionRun(TestkitTestCase):
         n = n + 7
         result = self._session1.run(
             "UNWIND RANGE(0, $n) AS x RETURN x",
-            params={"n": types.CypherInt(n)})
+            params={"n": types.CypherInt(n)}
+        )
         for x in range(0, n):
             exp = types.Record(values=[types.CypherInt(x)])
             rec = result.next()
@@ -305,7 +294,8 @@ class TestSessionRun(TestkitTestCase):
         def run(i, n):
             return self._session1.run(
                 "UNWIND RANGE ($i, $n) AS x RETURN x",
-                {"i": types.CypherInt(i), "n": types.CypherInt(n)})
+                params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
+            )
         i0 = 0
         n0 = 6
         res0 = run(i0, n0)
@@ -318,14 +308,16 @@ class TestSessionRun(TestkitTestCase):
             for r1 in range(i1, n1 + 1):
                 rec = res1.next()
                 self.assertEqual(
-                    rec, types.Record(values=[types.CypherInt(r1)]))
+                    rec, types.Record(values=[types.CypherInt(r1)])
+                )
                 i2 = 999
                 n2 = 1001
                 res2 = run(i2, n2)
                 for r2 in range(i2, n2 + 1):
                     rec = res2.next()
                     self.assertEqual(
-                        rec, types.Record(values=[types.CypherInt(r2)]))
+                        rec, types.Record(values=[types.CypherInt(r2)])
+                    )
                 self.assertEqual(res2.next(), types.NullRecord())
             self.assertEqual(res1.next(), types.NullRecord())
         self.assertEqual(res0.next(), types.NullRecord())
@@ -347,14 +339,16 @@ class TestSessionRun(TestkitTestCase):
         # This one should function properly
         result = self._session1.run("RETURN 1 AS n")
         self.assertEqual(
-            result.next(), types.Record(values=[types.CypherInt(1)]))
+            result.next(), types.Record(values=[types.CypherInt(1)])
+        )
 
     @cluster_unsafe_test
     def test_recover_from_fail_on_streaming(self):
         self._session1 = self._driver.session("r")
         result = self._session1.run("UNWIND [1, 0, 2] AS x RETURN 10 / x")
         self.assertEqual(
-            result.next(), types.Record(values=[types.CypherInt(10)]))
+            result.next(), types.Record(values=[types.CypherInt(10)])
+        )
         with self.assertRaises(types.DriverError):
             result.next()
         # TODO: Further inspection of the type of error?
@@ -363,7 +357,8 @@ class TestSessionRun(TestkitTestCase):
         # This one should function properly
         result = self._session1.run("RETURN 1 as n")
         self.assertEqual(
-            result.next(), types.Record(values=[types.CypherInt(1)]))
+            result.next(), types.Record(values=[types.CypherInt(1)])
+        )
 
     @cluster_unsafe_test
     def test_updates_last_bookmark(self):

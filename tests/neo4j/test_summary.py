@@ -1,3 +1,5 @@
+import re
+
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
@@ -5,6 +7,7 @@ from tests.neo4j.shared import (
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    QueryBuilder,
     requires_multi_db_support,
 )
 from tests.shared import TestkitTestCase
@@ -31,7 +34,7 @@ class TestSummary(TestkitTestCase):
             return summary
         params = {} if params is None else params
         self._session = self._driver.session("w")
-        return self._session.write_transaction(work)
+        return self._session.execute_write(work)
 
     def test_can_obtain_summary_after_consuming_result(self):
         summary = self.get_summary("CREATE (n) RETURN n")
@@ -80,7 +83,7 @@ class TestSummary(TestkitTestCase):
         max_server_protocol_version = get_server_info().max_protocol_version
         common_protocol_versions = [
             f.value.split(":")[-1] for f in self._driver_features
-            if (f.name.startswith("BOLT_")
+            if (re.match(r"BOLT_\d+_\d+", f.name)
                 and f.value.split(":")[-1] <= max_server_protocol_version)
         ]
         if not common_protocol_versions:
@@ -93,11 +96,6 @@ class TestSummary(TestkitTestCase):
             # server versions into the handshake
             self.assertIn(summary.server_info.protocol_version,
                           ("4.2", "4.1"))
-        # TODO: this will start to fail as soon as 5.0 servers implement bolt
-        #       5.0. For now they don't. Until then, we expect the driver to
-        #       negotiate bolt 4.4.
-        elif common_max_version == "5.0":
-            self.assertEqual(summary.server_info.protocol_version, "4.4")
         else:
             self.assertEqual(summary.server_info.protocol_version,
                              common_max_version)
@@ -111,6 +109,10 @@ class TestSummary(TestkitTestCase):
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
             self.assertTrue(version.startswith("Neo4j/"))
+        elif re.match(r"(\d+)\.dev", server_info.version):
+            self.assertTrue(version.startswith(
+                "Neo4j/" + server_info.version.split(".")[0]
+            ))
         else:
             version = ".".join(summary.server_info.agent.split(".")[:2])
             self.assertEqual(version, get_server_info().server_agent)
@@ -157,7 +159,9 @@ class TestSummary(TestkitTestCase):
 
         self._session = self._driver.session("w", database="system")
 
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        drop_db_test_query = QueryBuilder.drop_db("test")
+        create_db_test_query = QueryBuilder.create_db("test")
+        self._session.run(drop_db_test_query).consume()
 
         # SHOW DATABASES
 
@@ -183,10 +187,10 @@ class TestSummary(TestkitTestCase):
         self._assert_counters(summary)
 
         # CREATE DATABASE test
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
-        summary = self._session.run("CREATE DATABASE test").consume()
+        self._session.run(drop_db_test_query).consume()
+        summary = self._session.run(create_db_test_query).consume()
 
-        self.assertEqual(summary.query.text, "CREATE DATABASE test")
+        self.assertEqual(summary.query.text, create_db_test_query)
         self.assertEqual(summary.query.parameters, {})
 
         self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
@@ -280,4 +284,4 @@ class TestSummary(TestkitTestCase):
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run("DROP DATABASE test IF EXISTS").consume()
+        self._session.run(drop_db_test_query).consume()

@@ -18,10 +18,9 @@ class RoutingV4x1(RoutingV4x4):
             "#VERSION#": self.bolt_version,
             "#HOST#": host,
             "#SERVER_AGENT#": self.server_agent,
-            "#ROUTINGCTX#": (
+            "#ROUTINGCTX#":
                 '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}'
-            ),
+                + ':9000", "region": "china", "policy": "my_policy"}',
         }
 
         return v

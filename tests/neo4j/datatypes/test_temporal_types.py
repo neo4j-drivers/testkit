@@ -9,6 +9,7 @@ from tests.neo4j.datatypes._base import (
     MIN_INT64,
 )
 from tests.neo4j.datatypes._util import TZ_IDS
+from tests.neo4j.shared import get_server_info
 from tests.shared import get_driver_name
 
 
@@ -100,11 +101,10 @@ class TestDataTypes(_TestTypesBase):
 
         assert self._driver and self._session
         try:
-            echoed_tz_id = self._session.read_transaction(work)
+            echoed_tz_id = self._session.execute_read(work)
             return echoed_tz_id == tz_id
         except types.DriverError as e:
-            print("timezone %s not supported by server" % tz_id)
-            print(e)
+            assert tz_id in e.msg
             return False
 
     def test_should_echo_all_timezone_ids(self):
@@ -124,43 +124,60 @@ class TestDataTypes(_TestTypesBase):
             if not self._timezone_server_support(tz_id):
                 continue
             for time in times:
-                with self.subTest(tz_id=tz_id, time=time):
-                    # FIXME: while there is a bug in the bolt protocol that
-                    #        makes it incapable of representing datetimes with
-                    #        timezone ids when there is ambiguity, we will
-                    #        avoid those.
-                    # ---------------------------------------------------------
-                    try:
-                        tz = pytz.timezone(tz_id)
-                    except pytz.UnknownTimeZoneError:
-                        # We will be able to remove this check and test those
-                        # timezones, once we don't need the workaround for the
-                        # ambiguity in the bolt protocol anymore.
-                        self.skipTest("timezone %s not supported by TestKit"
-                                      % tz_id)
-                    naive_dt = datetime.datetime(*time[:-1])
+                try:
+                    tz = pytz.timezone(tz_id)
+                except pytz.UnknownTimeZoneError:
+                    # Can't test this timezone as Python doesn't know it :(
+                    continue
+                # FIXME: while there is a bug in the bolt protocol that
+                #        makes it incapable of representing datetimes with
+                #        timezone ids when there is ambiguity, we will
+                #        avoid those.
+                # ---------------------------------------------------------
+                naive_dt = datetime.datetime(*time[:-1])
+                dst_local_dt = tz.localize(naive_dt, is_dst=True)
+                no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
+                while dst_local_dt != no_dst_local_dt:
+                    naive_dt += datetime.timedelta(hours=1)
                     dst_local_dt = tz.localize(naive_dt, is_dst=True)
                     no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
-                    while dst_local_dt != no_dst_local_dt:
-                        naive_dt += datetime.timedelta(hours=1)
-                        dst_local_dt = tz.localize(naive_dt, is_dst=True)
-                        no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
-                    # ---------------------------------------------------------
+                # ---------------------------------------------------------
 
-                    dt = types.CypherDateTime(
-                        naive_dt.year,
-                        naive_dt.month,
-                        naive_dt.day,
-                        naive_dt.hour,
-                        naive_dt.minute,
-                        naive_dt.second,
-                        time[-1],
-                        utc_offset_s=dst_local_dt.utcoffset().total_seconds(),
-                        timezone_id=tz_id
-                    )
+                dt = types.CypherDateTime(
+                    naive_dt.year,
+                    naive_dt.month,
+                    naive_dt.day,
+                    naive_dt.hour,
+                    naive_dt.minute,
+                    naive_dt.second,
+                    time[-1],
+                    utc_offset_s=dst_local_dt.utcoffset().total_seconds(),
+                    timezone_id=tz_id
+                )
+                with self.subTest(dt=dt):
                     self._verify_can_echo(dt)
 
     def test_date_time_cypher_created_tz_id(self):
+        def assert_utc_equal(dt_, cypher_dt_):
+            self.assertEqual(dt_.timezone_id, tz)
+            # We are comparing in UTC because the server's and the
+            # driver's timezone db may diverge.
+            self.assertEqual(dt_.as_utc(), cypher_dt_.as_utc())
+
+        def assert_wall_time_equal(dt_, cypher_dt_):
+            self.assertEqual(dt_.year, cypher_dt_.year)
+            self.assertEqual(dt_.month, cypher_dt_.month)
+            self.assertEqual(dt_.day, cypher_dt_.day)
+            self.assertEqual(dt_.hour, cypher_dt_.hour)
+            self.assertEqual(dt_.minute, cypher_dt_.minute)
+            self.assertEqual(dt_.second, cypher_dt_.second)
+            self.assertEqual(dt_.nanosecond, cypher_dt_.nanosecond)
+            # We are not testing the offset value because the
+            # server's and the driver's timezone db may diverge.
+            # self.assertEqual(dt.utc_offset_s, cypher_dt.utc_offset_s)
+            self.assertEqual(dt_.timezone_id, cypher_dt_.timezone_id)
+            pass
+
         def work(tx):
             res = tx.run(
                 f"WITH datetime('1970-01-01T10:08:09.000000001[{tz_id}]') "
@@ -185,20 +202,36 @@ class TestDataTypes(_TestTypesBase):
             return map(lambda x: getattr(x, "value", x), rec.values)
 
         self._create_driver_and_session()
+        server_supports_utc = get_server_info().has_utc_patch
         for tz_id in TZ_IDS:
             if not self._timezone_server_support(tz_id):
                 continue
             with self.subTest(tz_id=tz_id):
                 dt, y, mo, d, h, m, s, ns, offset, tz = \
-                    self._session.read_transaction(work)
-                self.assertEqual(dt.year, y)
-                self.assertEqual(dt.month, mo)
-                self.assertEqual(dt.day, d)
-                self.assertEqual(dt.hour, h)
-                self.assertEqual(dt.minute, m)
-                self.assertEqual(dt.second, s)
-                self.assertEqual(dt.nanosecond, ns)
-                self.assertEqual(dt.timezone_id, tz)
+                    self._session.execute_read(work)
+                cypher_dt = types.CypherDateTime(
+                    y, mo, d, h, m, s, ns, offset, tz_id
+                )
+                if server_supports_utc == 1:
+                    # 5.0+ protocol sends date times in UTC
+                    # => UTC times must be equal
+                    assert_utc_equal(dt, cypher_dt)
+                elif server_supports_utc == 0:
+                    # 4.2- protocol sends date times in wall clock time
+                    # => Wall clock times must be equal
+                    assert_wall_time_equal(dt, cypher_dt)
+                else:
+                    # 4.4 and 4.3 protocol sends date times in
+                    # wall clock time or UTC depending on server version,
+                    # driver version and their handshake.
+                    try:
+                        assert_utc_equal(dt, cypher_dt)
+                    except AssertionError:
+                        # guess it was the other
+                        pass
+                    else:
+                        continue
+                    assert_wall_time_equal(dt, cypher_dt)
 
     def test_date_components(self):
         self._create_driver_and_session()
@@ -335,8 +368,11 @@ class TestDataTypes(_TestTypesBase):
             "CYPHER runtime=interpreted WITH $x AS x "
             "RETURN [x.year, x.month, x.day, x.hour, x.minute, x.second, "
             "x.nanosecond, x.offset]",
-            params={"x": types.CypherDateTime(2022, 3, 30, 13, 24, 34,
-                                              699546224, utc_offset_s=-5520)}
+            params={
+                "x": types.CypherDateTime(
+                    2022, 3, 30, 13, 24, 34, 699546224, utc_offset_s=-5520
+                ),
+            }
         )
         self.assertEqual(
             values,
@@ -404,12 +440,17 @@ class TestDataTypes(_TestTypesBase):
             (
                 "datetime('1976-06-13T12:34:56')",
                 types.CypherDateTime(1976, 6, 13, 12, 34, 56, 0,
+                                     utc_offset_s=0)
+            ),
+            (
+                "datetime('1976-06-13T12:34:56[UTC]')",
+                types.CypherDateTime(1976, 6, 13, 12, 34, 56, 0,
                                      utc_offset_s=0, timezone_id="UTC")
             ),
             (
                 "datetime('1976-06-13T12:34:56.999888777')",
                 types.CypherDateTime(1976, 6, 13, 12, 34, 56, 999888777,
-                                     utc_offset_s=0, timezone_id="UTC")
+                                     utc_offset_s=0)
             ),
             (
                 "datetime('1976-06-13T12:34:56.999888777-05:00')",
@@ -417,7 +458,8 @@ class TestDataTypes(_TestTypesBase):
                                      utc_offset_s=-18000)
             ),
             (
-                "datetime('1976-06-13T12:34:56.789012345[Europe/London]')",
+                "datetime('1976-06-13T12:34:56.789012345+01:00"
+                "[Europe/London]')",
                 types.CypherDateTime(
                     1976, 6, 13, 12, 34, 56, 789012345,
                     utc_offset_s=3600, timezone_id="Europe/London"
@@ -435,6 +477,12 @@ class TestDataTypes(_TestTypesBase):
             with self.subTest(s=s, dt=dt):
                 self._create_driver_and_session()
                 values = self._read_query_values(f"RETURN {s}")
+                if get_driver_name() == "python":
+                    # Python cannot discriminate between +00:00
+                    # and +00:00[UTC]
+                    assert isinstance(dt, types.CypherDateTime)
+                    if dt.utc_offset_s == 0 and dt.timezone_id is None:
+                        dt.timezone_id = "UTC"
                 self.assertEqual(values, [dt])
 
     def test_duration_components(self):

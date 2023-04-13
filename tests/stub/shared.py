@@ -59,6 +59,7 @@ class StubServer:
         self._stderr_lines = []
         self._pipes_closed = False
         self._script_path = None
+        self._last_rewritten_path = None
 
     def start(self, path=None, script=None, vars_=None):
         if self._process:
@@ -74,8 +75,10 @@ class StubServer:
             raise ValueError("Specify either path or script.")
 
         script_fn = "temp.script"
+        self._last_rewritten_path = None
         if vars_:
             if path:
+                self._last_rewritten_path = path
                 script_fn = os.path.basename(path)
                 with open(path, "r") as f:
                     script = f.read()
@@ -159,6 +162,8 @@ class StubServer:
                 break
 
     def _dump(self):
+        if self._last_rewritten_path:
+            print(f"Original stub script file: {self._last_rewritten_path}")
         self._read_pipes()
         sys.stdout.flush()
         print(">>>> Captured stub server %s stdout" % self.address)
@@ -366,6 +371,27 @@ class StubServer:
 
     def count_responses(self, pattern, silence_period=0.1):
         return len(self.get_responses(pattern, silence_period))
+
+    def get_conversation(self, silence_period=0.1):
+        self._wait_for_silence(silence_period)
+        lines = []
+        for line in self._stdout_lines:
+            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # plus some color escape sequences and ends on a newline
+            line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
+            line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
+                          line)
+            match = re.match(
+                r"^((?:C: )|(?:\(\s*\d+\) C: ))"
+                r"|((?:S: )|(?:\(\s*\d+\) S: )|(?:\(\s*\d+\)\s+))",
+                line
+            )
+            if not match:
+                continue
+            # print(match)
+            header = "S: " if match.group(1) else "C: "
+            lines.append(f"{header} {line[match.end():]}")
+        return lines
 
     @property
     def stdout(self):

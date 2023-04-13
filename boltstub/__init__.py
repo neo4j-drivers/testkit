@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
-# Copyright (c) 2002-2020 "Neo Technology,"
-# Network Engine for Objects in Lund AB [http://neotechnology.com]
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
 #
 # This file is part of Neo4j.
 #
@@ -9,7 +7,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -34,7 +32,10 @@ from threading import (
 )
 
 from .addressing import Address
-from .channel import Channel
+from .channel import (
+    Channel,
+    EvalContext,
+)
 from .errors import ServerExit
 from .parsing import (
     parse_file,
@@ -98,6 +99,7 @@ class BoltStubService:
         self.ever_acted = False
         self.actors_lock = Lock()
         service = self
+        eval_context = script.context.create_eval_context()
 
         class BoltStubRequestHandler(BaseRequestHandler):
             wire = None
@@ -115,7 +117,8 @@ class BoltStubService:
 
             def handle(self) -> None:
                 with service.actors_lock:
-                    actor = BoltActor(deepcopy(script), self.wire)
+                    actor = BoltActor(deepcopy(script), self.wire,
+                                      eval_context)
                     service.actors.append(actor)
                     service.ever_acted = True
                 try:
@@ -197,11 +200,13 @@ class BoltStubService:
 
 class BoltActor:
 
-    def __init__(self, script: Script, wire):
+    def __init__(self, script: Script, wire, eval_context: EvalContext):
         self.script = script
         self.channel = Channel(
             wire, script.context.bolt_version, log_cb=self.log,
-            handshake_data=self.script.context.handshake
+            handshake_data=self.script.context.handshake,
+            handshake_delay=self.script.context.handshake_delay,
+            eval_context=eval_context,
         )
         self._exit = False
 
@@ -220,7 +225,7 @@ class BoltActor:
             while True:
                 if self._exit:
                     raise ServerExit("Actor exit on request")
-                if self.script.done():
+                if self.script.done(self.channel):
                     break
                 try:
                     self.script.consume(self.channel)
@@ -243,7 +248,7 @@ class BoltActor:
         self.log("Script finished")
 
     def try_skip_to_end(self):
-        self.script.try_skip_to_end()
+        self.script.try_skip_to_end(self.channel)
 
     def exit(self):
         self._exit = True

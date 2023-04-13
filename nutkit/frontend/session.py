@@ -16,7 +16,7 @@ class Session:
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session but was: %s" % res)
 
-    def run(self, cypher, params=None, tx_meta=None, hooks=None, **kwargs):
+    def run(self, cypher, *, params=None, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionRun(self._session.id, cypher, params,
                                   txMeta=tx_meta, **kwargs)
         res = self._driver.send_and_receive(req, hooks=hooks,
@@ -40,12 +40,6 @@ class Session:
                     # that the frontend test function makes calls to the
                     # backend it self.
                     x = fn(tx)
-                    # The frontend test function were fine with the
-                    # interaction, notify backend that we're happy to go.
-                    self._driver.send(
-                        protocol.RetryablePositive(self._session.id),
-                        hooks=hooks
-                    )
                 except (ApplicationCodeError, protocol.DriverError) as e:
                     # If this is an error originating from the driver in the
                     # backend, retrieve the id of the error  and send that,
@@ -59,6 +53,26 @@ class Session:
                                                    errorId=error_id),
                         hooks=hooks
                     )
+                except Exception as e:
+                    # If this fails any other way, we still want the backend
+                    # to rollback the transaction.
+                    try:
+                        res = self._driver.send_and_receive(
+                            protocol.RetryableNegative(self._session.id),
+                            allow_resolution=False, hooks=hooks
+                        )
+                    except protocol.FrontendError:
+                        raise e
+                    else:
+                        raise Exception("Should be FrontendError but was: %s" %
+                                        res)
+                else:
+                    # The frontend test function were fine with the
+                    # interaction, notify backend that we're happy to go.
+                    self._driver.send(
+                        protocol.RetryablePositive(self._session.id),
+                        hooks=hooks
+                    )
             elif isinstance(res, protocol.RetryableDone):
                 return x
             else:
@@ -66,21 +80,21 @@ class Session:
                     "Should be RetryableTry or RetryableDone but was: %s" % res
                 )
 
-    def read_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
+    def execute_read(self, fn, *, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionReadTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )
         return self.process_transaction(req, fn, hooks=hooks)
 
-    def write_transaction(self, fn, tx_meta=None, hooks=None, **kwargs):
+    def execute_write(self, fn, *, tx_meta=None, hooks=None, **kwargs):
         # Send request to enter transactional read function
         req = protocol.SessionWriteTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )
         return self.process_transaction(req, fn, hooks=hooks)
 
-    def begin_transaction(self, tx_meta=None, hooks=None, **kwargs):
+    def begin_transaction(self, *, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionBeginTransaction(
             self._session.id, txMeta=tx_meta, **kwargs
         )

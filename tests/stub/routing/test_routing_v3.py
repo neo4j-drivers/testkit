@@ -17,10 +17,9 @@ class RoutingV3(RoutingV4x4):
             "#VERSION#": self.bolt_version,
             "#HOST#": host,
             "#SERVER_AGENT#": self.server_agent,
-            "#ROUTINGCTX#": (
+            "#ROUTINGCTX#":
                 '{"address": "' + host
-                + ':9000", "region": "china", "policy": "my_policy"}'
-            ),
+                + ':9000", "region": "china", "policy": "my_policy"}',
             "#EXTR_HELLO_ROUTING_PROPS#": "",
             "#EXTR_HELLO_ROUTING_PROPS_EMPTY_CTX#": ""
         }
@@ -46,7 +45,8 @@ class RoutingV3(RoutingV4x4):
         return False
 
     def test_should_read_successfully_from_reachable_db_after_trying_unreachable_db(  # noqa: N802,E501
-            self):
+        self
+    ):
         pass
 
     def test_should_pass_system_bookmark_when_getting_rt_for_multi_db(self):

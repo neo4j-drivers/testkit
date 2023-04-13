@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
-# Copyright (c) 2002-2020 "Neo4j,"
-# Neo4j Sweden AB [http://neo4j.com]
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
 #
 # This file is part of Neo4j.
 #
@@ -9,13 +7,14 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#     https://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 
 import inspect
 import re
@@ -287,7 +286,7 @@ class Structure:
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
-    def _from_jolt_v2_type(cls, jolt: jolt_v1_types.JoltType):
+    def _from_jolt_v2_type(cls, jolt: jolt_v2_types.JoltType):
         if isinstance(jolt, jolt_v2_types.JoltDate):
             return cls(StructTagV2.date, jolt.days, packstream_version=2)
         if isinstance(jolt, jolt_v2_types.JoltTime):
@@ -520,7 +519,8 @@ class PackstreamV1StructureValidator:
                 raise ValueError(
                     f"Invalid {type_name} struct received.\n"
                     f"validation failed: {inspect.getsource(validation)}"
-                    f" {structure}")
+                    f" {structure}"
+                )
 
     @classmethod
     def _verify_node(cls, structure, fields):
@@ -666,9 +666,9 @@ class PackstreamV2StructureValidator(PackstreamV1StructureValidator):
     def _verify_relationship(cls, structure, fields):
         validations = [
             lambda f: len(f) == 8,
-            lambda f: (isinstance(f[0], int) or f[0] is None),
-            lambda f: (isinstance(f[1], int) or f[1] is None),
-            lambda f: (isinstance(f[2], int) or f[2] is None),
+            lambda f: isinstance(f[0], int) or f[0] is None,
+            lambda f: isinstance(f[1], int) or f[1] is None,
+            lambda f: isinstance(f[2], int) or f[2] is None,
             lambda f: isinstance(f[3], str),
             lambda f: isinstance(f[4], dict),
             lambda f: all(isinstance(k, str) for k in f[4].keys()),

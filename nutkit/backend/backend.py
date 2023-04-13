@@ -3,11 +3,13 @@ import json
 import os
 import socket
 from contextlib import contextmanager
+from datetime import datetime
 
 import nutkit.protocol as protocol
 
-PROTOCOL_CLASSES = dict([
-    m for m in inspect.getmembers(protocol, inspect.isclass)])
+PROTOCOL_CLASSES = dict(
+    m for m in inspect.getmembers(protocol, inspect.isclass)
+)
 DEBUG_MESSAGES = os.environ.get("TEST_DEBUG_REQRES", "0").lower() in (
     "1", "y", "yes", "true", "t", "on"
 )
@@ -75,7 +77,7 @@ class Backend:
                 hook(req)
         req_json = self._encoder.encode(req)
         if DEBUG_MESSAGES:
-            print("Request: %s" % req_json)
+            print("%s Request: %s" % (datetime.now(), req_json))
         self._writer.write("#request begin\n")
         self._writer.write(req_json + "\n")
         self._writer.write("#request end\n")
@@ -97,7 +99,7 @@ class Backend:
             elif line == "#response end":
                 if DEBUG_MESSAGES:
                     try:
-                        print("Response: %s" % response)
+                        print("%s Response: %s" % (datetime.now(), response))
                     except UnicodeEncodeError:
                         print("Response: <invalid unicode>")
                 try:

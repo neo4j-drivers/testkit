@@ -107,8 +107,9 @@ class TestIterationTxRun(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path(
-            "v4x4", "tx_pull_1_nested_list.script"))
+        self._server.start(
+            path=self.script_path("v4x4", "tx_pull_1_nested_list.script")
+        )
         session = driver.session("w", fetch_size=1)
         tx = session.begin_transaction()
         res1 = tx.run("CYPHER")
@@ -128,4 +129,5 @@ class TestIterationTxRun(TestkitTestCase):
         self._server.done()
         self.assertEqual(["1_1", "1_2", "1_3"], seq)
         self.assertEqual(
-            [["2_1", "2_2"], ["3_1", "3_2"], ["4_1", "4_2"]], seqs)
+            [["2_1", "2_2"], ["3_1", "3_2"], ["4_1", "4_2"]], seqs
+        )

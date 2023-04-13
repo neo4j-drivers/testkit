@@ -1,3 +1,21 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import inspect
 
 from ..common.errors import (
@@ -98,8 +116,6 @@ class JoltNodeTransformer(JoltNodeTransformer):
             raise JOLTValueError("Node properties must be dict")
         if not isinstance(element_id, str):
             raise JOLTValueError("Node element_id must be a str")
-        if id_ is not None and str(id_) != element_id:
-            raise JOLTValueError("Node's element_id must equal id if present")
 
         properties = {k: decode_cb(v) for k, v in properties.items()}
         assert all(map(lambda e: isinstance(e, str), properties.keys()))
@@ -142,21 +158,12 @@ class JoltRelationTransformer(JoltRelationTransformer):
             raise JOLTValueError("Relationship's properties keys must be str")
         if not isinstance(element_id, str):
             raise JOLTValueError("Relationship's element_id must be str")
-        if id_ is not None and str(id_) != element_id:
-            raise JOLTValueError("Relationship's element_id must equal id")
         if not isinstance(start_node_element_id, str):
             raise JOLTValueError("Relationship's start_node_element_id must "
                                  "be str")
-        if (start_node_id is not None
-                and str(start_node_id) != start_node_element_id):
-            raise JOLTValueError("Relationship's start_node_element_id "
-                                 "must equal start_node_id")
         if not isinstance(end_node_element_id, str):
-            raise JOLTValueError(
-                "Relationship's end_node_element_id must be str")
-        if end_node_id is not None and str(end_node_id) != end_node_element_id:
-            raise JOLTValueError("Relationship's end_node_element_id "
-                                 "must equal end_node_id")
+            raise JOLTValueError("Relationship's end_node_element_id must "
+                                 "be str")
 
         return JoltRelationship(id_, start_node_id, rel_type, end_node_id,
                                 properties, element_id, start_node_element_id,

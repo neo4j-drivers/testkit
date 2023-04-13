@@ -1,0 +1,71 @@
+!: BOLT #VERSION#
+
+C: HELLO {"user_agent": "*", "[routing]": "*"}
+C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
+S: SUCCESS {}
+
+*: RESET
+
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+
+C: LOGOFF
+C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
+
+{{
+    C: RESET
+    S: SUCCESS {}
+    S: SUCCESS {}
+    S: SUCCESS {}
+
+    C: RUN "RETURN 2 AS n" {"{}": "*"} {"{}": "*"}
+----
+    C: RUN "RETURN 2 AS n" {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {}
+    S: SUCCESS {}
+}}
+S: SUCCESS {"fields": ["n"]}
+
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+
+C: RUN "RETURN 3 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+
+C: LOGOFF
+C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass"}
+
+{{
+    C: RESET
+    S: SUCCESS {}
+    S: SUCCESS {}
+    S: SUCCESS {}
+
+    C: RUN "RETURN 4 AS n" {"{}": "*"} {"{}": "*"}
+----
+    C: RUN "RETURN 4 AS n" {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {}
+    S: SUCCESS {}
+}}
+S: SUCCESS {"fields": ["n"]}
+
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+?: GOODBYE
