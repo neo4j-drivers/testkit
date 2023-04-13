@@ -14,6 +14,8 @@ TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
                      Neo4j server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
+
+
 from functools import wraps
 import os
 import re
@@ -24,6 +26,7 @@ from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
     dns_resolve_single,
+    Potential,
     TestkitTestCase,
 )
 
@@ -128,10 +131,10 @@ class ServerInfo:
     @property
     def has_utc_patch(self):
         if self.version >= "5":
-            return 1
+            return Potential.YES
         if self.version >= "4.3":
-            return 0.5  # maybe
-        return 0
+            return Potential.MAYBE
+        return Potential.NO
 
 
 def get_server_info():
