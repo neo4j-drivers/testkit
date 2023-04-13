@@ -241,8 +241,8 @@ class BoltActor:
                     continue
         except OSError as e:
             self.log("S: <BROKEN> %r", e)
-            self.script.try_skip_to_end()
-            if not self.script.done():
+            self.script.try_skip_to_end(self.channel)
+            if not self.script.done(self.channel):
                 raise
         self.log("Script finished")
 
