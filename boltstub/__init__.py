@@ -235,8 +235,9 @@ class BoltActor:
                     # `try_skip_to_end` being called from the interrupt handler
                     # in `__main__.py` which spawns a new thread. Without this
                     # `sleep`, the main thread that keeps calling
-                    # `script.consume` only releases Script's internal lock  so
-                    # briefly that `try_skip_to_end` hangs unnecessarily long
+                    # `script.consume` only releases Script's internal lock so
+                    # briefly that `try_skip_to_end` can't reliably acquire it
+                    # thus hanging unnecessarily long.
                     time.sleep(0.000001)
                     continue
         except OSError as e:

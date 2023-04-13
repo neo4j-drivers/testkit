@@ -1213,14 +1213,10 @@ class BlockList(Block):
         return self.blocks[-1].has_deterministic_end()
 
     def init(self, channel):
-        while True:
+        while self.index < len(self.blocks):
             block = self.blocks[self.index]
             block.init(channel)
-            if (
-                not block.has_deterministic_end()
-                or not block.done(channel)
-                or self.index + 1 >= len(self.blocks)
-            ):
+            if not block.has_deterministic_end() or not block.done(channel):
                 break
             self.index += 1
 
