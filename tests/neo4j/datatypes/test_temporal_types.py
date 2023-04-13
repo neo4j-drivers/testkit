@@ -10,7 +10,10 @@ from tests.neo4j.datatypes._base import (
 )
 from tests.neo4j.datatypes._util import TZ_IDS
 from tests.neo4j.shared import get_server_info
-from tests.shared import get_driver_name
+from tests.shared import (
+    get_driver_name,
+    Potential,
+)
 
 
 class TestDataTypes(_TestTypesBase):
@@ -212,15 +215,15 @@ class TestDataTypes(_TestTypesBase):
                 cypher_dt = types.CypherDateTime(
                     y, mo, d, h, m, s, ns, offset, tz_id
                 )
-                if server_supports_utc == 1:
+                if server_supports_utc == Potential.YES:
                     # 5.0+ protocol sends date times in UTC
                     # => UTC times must be equal
                     assert_utc_equal(dt, cypher_dt)
-                elif server_supports_utc == 0:
+                elif server_supports_utc == Potential.NO:
                     # 4.2- protocol sends date times in wall clock time
                     # => Wall clock times must be equal
                     assert_wall_time_equal(dt, cypher_dt)
-                else:
+                else:  # Potential.MAYBE
                     # 4.4 and 4.3 protocol sends date times in
                     # wall clock time or UTC depending on server version,
                     # driver version and their handshake.
