@@ -122,11 +122,11 @@ def initialise_configurations(settings):
             # nightly build of official backwards-compatible version
             ("4.4",    "4.4",      True,        True,     "neo4j", 60),
             # latest version
-            ("5.7",    "dev",      False,       False,    "bolt",   0),
-            ("5.7",    "dev",      False,       False,    "neo4j",  0),
-            ("5.7",    "dev",      True,        False,    "bolt",  90),
-            ("5.7",    "dev",      True,        False,    "neo4j",  0),
-            ("5.7",    "dev",      True,        True,     "neo4j", 90),
+            ("5.dev",  "dev",      False,       False,    "bolt",   0),
+            ("5.dev",  "dev",      False,       False,    "neo4j",  0),
+            ("5.dev",  "dev",      True,        False,    "bolt",  90),
+            ("5.dev",  "dev",      True,        False,    "neo4j",  0),
+            ("5.dev",  "dev",      True,        True,     "neo4j", 90),
         )
     ]
 

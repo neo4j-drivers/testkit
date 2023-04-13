@@ -1,6 +1,7 @@
 """Defines suites of test to run in different setups."""
 
 import os
+import re
 import sys
 import unittest
 
@@ -56,12 +57,16 @@ if __name__ == "__main__":
         print("Missing suite name parameter")
         sys.exit(-10)
     name = sys.argv[1]
-    try:
-        version = tuple(int(i) for i in name.split("."))
-    except ValueError:
-        print(f"Invalid suite name: {name}. "
-              "Should be X.Y for X and Y integer.")
-        sys.exit(-2)
+    match = re.match(r"(\d+)\.dev", name)
+    if match:
+        version = (int(match.group(1)), float("inf"))
+    else:
+        try:
+            version = tuple(int(i) for i in name.split("."))
+        except ValueError:
+            print(f"Invalid suite name: {name}. "
+                  "Should be X.Y for X and Y integer.")
+            sys.exit(-2)
     if version >= (5, 7):
         suite = suite_5x7
     elif version >= (5, 5):
