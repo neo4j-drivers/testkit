@@ -478,7 +478,7 @@ def test_initial_response(server_version, response_tag, response_name,
     con.read(4)
     res = con.read_message()
     assert res[:2] == b"\xb0" + response_tag
-    with pytest.raises(socket.timeout):
+    with pytest.raises(BrokenSocket):
         con.read(1)
     assert not server.service.exceptions
 
