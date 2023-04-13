@@ -15,8 +15,8 @@ class TestServerSideRouting(TestkitTestCase):
     def setUp(self):
         super().setUp()
         self._server = StubServer(9001)
-        self._auth = types.AuthorizationToken(
-            "basic", principal="p", credentials="c")
+        self._auth = types.AuthorizationToken("basic", principal="p",
+                                              credentials="c")
         self._userAgent = "007"
 
     def tearDown(self):

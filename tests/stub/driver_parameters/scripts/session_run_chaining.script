@@ -1,0 +1,31 @@
+!: BOLT 5.0
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+*: RESET
+{*
+    {{
+        C: RUN "RETURN BOOKMARK bm1" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r", "bookmark": "bm1"}
+    ----
+        C: RUN "RETURN BOOKMARK bm2" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r", "bookmark": "bm2"}
+    ----
+        C: RUN "RETURN BOOKMARK bm3" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r", "bookmark": "bm3"}
+    ----
+        C: RUN "USE adb RETURN BOOKMARK adb:bm4" "*" "*"
+        S: SUCCESS {"fields": ["n"]}
+        C: PULL {"n": 1000}
+        S: SUCCESS {"type": "r", "bookmark": "adb:bm4", "db": "adb"}
+    }}
+    *: RESET
+*}
+
+?: GOODBYE

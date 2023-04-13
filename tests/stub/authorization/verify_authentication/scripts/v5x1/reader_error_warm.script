@@ -1,0 +1,23 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+A: LOGON {"scheme": "basic", #DRIVER_AUTH#, "[realm]": ""}
+*: RESET
+
+# warmup query
+C: RUN {"U": "*"} "*" "*"
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+*: RESET
+
+{{
+    A: LOGOFF
+    C: LOGON {"scheme": "basic", #VERIFY_AUTH#, "[realm]": ""}
+----
+    C: RUN {"U": "*"} "*" "*"
+}}
+
+S: FAILURE {"code": "#ERROR#", "message": "These are not the credentials you're looking for."}
+   <EXIT>

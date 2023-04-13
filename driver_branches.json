@@ -1,0 +1,22 @@
+{
+  "dotnet": {
+    "uri": "https://github.com/neo4j/neo4j-dotnet-driver.git",
+    "ref": "5.0"
+  },
+  "go": {
+    "uri": "https://github.com/neo4j/neo4j-go-driver.git",
+    "ref": "5.0"
+  },
+  "java": {
+    "uri": "https://github.com/neo4j/neo4j-java-driver.git",
+    "ref": "5.0"
+  },
+  "javascript": {
+    "uri": "https://github.com/neo4j/neo4j-javascript-driver.git",
+    "ref": "5.0"
+  },
+  "python": {
+    "uri": "https://github.com/neo4j/neo4j-python-driver.git",
+    "ref": "5.0"
+  }
+}

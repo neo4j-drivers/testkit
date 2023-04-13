@@ -4,6 +4,8 @@ from enum import Enum
 
 class Feature(Enum):
     # === FUNCTIONAL FEATURES ===
+    # Driver supports the Bookmark Manager Feature
+    API_BOOKMARK_MANAGER = "Feature:API:BookmarkManager"
     # The driver offers a configuration option to limit time it spends at most,
     # trying to acquire a connection from the pool.
     # The connection acquisition timeout must account for the whole acquisition
@@ -11,6 +13,9 @@ class Feature(Enum):
     # is picked up instead or we need to wait until the full pool depletes.
     API_CONNECTION_ACQUISITION_TIMEOUT = \
         "Feature:API:ConnectionAcquisitionTimeout"
+    # The driver offers a method to run a query in a retryable context at the
+    # driver object level.
+    API_DRIVER_EXECUTE_QUERY = "Feature:API:Driver.ExecuteQuery"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established and retrieve the server info of the
     # reached remote.
@@ -18,9 +23,18 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports notification filters configuration.
+    API_DRIVER_NOTIFICATIONS_CONFIG = "Feature:API:Driver:NotificationsConfig"
+    # The driver offers a method for checking if the provided authentication
+    # information is accepted by the server.
+    API_DRIVER_VERIFY_AUTHENTICATION = \
+        "Feature:API:Driver.VerifyAuthentication"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established.
     API_DRIVER_VERIFY_CONNECTIVITY = "Feature:API:Driver.VerifyConnectivity"
+    # The driver offers a method for checking if a protocol version negotiated
+    # with the remote supports re-authentication.
+    API_DRIVER_SUPPORTS_SESSION_AUTH = "Feature:API:Driver.SupportsSessionAuth"
     # The driver supports connection liveness check.
     API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
     # The driver offers a method for the result to return all records as a list
@@ -40,13 +54,13 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
-    # The driver offers a configuration option to limit time it spends at most,
-    # trying to acquire a usable read/write connection for any session.
-    # The connection acquisition timeout must account for the whole acquisition
-    # execution time, whether a new connection is created, an idle connection
-    # is picked up instead, we need to wait until the full pool depletes, or
-    # a routing table must be fetched.
-    API_SESSION_CONNECTION_TIMEOUT = "Feature:API:SessionConnectionTimeout"
+    # The session configuration allows to switch the authentication context
+    # by supplying new credentials. This new context is only valid for the
+    # current session.
+    API_SESSION_AUTH_CONFIG = "Feature:API:Session:AuthConfig"
+    # The session supports notification filters configuration.
+    API_SESSION_NOTIFICATIONS_CONFIG = \
+        "Feature:API:Session:NotificationsConfig"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -60,9 +74,6 @@ class Feature(Enum):
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
     API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
-    # The driver offers a configuration option to limit time it spends at most,
-    # trying to update the routing table whenever needed.
-    API_UPDATE_ROUTING_TABLE_TIMEOUT = "Feature:API:UpdateRoutingTableTimeout"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -72,6 +83,10 @@ class Feature(Enum):
     # The driver supports Kerberos authentication by providing a dedicated auth
     # token API.
     AUTH_KERBEROS = "Feature:Auth:Kerberos"
+    # The driver supports an auth token manager or similar mechanism for the
+    # user to provide (potentially changing) auth tokens and a way to get
+    # notified when the server reports a token expired.
+    AUTH_MANAGED = "Feature:Auth:Managed"
     # The driver supports Bolt protocol version 3
     BOLT_3_0 = "Feature:Bolt:3.0"
     # The driver supports Bolt protocol version 4.1
@@ -84,6 +99,10 @@ class Feature(Enum):
     BOLT_4_4 = "Feature:Bolt:4.4"
     # The driver supports Bolt protocol version 5.0
     BOLT_5_0 = "Feature:Bolt:5.0"
+    # The driver supports Bolt protocol version 5.1
+    BOLT_5_1 = "Feature:Bolt:5.1"
+    # The driver supports Bolt protocol version 5.2
+    BOLT_5_2 = "Feature:Bolt:5.2"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
@@ -118,8 +137,23 @@ class Feature(Enum):
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
+    # Driver should not send duplicated bookmarks to the server
+    OPT_MINIMAL_BOOKMARKS_SET = "Optimization:MinimalBookmarksSet"
     # The driver sends no more than the strictly necessary RESET messages.
     OPT_MINIMAL_RESETS = "Optimization:MinimalResets"
+    # The driver's VerifyAuthentication method is optimized. It
+    # * reuses connections from the pool
+    # * only issues a single LOGOFF/LOGON cycle
+    # * doesn't issue the cycle for newly established connections
+    OPT_MINIMAL_VERIFY_AUTHENTICATION = \
+        "Optimization:MinimalVerifyAuthentication"
+    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
+    # pipelines a LOGIN right afterwards and consumes two messages after.
+    # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
+    # LOGON but pipelines it with the next message and consumes all three
+    # responses at once.
+    # Each saves a full round-trip.
+    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.
@@ -151,6 +185,10 @@ class Feature(Enum):
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
 
     # === BACKEND FEATURES FOR TESTING ===
+    # The backend understands the FakeTimeInstall, FakeTimeUninstall and
+    # FakeTimeTick protocol messages and provides a way to mock the system
+    # time. This is mainly used for testing various timeouts.
+    BACKEND_MOCK_TIME = "Backend:MockTime"
     # The backend understands the GetRoutingTable protocol message and provides
     # a way for TestKit to request the routing table (for testing only, should
     # not be exposed to the user).

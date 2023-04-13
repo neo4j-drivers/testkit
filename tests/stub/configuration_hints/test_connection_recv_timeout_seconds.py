@@ -47,7 +47,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         elif get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
-                e.errorType)
+                e.errorType
+            )
         elif get_driver_name() in ["go"]:
             # remove second assertion once the context API PR is merged
             self.assertTrue("context deadline exceeded" in e.msg
@@ -55,7 +56,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ConnectionReadTimeoutException",
-                e.errorType)
+                e.errorType
+            )
         elif get_driver_name() in ["dotnet"]:
             self.assertIn("ConnectionReadTimeoutError",
                           e.errorType)
@@ -64,11 +66,13 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
-                e.errorType)
+                e.errorType
+            )
         elif get_driver_name() in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ClientException",
-                e.errorType)
+                e.errorType
+            )
 
     def _on_failed_retry_assertions(self):
         pass
@@ -119,7 +123,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
     @driver_feature(types.Feature.CONF_HINT_CON_RECV_TIMEOUT)
     def test_timeout_unmanaged_tx_should_fail_subsequent_usage_after_timeout(
-            self):
+        self
+    ):
         self._start_server("1_second_exceeds_tx.script")
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as first_run_error:
@@ -171,7 +176,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
 
         self._start_server("1_second_exceeds_tx_retry.script")
-        self._session.write_transaction(work)
+        self._session.execute_write(work)
         self._server.done()
         self.assertEqual(retries, 2)
         self.assertIsInstance(record, types.Record)
@@ -225,7 +230,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
 
         self._start_server("2_seconds_in_time_tx_retry.script")
-        self._session.write_transaction(work)
+        self._session.execute_write(work)
         self._server.done()
         self.assertEqual(retries, 1)
         self.assertIsInstance(record, types.Record)

@@ -14,6 +14,8 @@ All cypher types are sent from backend as:
     }
 """
 
+
+import datetime
 import math
 
 
@@ -150,7 +152,7 @@ class Node:
         # TODO: remove once all backends support new style relationships
         if elementId is None:
             import warnings
-            warnings.warn(
+            warnings.warn(  # noqa: B028
                 "Backend needs to support new style IDs for nodes"
             )
         self.id = id
@@ -160,7 +162,8 @@ class Node:
 
     def __str__(self):
         return "Node(id={}, labels={}, props={}, elementId={})".format(
-            self.id, self.labels, self.props, self.elementId)
+            self.id, self.labels, self.props, self.elementId
+        )
 
     def __repr__(self):
         return "<{}(id={}, labels={}, props={}, elementId={})>".format(
@@ -186,7 +189,7 @@ class Relationship:
         # TODO: remove once all backends support new style relationships
         if None in (elementId, startNodeElementId, endNodeElementId):
             import warnings
-            warnings.warn(
+            warnings.warn(  # noqa: B028
                 "Backend needs to support new style IDs for relationships"
             )
         self.id = id
@@ -423,6 +426,22 @@ class CypherDateTime:
                    for attr in ("year", "month", "day", "hour", "minute",
                                 "second", "nanosecond", "utc_offset_s",
                                 "timezone_id"))
+
+    def as_utc(self):
+        if self.utc_offset_s is None:
+            return self
+        us, ns = divmod(self.nanosecond, 1000)
+        dt = datetime.datetime(
+            year=self.year, month=self.month, day=self.day, hour=self.hour,
+            minute=self.minute, second=self.second, microsecond=us
+        )
+        utc_dt = dt - datetime.timedelta(seconds=self.utc_offset_s)
+
+        return CypherDateTime(
+            utc_dt.year, utc_dt.month, utc_dt.day, utc_dt.hour, utc_dt.minute,
+            utc_dt.second, utc_dt.microsecond * 1000 + ns,
+            utc_offset_s=0, timezone_id="UTC"
+        )
 
 
 class CypherDuration:

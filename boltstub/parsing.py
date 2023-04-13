@@ -1,3 +1,21 @@
+# Copyright (c) "Neo4j,"
+# Neo4j Sweden AB [https://neo4j.com]
+#
+# This file is part of Neo4j.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import abc
 from collections import OrderedDict
 from copy import deepcopy
@@ -32,6 +50,7 @@ from .simple_jolt.common.types import (
     JoltType,
     JoltWildcard,
 )
+from .util import EvalContext
 
 
 def load_parser():
@@ -109,6 +128,8 @@ class BangLine(Line):
     TYPE_RESTART = "restart"
     TYPE_CONCURRENT = "concurrent"
     TYPE_HANDSHAKE = "handshake"
+    TYPE_HANDSHAKE_DELAY = "handshake_delay"
+    TYPE_PYTHON = "python"
 
     def __new__(cls, *args, **kwargs):
         obj = super().__new__(cls, *args, **kwargs)
@@ -140,8 +161,29 @@ class BangLine(Line):
                     obj,
                     "invalid argument for handshake, must be list of 2-digit "
                     "hex encoded bytes, whitespace is ignored (e.g. "
-                    "'HANDSHAKE 00 FF 02 04 F0'")
+                    "'HANDSHAKE 00 FF 02 04 F0'"
+                )
             obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
+        elif re.match(r"^HANDSHAKE_DELAY\s", obj.content):
+            obj._type = BangLine.TYPE_HANDSHAKE_DELAY
+            raw_arg = obj.content[16:].strip()
+            try:
+                obj._arg = float(raw_arg)
+            except ValueError:
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake delay, must be a number "
+                    "number (e.g. 'HANDSHAKE_DELAY 0.5')"
+                )
+            if obj._arg < 0:
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake delay, must be a positive "
+                    "number (e.g. 'HANDSHAKE_DELAY 0.5')"
+                )
+        elif re.match(r"^PY\s", obj.content):
+            obj._type = BangLine.TYPE_PYTHON
+            obj._arg = obj.content[3:].strip()
         else:
             raise LineError(obj, 'unsupported Bang line: "{}"'.format(obj))
         return obj
@@ -152,8 +194,8 @@ class BangLine(Line):
     def update_context(self, ctx: "ScriptContext"):
         if self._type == BangLine.TYPE_AUTO:
             if self._arg in ctx.auto:
-                warnings.warn(
-                    'Specified AUTO for "{}" multiple times'.format(self._arg)
+                warnings.warn(  # noqa: B028
+                    f'Specified AUTO for "{self._arg}" multiple times'
                 )
             ctx.auto.add(self._arg)
             ctx.bang_lines["auto"][self._arg] = self
@@ -164,27 +206,43 @@ class BangLine(Line):
             ctx.bang_lines["bolt_version"] = self
         elif self._type == BangLine.TYPE_RESTART:
             if ctx.restarting:
-                warnings.warn('Specified "!: ALLOW RESTART" multiple times')
+                warnings.warn(  # noqa: B028
+                    'Specified "!: ALLOW RESTART" multiple times'
+                )
             ctx.restarting = True
             ctx.bang_lines["restarting"] = self
         elif self._type == BangLine.TYPE_CONCURRENT:
             if ctx.concurrent:
-                warnings.warn('Specified "!: ALLOW CONCURRENT" multiple times')
+                warnings.warn(  # noqa: B028
+                    'Specified "!: ALLOW CONCURRENT" multiple times'
+                )
             ctx.concurrent = True
             ctx.bang_lines["concurrent"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE:
             if ctx.handshake:
-                warnings.warn('Specified "!: HANDSHAKE" multiple times')
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE" multiple times'
+                )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
+        elif self._type == BangLine.TYPE_HANDSHAKE_DELAY:
+            if ctx.handshake_delay is not None:
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE_DELAY" multiple times'
+                )
+            ctx.handshake_delay = self._arg
+            ctx.bang_lines["handshake_delay"] = self
+        elif self._type == BangLine.TYPE_PYTHON:
+            ctx.bang_lines["python"].append(self)
+            ctx.python.append(self._arg)
         if ctx.restarting and ctx.concurrent:
-            warnings.warn(
+            warnings.warn(  # noqa: B028
                 'Specified "!: ALLOW RESTART" and "!: ALLOW CONCURRENT" '
                 "(concurrent scripts are implicitly restarting)"
             )
 
 
-class MessageLine(Line, abc.ABC):
+class MessageLine(Line):
     allow_jolt_wildcard = False
     always_parse = True
 
@@ -374,7 +432,7 @@ class ServerLine(MessageLine):
                 raise LineError(obj, "Unknown command %r" % (tag,))
 
     def canonical(self):
-        if self.is_command is None:
+        if self.is_command:
             return "S: {}".format(self.content)
         else:
             return " ".join(("S:", self.parsed[0],
@@ -400,16 +458,24 @@ class ServerLine(MessageLine):
         return False
 
 
+class PythonLine(Line):
+    def canonical(self):
+        return "PY: {}".format(self.content)
+
+    def exec(self, eval_context: EvalContext):
+        eval_context.exec(self.content.strip())
+
+
 class Block(abc.ABC):
     def __init__(self, line_number: int):
         self.line_number = line_number
 
     @abc.abstractmethod
-    def accepted_messages(self) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> List[ClientLine]:
         pass
 
     @abc.abstractmethod
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
         pass
 
     @abc.abstractmethod
@@ -417,10 +483,10 @@ class Block(abc.ABC):
         """Raise error if `init()` would send messages."""
 
     @abc.abstractmethod
-    def done(self) -> bool:
+    def done(self, channel) -> bool:
         pass
 
-    def can_be_skipped(self):
+    def can_be_skipped(self, channel):
         return False
 
     @abc.abstractmethod
@@ -476,17 +542,17 @@ class ClientBlock(Block):
         self.lines = lines
         self.index = 0
 
-    def accepted_messages(self) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> List[ClientLine]:
         return self.lines[self.index:(self.index + 1)]
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
         return self.lines[0:1]
 
     def assert_no_init(self):
         return
 
     def can_consume(self, channel) -> bool:
-        if self.done():
+        if self.done(channel):
             return False
         return channel.match_client_line(self.lines[self.index],
                                          channel.peek())
@@ -499,7 +565,7 @@ class ClientBlock(Block):
         channel.consume(self.lines[self.index].line_number)
         self.index += 1
 
-    def done(self):
+    def done(self, channel):
         return self.index >= len(self.lines)
 
     def has_deterministic_end(self) -> bool:
@@ -558,10 +624,10 @@ class ServerBlock(Block):
         self.lines = lines
         self.index = 0
 
-    def accepted_messages(self) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> List[ClientLine]:
         return []
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
         return []
 
     def assert_no_init(self):
@@ -577,7 +643,7 @@ class ServerBlock(Block):
     def can_consume_after_reset(self, channel) -> bool:
         return False
 
-    def done(self):
+    def done(self, channel):
         return self.index >= len(self.lines)
 
     def has_deterministic_end(self) -> bool:
@@ -587,7 +653,7 @@ class ServerBlock(Block):
         self.respond(channel)
 
     def respond(self, channel):
-        while not self.done():
+        while not self.done(channel):
             line = self.lines[self.index]
             if not line.try_run_command(channel):
                 channel.send_server_line(line)
@@ -616,6 +682,33 @@ class ServerBlock(Block):
             line.parse_jolt(simple_jolt)
 
 
+class PythonBlock(ServerBlock):
+    def __init__(self, lines: List[PythonLine], line_number: int):
+        super().__init__(lines, line_number)
+        self.lines = lines
+        self.index = 0
+
+    def respond(self, channel):
+        while not self.done(channel):
+            line = self.lines[self.index]
+            line.exec(channel.eval_context)
+            self.index += 1
+
+    def parse_jolt(self, simple_jolt):
+        pass
+
+    def assert_no_init(self):
+        if self.lines:
+            raise LineError(
+                self.lines[0],
+                "ambiguity of script does not allow for python execution here"
+            )
+
+    @property
+    def server_lines(self):
+        yield from ()
+
+
 class AlternativeBlock(Block):
     def __init__(self, block_lists: List["BlockList"], line_number: int):
         super().__init__(line_number)
@@ -623,13 +716,14 @@ class AlternativeBlock(Block):
         self.selection = None
         self.assert_no_init()
 
-    def accepted_messages(self) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> List[ClientLine]:
         if self.selection is None:
-            return sum((b.accepted_messages() for b in self.block_lists), [])
-        return self.block_lists[self.selection].accepted_messages()
+            return sum((b.accepted_messages(channel)
+                        for b in self.block_lists), [])
+        return self.block_lists[self.selection].accepted_messages(channel)
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
-        return sum((b.accepted_messages_after_reset()
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+        return sum((b.accepted_messages_after_reset(channel)
                     for b in self.block_lists),
                    [])
 
@@ -637,10 +731,10 @@ class AlternativeBlock(Block):
         for block in self.block_lists:
             block.assert_no_init()
 
-    def can_be_skipped(self):
+    def can_be_skipped(self, channel):
         if self.selection is None:
-            return any(b.can_be_skipped() for b in self.block_lists)
-        return self.block_lists[self.selection].can_be_skipped()
+            return any(b.can_be_skipped(channel) for b in self.block_lists)
+        return self.block_lists[self.selection].can_be_skipped(channel)
 
     def can_consume(self, channel) -> bool:
         if self.selection is None:
@@ -651,9 +745,9 @@ class AlternativeBlock(Block):
         return any(b.can_consume_after_reset(channel)
                    for b in self.block_lists)
 
-    def done(self):
+    def done(self, channel):
         return (self.selection is not None
-                and self.block_lists[self.selection].done())
+                and self.block_lists[self.selection].done(channel))
 
     def has_deterministic_end(self) -> bool:
         return all(b.has_deterministic_end() for b in self.block_lists)
@@ -702,23 +796,23 @@ class ParallelBlock(Block):
         self.block_lists = block_lists
         self.assert_no_init()
 
-    def accepted_messages(self) -> List[ClientLine]:
-        return sum((b.accepted_messages() for b in self.block_lists), [])
+    def accepted_messages(self, channel) -> List[ClientLine]:
+        return sum((b.accepted_messages(channel)
+                    for b in self.block_lists), [])
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
-        return sum((b.accepted_messages_after_reset()
-                    for b in self.block_lists),
-                   [])
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+        return sum((b.accepted_messages_after_reset(channel)
+                    for b in self.block_lists), [])
 
     def assert_no_init(self):
         for b in self.block_lists:
             b.assert_no_init()
 
-    def done(self) -> bool:
-        return all(b.done() for b in self.block_lists)
+    def done(self, channel) -> bool:
+        return all(b.done(channel) for b in self.block_lists)
 
-    def can_be_skipped(self):
-        return all(b.can_be_skipped() for b in self.block_lists)
+    def can_be_skipped(self, channel):
+        return all(b.can_be_skipped(channel) for b in self.block_lists)
 
     def can_consume(self, channel) -> bool:
         return any(b.can_consume(channel) for b in self.block_lists)
@@ -771,20 +865,20 @@ class OptionalBlock(Block):
         self.block_list = block_list
         self.assert_no_init()
 
-    def accepted_messages(self) -> List[ClientLine]:
-        return self.block_list.accepted_messages()
+    def accepted_messages(self, channel) -> List[ClientLine]:
+        return self.block_list.accepted_messages(channel)
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
-        return self.block_list.accepted_messages_after_reset()
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+        return self.block_list.accepted_messages_after_reset(channel)
 
     def assert_no_init(self):
         self.block_list.assert_no_init()
 
-    def can_be_skipped(self):
+    def can_be_skipped(self, channel):
         if self.started:
             if self.block_list.has_deterministic_end():
-                return self.block_list.done()
-            return self.block_list.can_be_skipped()
+                return self.block_list.done(channel)
+            return self.block_list.can_be_skipped(channel)
         return True
 
     def can_consume(self, channel) -> bool:
@@ -793,9 +887,9 @@ class OptionalBlock(Block):
     def can_consume_after_reset(self, channel) -> bool:
         return self.block_list.can_consume_after_reset(channel)
 
-    def done(self) -> bool:
+    def done(self, channel) -> bool:
         if self.started and self.block_list.has_deterministic_end():
-            return self.block_list.done()
+            return self.block_list.done(channel)
         raise RuntimeError("it's nondeterministic!")
 
     def has_deterministic_end(self) -> bool:
@@ -841,25 +935,25 @@ class _RepeatBlock(Block, abc.ABC):
         self.block_list = block_list
         self.assert_no_init()
 
-    def accepted_messages(self) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> List[ClientLine]:
         res = OrderedDict((m, True)
-                          for m in self.block_list.accepted_messages())
-        if ((self.has_deterministic_end() and self.done())
-                or self.block_list.can_be_skipped()):
+                          for m in self.block_list.accepted_messages(channel))
+        if ((self.has_deterministic_end() and self.done(channel))
+                or self.block_list.can_be_skipped(channel)):
             res.update(
                 (m, True)
-                for m in self.block_list.accepted_messages_after_reset()
+                for m in self.block_list.accepted_messages_after_reset(channel)
             )
         return list(res.keys())
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
-        return self.block_list.accepted_messages_after_reset()
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+        return self.block_list.accepted_messages_after_reset(channel)
 
     def assert_no_init(self):
         self.block_list.assert_no_init()
 
     @abc.abstractmethod
-    def can_be_skipped(self):
+    def can_be_skipped(self, channel):
         pass
 
     def can_consume(self, channel) -> bool:
@@ -868,7 +962,7 @@ class _RepeatBlock(Block, abc.ABC):
     def can_consume_after_reset(self, channel) -> bool:
         return self.block_list.can_consume_after_reset(channel)
 
-    def done(self) -> bool:
+    def done(self, channel) -> bool:
         raise RuntimeError("it's nondeterministic!")
 
     def has_deterministic_end(self) -> bool:
@@ -889,18 +983,18 @@ class _RepeatBlock(Block, abc.ABC):
         return self.try_consume(channel)
 
     def _try_consume_deterministic(self, channel):
-        if self.block_list.done():
+        if self.block_list.done(channel):
             return self._consume_after_jump_to_top(channel)
         if self.block_list.try_consume(channel):
-            self.in_block = not self.block_list.done()
+            self.in_block = not self.block_list.done(channel)
             return True
         return False
 
     def _try_consume_nondeterministic(self, channel):
         if self.block_list.try_consume(channel):
-            self.in_block = not self.block_list.can_be_skipped()
+            self.in_block = not self.block_list.can_be_skipped(channel)
             return True
-        elif (self.block_list.can_be_skipped()
+        elif (self.block_list.can_be_skipped(channel)
                 and self.block_list.can_consume_after_reset(channel)):
             assert self._consume_after_jump_to_top(channel)
             return True
@@ -928,15 +1022,132 @@ class _RepeatBlock(Block, abc.ABC):
 
 
 class Repeat0Block(_RepeatBlock):
-    def can_be_skipped(self):
+    def can_be_skipped(self, channel):
         return not self.in_block
 
 
 class Repeat1Block(_RepeatBlock):
-    def can_be_skipped(self):
+    def can_be_skipped(self, channel):
         if self.in_block:
             return False
-        return self.block_list.can_be_skipped() or self.iteration_count >= 1
+        return (
+            self.block_list.can_be_skipped(channel)
+            or self.iteration_count >= 1
+        )
+
+
+class ConditionalBlock(Block):
+
+    def __init__(self, conditions: List[str], blocks: List[Block],
+                 line_number: int):
+        super().__init__(line_number)
+        self.conditions = conditions
+        self.blocks = blocks
+        self.selection = None
+
+    def _get_selected_block(
+        self, channel, selection, probing
+    ) -> Optional[int]:
+        if selection is not None:
+            return selection
+        for i, condition in enumerate(self.conditions):
+            if channel.eval_context.eval(condition, probing=probing):
+                return i
+        if len(self.blocks) > len(self.conditions):
+            return len(self.conditions)
+        return None
+
+    def _probe_selection(self, channel, selection) -> Optional[Block]:
+        selection = self._get_selected_block(channel, selection, probing=True)
+        if selection is None:
+            return None
+        return self.blocks[selection]
+
+    def _get_selection(self, channel, selection) -> Optional[Block]:
+        selection = self._get_selected_block(channel, selection, probing=False)
+        self.selection = selection
+        if selection is None:
+            return None
+        return self.blocks[selection]
+
+    def accepted_messages(self, channel) -> List[ClientLine]:
+        block = self._probe_selection(channel, self.selection)
+        if not block:
+            return []
+        return block.accepted_messages(channel)
+
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+        block = self._probe_selection(channel, None)
+        if not block:
+            return []
+        return block.accepted_messages_after_reset(channel)
+
+    def assert_no_init(self):
+        return
+
+    def done(self, channel) -> bool:
+        block = self._probe_selection(channel, self.selection)
+        if not block:
+            return True
+        return block.done(channel)
+
+    def can_be_skipped(self, channel):
+        block = self._probe_selection(channel, self.selection)
+        if not block:
+            return True
+        return block.can_be_skipped(channel)
+
+    def can_consume(self, channel) -> bool:
+        block = self._probe_selection(channel, self.selection)
+        if not block:
+            return False
+        return block.can_consume(channel)
+
+    def can_consume_after_reset(self, channel) -> bool:
+        block = self._probe_selection(channel, None)
+        if not block:
+            return False
+        return block.can_consume(channel)
+        pass
+
+    def has_deterministic_end(self):
+        return all(b.has_deterministic_end() for b in self.blocks)
+
+    def init(self, channel):
+        block = self._get_selection(channel, self.selection)
+        if not block:
+            return
+        block.init(channel)
+
+    def reset(self):
+        self.selection = None
+        for block in self.blocks:
+            block.reset()
+
+    def try_consume(self, channel) -> bool:
+        block = self._get_selection(channel, self.selection)
+        if not block:
+            return False
+        return block.try_consume(channel)
+
+    @property
+    def all_lines(self):
+        for block in self.blocks:
+            yield from block.all_lines
+
+    @property
+    def client_lines(self):
+        for block in self.blocks:
+            yield from block.client_lines
+
+    @property
+    def server_lines(self):
+        for block in self.blocks:
+            yield from block.server_lines
+
+    def parse_jolt(self, simple_jolt):
+        for block in self.blocks:
+            block.parse_jolt(simple_jolt)
 
 
 class BlockList(Block):
@@ -948,40 +1159,40 @@ class BlockList(Block):
             if not prev_block.has_deterministic_end():
                 next_block.assert_no_init()
 
-    def accepted_messages(self) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> List[ClientLine]:
         res = []
         if self.index >= len(self.blocks):
             return res
 
         for i in range(self.index, len(self.blocks)):
-            res += self.blocks[i].accepted_messages()
-            if not self.blocks[i].can_be_skipped():
+            res += self.blocks[i].accepted_messages(channel)
+            if not self.blocks[i].can_be_skipped(channel):
                 break
         return res
 
-    def accepted_messages_after_reset(self) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
         res = []
         if not self.blocks:
             return res
 
         for i in range(len(self.blocks)):
-            res += self.blocks[i].accepted_messages_after_reset()
-            if not self.blocks[i].can_be_skipped():
+            res += self.blocks[i].accepted_messages_after_reset(channel)
+            if not self.blocks[i].can_be_skipped(channel):
                 break
         return res
 
     def assert_no_init(self):
         self.blocks[0].assert_no_init()
 
-    def can_be_skipped(self):
-        return all(b.can_be_skipped()
+    def can_be_skipped(self, channel):
+        return all(b.can_be_skipped(channel)
                    for b in self.blocks[self.index:len(self.blocks)])
 
     def can_consume(self, channel) -> bool:
         for i in range(self.index, len(self.blocks)):
             if self.blocks[i].can_consume(channel):
                 return True
-            if not self.blocks[i].can_be_skipped():
+            if not self.blocks[i].can_be_skipped(channel):
                 break
         return False
 
@@ -989,11 +1200,11 @@ class BlockList(Block):
         for i in range(len(self.blocks)):
             if self.blocks[i].can_consume_after_reset(channel):
                 return True
-            if not self.blocks[i].can_be_skipped():
+            if not self.blocks[i].can_be_skipped(channel):
                 break
         return False
 
-    def done(self) -> bool:
+    def done(self, channel) -> bool:
         if not self.has_deterministic_end():
             raise RuntimeError("it's nondeterministic!")
         return self.index >= len(self.blocks)
@@ -1002,11 +1213,15 @@ class BlockList(Block):
         return self.blocks[-1].has_deterministic_end()
 
     def init(self, channel):
-        self.blocks[0].init(channel)
-        if (
-            self.blocks[0].has_deterministic_end
-            and self.blocks[0].done()
-        ):
+        while True:
+            block = self.blocks[self.index]
+            block.init(channel)
+            if (
+                not block.has_deterministic_end()
+                or not block.done(channel)
+                or self.index + 1 >= len(self.blocks)
+            ):
+                break
             self.index += 1
 
     def reset(self):
@@ -1019,7 +1234,7 @@ class BlockList(Block):
             block = self.blocks[i]
             if block.try_consume(channel):
                 self.index = i
-                while block.has_deterministic_end() and block.done():
+                while block.has_deterministic_end() and block.done(channel):
                     self.index += 1
                     if self.index < len(self.blocks):
                         block = self.blocks[self.index]
@@ -1027,7 +1242,11 @@ class BlockList(Block):
                     else:
                         break
                 return True
-            if not block.can_be_skipped():
+            if (
+                not block.can_be_skipped(channel)
+                and block.has_deterministic_end()
+                and not block.done(channel)
+            ):
                 break
         return False
 
@@ -1079,13 +1298,23 @@ class ScriptContext:
         self.restarting = False
         self.concurrent = False
         self.handshake = None
+        self.handshake_delay = None
+        self.python = []
         self.bang_lines = {
             "bolt_version": None,
             "auto": {},
             "restarting": None,
             "concurrent": None,
             "handshake": None,
+            "handshake_delay": None,
+            "python": [],
         }
+
+    def create_eval_context(self) -> EvalContext:
+        context = EvalContext()
+        for cmd in self.python:
+            context.exec(cmd)
+        return context
 
 
 class Script:
@@ -1134,20 +1363,22 @@ class Script:
         with self._lock:
             if not self.block_list.try_consume(channel):
                 if not channel.try_auto_consume(self.context.auto):
-                    raise ScriptDeviation(self.block_list.accepted_messages(),
-                                          channel.peek())
+                    raise ScriptDeviation(
+                        self.block_list.accepted_messages(channel),
+                        channel.peek()
+                    )
 
-    def done(self):
+    def done(self, channel):
         with self._lock:
             if self._skipped:
                 return True
             if self.block_list.has_deterministic_end():
-                return self.block_list.done()
+                return self.block_list.done(channel)
             return False
 
-    def try_skip_to_end(self):
+    def try_skip_to_end(self, channel):
         with self._lock:
-            if self.block_list.can_be_skipped():
+            if self.block_list.can_be_skipped(channel):
                 self._skipped = True
 
     @property
@@ -1182,6 +1413,11 @@ class ScriptTransformer(lark.Transformer):
     @lark.v_args(meta=True)
     def server_line(self, meta, children):
         return ServerLine(meta.line, "".join(children),
+                          children[-1].strip())
+
+    @lark.v_args(meta=True)
+    def python_line(self, meta, children):
+        return PythonLine(meta.line, "".join(children),
                           children[-1].strip())
 
     def start(self, children):
@@ -1262,6 +1498,23 @@ class ScriptTransformer(lark.Transformer):
         )
 
     @lark.v_args(meta=True)
+    def python_block(self, meta, children):
+        return PythonBlock(
+            [
+                child for child in children
+                if child.__class__ == PythonLine
+            ],
+            meta.line
+        )
+
+    @lark.v_args()
+    def simple_block(self, children):
+        children = [c for c in children if not isinstance(c, lark.Token)]
+        assert len(children) == 1
+        assert isinstance(children[0], BlockList)
+        return children[0]
+
+    @lark.v_args(meta=True)
     def alternative_block(self, meta, children):
         return AlternativeBlock(
             [c for c in children if not isinstance(c, lark.Token)],
@@ -1286,6 +1539,18 @@ class ScriptTransformer(lark.Transformer):
     @lark.v_args(meta=True)
     def repeat_1_block(self, meta, children):
         return Repeat1Block(children[2], meta.line)
+
+    @lark.v_args(meta=True)
+    def conditional_block(self, meta, children):
+        conditions = [children[0].children[-1].strip()]
+        blocks = [children[2]]
+        for child in children[4:]:
+            if isinstance(child, lark.Tree) and child.data == "elif_line":
+                conditions.append(child.children[-1].strip())
+            elif isinstance(child, Block):
+                blocks.append(child)
+
+        return ConditionalBlock(conditions, blocks, meta.line)
 
 
 def parse(script: str, substitutions: Optional[dict] = None) -> Script:

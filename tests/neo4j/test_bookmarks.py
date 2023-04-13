@@ -78,7 +78,8 @@ class TestBookmarks(TestkitTestCase):
         if get_driver_name() in ["javascript"]:
             self.skipTest("Fails the exception code assertion")
         self._session = self._driver.session(
-            "w", ["hi, this is an invalid bookmark"])
+            "w", ["hi, this is an invalid bookmark"]
+        )
         with self.assertRaises(types.DriverError) as exc:
             tx = self._session.begin_transaction()
             result = tx.run("RETURN 1")
@@ -109,14 +110,15 @@ class TestBookmarks(TestkitTestCase):
         if get_driver_name() in ["javascript"]:
             self.skipTest("Times out when invoking the transaction function")
         self._session = self._driver.session(
-            "w", ["hi, this is an invalid bookmark"])
+            "w", ["hi, this is an invalid bookmark"]
+        )
 
         def work(tx):
             result = tx.run("RETURN 1")
             result.next()
 
         with self.assertRaises(types.DriverError) as exc:
-            self._session.read_transaction(work)
+            self._session.execute_read(work)
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
@@ -143,12 +145,13 @@ class TestBookmarks(TestkitTestCase):
         def create_node(tx):
             result = tx.run(
                 "CREATE (t:MultipleBookmarksTest {testId:$uuid})",
-                params={"uuid": types.CypherString(test_execution_id)})
+                params={"uuid": types.CypherString(test_execution_id)}
+            )
             result.consume()
 
         for _ in range(expected_node_count):
             self._session = self._driver.session("w")
-            self._session.write_transaction(create_node)
+            self._session.execute_write(create_node)
             bookmarks.append(self._session.last_bookmarks())
             self._session.close()
 
@@ -159,11 +162,12 @@ class TestBookmarks(TestkitTestCase):
             result = tx.run(
                 "MATCH (t:MultipleBookmarksTest {testId:$uuid})"
                 " RETURN count(t)",
-                params={"uuid": types.CypherString(test_execution_id)})
+                params={"uuid": types.CypherString(test_execution_id)}
+            )
             record = result.next()
             return record.values[0]
 
-        count = self._session.read_transaction(get_node_count)
+        count = self._session.execute_read(get_node_count)
         self.assertEqual(types.CypherInt(expected_node_count), count)
 
     @cluster_unsafe_test
@@ -173,7 +177,8 @@ class TestBookmarks(TestkitTestCase):
         tx = self._session.begin_transaction()
         result = tx.run(
             "CREATE (t:AccessModeTest {testId:$uuid})",
-            params={"uuid": types.CypherString(test_execution_id)})
+            params={"uuid": types.CypherString(test_execution_id)}
+        )
         result.consume()
         tx.commit()
         bookmarks = self._session.last_bookmarks()
@@ -184,7 +189,8 @@ class TestBookmarks(TestkitTestCase):
         result = tx.run(
             "MATCH (t:AccessModeTest {testId:$uuid})"
             " RETURN count(t)",
-            params={"uuid": types.CypherString(test_execution_id)})
+            params={"uuid": types.CypherString(test_execution_id)}
+        )
         record = result.next()
         node_count = record.values[0]
         tx.commit()
@@ -198,7 +204,8 @@ class TestBookmarks(TestkitTestCase):
         tx = self._session.begin_transaction()
         result = tx.run(
             "CREATE (t:AccessModeTest {testId:$uuid})",
-            params={"uuid": types.CypherString(test_execution_id)})
+            params={"uuid": types.CypherString(test_execution_id)}
+        )
         result.consume()
         tx.commit()
         bookmarks = self._session.last_bookmarks()
@@ -209,7 +216,8 @@ class TestBookmarks(TestkitTestCase):
         result = tx.run(
             "MATCH (t:AccessModeTest {testId:$uuid}) "
             "RETURN count(t)",
-            params={"uuid": types.CypherString(test_execution_id)})
+            params={"uuid": types.CypherString(test_execution_id)}
+        )
         record = result.next()
         node_count1 = record.values[0]
         tx.commit()
@@ -220,7 +228,8 @@ class TestBookmarks(TestkitTestCase):
         tx = self._session.begin_transaction()
         result = tx.run(
             "CREATE (t:AccessModeTest {testId:$uuid})",
-            params={"uuid": types.CypherString(test_execution_id)})
+            params={"uuid": types.CypherString(test_execution_id)}
+        )
         result.consume()
         tx.commit()
         bookmarks = self._session.last_bookmarks()
@@ -231,7 +240,8 @@ class TestBookmarks(TestkitTestCase):
         result = tx.run(
             "MATCH (t:AccessModeTest {testId:$uuid}) "
             "RETURN count(t)",
-            params={"uuid": types.CypherString(test_execution_id)})
+            params={"uuid": types.CypherString(test_execution_id)}
+        )
         record = result.next()
         node_count2 = record.values[0]
         tx.commit()

@@ -48,7 +48,7 @@ class TestRetryClustering(TestkitTestCase):
 
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
         session = driver.session("r")
-        x = session.read_transaction(once)
+        x = session.execute_read(once)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 1)
@@ -99,7 +99,7 @@ class TestRetryClustering(TestkitTestCase):
         session = driver.session("w")
 
         with self.assertRaises(types.DriverError) as e:  # Check further...
-            session.write_transaction(once)
+            session.execute_write(once)
         if get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
@@ -175,7 +175,7 @@ class TestRetryClustering(TestkitTestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
 
         session = driver.session("r")
-        x = session.write_transaction(twice)
+        x = session.execute_write(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)
@@ -213,7 +213,7 @@ class TestRetryClustering(TestkitTestCase):
             session = driver.session("w")
 
             with self.assertRaises(types.DriverError) as exc:
-                session.write_transaction(once)
+                session.execute_write(once)
 
             self.assertEqual(exc.exception.code, failure[1])
 
@@ -223,24 +223,17 @@ class TestRetryClustering(TestkitTestCase):
             self._routingServer.done()
             self._writeServer.done()  #
 
-        failures = []
-        # TODO REMOVE THIS BLOCK ONCE ALL IMPLEMENT RETRYABLE EXCEPTIONS
-        if get_driver_name() in ["javascript"]:
-            failures.append(
-                ["Neo.TransientError.Transaction.Terminated",
-                 "Neo.TransientError.Transaction.Terminated"])
-            failures.append(
-                ["Neo.TransientError.Transaction.Terminated",
-                 "Neo.TransientError.Transaction.Terminated"])
-        else:
-            failures.append(
-                ["Neo.TransientError.Transaction.Terminated",
-                 "Neo.ClientError.Transaction.Terminated"])
-            failures.append(
-                ["Neo.TransientError.Transaction.LockClientStopped",
-                 "Neo.ClientError.Transaction.LockClientStopped"])
+        failures = [
+            [
+                "Neo.TransientError.Transaction.Terminated",
+                "Neo.ClientError.Transaction.Terminated"
+            ], [
+                "Neo.TransientError.Transaction.LockClientStopped",
+                "Neo.ClientError.Transaction.LockClientStopped"
+            ]
+        ]
 
-        for failure in (failures):
+        for failure in failures:
             with self.subTest(failure=failure):
                 _test()
             self._routingServer.reset()
@@ -277,7 +270,7 @@ class TestRetryClustering(TestkitTestCase):
         driver = Driver(self._backend, self._uri, self._auth, self._userAgent)
 
         session = driver.session("r")
-        x = session.write_transaction(twice)
+        x = session.execute_write(twice)
         self.assertIsInstance(x, types.CypherInt)
         self.assertEqual(x.value, 1)
         self.assertEqual(num_retries, 2)

@@ -1,3 +1,5 @@
+from time import perf_counter
+
 from nutkit.frontend import Driver
 import nutkit.protocol as types
 from tests.shared import (
@@ -65,9 +67,13 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
         return super().tearDown()
 
-    def _start_server(self, server, script):
-        server.start(self.script_path(script),
-                     vars_={"#HOST#": self._router.host})
+    def _get_vars(self):
+        return {"#HOST#": self._router.host}
+
+    def _start_server(self, server, script, vars_=None):
+        if vars_ is None:
+            vars_ = self._get_vars()
+        server.start(self.script_path(script), vars_=vars_)
 
     def test_should_work_when_every_step_is_done_in_time(self):
         """
@@ -93,6 +99,45 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._session = self._driver.session("r")
 
         list(self._session.run("RETURN 1 AS n"))
+
+    def test_should_encompass_the_version_handshake_time_out(self):
+        self._start_server(self._server,
+                           "session_run_bolt_handshake_delay.script",
+                           vars_={**self._get_vars(), "#DELAY#": "4"})
+
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        uri = "bolt://%s" % self._server.address
+        self._driver = Driver(self._backend, uri, auth,
+                              connection_acquisition_timeout_ms=1500,
+                              connection_timeout_ms=5000)
+
+        self._session = self._driver.session("r")
+
+        t0 = perf_counter()
+        with self.assertRaises(types.DriverError):
+            list(self._session.run("RETURN 1 AS n"))
+        took = perf_counter() - t0
+        self.assertLess(took, 3)  # give it 1.5 seconds margin
+
+    def test_should_encompass_the_version_handshake_in_time(self):
+        self._start_server(self._server,
+                           "session_run_bolt_handshake_delay.script",
+                           vars_={**self._get_vars(), "#DELAY#": "1.5"})
+
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        uri = "bolt://%s" % self._server.address
+        self._driver = Driver(self._backend, uri, auth,
+                              connection_acquisition_timeout_ms=3000,
+                              # connection timeout should not affect the
+                              # bolt handshake
+                              connection_timeout_ms=1000)
+
+        self._session = self._driver.session("r")
+
+        res = list(self._session.run("RETURN 1 AS n"))
+        assert res == [types.Record(values=[types.CypherInt(1)])]
 
     def test_should_encompass_the_handshake_time(self):
         """
@@ -178,15 +223,15 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         with self.assertRaises(types.DriverError):
             list(self._session.run("RETURN 1 AS n"))
 
-    def test_does_not_encompass_router_handshake(self):
+    def test_router_handshake_has_own_timeout_in_time(self):
         self._start_server(self._router, "router_hello_delay.script")
-        self._start_server(self._server, "session_run.script")
+        self._start_server(self._server, "session_run_auth_delay.script")
 
         uri = "neo4j://%s" % self._router.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         self._driver = Driver(self._backend, uri, auth,
-                              connection_acquisition_timeout_ms=2000,
+                              connection_acquisition_timeout_ms=6000,
                               connection_timeout_ms=720000)
         self._session = self._driver.session("r")
         list(self._session.run("RETURN 1 AS n"))
@@ -197,6 +242,20 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._driver = None
         self._router.done()
         self._server.done()
+
+    def test_router_handshake_has_own_timeout_too_slow(self):
+        self._start_server(self._router, "router_hello_delay.script")
+        self._start_server(self._server, "session_run.script")
+
+        uri = "neo4j://%s" % self._router.address
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        self._driver = Driver(self._backend, uri, auth,
+                              connection_acquisition_timeout_ms=2000,
+                              connection_timeout_ms=720000)
+        self._session = self._driver.session("r")
+        with self.assertRaises(types.DriverError):
+            list(self._session.run("RETURN 1 AS n"))
 
     def test_does_not_encompass_router_route_response(self):
         self._start_server(self._router, "router_route_delay.script")

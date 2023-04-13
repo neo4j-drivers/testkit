@@ -3,6 +3,6 @@
 A: HELLO {"{}": "*"}
 C: BEGIN {"mode": "r"}
 S: SUCCESS {}
-C: RUN "RETURN 1 as n" {} {}
+C: RUN "RETURN 1 AS n" {} {}
 S: FAILURE #ERROR#
    <EXIT>

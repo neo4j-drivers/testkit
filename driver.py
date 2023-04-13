@@ -88,7 +88,8 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
         host_map={"host.docker.internal": "host-gateway"},
         port_map={9876: 9876},  # For convenience when debugging
         network=network,
-        working_folder="/driver")
+        working_folder="/driver"
+    )
     docker.network_connect(secondary_network, container_name)
     container = docker.start(container_name)
     return Container(container, driver_glue_path)
@@ -152,16 +153,18 @@ class Container:
     def run_stress_tests(self, hostname, port, username, password,
                          config: neo4j.Config) -> None:
         env = self._native_env(hostname, port, username, password, config)
-        self._container.exec([
-            "python3", self._glue_path + "stress.py"],
-            env_map=env)
+        self._container.exec(
+            ["python3", self._glue_path + "stress.py"],
+            env_map=env
+        )
 
     def run_integration_tests(self, hostname, port, username, password,
                               config: neo4j.Config):
         env = self._native_env(hostname, port, username, password, config)
-        self._container.exec([
-            "python3", self._glue_path + "integration.py"],
-            env_map=env)
+        self._container.exec(
+            ["python3", self._glue_path + "integration.py"],
+            env_map=env
+        )
 
     def start_backend(self, artifacts_path):
         env = self._default_env()
@@ -177,17 +180,22 @@ class Container:
         )
         # Wait until backend started
         # Use driver container to check for backend availability
-        self._container.exec([
-            "python3",
-            "/testkit/driver/wait_for_port.py", "localhost", "%d" % 9876],
-            env_map=env)
+        self._container.exec(
+            [
+                "python3", "/testkit/driver/wait_for_port.py",
+                "localhost", "9876"
+            ],
+            env_map=env
+        )
 
     def poll_host_and_port_until_available(self, hostname, port):
         self._container.exec([
             "python3", "/testkit/driver/wait_for_port.py",
-            hostname, "%d" % port])
+            hostname, "%d" % port
+        ])
 
     def assert_connections_closed(self, hostname, port):
         self._container.exec([
             "python3", "/testkit/driver/assert_conns_closed.py",
-            hostname, "%d" % port])
+            hostname, "%d" % port
+        ])

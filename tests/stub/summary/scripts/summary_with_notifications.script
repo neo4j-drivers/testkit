@@ -5,8 +5,8 @@ A: HELLO {"{}": "*"}
 C: RUN "*" "*" "*"
 S: SUCCESS {"t_first": 2001, "fields": ["n"]}
 {{
-C: PULL {"n": "*"}
-S: RECORD [1]
+    C: PULL {"n": "*"}
+    S: RECORD [1]
 ----
     C: DISCARD {"n": -1}
 }}

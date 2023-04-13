@@ -135,7 +135,7 @@ def get_driver_features(backend):
         print("features", features)
         return features
     except (OSError, protocol.BaseError) as e:
-        warnings.warn("Could not fetch FeatureList: %s" % e)
+        warnings.warn(f"Could not fetch FeatureList: {e}")  # noqa: B028
         return set()
 
 
