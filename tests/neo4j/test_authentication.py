@@ -37,7 +37,7 @@ class TestAuthenticationBasic(TestkitTestCase):
 
         self.create_driver_and_session(auth_token)
         if use_tx:
-            result = self._session.read_transaction(dummy_query)
+            result = self._session.execute_read(dummy_query)
         else:
             result = self._session.run("RETURN 2 as Number")
         self.assertEqual(
@@ -77,7 +77,8 @@ class TestAuthenticationBasic(TestkitTestCase):
             "basic",
             realm="native",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass"))
+            credentials=os.environ.get(env_neo4j_pass, "pass")
+        )
         self.verify_connectivity(auth_token)
 
     @cluster_unsafe_test
@@ -85,5 +86,6 @@ class TestAuthenticationBasic(TestkitTestCase):
         auth_token = types.AuthorizationToken(
             "basic",
             principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass"))
+            credentials=os.environ.get(env_neo4j_pass, "pass")
+        )
         self.verify_connectivity(auth_token)

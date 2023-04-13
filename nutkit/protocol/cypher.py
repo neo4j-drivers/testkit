@@ -152,7 +152,7 @@ class Node:
         # TODO: remove once all backends support new style relationships
         if elementId is None:
             import warnings
-            warnings.warn(
+            warnings.warn(  # noqa: B028
                 "Backend needs to support new style IDs for nodes"
             )
         self.id = id
@@ -162,7 +162,8 @@ class Node:
 
     def __str__(self):
         return "Node(id={}, labels={}, props={}, elementId={})".format(
-            self.id, self.labels, self.props, self.elementId)
+            self.id, self.labels, self.props, self.elementId
+        )
 
     def __repr__(self):
         return "<{}(id={}, labels={}, props={}, elementId={})>".format(
@@ -188,7 +189,7 @@ class Relationship:
         # TODO: remove once all backends support new style relationships
         if None in (elementId, startNodeElementId, endNodeElementId):
             import warnings
-            warnings.warn(
+            warnings.warn(  # noqa: B028
                 "Backend needs to support new style IDs for relationships"
             )
         self.id = id

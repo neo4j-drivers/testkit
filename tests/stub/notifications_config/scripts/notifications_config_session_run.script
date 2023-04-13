@@ -1,0 +1,16 @@
+!: BOLT 5.2
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN "RETURN 1 as n" {} {#NOTIS#"[mode]": "*", "[db]": "*"}
+S: SUCCESS {"fields": ["n"]}
+{{
+    C: PULL "*"
+    S: RECORD [1]
+----
+    C: DISCARD "*"
+}}
+S: SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

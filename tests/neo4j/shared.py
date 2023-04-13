@@ -94,6 +94,10 @@ class ServerInfo:
             raise ValueError(
                 "We can't predict the server's agent string for aura!"
             )
+        if re.match(r"(\d+)\.dev", self.version):
+            raise ValueError(
+                "We can't predict the server's agent string for dev versions!"
+            )
         return "Neo4j/" + self.version
 
     @property
@@ -102,12 +106,24 @@ class ServerInfo:
 
     @property
     def max_protocol_version(self):
-        return {
-            "4.2": "4.2",
-            "4.3": "4.3",
-            "4.4": "4.4",
-            "5.0": "5.0",
-        }[".".join(self.version.split(".")[:2])]
+        match = re.match(r"(\d+)\.dev", self.version)
+        if match:
+            version = (int(match.group(1)), float("inf"))
+        else:
+            version = tuple(int(i) for i in self.version.split(".")[:2])
+        if version >= (5, 7):
+            return "5.2"
+        if version >= (5, 5):
+            return "5.1"
+        if version >= (5, 0):
+            return "5.0"
+        if version >= (4, 4):
+            return "4.4"
+        if version >= (4, 3):
+            return "4.3"
+        if version >= (4, 2):
+            return "4.2"
+        raise ValueError(f"Unsupported Neo4j version to test: {self.version}")
 
     @property
     def has_utc_patch(self):

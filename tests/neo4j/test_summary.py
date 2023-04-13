@@ -1,3 +1,5 @@
+import re
+
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
@@ -32,7 +34,7 @@ class TestSummary(TestkitTestCase):
             return summary
         params = {} if params is None else params
         self._session = self._driver.session("w")
-        return self._session.write_transaction(work)
+        return self._session.execute_write(work)
 
     def test_can_obtain_summary_after_consuming_result(self):
         summary = self.get_summary("CREATE (n) RETURN n")
@@ -81,7 +83,7 @@ class TestSummary(TestkitTestCase):
         max_server_protocol_version = get_server_info().max_protocol_version
         common_protocol_versions = [
             f.value.split(":")[-1] for f in self._driver_features
-            if (f.name.startswith("BOLT_")
+            if (re.match(r"BOLT_\d+_\d+", f.name)
                 and f.value.split(":")[-1] <= max_server_protocol_version)
         ]
         if not common_protocol_versions:
@@ -107,6 +109,10 @@ class TestSummary(TestkitTestCase):
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
             self.assertTrue(version.startswith("Neo4j/"))
+        elif re.match(r"(\d+)\.dev", server_info.version):
+            self.assertTrue(version.startswith(
+                "Neo4j/" + server_info.version.split(".")[0]
+            ))
         else:
             version = ".".join(summary.server_info.agent.split(".")[:2])
             self.assertEqual(version, get_server_info().server_agent)

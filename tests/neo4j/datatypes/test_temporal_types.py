@@ -101,7 +101,7 @@ class TestDataTypes(_TestTypesBase):
 
         assert self._driver and self._session
         try:
-            echoed_tz_id = self._session.read_transaction(work)
+            echoed_tz_id = self._session.execute_read(work)
             return echoed_tz_id == tz_id
         except types.DriverError as e:
             assert tz_id in e.msg
@@ -208,7 +208,7 @@ class TestDataTypes(_TestTypesBase):
                 continue
             with self.subTest(tz_id=tz_id):
                 dt, y, mo, d, h, m, s, ns, offset, tz = \
-                    self._session.read_transaction(work)
+                    self._session.execute_read(work)
                 cypher_dt = types.CypherDateTime(
                     y, mo, d, h, m, s, ns, offset, tz_id
                 )

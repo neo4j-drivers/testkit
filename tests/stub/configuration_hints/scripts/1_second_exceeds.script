@@ -19,6 +19,6 @@ S: SUCCESS {"server": "Neo4j/4.4.1", "hints": {"connection.recv_timeout_seconds"
     C: PULL {"n": "*"}
     S: RECORD [1]
        SUCCESS {"type": "r"}
-    *: RESET
 }}
+*: RESET
 ?: GOODBYE
