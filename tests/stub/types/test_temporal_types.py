@@ -35,54 +35,104 @@ class _TestTemporalTypes(TestkitTestCase):
         auth = types.AuthorizationToken("basic", principal="", credentials="")
         self._driver = Driver(self._backend, uri, auth)
 
-    def _test_date_time(self):
-        self._start_server("echo_date_time.script")
+    def _test_date_time(self, patched):
+        script = "echo_date_time.script"
+        if patched:
+            script = "echo_date_time_patched.script"
+        self._start_server(script)
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
-                                       utc_offset_s=7200)
-        })
-        list(result)
+        dt = types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0, utc_offset_s=7200)
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
+        self.assertEqual(dt, records[0].values[0])
 
-    def _test_zoned_date_time(self):
-        self._start_server("echo_zoned_date_time.script")
+    def _test_zoned_date_time(self, patched):
+        script = "echo_zoned_date_time.script"
+        if patched:
+            script = "echo_zoned_date_time_patched.script"
+        self._start_server(script)
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(
-                2022, 6, 7, 11, 52, 5, 0,
-                utc_offset_s=7200, timezone_id="Europe/Stockholm"
-            )
-        })
-        list(result)
+        dt = types.CypherDateTime(
+            2022, 6, 7, 11, 52, 5, 0,
+            utc_offset_s=7200, timezone_id="Europe/Stockholm"
+        )
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
+        self.assertEqual(dt, records[0].values[0])
 
+    def _test_unknown_zoned_date_time(self, patched):
+        tx_count = 0
 
-class _TestTemporalTypesPatchedBolt(_TestTemporalTypes):
+        def work(tx):
+            nonlocal tx_count
+            tx_count += 1
+            res = tx.run("MATCH (n:State) RETURN n.founded AS dt")
+            with self.assertRaises(types.DriverError) as exc:
+                res.next()
+            self.assertIn("Europe/Neo4j", exc.exception.msg)
+            raise exc.exception
 
-    @driver_feature(types.Feature.BOLT_PATCH_UTC)
-    def _test_date_time_with_patch(self):
-        self._start_server("echo_date_time_patched.script")
+        script = "echo_unknown_zoned_date_time.script"
+        if patched:
+            script = "echo_unknown_zoned_date_time_patched.script"
+        self._start_server(script)
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(2022, 6, 7, 11, 52, 5, 0,
-                                       utc_offset_s=7200)
-        })
-        list(result)
+        with self.assertRaises(types.DriverError):
+            self._session.read_transaction(work)
+        self._server.done()
+        self.assertEqual(tx_count, 1)
 
-    @driver_feature(types.Feature.BOLT_PATCH_UTC)
-    def _test_zoned_date_time_with_patch(self):
-        self._start_server("echo_zoned_date_time_patched.script")
+    def _test_unknown_then_known_zoned_date_time(self, patched):
+        result_is_valid_after_unknown_zone = self.driver_supports_features(
+            types.Feature.DETAIL_RESULT_STREAM_WORKS_AFTER_BROKEN_RECORD
+        )
+
+        def work(tx):
+            res = tx.run("MATCH (n:State) RETURN n.founded AS dt")
+            with self.assertRaises(types.DriverError) as exc:
+                res.next()
+            self.assertIn("Europe/Neo4j", exc.exception.msg)
+
+            if result_is_valid_after_unknown_zone:
+                rec = res.next()
+                self.assertIsInstance(rec, types.Record)
+                self.assertEqual(len(rec.values), 1)
+                self.assertEqual(
+                    rec.values[0],
+                    types.CypherDateTime(1970, 1, 1, 1, 0, 0, 0,
+                                         utc_offset_s=1800)
+                )
+            else:
+                with self.assertRaises(types.DriverError):
+                    rec = res.next()
+                    if isinstance(rec, types.NullRecord):
+                        # that's fine, too
+                        raise types.DriverError("Result is broken")
+                raise exc.exception  # abort the transaction
+
+        script = "echo_unknown_then_known_zoned_date_time.script"
+        if patched:
+            script = "echo_unknown_then_known_zoned_date_time_patched.script"
+        self._start_server(script)
         self._create_direct_driver()
         self._session = self._driver.session("w")
-        result = self._session.run("RETURN $dt AS dt", params={
-            "dt": types.CypherDateTime(
-                2022, 6, 7, 11, 52, 5, 0,
-                utc_offset_s=7200, timezone_id="Europe/Stockholm"
-            )
-        })
-        list(result)
+        if result_is_valid_after_unknown_zone:
+            self._session.read_transaction(work)
+            self._server.done()
+            self.assertEqual(self._server.count_requests("COMMIT"), 1)
+            self.assertEqual(self._server.count_requests("ROLLBACK"), 0)
+        else:
+            with self.assertRaises(types.DriverError):
+                self._session.read_transaction(work)
+            self._server.done()
+            self.assertEqual(self._server.count_requests("COMMIT"), 0)
 
 
 class TestTemporalTypesV3x0(_TestTemporalTypes):
@@ -94,10 +144,10 @@ class TestTemporalTypesV3x0(_TestTemporalTypes):
     bolt_version = "3.0"
 
     def test_date_time(self):
-        super()._test_date_time()
+        super()._test_date_time(patched=False)
 
     def test_zoned_date_time(self):
-        super()._test_zoned_date_time()
+        super()._test_zoned_date_time(patched=False)
 
 
 class TestTemporalTypesV4x1(_TestTemporalTypes):
@@ -108,10 +158,10 @@ class TestTemporalTypesV4x1(_TestTemporalTypes):
     bolt_version = "4.1"
 
     def test_date_time(self):
-        super()._test_date_time()
+        super()._test_date_time(patched=False)
 
     def test_zoned_date_time(self):
-        super()._test_zoned_date_time()
+        super()._test_zoned_date_time(patched=False)
 
 
 class TestTemporalTypesV4x2(_TestTemporalTypes):
@@ -123,13 +173,13 @@ class TestTemporalTypesV4x2(_TestTemporalTypes):
     bolt_version = "4.2"
 
     def test_date_time(self):
-        super()._test_date_time()
+        super()._test_date_time(patched=False)
 
     def test_zoned_date_time(self):
-        super()._test_zoned_date_time()
+        super()._test_zoned_date_time(patched=False)
 
 
-class TestTemporalTypesV4x3(_TestTemporalTypesPatchedBolt):
+class TestTemporalTypesV4x3(_TestTemporalTypes):
 
     required_features = (
         *_TestTemporalTypes.required_features,
@@ -138,19 +188,21 @@ class TestTemporalTypesV4x3(_TestTemporalTypesPatchedBolt):
     bolt_version = "4.3"
 
     def test_date_time(self):
-        super()._test_date_time()
+        super()._test_date_time(patched=False)
 
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_date_time_with_patch(self):
-        super()._test_date_time_with_patch()
+        super()._test_date_time(patched=True)
 
     def test_zoned_date_time(self):
-        super()._test_zoned_date_time()
+        super()._test_zoned_date_time(patched=False)
 
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_zoned_date_time_with_patch(self):
-        super()._test_zoned_date_time_with_patch()
+        super()._test_zoned_date_time(patched=True)
 
 
-class TestTemporalTypesV4x4(_TestTemporalTypesPatchedBolt):
+class TestTemporalTypesV4x4(_TestTemporalTypes):
 
     required_features = (
         *_TestTemporalTypes.required_features,
@@ -159,13 +211,29 @@ class TestTemporalTypesV4x4(_TestTemporalTypesPatchedBolt):
     bolt_version = "4.4"
 
     def test_date_time(self):
-        super()._test_date_time()
+        super()._test_date_time(patched=False)
 
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_date_time_with_patch(self):
-        super()._test_date_time_with_patch()
+        super()._test_date_time(patched=True)
 
     def test_zoned_date_time(self):
-        super()._test_zoned_date_time()
+        super()._test_zoned_date_time(patched=False)
 
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_zoned_date_time_with_patch(self):
-        super()._test_zoned_date_time_with_patch()
+        super()._test_zoned_date_time(patched=True)
+
+    def test_unknown_zoned_date_time(self):
+        super()._test_unknown_zoned_date_time(patched=False)
+
+    def test_unknown_then_known_zoned_date_time(self):
+        super()._test_unknown_then_known_zoned_date_time(patched=False)
+
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
+    def test_unknown_zoned_date_time_patched(self):
+        super()._test_unknown_zoned_date_time(patched=True)
+
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
+    def test_unknown_then_known_zoned_date_time_patched(self):
+        super()._test_unknown_then_known_zoned_date_time(patched=True)

@@ -184,7 +184,7 @@ class BangLine(Line):
             )
 
 
-class MessageLine(Line, abc.ABC):
+class MessageLine(Line):
     allow_jolt_wildcard = False
     always_parse = True
 

@@ -58,12 +58,6 @@ class Session:
                     # that the frontend test function makes calls to the
                     # backend it self.
                     x = fn(tx)
-                    # The frontend test function were fine with the
-                    # interaction, notify backend that we're happy to go.
-                    self._backend.send(
-                        protocol.RetryablePositive(self._session.id),
-                        hooks=hooks
-                    )
                 except (ApplicationCodeError, protocol.DriverError) as e:
                     # If this is an error originating from the driver in the
                     # backend, retrieve the id of the error  and send that,
@@ -75,6 +69,26 @@ class Session:
                     self._backend.send(
                         protocol.RetryableNegative(self._session.id,
                                                    errorId=error_id),
+                        hooks=hooks
+                    )
+                except Exception as e:
+                    # If this fails any other way, we still want the backend
+                    # to rollback the transaction.
+                    try:
+                        res = self._backend.send_and_receive(
+                            protocol.RetryableNegative(self._session.id),
+                            hooks=hooks
+                        )
+                    except protocol.FrontendError:
+                        raise e
+                    else:
+                        raise Exception("Should be FrontendError but was: %s" %
+                                        res)
+                else:
+                    # The frontend test function were fine with the
+                    # interaction, notify backend that we're happy to go.
+                    self._backend.send(
+                        protocol.RetryablePositive(self._session.id),
                         hooks=hooks
                     )
             elif isinstance(res, protocol.ResolverResolutionRequired):

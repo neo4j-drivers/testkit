@@ -125,6 +125,15 @@ class Feature(Enum):
     # configuration as long as values match.
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
+    # The Result object is not broken after receiving a record that is valid
+    # on packstream level but failed hydration (e.g., it contained a structure
+    # with unknown tag or a zoned date time with unknown zone id). But instead,
+    # it allows the user to catch the exception and request the next record in
+    # the stream. If the flag is not present, TestKit will assert the opposite:
+    # The Result object is expected to be broken afterwards, i.e., either throw
+    # or return NullRecord on next call to next().
+    DETAIL_RESULT_STREAM_WORKS_AFTER_BROKEN_RECORD = \
+        "Detail:ResultStreamWorksAfterBrokenRecord"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
