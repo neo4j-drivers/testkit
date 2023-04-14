@@ -213,7 +213,7 @@ class Summary:
         if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
             if "address" in data["serverInfo"]:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports address field in Summary.serverInfo. "
                     "Remove the backwards compatibility check!"
                 )
@@ -229,14 +229,14 @@ class Summary:
                 del data["counters"]
             else:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports well-formatted counter. "
                     "Remove the backwards compatibility check!"
                 )
         if get_driver_name() in ["javascript", "go", "dotnet"]:
             if "counters" in data:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports counters field in Summary. "
                     "Remove the backwards compatibility check!"
                 )
@@ -259,7 +259,7 @@ class Summary:
                 }
             if "query" in data:
                 import warnings
-                warnings.warn(
+                warnings.warn(  # noqa: B028
                     "Backend supports query field in Summary. "
                     "Remove the backwards compatibility check!"
                 )
@@ -274,7 +274,7 @@ class Summary:
             ):
                 if field in data:
                     import warnings
-                    warnings.warn(
+                    warnings.warn(  # noqa: B028
                         "Backend supports %s field in Summary. "
                         "Remove the backwards compatibility check!" % field
                     )

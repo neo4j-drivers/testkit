@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 
-from . import _common
 from ..bolt_protocol import TranslatedStructure
 from ..errors import ServerExit
 from ..parsing import (
@@ -12,6 +11,7 @@ from ..parsing import (
     LineError,
     ServerLine,
 )
+from . import _common
 
 
 class TestClientLine:

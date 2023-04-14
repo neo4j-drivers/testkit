@@ -1,5 +1,5 @@
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     dns_resolve_single,
     driver_feature,

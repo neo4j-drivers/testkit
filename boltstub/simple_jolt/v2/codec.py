@@ -4,16 +4,6 @@ from ..common.errors import (
     JOLTValueError,
     NoSimpleRepresentation,
 )
-from ..v1.codec import (
-    Codec,
-    JoltDateTimeTransformer,
-    JoltNodeTransformer,
-    JoltPathTransformer,
-    JoltPointTransformer,
-    JoltRelationTransformer,
-    JoltReverseRelationTransformer,
-    JoltTypeTransformer,
-)
 
 # unused transformer imports are required for the codec to pick them up
 from ..v1.codec import JoltBoolTransformer  # noqa: F401
@@ -24,6 +14,16 @@ from ..v1.codec import JoltIntTransformer  # noqa: F401
 from ..v1.codec import JoltListTransformer  # noqa: F401
 from ..v1.codec import JoltNullTransformer  # noqa: F401
 from ..v1.codec import JoltStrTransformer  # noqa: F401
+from ..v1.codec import (
+    Codec,
+    JoltDateTimeTransformer,
+    JoltNodeTransformer,
+    JoltPathTransformer,
+    JoltPointTransformer,
+    JoltRelationTransformer,
+    JoltReverseRelationTransformer,
+    JoltTypeTransformer,
+)
 from .types import (
     JoltDate,
     JoltDateTime,

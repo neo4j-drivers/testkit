@@ -1,6 +1,6 @@
-from collections import defaultdict
 import itertools
 import re
+from collections import defaultdict
 from typing import (
     Iterator,
     Optional,
