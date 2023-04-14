@@ -1,7 +1,7 @@
 from time import perf_counter
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
     TestkitTestCase,

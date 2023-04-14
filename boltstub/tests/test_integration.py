@@ -16,11 +16,11 @@
 # limitations under the License.
 
 
-from contextlib import contextmanager
 import socket
-from struct import unpack as struct_unpack
 import threading
 import traceback
+from contextlib import contextmanager
+from struct import unpack as struct_unpack
 
 import pytest
 

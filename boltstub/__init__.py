@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+import time
+import traceback
 from copy import deepcopy
 from logging import getLogger
 from socketserver import (
@@ -28,8 +30,6 @@ from threading import (
     Lock,
     Thread,
 )
-import time
-import traceback
 
 from .addressing import Address
 from .channel import (

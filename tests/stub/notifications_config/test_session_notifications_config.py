@@ -1,5 +1,5 @@
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.stub.notifications_config.notifications_base import (  # noqa: E501
     NotificationsBase,
 )

@@ -1,11 +1,11 @@
 from contextlib import contextmanager
 
+import nutkit.protocol as types
 from nutkit.frontend import (
     AuthTokenManager,
     Driver,
     ExpirationBasedAuthTokenManager,
 )
-import nutkit.protocol as types
 from tests.shared import driver_feature
 from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer

@@ -1,9 +1,9 @@
 """Neo4j instance test configuration (no runtime properties)."""
 
-from dataclasses import dataclass
 import os
-from os.path import join
 import re
+from dataclasses import dataclass
+from os.path import join
 
 import docker
 
