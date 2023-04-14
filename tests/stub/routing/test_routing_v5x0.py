@@ -24,9 +24,6 @@ class RoutingV5x0(RoutingBase):
 
     @driver_feature(types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_successfully_get_routing_table_with_context(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("needs verifyConnectivity support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1,
@@ -216,9 +213,6 @@ class RoutingV5x0(RoutingBase):
     def _should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(  # noqa: E501
         self, interrupting_reader_script
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -275,9 +269,6 @@ class RoutingV5x0(RoutingBase):
     def _should_fail_when_reading_from_unexpectedly_interrupting_reader_using_tx_run(  # noqa: E501
         self, interrupting_reader_script
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -647,9 +638,6 @@ class RoutingV5x0(RoutingBase):
     def _should_fail_when_writing_on_unexpectedly_interrupting_writer_using_session_run(  # noqa: E501
         self, interrupting_writer_script
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -718,8 +706,6 @@ class RoutingV5x0(RoutingBase):
         self, interrupting_writer_script, fails_on_next=False
     ):
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -782,9 +768,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_fail_discovery_when_router_fails_with_procedure_not_found_code(  # noqa: E501
         self
     ):
-        # TODO add support and remove this block
-        if get_driver_name() in ["go"]:
-            self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -819,9 +802,6 @@ class RoutingV5x0(RoutingBase):
         self.assertTrue(failed)
 
     def test_should_fail_discovery_when_router_fails_with_unknown_code(self):
-        # TODO add support and remove this block
-        if get_driver_name() in ["go"]:
-            self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1002,8 +982,6 @@ class RoutingV5x0(RoutingBase):
         self
     ):
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1065,8 +1043,6 @@ class RoutingV5x0(RoutingBase):
         self
     ):
         # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("consume not implemented in backend")
         if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
@@ -1118,9 +1094,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_fail_when_writing_without_explicit_consumption_on_writer_that_returns_not_a_leader_code_using_tx_run(  # noqa: E501
         self
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         # TODO remove this block once all languages work
         if get_driver_name() in ["go", "dotnet"]:
             self.skipTest("needs routing table API support")
@@ -1475,9 +1448,6 @@ class RoutingV5x0(RoutingBase):
     def _should_retry_read_tx_and_rediscovery_until_success(
         self, interrupting_reader_script
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1535,9 +1505,6 @@ class RoutingV5x0(RoutingBase):
     def _should_retry_write_tx_and_rediscovery_until_success(
         self, interrupting_writer_script
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1596,9 +1563,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_use_initial_router_for_discovery_when_others_unavailable(
         self
     ):
-        # TODO add support and remove this block
-        if get_driver_name() in ["go"]:
-            self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1704,10 +1668,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_serve_reads_and_fail_writes_when_no_writers_available(
         self
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("consume not implemented in backend "
-                          "or requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1757,9 +1717,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_accept_routing_table_without_writers_and_then_rediscover(
         self
     ):
-        # TODO add support and remove this block
-        if get_driver_name() in ["go"]:
-            self.skipTest("verifyConnectivity not implemented in backend")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -1830,9 +1787,6 @@ class RoutingV5x0(RoutingBase):
         driver.close()
 
     def test_should_accept_routing_table_with_single_router(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("requires investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -2486,9 +2440,6 @@ class RoutingV5x0(RoutingBase):
 
     @driver_feature(types.Feature.BACKEND_RT_FORCE_UPDATE)
     def test_should_successfully_acquire_rt_when_router_ip_changes(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go"]:
-            self.skipTest("needs verifyConnectivity support")
         ip_addresses = get_ip_addresses()
         if len(ip_addresses) < 2:
             self.skipTest("at least 2 IP addresses are required for this test "
@@ -2564,7 +2515,7 @@ class RoutingV5x0(RoutingBase):
 
     def test_should_fail_when_driver_closed_using_session_run(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
+        if get_driver_name() in ["dotnet", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -3012,7 +2963,7 @@ class RoutingV5x0(RoutingBase):
 
     def test_does_not_use_read_connection_for_write(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
+        if get_driver_name() in ["javascript", "dotnet", "ruby"]:
             self.skipTest("Requires address field in summary")
 
         def read(tx):
