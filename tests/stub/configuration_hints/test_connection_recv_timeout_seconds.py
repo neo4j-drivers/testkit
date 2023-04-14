@@ -7,7 +7,10 @@ from tests.shared import (
     get_driver_name,
     TestkitTestCase,
 )
-from tests.stub.shared import StubServer
+from tests.stub.shared import (
+    StubServer,
+    StubServerUncleanExitError,
+)
 
 
 class TestDirectConnectionRecvTimeout(TestkitTestCase):
@@ -114,7 +117,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         res = tx.run("in time")
         res.next()
         tx.commit()
-        self._server.done()
+        with self.assertRaises(StubServerUncleanExitError):
+            self._server.done()
         self._assert_is_timeout_exception(exc.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 2)
         self.assertEqual(self._server.count_responses("<HANGUP>"), 2)
@@ -143,7 +147,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         if get_driver_name() in ["java", "ruby"]:
             tx.rollback()
 
-        self._server.done()
+        with self.assertRaises(StubServerUncleanExitError):
+            self._server.done()
         self._assert_is_timeout_exception(first_run_error.exception)
         self._assert_is_client_exception(second_run_error.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
@@ -177,7 +182,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
 
         self._start_server("1_second_exceeds_tx_retry.script")
         self._session.execute_write(work)
-        self._server.done()
+        with self.assertRaises(StubServerUncleanExitError):
+            self._server.done()
         self.assertEqual(retries, 2)
         self.assertIsInstance(record, types.Record)
         self.assertEqual(record.values, [types.CypherInt(1)])
