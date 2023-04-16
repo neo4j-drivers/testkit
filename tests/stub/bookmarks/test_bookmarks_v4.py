@@ -1,5 +1,5 @@
-from contextlib import contextmanager
 import json
+from contextlib import contextmanager
 
 from nutkit import protocol as types
 from nutkit.frontend import Driver

@@ -16,11 +16,11 @@
 # limitations under the License.
 
 
-from contextlib import contextmanager
 import socket
-from struct import unpack as struct_unpack
 import threading
 import traceback
+from contextlib import contextmanager
+from struct import unpack as struct_unpack
 
 import pytest
 
@@ -236,7 +236,7 @@ def test_magic_bytes(server_version, magic_bytes, server_factory, fail,
     [b"\x00\x00\x01\x04", (4, 2), (4, 1)],
     [b"\x00\x00\x02\x04", (4, 1), None],
     [b"\x00\x00\x02\x04", (4, 3), None],
-])  # noqa: PAR101
+])  # noqa: PAR102
 def test_handshake_auto(client_version, server_version, negotiated_version,
                         server_factory, connection_factory):
     client_version = client_version + b"\x00" * (16 - len(client_version))
@@ -393,7 +393,7 @@ def test_auto_replies(server_version, request_tag, request_name,
     ),
     # enough structures tested. translation to Structs and checking
     # equality is covered by unit tests
-))  # noqa: PAR101
+))  # noqa: PAR102
 def test_plays_through(server_version, request_tag, request_name, field_rep,
                        field_bin, server_factory, connection_factory):
     script = parse("""
@@ -478,7 +478,7 @@ def test_initial_response(server_version, response_tag, response_name,
     con.read(4)
     res = con.read_message()
     assert res[:2] == b"\xb0" + response_tag
-    with pytest.raises(socket.timeout):
+    with pytest.raises(BrokenSocket):
         con.read(1)
     assert not server.service.exceptions
 
@@ -496,10 +496,17 @@ def test_restarting(server_factory, restarting, concurrent,
         "!: ALLOW CONCURRENT\n" if concurrent else "",
     )
 
-    server = server_factory(parse(script))
+    if restarting and concurrent:
+        with pytest.warns(
+            Warning, match="concurrent scripts are implicitly restarting"
+        ):
+            server = server_factory(parse(script))
+    else:
+        server = server_factory(parse(script))
+
     for i in range(3):
         if i > 0 and not (restarting or concurrent):
-            with pytest.raises((ConnectionError, OSError, BrokenSocket)):
+            with pytest.raises((OSError, BrokenSocket)):
                 con = connection_factory("localhost", 7687)
                 con.write(b"\x60\x60\xb0\x17")
                 con.write(server_version_to_version_request((4, 3)))

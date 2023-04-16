@@ -10,7 +10,7 @@ TEST_BACKEND_PORT  Port on backend host, default is 9876
 """
 
 
-from contextlib import contextmanager
+import enum
 import functools
 import inspect
 import os
@@ -18,6 +18,7 @@ import re
 import socket
 import unittest
 import warnings
+from contextlib import contextmanager
 
 import ifaddr
 
@@ -247,3 +248,10 @@ class TestkitTestCase(unittest.TestCase):
                     raise Exception("Should be SkipTest, or RunTest, "
                                     "received {}: {}".format(type(response),
                                                              response))
+
+
+class Potential(enum.Enum):
+    YES = 1.0
+    NO = 0.0
+    MAYBE = 0.5
+    # CAN_YOU_REPEAT_THE_QUESTION = "?"

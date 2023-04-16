@@ -1,7 +1,8 @@
 """Neo4j instance test configuration (no runtime properties)."""
 
-from dataclasses import dataclass
 import os
+import re
+from dataclasses import dataclass
 from os.path import join
 
 import docker
@@ -36,8 +37,12 @@ class Standalone:
         self._container = None
         self._hostname = hostname
         self._port = port
-        self._version = tuple(int(i) for i in version.split("."))
-        assert len(self._version) == 2
+        match = re.match(r"(\d+)\.dev", version)
+        if match:
+            self._version = (int(match.group(1)), float("inf"))
+        else:
+            self._version = tuple(int(i) for i in version.split("."))
+            assert len(self._version) == 2
         self._edition = edition
 
     def start(self, network):
@@ -122,8 +127,12 @@ class Core:
         self._index = index
         self._artifacts_path = join(artifacts_path, self.name)
         self._container = None
-        self._version = tuple(int(i) for i in version.split("."))
-        assert len(self._version) == 2
+        match = re.match(r"(\d+)\.dev", version)
+        if match:
+            self._version = (int(match.group(1)), float("inf"))
+        else:
+            self._version = tuple(int(i) for i in version.split("."))
+            assert len(self._version) == 2
 
     def start(self, image, initial_members, network):
         env_map = {

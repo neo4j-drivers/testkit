@@ -14,9 +14,11 @@ TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
                      Neo4j server, default "enterprise"
 TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
-from functools import wraps
+
+
 import os
 import re
+from functools import wraps
 from warnings import warn
 
 from nutkit import protocol
@@ -24,6 +26,7 @@ from nutkit.frontend import Driver
 from nutkit.protocol import AuthorizationToken
 from tests.shared import (
     dns_resolve_single,
+    Potential,
     TestkitTestCase,
 )
 
@@ -94,6 +97,10 @@ class ServerInfo:
             raise ValueError(
                 "We can't predict the server's agent string for aura!"
             )
+        if re.match(r"(\d+)\.dev", self.version):
+            raise ValueError(
+                "We can't predict the server's agent string for dev versions!"
+            )
         return "Neo4j/" + self.version
 
     @property
@@ -102,7 +109,11 @@ class ServerInfo:
 
     @property
     def max_protocol_version(self):
-        version = tuple(int(i) for i in self.version.split(".")[:2])
+        match = re.match(r"(\d+)\.dev", self.version)
+        if match:
+            version = (int(match.group(1)), float("inf"))
+        else:
+            version = tuple(int(i) for i in self.version.split(".")[:2])
         if version >= (5, 7):
             return "5.2"
         if version >= (5, 5):
@@ -120,10 +131,10 @@ class ServerInfo:
     @property
     def has_utc_patch(self):
         if self.version >= "5":
-            return 1
+            return Potential.YES
         if self.version >= "4.3":
-            return 0.5  # maybe
-        return 0
+            return Potential.MAYBE
+        return Potential.NO
 
 
 def get_server_info():

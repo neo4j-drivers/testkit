@@ -1,15 +1,12 @@
 """Defines suites of test to run in different setups."""
 
 import os
+import re
 import sys
 import unittest
 
 from tests.neo4j.shared import env_neo4j_version
-from tests.testenv import (
-    begin_test_suite,
-    end_test_suite,
-    get_test_result_class,
-)
+from tests.testenv import get_test_result_class
 
 #######################
 # Suite for Neo4j 4.2 #
@@ -55,13 +52,19 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Missing suite name parameter")
         sys.exit(-10)
-    name = sys.argv[1]
-    try:
-        version = tuple(int(i) for i in name.split("."))
-    except ValueError:
-        print(f"Invalid suite name: {name}. "
-              "Should be X.Y for X and Y integer.")
-        sys.exit(-2)
+    version = sys.argv[1]
+    if len(sys.argv) > 2:
+        name = sys.argv[2]
+    match = re.match(r"(\d+)\.dev", version)
+    if match:
+        version = (int(match.group(1)), float("inf"))
+    else:
+        try:
+            version = tuple(int(i) for i in version.split("."))
+        except ValueError:
+            print(f"Invalid suite version: {version}. "
+                  "Should be X.Y for X and Y integer.")
+            sys.exit(-2)
     if version >= (5, 7):
         suite = suite_5x7
     elif version >= (5, 5):
@@ -75,17 +78,17 @@ if __name__ == "__main__":
     elif version >= (4, 2):
         suite = suite_4x2
     else:
-        print("Unknown suite name: " + name)
+        print(f"Unknown suite version: {version}")
         sys.exit(-1)
 
     import os
-    os.environ[env_neo4j_version] = os.environ.get(env_neo4j_version, name)
+    os.environ[env_neo4j_version] = os.environ.get(env_neo4j_version, version)
 
-    suite_name = "Integration tests " + name
-    begin_test_suite(suite_name)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
-                                     verbosity=100)
+    suite_name = f"Integration tests {name}"
+    runner = unittest.TextTestRunner(
+        resultclass=get_test_result_class(suite_name),
+        verbosity=100, stream=sys.stdout,
+    )
     result = runner.run(suite)
-    end_test_suite(suite_name)
     if result.errors or result.failures:
         sys.exit(-1)

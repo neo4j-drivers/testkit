@@ -1,8 +1,8 @@
 from contextlib import contextmanager
 
+import nutkit.protocol as types
 from nutkit.backend.backend import backend_timeout_adjustment
 from nutkit.frontend import Driver
-import nutkit.protocol as types
 from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
