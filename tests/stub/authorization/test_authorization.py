@@ -74,6 +74,8 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
         elif driver in ["go", "javascript"]:
             pass  # code and msg check are enough
+        elif driver in ["dotnet"]:
+            expected_type = "ClientError"
         elif driver == "java":
             expected_type = \
                 "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
