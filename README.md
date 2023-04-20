@@ -2,6 +2,8 @@
 
 ## Running all test suites within docker containers
 
+👀
+
 Requirements on host:
   * Python >= 3.8
   * Docker >= 19.03
