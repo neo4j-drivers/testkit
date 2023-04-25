@@ -96,6 +96,7 @@ class BoltStubService:
         self.script = script
         self.exceptions = []
         self.actors = []
+        self._shutting_down_actors = False
         self.ever_acted = False
         self.actors_lock = Lock()
         service = self
@@ -117,6 +118,11 @@ class BoltStubService:
 
             def handle(self) -> None:
                 with service.actors_lock:
+                    if service._shutting_down_actors:
+                        log.info("[#%04X>#%04X]  S: <EXIT> shutting down",
+                                 self.client_address.port_number,
+                                 self.server_address.port_number)
+                        return
                     actor = BoltActor(deepcopy(script), self.wire,
                                       eval_context)
                     service.actors.append(actor)
@@ -162,33 +168,25 @@ class BoltStubService:
             self.server.handle_request()
             self.server.server_close()
 
-    def _close_socket(self):
-        self.server.socket.close()
-
-    def _stop_server(self):
-        if self.script.context.restarting or self.script.context.concurrent:
-            self.server.shutdown()
-
     def stop(self):
-        self._close_socket()
-        self._stop_server()
+        self.server.shutdown()
 
     def try_skip_to_end(self):
-        self._close_socket()
         with self.actors_lock:
+            self._shutting_down_actors = True
             for actor in self.actors:
                 actor.try_skip_to_end()
-        self._stop_server()
+        self.stop()
 
     def try_skip_to_end_async(self):
         Thread(target=self.try_skip_to_end, daemon=True).start()
 
     def close_all_connections(self):
-        self._close_socket()
         with self.actors_lock:
+            self._shutting_down_actors = True
             for actor in self.actors:
                 actor.exit()
-        self._stop_server()
+        self.stop()
 
     def close_all_connections_async(self):
         Thread(target=self.close_all_connections, daemon=True).start()
