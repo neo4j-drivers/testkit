@@ -169,7 +169,8 @@ class BoltStubService:
             self.server.server_close()
 
     def stop(self):
-        self.server.shutdown()
+        if self.script.context.restarting or self.script.context.concurrent:
+            self.server.shutdown()
 
     def try_skip_to_end(self):
         with self.actors_lock:
