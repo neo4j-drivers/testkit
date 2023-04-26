@@ -25,15 +25,15 @@ as well as classes for modelling IP addresses, based on tuples.
 
 
 import base64
-from functools import cached_property
 import hashlib
+import struct
+from functools import cached_property
 from socket import (
     AF_INET,
     AF_INET6,
     getservbyname,
     timeout,
 )
-import struct
 
 BOLT_PORT_NUMBER = 7687
 HTTP_HEADER_MIN_SIZE = 26  # BYTES

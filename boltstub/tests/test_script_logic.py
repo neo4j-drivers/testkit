@@ -22,7 +22,6 @@ from typing import Iterable
 
 import pytest
 
-from . import _common
 from ..bolt_protocol import TranslatedStructure
 from ..parsing import (
     AlternativeBlock,
@@ -42,6 +41,7 @@ from ..parsing import (
 from ..simple_jolt import v1 as jolt_v1
 from ..simple_jolt import v2 as jolt_v2
 from ..util import EvalContext
+from . import _common
 
 
 class MockChannel:

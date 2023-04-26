@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -44,6 +44,11 @@ class TestResultScope(TestkitTestCase):
                 exc.errorType,
                 "org.neo4j.driver.exceptions.ResultConsumedException"
             )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                exc.errorType,
+                "Neo4j::Driver::Exceptions::ResultConsumedException"
+            )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")
         elif driver in ["javascript"]:
@@ -67,6 +72,11 @@ class TestResultScope(TestkitTestCase):
             self.assertEqual(
                 exc.errorType,
                 "org.neo4j.driver.exceptions.ResultConsumedException"
+            )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                exc.errorType,
+                "Neo4j::Driver::Exceptions::ResultConsumedException"
             )
         elif driver in ["dotnet"]:
             self.assertEqual(exc.errorType, "ResultConsumedError")

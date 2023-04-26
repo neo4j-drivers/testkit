@@ -10,7 +10,6 @@ TEST_BACKEND_PORT  Port on backend host, default is 9876
 """
 
 
-from contextlib import contextmanager
 import enum
 import functools
 import inspect
@@ -19,6 +18,7 @@ import re
 import socket
 import unittest
 import warnings
+from contextlib import contextmanager
 
 import ifaddr
 

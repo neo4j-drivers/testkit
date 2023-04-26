@@ -1,12 +1,12 @@
 import json
 import re
 
+import nutkit.protocol as types
 from nutkit.frontend import (
     BookmarkManager,
     Driver,
     Neo4jBookmarkManagerConfig,
 )
-import nutkit.protocol as types
 from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 

@@ -17,21 +17,21 @@
 
 
 import abc
-from collections import OrderedDict
-from copy import deepcopy
 import json
 import math
-from os import path
 import re
 import sys
-from textwrap import wrap
 import threading
+import warnings
+from collections import OrderedDict
+from copy import deepcopy
+from os import path
+from textwrap import wrap
 from time import sleep
 from typing import (
     List,
     Optional,
 )
-import warnings
 
 import lark
 
@@ -1214,14 +1214,10 @@ class BlockList(Block):
         return self.blocks[-1].has_deterministic_end()
 
     def init(self, channel):
-        while True:
+        while self.index < len(self.blocks):
             block = self.blocks[self.index]
             block.init(channel)
-            if (
-                not block.has_deterministic_end()
-                or not block.done(channel)
-                or self.index + 1 >= len(self.blocks)
-            ):
+            if not block.has_deterministic_end() or not block.done(channel):
                 break
             self.index += 1
 

@@ -37,8 +37,8 @@ Environment variables:
     as integration tests against nightly builds pulled from the CI. To download
     those builds (only when trying to run the respective integration tests),
     you also need to set:
-  * `TEAMCITY_API_TOKEN`  
-    The API token to access nightly builds on TeamCity.
+  * `TEST_AWS_ECR_URITEAMC`  
+    The URL to the docker container registry where nightly builds are stored.
 
 ```console
 export TEST_DRIVER_NAME=go

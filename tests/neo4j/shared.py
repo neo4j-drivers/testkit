@@ -16,9 +16,9 @@ TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
 """
 
 
-from functools import wraps
 import os
 import re
+from functools import wraps
 from warnings import warn
 
 from nutkit import protocol
