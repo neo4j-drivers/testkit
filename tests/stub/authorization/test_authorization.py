@@ -120,6 +120,8 @@ class AuthorizationBase(TestkitTestCase):
                 "Neo4j::Driver::Exceptions::UnsupportedFeatureException",
                 error.errorType
             )
+        elif driver in ["dotnet"]:
+            self.assertEqual("UnsupportedFeatureException", error.errorType)
         elif driver in ["go"]:
             self.assertEqual("feature not supported", error.errorType)
             self.assertIn("session auth", error.msg)
