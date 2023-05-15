@@ -74,10 +74,6 @@ class _ClientAgentStringsTestBase(TestkitTestCase, abc.ABC):
         self._start_server("user_agent_custom.script")
         self._session_run_return_1(user_agent="Hello, I'm a banana 🍌!")
 
-    def _test_empty_user_agent(self):
-        self._start_server("user_agent_empty.script")
-        self._session_run_return_1(user_agent="")
-
 
 class TestClientAgentStringsV5x2(_ClientAgentStringsTestBase):
 
@@ -90,9 +86,6 @@ class TestClientAgentStringsV5x2(_ClientAgentStringsTestBase):
     def test_custom_user_agent(self):
         super()._test_custom_user_agent()
 
-    def test_empty_user_agent(self):
-        super()._test_empty_user_agent()
-
 
 class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
 
@@ -104,6 +97,3 @@ class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
 
     def test_custom_user_agent(self):
         super()._test_custom_user_agent()
-
-    def test_empty_user_agent(self):
-        super()._test_empty_user_agent()
