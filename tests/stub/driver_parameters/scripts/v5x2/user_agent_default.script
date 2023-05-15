@@ -1,6 +1,6 @@
 !: BOLT 5.2
 
-C: HELLO {"[routing]": null, "user_agent": #USER_AGENT#}
+C: HELLO {"[routing]": null, "user_agent": {"U": "*"}}
 S: SUCCESS {"server": "Neo4j/5.5.0", "connection_id": "bolt-1"}
 C: LOGON {"{}": "*"}
 S: SUCCESS {}
