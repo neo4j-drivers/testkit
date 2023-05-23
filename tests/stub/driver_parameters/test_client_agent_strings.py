@@ -1,4 +1,6 @@
 import abc
+import json
+import re
 from contextlib import contextmanager
 
 import nutkit.protocol as types
@@ -97,3 +99,25 @@ class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
 
     def test_custom_user_agent(self):
         super()._test_custom_user_agent()
+
+    def test_bolt_agent(self):
+        super()._test_default_user_agent()
+
+        hellos = self._server.get_requests("HELLO")
+        assert len(hellos) == 1
+        hello_extra = json.loads(hellos[0].split(maxsplit=1)[1])
+        bolt_agent = hello_extra["{}"]["bolt_agent"]["{}"]
+        self._assert_bolt_agent_product_conforms_format(bolt_agent["product"])
+
+        self._server.reset()
+        super()._test_custom_user_agent()
+
+        hellos = self._server.get_requests("HELLO")
+        assert len(hellos) == 1
+        hello_extra = json.loads(hellos[0].split(maxsplit=1)[1])
+        # asserts user agent is does not affect bolt agent
+        assert bolt_agent == hello_extra["{}"]["bolt_agent"]["{}"]
+
+    @staticmethod
+    def _assert_bolt_agent_product_conforms_format(bolt_agent_product):
+        assert re.match(r"^.+/.+$", bolt_agent_product)
