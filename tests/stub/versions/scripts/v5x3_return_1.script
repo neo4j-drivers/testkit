@@ -1,4 +1,4 @@
-!: BOLT 5.2
+!: BOLT 5.3
 
 C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
