@@ -1,7 +1,7 @@
 import json
 
 import nutkit.protocol as types
-from tests.stub.notifications_config.notifications_base import (  # noqa: E501
+from tests.stub.notifications_config.notifications_base import (
     NotificationsBase,
 )
 
