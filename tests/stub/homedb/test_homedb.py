@@ -7,7 +7,7 @@ from tests.shared import (
 from tests.stub.shared import StubServer
 
 
-class TestHomeDb(TestkitTestCase):
+class TestHomeDbUncached(TestkitTestCase):
 
     required_features = types.Feature.BOLT_4_4,
 
@@ -26,6 +26,13 @@ class TestHomeDb(TestkitTestCase):
         self._router.reset()
         super().tearDown()
 
+    def _get_driver(self):
+        args = (self._backend, self._uri, self._auth_token)
+        kwargs = {}
+        if self.driver_supports_features(types.Feature.HOME_DB_CACHE):
+            kwargs["max_home_database_delay_ms"] = 0
+        return Driver(*args, **kwargs)
+
     @driver_feature(types.Feature.IMPERSONATION)
     def test_should_resolve_db_per_session_session_run(self):
         def _test():
@@ -38,7 +45,7 @@ class TestHomeDb(TestkitTestCase):
                 path=self.script_path("reader_change_homedb.script")
             )
 
-            driver = Driver(self._backend, self._uri, self._auth_token)
+            driver = self._get_driver()
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             result = session1.run("RETURN 1")
@@ -78,7 +85,7 @@ class TestHomeDb(TestkitTestCase):
                 path=self.script_path("reader_tx_change_homedb.script")
             )
 
-            driver = Driver(self._backend, self._uri, self._auth_token)
+            driver = self._get_driver()
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             tx = session1.begin_transaction()
@@ -126,7 +133,7 @@ class TestHomeDb(TestkitTestCase):
                 path=self.script_path("reader_tx_change_homedb.script")
             )
 
-            driver = Driver(self._backend, self._uri, self._auth_token)
+            driver = self._get_driver()
 
             session1 = driver.session("r", impersonated_user="the-imposter")
             query = "RETURN 1"
@@ -179,7 +186,7 @@ class TestHomeDb(TestkitTestCase):
                 res = tx.run("RETURN 1")
                 return res.next()
 
-        driver = Driver(self._backend, self._uri, self._auth_token)
+        driver = self._get_driver()
 
         self._router.start(
             path=self.script_path("router_homedb.script"),

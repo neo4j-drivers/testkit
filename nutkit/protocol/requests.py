@@ -74,7 +74,8 @@ class NewDriver:
         liveness_check_timeout_ms=None, max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None,
         notifications_min_severity=None,
-        notifications_disabled_categories=None
+        notifications_disabled_categories=None,
+        max_home_database_delay_ms=None,
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -92,6 +93,8 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        if max_home_database_delay_ms is not None:
+            self.maxHomeDatabaseDelayMs = max_home_database_delay_ms
         if notifications_min_severity is not None:
             self.notificationsMinSeverity = notifications_min_severity
         if notifications_disabled_categories is not None:
@@ -297,6 +300,17 @@ class CheckDriverIsEncrypted:
     Perform a check if the driver is configured to enforce encryption.
 
     Backend should respond with a DriverIsEncrypted response.
+    """
+
+    def __init__(self, driverId):
+        self.driverId = driverId
+
+
+class ForceHomeDatabaseResolution:
+    """
+    Force home database resolution for the next session.
+
+    Backend should respond with a Driver response or an Error response.
     """
 
     def __init__(self, driverId):

@@ -137,7 +137,11 @@ class TestUserSwitchingV5x1(AuthorizationBase):
             self._reader,
             self.script_fn_with_features("reader_user_switch.script")
         )
-        with self.driver(routing=True) as driver:
+        driver_config = {"routing": True}
+        if self.driver_supports_features(types.Feature.HOME_DB_CACHE):
+            # force home db resolution to be able to test re-auth on router
+            driver_config["max_home_database_delay_ms"] = 0
+        with self.driver(**driver_config) as driver:
             with self.session(driver=driver) as session:
                 list(session.run("RETURN 1 AS n"))
             with self.session(driver=driver, auth=self._auth2) as session:
@@ -230,7 +234,11 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
             self._reader,
             self.script_fn_with_features("reader_user_switch.script")
         )
-        with self.driver(routing=True) as driver:
+        driver_config = {"routing": True}
+        if self.driver_supports_features(types.Feature.HOME_DB_CACHE):
+            # force home db resolution to be able to test re-auth on router
+            driver_config["max_home_database_delay_ms"] = 0
+        with self.driver(**driver_config) as driver:
             with self.session(driver=driver) as session:
                 list(session.run("RETURN 1 AS n"))
             with self.assertRaises(types.DriverError) as exc:
@@ -247,7 +255,11 @@ class TestUserSwitchingV5x0(TestUserSwitchingV5x1):
             self._reader,
             self.script_fn_with_features("reader_user_switch.script")
         )
-        with self.driver(routing=True, auth=self._auth2) as driver:
+        driver_config = {"routing": True, "auth": self._auth2}
+        if self.driver_supports_features(types.Feature.HOME_DB_CACHE):
+            # force home db resolution to be able to test re-auth on router
+            driver_config["max_home_database_delay_ms"] = 0
+        with self.driver(**driver_config) as driver:
             with self.assertRaises(types.DriverError) as exc:
                 with self.session(driver=driver, auth=self._auth1) as session:
                     list(session.run("RETURN 1 AS n"))

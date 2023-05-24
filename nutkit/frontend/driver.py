@@ -16,7 +16,8 @@ class Driver:
                  max_connection_pool_size=None,
                  connection_acquisition_timeout_ms=None,
                  notifications_min_severity=None,
-                 notifications_disabled_categories=None):
+                 notifications_disabled_categories=None,
+                 max_home_database_delay_ms=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -45,7 +46,8 @@ class Driver:
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
             notifications_min_severity=notifications_min_severity,
-            notifications_disabled_categories=notifications_disabled_categories
+            notifications_disabled_categories=notifications_disabled_categories,  # noqa: E501
+            max_home_database_delay_ms=max_home_database_delay_ms,
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -155,6 +157,12 @@ class Driver:
         if not isinstance(res, protocol.DriverIsEncrypted):
             raise Exception(f"Should be DriverIsEncrypted but was {res}")
         return res.encrypted
+
+    def force_home_database_resolution(self):
+        req = protocol.ForceHomeDatabaseResolution(self._driver.id)
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.Driver):
+            raise Exception(f"Should be Driver but was {res}")
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)

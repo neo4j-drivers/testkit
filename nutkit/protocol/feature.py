@@ -107,6 +107,11 @@ class Feature(Enum):
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
+    # The driver implements a home database resolution cache according to
+    # specification.
+    # This includes the ability to configure the cache TTL and a method for
+    # clearing the cache.
+    HOME_DB_CACHE = "Feature:HomeDbCache"
     # The driver supports TLS 1.1 connections.
     # If this flag is missing, TestKit assumes that attempting to establish
     # such a connection fails.

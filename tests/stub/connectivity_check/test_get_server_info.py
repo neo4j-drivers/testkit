@@ -173,7 +173,10 @@ class TestGetServerInfo(TestkitTestCase):
             self.assertEqual(self._router.count_requests("ROUTE"), 1)
             self._test_call(driver,
                             self._build_result_check_cb(self._server1.port))
-            self.assertEqual(self._router.count_requests("ROUTE"), 2)
+            if self.driver_supports_features(types.Feature.HOME_DB_CACHE):
+                self.assertEqual(self._router.count_requests("ROUTE"), 1)
+            else:
+                self.assertEqual(self._router.count_requests("ROUTE"), 2)
             resets2 = self._server1.count_requests("RESET")
             if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
                 self.assertEqual(resets1 + 1, resets2)
@@ -193,6 +196,8 @@ class TestGetServerInfo(TestkitTestCase):
             self._test_call(driver,
                             self._build_result_check_cb(self._server1.port))
             self._server1.done()
+            if self.driver_supports_features(types.Feature.HOME_DB_CACHE):
+                driver.force_home_database_resolution()
             # resolves home db again and received server2 as reader
             self._test_call(driver,
                             self._build_result_check_cb(self._server2.port))
