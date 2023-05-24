@@ -1,9 +1,9 @@
-from contextlib import contextmanager
-from datetime import datetime
 import inspect
 import json
 import os
 import socket
+from contextlib import contextmanager
+from datetime import datetime
 
 import nutkit.protocol as protocol
 

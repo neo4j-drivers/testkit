@@ -24,11 +24,7 @@ import driver
 import neo4j
 import runner
 import settings
-from tests.testenv import (
-    begin_test_suite,
-    end_test_suite,
-    in_teamcity,
-)
+from tests.testenv import in_teamcity
 
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]
@@ -122,11 +118,11 @@ def initialise_configurations(settings):
             # nightly build of official backwards-compatible version
             ("4.4",    "4.4",      True,        True,     "neo4j", 60),
             # latest version
-            ("5.7",    "dev",      False,       False,    "bolt",   0),
-            ("5.7",    "dev",      False,       False,    "neo4j",  0),
-            ("5.7",    "dev",      True,        False,    "bolt",  90),
-            ("5.7",    "dev",      True,        False,    "neo4j",  0),
-            ("5.7",    "dev",      True,        True,     "neo4j", 90),
+            ("5.dev",  "dev",      False,       False,    "bolt",   0),
+            ("5.dev",  "dev",      False,       False,    "neo4j",  0),
+            ("5.dev",  "dev",      True,        False,    "bolt",  90),
+            ("5.dev",  "dev",      True,        False,    "neo4j",  0),
+            ("5.dev",  "dev",      True,        True,     "neo4j", 90),
         )
     ]
 
@@ -336,9 +332,9 @@ def main(settings, configurations):
     print("Finished building driver and test backend")
 
     if test_flags["UNIT_TESTS"]:
-        begin_test_suite("Unit tests")
+        print(">>> Start test suite: driver's unit tests")
         run_fail_wrapper(driver_container.run_unit_tests)
-        end_test_suite("Unit tests")
+        print(">>> End test suite: driver's unit tests")
 
     print("Start test backend in driver container")
     driver_container.start_backend(backend_artifacts_path)

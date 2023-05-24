@@ -1,8 +1,8 @@
 import inspect
 import os
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
     get_driver_name,
@@ -74,9 +74,14 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
         elif driver in ["go", "javascript"]:
             pass  # code and msg check are enough
+        elif driver in ["dotnet"]:
+            expected_type = "ClientError"
         elif driver == "java":
             expected_type = \
                 "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
+        elif driver == "ruby":
+            expected_type = \
+                "Neo4j::Driver::Exceptions::TokenExpiredRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -110,6 +115,13 @@ class AuthorizationBase(TestkitTestCase):
                 "org.neo4j.driver.exceptions.UnsupportedFeatureException",
                 error.errorType
             )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::UnsupportedFeatureException",
+                error.errorType
+            )
+        elif driver in ["dotnet"]:
+            self.assertEqual("UnsupportedFeatureException", error.errorType)
         elif driver in ["go"]:
             self.assertEqual("feature not supported", error.errorType)
             self.assertIn("session auth", error.msg)

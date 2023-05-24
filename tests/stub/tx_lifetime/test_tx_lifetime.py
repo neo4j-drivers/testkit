@@ -1,7 +1,7 @@
 from contextlib import contextmanager
 
-from nutkit.frontend import Driver
 import nutkit.protocol as types
+from nutkit.frontend import Driver
 from tests.shared import (
     get_driver_name,
     TestkitTestCase,
@@ -46,6 +46,9 @@ class TestTxLifetime(TestkitTestCase):
         elif driver in ["java"]:
             self.assertEqual(exc.errorType,
                              "org.neo4j.driver.exceptions.ClientException")
+        elif driver in ["ruby"]:
+            self.assertEqual(exc.errorType,
+                             "Neo4j::Driver::Exceptions::ClientException")
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

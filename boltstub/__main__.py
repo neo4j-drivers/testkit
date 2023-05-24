@@ -18,16 +18,16 @@
 # limitations under the License.
 
 
-from argparse import ArgumentParser
-from logging import (
-    getLogger,
-    INFO,
-)
 import platform
 import signal
 import sys
 import threading
 import time
+from argparse import ArgumentParser
+from logging import (
+    getLogger,
+    INFO,
+)
 
 from . import BoltStubService
 from .parsing import (
