@@ -224,7 +224,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="3", script="v3_optional_hello.script"
+            version="3", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_1)
@@ -233,7 +233,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.1", script="v3_optional_hello.script"
+            version="4.1", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_2)
@@ -242,7 +242,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.2", script="v3_optional_hello.script"
+            version="4.2", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_3)
@@ -251,7 +251,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.3", script="v3_optional_hello.script"
+            version="4.3", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_4)
@@ -260,7 +260,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.4", script="v3_optional_hello.script"
+            version="4.4", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_0)
@@ -269,7 +269,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.0", script="v3_optional_hello.script"
+            version="5.0", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_1)
@@ -278,7 +278,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.1", script="v5x1_optional_hello.script"
+            version="5.1", script="v5x1_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_2)
@@ -287,7 +287,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.2", script="v5x1_optional_hello.script"
+            version="5.2", script="v5x1_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_3)
@@ -296,7 +296,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.3", script="v5x1_optional_hello.script"
+            version="5.3", script="v5x1_and_up_optional_hello.script"
         )
 
     def _test_should_reject_server_using_verify_connectivity(

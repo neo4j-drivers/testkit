@@ -1,7 +1,7 @@
 !: BOLT 5.3
 
 C: HELLO {"[routing]": null, "user_agent": "Hello, I'm a banana 🍌!", "bolt_agent": {"product": {"U": "*"}, "[platform]": {"U": "*"}, "[language]": {"U": "*"}, "[language_details]": {"U": "*"}}}
-S: SUCCESS {"server": "Neo4j/5.5.0", "connection_id": "bolt-1"}
+S: SUCCESS {"server": "Neo4j/5.9.0", "connection_id": "bolt-1"}
 C: LOGON {"{}": "*"}
 S: SUCCESS {}
 *: RESET
