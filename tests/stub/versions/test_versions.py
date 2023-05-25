@@ -145,15 +145,21 @@ class TestProtocolVersions(TestkitTestCase):
     def test_supports_bolt5x2(self):
         self._run("5x2")
 
+    @driver_feature(types.Feature.BOLT_5_3)
+    def test_supports_bolt5x3(self):
+        self._run("5x3")
+
     def test_server_version(self):
-        for version in ("5x2", "5x1", "5x0", "4x4", "4x3", "4x2", "4x1", "3"):
+        for version in ("5x3", "5x2", "5x1", "5x0", "4x4", "4x3", "4x2", "4x1",
+                        "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version=version):
                 self._run(version, check_version=True)
 
     def test_server_agent(self):
-        for version in ("5x2", "5x1", "5x0", "4x4", "4x3", "4x2", "4x1", "3"):
+        for version in ("5x3", "5x2", "5x1", "5x0", "4x4", "4x3", "4x2", "4x1",
+                        "3"):
             for agent, reject in (
                 ("Neo4j/4.3.0", False),
                 ("Neo4j/4.1.0", False),
@@ -185,7 +191,8 @@ class TestProtocolVersions(TestkitTestCase):
         # TODO: remove block when all drivers support the address field
         if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
-        for version in ("5x2", "5x1", "5x0", "4x4", "4x3", "4x2", "4x1", "3"):
+        for version in ("5x3", "5x2", "5x1", "5x0", "4x4", "4x3", "4x2", "4x1",
+                        "3"):
             if not self.driver_supports_bolt(version):
                 continue
             with self.subTest(version=version):
@@ -217,7 +224,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="3", script="v3_optional_hello.script"
+            version="3", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_1)
@@ -226,7 +233,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.1", script="v3_optional_hello.script"
+            version="4.1", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_2)
@@ -235,7 +242,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.2", script="v3_optional_hello.script"
+            version="4.2", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_3)
@@ -244,7 +251,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.3", script="v3_optional_hello.script"
+            version="4.3", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_4_4)
@@ -253,7 +260,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="4.4", script="v3_optional_hello.script"
+            version="4.4", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_0)
@@ -262,7 +269,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.0", script="v3_optional_hello.script"
+            version="5.0", script="v3_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_1)
@@ -271,7 +278,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.1", script="v5x1_optional_hello.script"
+            version="5.1", script="v5x1_and_up_optional_hello.script"
         )
 
     @driver_feature(types.Feature.BOLT_5_2)
@@ -280,7 +287,16 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["dotnet", "go", "javascript"]:
             self.skipTest("Skipped because it needs investigation")
         self._test_should_reject_server_using_verify_connectivity(
-            version="5.2", script="v5x1_optional_hello.script"
+            version="5.2", script="v5x1_and_up_optional_hello.script"
+        )
+
+    @driver_feature(types.Feature.BOLT_5_3)
+    def test_should_reject_server_using_verify_connectivity_bolt_5x3(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Skipped because it needs investigation")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="5.3", script="v5x1_and_up_optional_hello.script"
         )
 
     def _test_should_reject_server_using_verify_connectivity(
