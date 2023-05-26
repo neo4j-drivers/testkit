@@ -1,0 +1,34 @@
+!: BOLT 5.3
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+{+
+    {{
+        C: RUN "RETURN 1" {} {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": {"U": "*"}, "db": "homedb1"}
+        S: SUCCESS {"fields": ["1"]}
+        {{
+            C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+            S: RECORD [1]
+        ----
+            C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+        }}
+    ----
+        C: RUN "RETURN 2" {} {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": {"U": "*"}, "db": "homedb2"}
+        S: SUCCESS {"fields": ["2"]}
+        {{
+            C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+            S: RECORD [2]
+        ----
+            C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+        }}
+    }}
+    S: SUCCESS {"type": "r"}
+    *: RESET
+    {*
+        A: LOGOFF
+        A: LOGON {"{}": "*"}
+    *}
++}
+?: GOODBYE

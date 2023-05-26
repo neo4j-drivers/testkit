@@ -1,5 +1,6 @@
 import nutkit.protocol as types
 from nutkit.frontend import (
+    AuthTokenManager,
     Driver,
     FakeTime,
 )
@@ -212,10 +213,7 @@ class TestHomeDbUncached(TestkitTestCase):
 
 class TestHomeDbCached(TestkitTestCase):
 
-    required_features = (
-        types.Feature.BOLT_4_4,
-        types.Feature.HOME_DB_CACHE,
-    )
+    required_features = (types.Feature.HOME_DB_CACHE,)
 
     def setUp(self):
         super().setUp()
@@ -260,7 +258,7 @@ class TestHomeDbCached(TestkitTestCase):
             return execute_read_worker
         raise ValueError("Unknown method: %s" % method)
 
-    @driver_feature(types.Feature.IMPERSONATION)
+    @driver_feature(types.Feature.BOLT_4_4, types.Feature.IMPERSONATION)
     def test_should_cache_home_db(self):
         def _test(parallel_sessions, method, script):
             work = self._build_work(method)
@@ -295,7 +293,7 @@ class TestHomeDbCached(TestkitTestCase):
                 self._router.reset()
                 self._reader.reset()
 
-    @driver_feature(types.Feature.IMPERSONATION)
+    @driver_feature(types.Feature.BOLT_4_4, types.Feature.IMPERSONATION)
     def test_home_db_time_based_expiration(self):
         default_home_db_cache_ttl_ms = 5000
 
@@ -337,7 +335,7 @@ class TestHomeDbCached(TestkitTestCase):
                 self._router.reset()
                 self._reader.reset()
 
-    @driver_feature(types.Feature.IMPERSONATION)
+    @driver_feature(types.Feature.BOLT_4_4, types.Feature.IMPERSONATION)
     def test_home_db_manual_expiration(self):
         def _test(method, script_template, expiration_point):
             work = self._build_work(method)
@@ -387,3 +385,129 @@ class TestHomeDbCached(TestkitTestCase):
                     _test(method_, script_template_, expiration_point_)
                 self._router.reset()
                 self._reader.reset()
+
+    @driver_feature(types.Feature.BOLT_5_3,
+                    types.Feature.API_SESSION_AUTH_CONFIG)
+    def test_home_db_cache_key_auth(self):
+        auth1 = types.AuthorizationToken(
+            "basic", principal="neo4j", credentials="pass"
+        )
+        auth2 = types.AuthorizationToken(
+            "basic", principal="neo5j", credentials="pass++"
+        )
+        self._start_server(self._router, "router_db1_then_db2.script")
+        self._start_server(self._reader, "reader_db1_then_db2.script")
+        driver = Driver(self._backend, self._uri, self._auth_token)
+        session1 = driver.session("r", auth_token=auth1)
+        result = session1.run("RETURN 1")
+        list(result)
+        session1.close()
+        session2 = driver.session("r", auth_token=auth2)
+        result = session2.run("RETURN 2")
+        list(result)
+        session2.close()
+
+    @driver_feature(types.Feature.BOLT_5_3,
+                    types.Feature.API_SESSION_AUTH_CONFIG)
+    def test_home_db_cache_key_session_auth_equals_driver_auth(self):
+        self._start_server(self._router, "router_db1_then_db2.script")
+        self._start_server(self._reader, "reader_db1_then_db2.script")
+        driver = Driver(self._backend, self._uri, self._auth_token)
+        session1 = driver.session("r")
+        result = session1.run("RETURN 1")
+        list(result)
+        session1.close()
+        session2 = driver.session("r", auth_token=self._auth_token)
+        result = session2.run("RETURN 2")
+        list(result)
+        session2.close()
+
+    @driver_feature(types.Feature.BOLT_5_3,
+                    types.Feature.AUTH_MANAGED)
+    def test_home_db_cache_key_does_not_use_auth_manager(self):
+        auth1 = types.AuthorizationToken(
+            "basic", principal="neo4j", credentials="pass"
+        )
+        auth2 = types.AuthorizationToken(
+            "basic", principal="neo5j", credentials="pass++"
+        )
+        current_auth = auth1
+
+        def get_auth():
+            return current_auth
+
+        auth_manager = AuthTokenManager(
+            self._backend,
+            get_auth,
+            lambda *args, **kwargs: None,
+        )
+        self._start_server(self._router, "router_db1_then_db2.script")
+        self._start_server(self._reader, "reader_db1_then_db1.script")
+        driver = Driver(self._backend, self._uri, auth_manager)
+        session1 = driver.session("r")
+        result = session1.run("RETURN 1")
+        list(result)
+        session1.close()
+        current_auth = auth2
+        session2 = driver.session("r")
+        result = session2.run("RETURN 2")
+        list(result)
+        session2.close()
+
+    @driver_feature(types.Feature.BOLT_5_3,
+                    types.Feature.IMPERSONATION)
+    def test_home_db_cache_key_impersonation(self):
+        def test(imp_user1, imp_user2):
+            self._start_server(self._router, "router_db1_then_db2.script")
+            self._start_server(self._reader, "reader_db1_then_db2.script")
+            driver = Driver(self._backend, self._uri, self._auth_token)
+            session1 = driver.session("r", impersonated_user=imp_user1)
+            result = session1.run("RETURN 1")
+            list(result)
+            session1.close()
+            session2 = driver.session("r", impersonated_user=imp_user2)
+            result = session2.run("RETURN 2")
+            list(result)
+            session2.close()
+
+        for (imp_user1_, imp_user2_) in (
+            (None, "the-imposter"),
+            ("the-imposter", None),
+            ("the-imposter1", "the-imposter2"),
+        ):
+            with self.subTest(imp_user1=imp_user1_, imp_user2=imp_user2_):
+                test(imp_user1_, imp_user2_)
+            self._router.reset()
+            self._reader.reset()
+
+    @driver_feature(types.Feature.BOLT_5_3,
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG)
+    def test_home_db_cache_key_auth_and_impersonation(self):
+        def test(imp_user1, imp_user2):
+            auth = types.AuthorizationToken(
+                "basic", principal="neo4j", credentials="pass"
+            )
+            self._start_server(self._router, "router_db1_then_db2.script")
+            self._start_server(self._reader, "reader_db1_then_db2.script")
+            driver = Driver(self._backend, self._uri, self._auth_token)
+            session1 = driver.session("r", auth_token=auth,
+                                      impersonated_user=imp_user1)
+            result = session1.run("RETURN 1")
+            list(result)
+            session1.close()
+            session2 = driver.session("r", auth_token=auth,
+                                      impersonated_user=imp_user2)
+            result = session2.run("RETURN 2")
+            list(result)
+            session2.close()
+
+        for (imp_user1_, imp_user2_) in (
+            (None, "the-imposter"),
+            ("the-imposter", None),
+            ("the-imposter1", "the-imposter2"),
+        ):
+            with self.subTest(imp_user1=imp_user1_, imp_user2=imp_user2_):
+                test(imp_user1_, imp_user2_)
+            self._router.reset()
+            self._reader.reset()

@@ -1,0 +1,23 @@
+!: BOLT 5.3
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+C: ROUTE "*" [] {}
+S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+
+*: RESET
+{*
+    A: LOGOFF
+    A: LOGON {"{}": "*"}
+*}
+*: RESET
+
+{?
+    C: ROUTE "*" [] {}
+    S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb2", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+?}
+
+*: RESET
+?: GOODBYE
