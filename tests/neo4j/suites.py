@@ -47,6 +47,10 @@ suite_5x5 = suite_5x0
 #######################
 suite_5x7 = suite_5x5
 
+#######################
+# Suite for Neo4j 5.9 #
+#######################
+suite_5x9 = suite_5x7
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -65,7 +69,9 @@ if __name__ == "__main__":
             print(f"Invalid suite version: {version}. "
                   "Should be X.Y for X and Y integer.")
             sys.exit(-2)
-    if version >= (5, 7):
+    if version >= (5, 9):
+        suite = suite_5x9
+    elif version >= (5, 7):
         suite = suite_5x7
     elif version >= (5, 5):
         suite = suite_5x5
