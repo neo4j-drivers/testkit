@@ -114,6 +114,8 @@ class ServerInfo:
             version = (int(match.group(1)), float("inf"))
         else:
             version = tuple(int(i) for i in self.version.split(".")[:2])
+        if version >= (5, 9):
+            return "5.3"
         if version >= (5, 7):
             return "5.2"
         if version >= (5, 5):
