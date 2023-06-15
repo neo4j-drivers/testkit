@@ -77,7 +77,7 @@ if __name__ == "__main__":
     uri = f"{scheme}://{host}:{port}"
 
     user = os.environ.get(env_neo4j_user, "neo4j")
-    password = os.environ.get(env_neo4j_pass, "hu8ji9ko0")
+    password = os.environ.get(env_neo4j_pass, "password")
 
     with GraphDatabase.driver(uri, auth=(user, password)) as driver:
         server_info = driver.get_server_info()
