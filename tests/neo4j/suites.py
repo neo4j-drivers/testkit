@@ -80,8 +80,8 @@ if __name__ == "__main__":
     password = os.environ.get(env_neo4j_pass, "hu8ji9ko0")
 
     with GraphDatabase.driver(uri, auth=(user, password)) as driver:
-        temp = driver.get_server_info()
-        version = parse_version_info(temp.agent)
+        server_info = driver.get_server_info()
+        version = parse_version_info(server_info.agent)
 
     if version >= (5, 9):
         suite = suite_5x9
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     import os
     os.environ[env_neo4j_version] = f"{version[0]}.{version[1]}"
 
-    suite_name = f"Integration tests {version[0]}.{version[1]}"
+    suite_name = f"Integration tests {server_info.agent}"
     runner = unittest.TextTestRunner(
         resultclass=get_test_result_class(suite_name),
         verbosity=100, stream=sys.stdout,
