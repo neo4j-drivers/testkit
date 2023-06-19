@@ -2,7 +2,7 @@ import os
 import shutil
 
 import docker
-import neo4j
+import neo4j_container as neo4j
 
 BUILD_ARG_PREFIX = "TESTKIT_DRIVER_BUILD_ARG_"
 
