@@ -260,10 +260,6 @@ class TestTxRun(TestkitTestCase):
         self._test_failed_tx_run(rollback=False)
 
     def test_should_prevent_pull_after_transaction_termination_on_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "javascript", "dotnet", "python"]:
-            self.skipTest("requires investigation")
-
         def _test():
             self._create_direct_driver()
             script = "tx_successful_and_failing_on_run_streams.script"
@@ -310,10 +306,6 @@ class TestTxRun(TestkitTestCase):
             self._server1.reset()
 
     def test_should_prevent_discard_after_transaction_termination_on_run(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "javascript", "dotnet", "python"]:
-            self.skipTest("requires investigation")
-
         self._create_direct_driver()
         script = "tx_successful_and_failing_on_run_streams.script"
         self._server1.start(path=self.script_path(script))
@@ -343,10 +335,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_should_prevent_run_after_transaction_termination_on_pull(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "javascript", "dotnet", "python"]:
-            self.skipTest("requires investigation")
-
         def _test():
             self._create_direct_driver()
             script = "tx_error_on_pull.script"
@@ -387,10 +375,6 @@ class TestTxRun(TestkitTestCase):
             self._server1.reset()
 
     def test_should_prevent_pull_after_transaction_termination_on_pull(self):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["go", "javascript", "dotnet", "python"]:
-            self.skipTest("requires investigation")
-
         def _test():
             self._create_direct_driver()
             script = "tx_successful_and_failing_on_pull_streams.script"
