@@ -259,7 +259,7 @@ class TestTxRun(TestkitTestCase):
     def test_failed_tx_run_allows_skipping_rollback(self):
         self._test_failed_tx_run(rollback=False)
 
-    def test_should_prevent_pull_after_transaction_termination_on_run(self):
+    def test_should_prevent_pull_after_tx_termination_on_run(self):
         def _test():
             self._create_direct_driver()
             script = "tx_res0_success_res1_error_on_run.script"
@@ -268,7 +268,7 @@ class TestTxRun(TestkitTestCase):
             tx = self._session.begin_transaction()
             res = tx.run("RETURN 1 AS n")
 
-            # begin another stream that fails on RUN
+            # initiate another stream that fails on RUN
             with self.assertRaises(types.DriverError) as exc:
                 failed_res = tx.run("invalid")
                 if get_driver_name() in ["javascript"]:
@@ -277,8 +277,7 @@ class TestTxRun(TestkitTestCase):
                              "Neo.ClientError.Statement.SyntaxError")
             self._assert_is_client_exception(exc)
 
-            # while already buffered records may be accessible, there must be
-            # no further PULL and an exception must be raised
+            # there must be no further PULL and an exception must be raised
             with self.assertRaises(types.DriverError) as exc:
                 if iterate == "true":
                     for _i in range(0, 3):
@@ -288,10 +287,10 @@ class TestTxRun(TestkitTestCase):
                     if self.driver_supports_features(fetch_all):
                         res.list()
                     else:
-                        # if the fetch all is not supported, only explicit
-                        # iteration can be tested
+                        # only explicit iteration is tested if the fetch all is
+                        # not supported
                         list(res)
-            # the streaming result cursors surface the termination exception
+            # the streaming result surfaces the termination exception
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.Statement.SyntaxError")
             self._assert_is_client_exception(exc)
@@ -305,7 +304,7 @@ class TestTxRun(TestkitTestCase):
                 _test()
             self._server1.reset()
 
-    def test_should_prevent_discard_after_transaction_termination_on_run(self):
+    def test_should_prevent_discard_after_tx_termination_on_run(self):
         self._create_direct_driver()
         script = "tx_res0_success_res1_error_on_run.script"
         self._server1.start(path=self.script_path(script))
@@ -313,7 +312,7 @@ class TestTxRun(TestkitTestCase):
         tx = self._session.begin_transaction()
         res = tx.run("RETURN 1 AS n")
 
-        # begin another stream that fails on RUN
+        # initiate another stream that fails on RUN
         with self.assertRaises(types.DriverError) as exc:
             failed_res = tx.run("invalid")
             if get_driver_name() in ["javascript"]:
@@ -324,7 +323,7 @@ class TestTxRun(TestkitTestCase):
 
         with self.assertRaises(types.DriverError) as exc:
             res.consume()
-        # the streaming result cursors surface the termination exception
+        # the streaming result surfaces the termination exception
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
         self._assert_is_client_exception(exc)
@@ -334,7 +333,7 @@ class TestTxRun(TestkitTestCase):
         self._session = None
         self._server1.done()
 
-    def test_should_prevent_run_after_transaction_termination_on_pull(self):
+    def test_should_prevent_run_after_tx_termination_on_pull(self):
         def _test():
             self._create_direct_driver()
             script = "tx_error_on_pull.script"
@@ -343,7 +342,7 @@ class TestTxRun(TestkitTestCase):
             tx = self._session.begin_transaction()
             res = tx.run("failing on pull")
 
-            # streaming fails on PULL
+            # res fails on PULL
             with self.assertRaises(types.DriverError) as exc:
                 if iterate == "true":
                     for _i in range(0, 3):
@@ -353,8 +352,8 @@ class TestTxRun(TestkitTestCase):
                     if self.driver_supports_features(fetch_all):
                         res.list()
                     else:
-                        # if the fetch all is not supported, only explicit
-                        # iteration can be tested
+                        # only explicit iteration is tested if the fetch all is
+                        # not supported
                         list(res)
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.MadeUp.Code")
@@ -362,7 +361,8 @@ class TestTxRun(TestkitTestCase):
 
             with self.assertRaises(types.DriverError) as exc:
                 tx.run("invalid")
-            # initiating actions of transaction throw terminated
+            # new actions on the transaction result in a tx terminated
+            # exception, a subclass of the client exception
             self._assert_is_tx_terminated_exception(exc)
 
             tx.close()
@@ -374,7 +374,7 @@ class TestTxRun(TestkitTestCase):
                 _test()
             self._server1.reset()
 
-    def test_should_prevent_pull_after_transaction_termination_on_pull(self):
+    def test_should_prevent_pull_after_tx_termination_on_pull(self):
         def _test():
             self._create_direct_driver()
             script = "tx_res0_success_res1_error_on_pull.script"
@@ -383,7 +383,7 @@ class TestTxRun(TestkitTestCase):
             tx = self._session.begin_transaction()
             res = tx.run("RETURN 1 AS n")
 
-            # fail on PULL
+            # initiate another stream that fails on PULL
             with self.assertRaises(types.DriverError) as exc:
                 failed_res = tx.run("failing on pull")
                 failed_res.next()
@@ -391,7 +391,7 @@ class TestTxRun(TestkitTestCase):
                              "Neo.ClientError.MadeUp.Code")
             self._assert_is_client_exception(exc)
 
-            # fail on iteration
+            # there must be no further PULL and an exception must be raised
             with self.assertRaises(types.DriverError):
                 if iterate == "true":
                     for _i in range(0, 3):
@@ -404,7 +404,7 @@ class TestTxRun(TestkitTestCase):
                         # if the fetch all is not supported, only explicit
                         # iteration can be tested
                         list(res)
-            # the streaming result cursors surface the termination exception
+            # the streaming result surfaces the termination exception
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.MadeUp.Code")
             self._assert_is_client_exception(exc)
