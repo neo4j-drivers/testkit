@@ -68,7 +68,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
     def _assert_is_client_exception(self, e):
         if get_driver_name() in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                "org.neo4j.driver.exceptions.TransactionTerminatedException",
                 e.errorType
             )
         elif get_driver_name() in ["ruby"]:
