@@ -262,7 +262,7 @@ class TestTxRun(TestkitTestCase):
     def test_should_prevent_pull_after_transaction_termination_on_run(self):
         def _test():
             self._create_direct_driver()
-            script = "tx_successful_and_failing_on_run_streams.script"
+            script = "tx_res0_success_res1_error_on_run.script"
             self._server1.start(path=self.script_path(script))
             self._session = self._driver.session("r", fetch_size=2)
             tx = self._session.begin_transaction()
@@ -307,7 +307,7 @@ class TestTxRun(TestkitTestCase):
 
     def test_should_prevent_discard_after_transaction_termination_on_run(self):
         self._create_direct_driver()
-        script = "tx_successful_and_failing_on_run_streams.script"
+        script = "tx_res0_success_res1_error_on_run.script"
         self._server1.start(path=self.script_path(script))
         self._session = self._driver.session("r", fetch_size=2)
         tx = self._session.begin_transaction()
@@ -377,7 +377,7 @@ class TestTxRun(TestkitTestCase):
     def test_should_prevent_pull_after_transaction_termination_on_pull(self):
         def _test():
             self._create_direct_driver()
-            script = "tx_successful_and_failing_on_pull_streams.script"
+            script = "tx_res0_success_res1_error_on_pull.script"
             self._server1.start(path=self.script_path(script))
             self._session = self._driver.session("r", fetch_size=2)
             tx = self._session.begin_transaction()
