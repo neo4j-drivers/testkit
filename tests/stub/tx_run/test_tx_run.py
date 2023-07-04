@@ -285,7 +285,7 @@ class TestTxRun(TestkitTestCase):
                     if self.driver_supports_features(fetch_all):
                         res.list()
                     else:
-                        # only explicit iteration is tested if the fetch all is
+                        # only explicit iteration is tested if fetch all is
                         # not supported
                         list(res)
             # the streaming result surfaces the termination exception
@@ -348,7 +348,7 @@ class TestTxRun(TestkitTestCase):
                     if self.driver_supports_features(fetch_all):
                         res.list()
                     else:
-                        # only explicit iteration is tested if the fetch all is
+                        # only explicit iteration is tested if fetch all is
                         # not supported
                         list(res)
             self.assertEqual(exc.exception.code,
@@ -397,8 +397,8 @@ class TestTxRun(TestkitTestCase):
                     if self.driver_supports_features(fetch_all):
                         res.list()
                     else:
-                        # if the fetch all is not supported, only explicit
-                        # iteration can be tested
+                        # only explicit iteration is tested if fetch all is
+                        # not supported
                         list(res)
             # the streaming result surfaces the termination exception
             self.assertEqual(exc.exception.code,
