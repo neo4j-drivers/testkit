@@ -15,7 +15,7 @@ S: SUCCESS {"fields": ["n"], "qid": 1}
     }}
     S: RECORD [1]
        RECORD [2]
-       SUCCESS {"has_more": true, "type": "r"}
+       SUCCESS {"has_more": true}
 ?}
 C: RUN "invalid" {"{}": "*"} {"{}": "*"}
 S: FAILURE {"code": "Neo.ClientError.Statement.SyntaxError", "message": "Invalid input"}
