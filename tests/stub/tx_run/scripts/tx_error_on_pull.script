@@ -15,5 +15,5 @@ S: SUCCESS {"fields": ["n"], "qid": 1}
 S: RECORD [1]
    RECORD [2]
    FAILURE {"code": "Neo.ClientError.MadeUp.Code", "message": "message"}
-*: RESET
++: RESET
 ?: GOODBYE

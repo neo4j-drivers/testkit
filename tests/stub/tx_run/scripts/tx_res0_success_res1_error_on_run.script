@@ -23,5 +23,5 @@ S: FAILURE {"code": "Neo.ClientError.Statement.SyntaxError", "message": "Invalid
     C: PULL {"n": {"Z": "*"}, "[qid]": -1}
     S: IGNORED
 ?}
-*: RESET
++: RESET
 ?: GOODBYE
