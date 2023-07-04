@@ -271,8 +271,6 @@ class TestTxRun(TestkitTestCase):
             # initiate another stream that fails on RUN
             with self.assertRaises(types.DriverError) as exc:
                 failed_res = tx.run("invalid")
-                if get_driver_name() in ["javascript"]:
-                    failed_res.next()
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.Statement.SyntaxError")
             self._assert_is_client_exception(exc)
@@ -315,8 +313,6 @@ class TestTxRun(TestkitTestCase):
         # initiate another stream that fails on RUN
         with self.assertRaises(types.DriverError) as exc:
             failed_res = tx.run("invalid")
-            if get_driver_name() in ["javascript"]:
-                failed_res.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
         self._assert_is_client_exception(exc)
