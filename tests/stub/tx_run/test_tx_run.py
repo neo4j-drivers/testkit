@@ -297,6 +297,7 @@ class TestTxRun(TestkitTestCase):
             self._session.close()
             self._session = None
             self._server1.done()
+            
         for iterate in ["true", "false"]:
             with self.subTest(iterate=iterate):
                 _test()
@@ -365,6 +366,7 @@ class TestTxRun(TestkitTestCase):
             self._session.close()
             self._session = None
             self._server1.done()
+
         for iterate in ["true", "false"]:
             with self.subTest(iterate=iterate):
                 _test()
@@ -409,6 +411,7 @@ class TestTxRun(TestkitTestCase):
             self._session.close()
             self._session = None
             self._server1.done()
+
         for iterate in ["true", "false"]:
             with self.subTest(iterate=iterate):
                 _test()
