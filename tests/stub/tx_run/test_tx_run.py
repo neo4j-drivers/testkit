@@ -297,7 +297,7 @@ class TestTxRun(TestkitTestCase):
             self._session.close()
             self._session = None
             self._server1.done()
-            
+
         for iterate in ["true", "false"]:
             with self.subTest(iterate=iterate):
                 _test()
@@ -418,15 +418,21 @@ class TestTxRun(TestkitTestCase):
             self._server1.reset()
 
     def _assert_is_client_exception(self, e):
-        if get_driver_name() in ["java"]:
+        driver = get_driver_name()
+        if driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
                 e.exception.errorType
             )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
 
     def _assert_is_tx_terminated_exception(self, e):
-        if get_driver_name() in ["java"]:
+        driver = get_driver_name()
+        if driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TransactionTerminatedException",
                 e.exception.errorType
             )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
