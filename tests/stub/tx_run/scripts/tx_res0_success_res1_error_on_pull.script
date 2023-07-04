@@ -1,0 +1,29 @@
+!: BOLT 5.3
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"], "qid": 1}
+{?
+    {{
+        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    ----
+        C: PULL {"n": {"Z": "*"}, "qid": 1}
+    }}
+    S: RECORD [1]
+       RECORD [2]
+       SUCCESS {"has_more": true}
+?}
+C: RUN "failing on pull" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"], "qid": 2}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+----
+    C: PULL {"n": {"Z": "*"}, "qid": 2}
+}}
+S: FAILURE {"code": "Neo.ClientError.MadeUp.Code", "message": "message"}
++: RESET
+?: GOODBYE

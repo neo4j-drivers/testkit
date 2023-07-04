@@ -65,17 +65,20 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertIn("ConnectionReadTimeoutError",
                           e.errorType)
 
-    def _assert_is_client_exception(self, e):
-        if get_driver_name() in ["java"]:
+    def _assert_is_tx_terminated_exception(self, e):
+        driver = get_driver_name()
+        if driver in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                "org.neo4j.driver.exceptions.TransactionTerminatedException",
                 e.errorType
             )
-        elif get_driver_name() in ["ruby"]:
+        elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ClientException",
                 e.errorType
             )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
 
     def _on_failed_retry_assertions(self):
         pass
@@ -150,7 +153,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         with self.assertRaises(StubServerUncleanExitError):
             self._server.done()
         self._assert_is_timeout_exception(first_run_error.exception)
-        self._assert_is_client_exception(second_run_error.exception)
+        self._assert_is_tx_terminated_exception(second_run_error.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._server.count_responses("<HANGUP>"), 1)
         self.assertEqual(self._server.count_requests('RUN "timeout"'), 1)
