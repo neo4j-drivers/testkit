@@ -330,6 +330,29 @@ class TestTxRun(TestkitTestCase):
         self._session = None
         self._server1.done()
 
+    def test_should_prevent_run_after_tx_termination_on_run(self):
+        self._create_direct_driver()
+        script = "tx_error_on_run.script"
+        self._server1.start(path=self.script_path(script))
+        self._session = self._driver.session("r")
+        tx = self._session.begin_transaction()
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("invalid")
+        self.assertEqual(exc.exception.code,
+                         "Neo.ClientError.MadeUp.Code")
+        self._assert_is_client_exception(exc)
+
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("invalid")
+        # new actions on the transaction result in a tx terminated
+        # exception, a subclass of the client exception
+        self._assert_is_tx_terminated_exception(exc)
+
+        tx.close()
+        self._session.close()
+        self._session = None
+        self._server1.done()
+
     def test_should_prevent_run_after_tx_termination_on_pull(self):
         def _test():
             self._create_direct_driver()
