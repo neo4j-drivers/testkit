@@ -447,6 +447,11 @@ class TestTxRun(TestkitTestCase):
                 "org.neo4j.driver.exceptions.ClientException",
                 e.exception.errorType
             )
+        elif driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ClientError'>",
+                e.exception.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -455,6 +460,11 @@ class TestTxRun(TestkitTestCase):
         if driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TransactionTerminatedException",
+                e.exception.errorType
+            )
+        elif driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.TransactionError'>",
                 e.exception.errorType
             )
         else:
