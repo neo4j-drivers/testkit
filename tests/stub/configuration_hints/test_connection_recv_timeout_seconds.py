@@ -77,6 +77,11 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 "Neo4j::Driver::Exceptions::ClientException",
                 e.errorType
             )
+        elif driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.TransactionError'>",
+                e.errorType
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
