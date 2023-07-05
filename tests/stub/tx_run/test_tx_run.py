@@ -363,7 +363,7 @@ class TestTxRun(TestkitTestCase):
             res = tx.run("failing on pull")
 
             # res fails on PULL
-            with self.assertRaises(types.DriverError) as exc:
+            with self.assertRaises(types.DriverError) as exc1:
                 if iterate == "true":
                     for _i in range(0, 3):
                         res.next()
@@ -375,15 +375,24 @@ class TestTxRun(TestkitTestCase):
                         # only explicit iteration is tested if fetch all is
                         # not supported
                         list(res)
-            self.assertEqual(exc.exception.code,
+            self.assertEqual(exc1.exception.code,
                              "Neo.ClientError.MadeUp.Code")
-            self._assert_is_client_exception(exc)
+            self._assert_is_client_exception(exc1)
 
-            with self.assertRaises(types.DriverError) as exc:
+            with self.assertRaises(types.DriverError) as exc2:
                 tx.run("invalid")
-            # new actions on the transaction result in a tx terminated
-            # exception, a subclass of the client exception
-            self._assert_is_tx_terminated_exception(exc)
+            driver = get_driver_name()
+            if driver in ["go"]:
+                # Go will return the same error the transaction failed with
+                # over and over again when reusing a failed transaction
+                self.assertEqual(exc1.exception.errorType,
+                                 exc2.exception.errorType)
+                self.assertEqual(exc1.exception.msg,
+                                 exc2.exception.msg)
+            else:
+                # new actions on the transaction result in a tx terminated
+                # exception, a subclass of the client exception
+                self._assert_is_tx_terminated_exception(exc2)
 
             tx.close()
             self._session.close()
@@ -452,6 +461,9 @@ class TestTxRun(TestkitTestCase):
                 "<class 'neo4j.exceptions.ClientError'>",
                 e.exception.errorType
             )
+        elif driver in ["go"]:
+            self.assertEqual("Neo4jError", e.exception.errorType)
+            self.assertIn("Neo.ClientError.", e.exception.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -466,6 +478,10 @@ class TestTxRun(TestkitTestCase):
             self.assertEqual(
                 "<class 'neo4j.exceptions.TransactionError'>",
                 e.exception.errorType
+            )
+        elif driver in ["go"]:
+            self.assertTrue(
+                e.exception.errorType.startswith("cannot use this transaction")
             )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)

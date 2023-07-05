@@ -82,6 +82,10 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 "<class 'neo4j.exceptions.TransactionError'>",
                 e.errorType
             )
+        elif driver in ["go"]:
+            self.assertTrue(
+                e.errorType.startswith("cannot use this transaction")
+            )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
