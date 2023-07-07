@@ -464,6 +464,8 @@ class TestTxRun(TestkitTestCase):
         elif driver in ["go"]:
             self.assertEqual("Neo4jError", e.exception.errorType)
             self.assertIn("Neo.ClientError.", e.exception.msg)
+        elif driver in ["dotnet"]:
+            self.assertEqual("ClientError", e.exception.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -482,6 +484,13 @@ class TestTxRun(TestkitTestCase):
         elif driver in ["go"]:
             self.assertTrue(
                 e.exception.errorType.startswith("cannot use this transaction")
+            )
+        elif driver in ["dotnet"]:
+            self.assertEqual("ClientError", e.exception.errorType)
+            self.assertTrue(
+                e.exception.msg.startswith(
+                    "Cannot run query in this transaction"
+                )
             )
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
