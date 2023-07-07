@@ -5,7 +5,7 @@ A: LOGON {"{}": "*"}
 *: RESET
 C: BEGIN {"{}": "*"}
 S: SUCCESS {}
-C: RUN "failing on pull" {"{}": "*"} {"{}": "*"}
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"], "qid": 1}
 {{
     C: PULL {"n": {"Z": "*"}, "[qid]": -1}
