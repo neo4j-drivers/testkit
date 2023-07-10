@@ -258,3 +258,239 @@ class TestTxRun(TestkitTestCase):
 
     def test_failed_tx_run_allows_skipping_rollback(self):
         self._test_failed_tx_run(rollback=False)
+
+    def test_should_prevent_pull_after_tx_termination_on_run(self):
+        def _test():
+            self._create_direct_driver()
+            script = "tx_res0_success_res1_error_on_run.script"
+            self._server1.start(path=self.script_path(script))
+            self._session = self._driver.session("r", fetch_size=2)
+            tx = self._session.begin_transaction()
+            res = tx.run("RETURN 1 AS n")
+
+            # initiate another stream that fails on RUN
+            with self.assertRaises(types.DriverError) as exc:
+                tx.run("invalid")
+            self.assertEqual(exc.exception.code,
+                             "Neo.ClientError.Statement.SyntaxError")
+            self._assert_is_client_exception(exc)
+
+            # there must be no further PULL and an exception must be raised
+            with self.assertRaises(types.DriverError) as exc:
+                if iterate == "true":
+                    for _i in range(0, 3):
+                        res.next()
+                else:
+                    fetch_all = types.Feature.OPT_RESULT_LIST_FETCH_ALL
+                    if self.driver_supports_features(fetch_all):
+                        res.list()
+                    else:
+                        # only explicit iteration is tested if fetch all is
+                        # not supported
+                        list(res)
+            # the streaming result surfaces the termination exception
+            self.assertEqual(exc.exception.code,
+                             "Neo.ClientError.Statement.SyntaxError")
+            self._assert_is_client_exception(exc)
+
+            tx.close()
+            self._session.close()
+            self._session = None
+            self._server1.done()
+
+        for iterate in ["true", "false"]:
+            with self.subTest(iterate=iterate):
+                _test()
+            self._server1.reset()
+
+    def test_should_prevent_discard_after_tx_termination_on_run(self):
+        self._create_direct_driver()
+        script = "tx_res0_success_res1_error_on_run.script"
+        self._server1.start(path=self.script_path(script))
+        self._session = self._driver.session("r", fetch_size=2)
+        tx = self._session.begin_transaction()
+        res = tx.run("RETURN 1 AS n")
+
+        # initiate another stream that fails on RUN
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("invalid")
+        self.assertEqual(exc.exception.code,
+                         "Neo.ClientError.Statement.SyntaxError")
+        self._assert_is_client_exception(exc)
+
+        with self.assertRaises(types.DriverError) as exc:
+            res.consume()
+        # the streaming result surfaces the termination exception
+        self.assertEqual(exc.exception.code,
+                         "Neo.ClientError.Statement.SyntaxError")
+        self._assert_is_client_exception(exc)
+
+        tx.close()
+        self._session.close()
+        self._session = None
+        self._server1.done()
+
+    def test_should_prevent_run_after_tx_termination_on_run(self):
+        self._create_direct_driver()
+        script = "tx_error_on_run.script"
+        self._server1.start(path=self.script_path(script))
+        self._session = self._driver.session("r")
+        tx = self._session.begin_transaction()
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("invalid")
+        self.assertEqual(exc.exception.code,
+                         "Neo.ClientError.MadeUp.Code")
+        self._assert_is_client_exception(exc)
+
+        with self.assertRaises(types.DriverError) as exc:
+            tx.run("invalid")
+        # new actions on the transaction result in a tx terminated
+        # exception, a subclass of the client exception
+        self._assert_is_tx_terminated_exception(exc)
+
+        tx.close()
+        self._session.close()
+        self._session = None
+        self._server1.done()
+
+    def test_should_prevent_run_after_tx_termination_on_pull(self):
+        def _test():
+            self._create_direct_driver()
+            script = "tx_error_on_pull.script"
+            self._server1.start(path=self.script_path(script))
+            self._session = self._driver.session("r", fetch_size=2)
+            tx = self._session.begin_transaction()
+            res = tx.run("failing on pull")
+
+            # res fails on PULL
+            with self.assertRaises(types.DriverError) as exc1:
+                if iterate == "true":
+                    for _i in range(0, 3):
+                        res.next()
+                else:
+                    fetch_all = types.Feature.OPT_RESULT_LIST_FETCH_ALL
+                    if self.driver_supports_features(fetch_all):
+                        res.list()
+                    else:
+                        # only explicit iteration is tested if fetch all is
+                        # not supported
+                        list(res)
+            self.assertEqual(exc1.exception.code,
+                             "Neo.ClientError.MadeUp.Code")
+            self._assert_is_client_exception(exc1)
+
+            with self.assertRaises(types.DriverError) as exc2:
+                tx.run("invalid")
+            driver = get_driver_name()
+            if driver in ["go"]:
+                # Go will return the same error the transaction failed with
+                # over and over again when reusing a failed transaction
+                self.assertEqual(exc1.exception.errorType,
+                                 exc2.exception.errorType)
+                self.assertEqual(exc1.exception.msg,
+                                 exc2.exception.msg)
+            else:
+                # new actions on the transaction result in a tx terminated
+                # exception, a subclass of the client exception
+                self._assert_is_tx_terminated_exception(exc2)
+
+            tx.close()
+            self._session.close()
+            self._session = None
+            self._server1.done()
+
+        for iterate in ["true", "false"]:
+            with self.subTest(iterate=iterate):
+                _test()
+            self._server1.reset()
+
+    def test_should_prevent_pull_after_tx_termination_on_pull(self):
+        def _test():
+            self._create_direct_driver()
+            script = "tx_res0_success_res1_error_on_pull.script"
+            self._server1.start(path=self.script_path(script))
+            self._session = self._driver.session("r", fetch_size=2)
+            tx = self._session.begin_transaction()
+            res = tx.run("RETURN 1 AS n")
+
+            # initiate another stream that fails on PULL
+            with self.assertRaises(types.DriverError) as exc:
+                failed_res = tx.run("failing on pull")
+                failed_res.next()
+            self.assertEqual(exc.exception.code,
+                             "Neo.ClientError.MadeUp.Code")
+            self._assert_is_client_exception(exc)
+
+            # there must be no further PULL and an exception must be raised
+            with self.assertRaises(types.DriverError):
+                if iterate == "true":
+                    for _i in range(0, 3):
+                        res.next()
+                else:
+                    fetch_all = types.Feature.OPT_RESULT_LIST_FETCH_ALL
+                    if self.driver_supports_features(fetch_all):
+                        res.list()
+                    else:
+                        # only explicit iteration is tested if fetch all is
+                        # not supported
+                        list(res)
+            # the streaming result surfaces the termination exception
+            self.assertEqual(exc.exception.code,
+                             "Neo.ClientError.MadeUp.Code")
+            self._assert_is_client_exception(exc)
+
+            tx.close()
+            self._session.close()
+            self._session = None
+            self._server1.done()
+
+        for iterate in ["true", "false"]:
+            with self.subTest(iterate=iterate):
+                _test()
+            self._server1.reset()
+
+    def _assert_is_client_exception(self, e):
+        driver = get_driver_name()
+        if driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ClientException",
+                e.exception.errorType
+            )
+        elif driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.ClientError'>",
+                e.exception.errorType
+            )
+        elif driver in ["go"]:
+            self.assertEqual("Neo4jError", e.exception.errorType)
+            self.assertIn("Neo.ClientError.", e.exception.msg)
+        elif driver in ["dotnet"]:
+            self.assertEqual("ClientError", e.exception.errorType)
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+
+    def _assert_is_tx_terminated_exception(self, e):
+        driver = get_driver_name()
+        if driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.TransactionTerminatedException",
+                e.exception.errorType
+            )
+        elif driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.TransactionError'>",
+                e.exception.errorType
+            )
+        elif driver in ["go"]:
+            self.assertTrue(
+                e.exception.errorType.startswith("cannot use this transaction")
+            )
+        elif driver in ["dotnet"]:
+            self.assertEqual("ClientError", e.exception.errorType)
+            self.assertTrue(
+                e.exception.msg.startswith(
+                    "Cannot run query in this transaction"
+                )
+            )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)

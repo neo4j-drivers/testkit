@@ -1,11 +1,19 @@
 """Defines suites of test to run in different setups."""
-
 import os
 import re
 import sys
 import unittest
 
-from tests.neo4j.shared import env_neo4j_version
+from neo4j import GraphDatabase
+
+from tests.neo4j.shared import (
+    env_neo4j_bolt_port,
+    env_neo4j_host,
+    env_neo4j_pass,
+    env_neo4j_scheme,
+    env_neo4j_user,
+    env_neo4j_version,
+)
 from tests.testenv import get_test_result_class
 
 #######################
@@ -47,25 +55,37 @@ suite_5x5 = suite_5x0
 #######################
 suite_5x7 = suite_5x5
 
+#######################
+# Suite for Neo4j 5.9 #
+#######################
+suite_5x9 = suite_5x7
+
+
+def parse_version_info(agent):
+    """Parse version string into tuple of integers."""
+    match = re.match(r".+/(\d+)\.(\d+).*", agent)
+    if match:
+        return tuple(int(x) for x in match.groups())
+    else:
+        raise ValueError(f"Invalid agent string: {agent}")
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Missing suite name parameter")
-        sys.exit(-10)
-    version = sys.argv[1]
-    if len(sys.argv) > 2:
-        name = sys.argv[2]
-    match = re.match(r"(\d+)\.dev", version)
-    if match:
-        version = (int(match.group(1)), float("inf"))
-    else:
-        try:
-            version = tuple(int(i) for i in version.split("."))
-        except ValueError:
-            print(f"Invalid suite version: {version}. "
-                  "Should be X.Y for X and Y integer.")
-            sys.exit(-2)
-    if version >= (5, 7):
+    scheme = os.environ.get(env_neo4j_scheme, "bolt")
+    host = os.environ.get(env_neo4j_host, "localhost")
+    port = os.environ.get(env_neo4j_bolt_port, 7687)
+    uri = f"{scheme}://{host}:{port}"
+
+    user = os.environ.get(env_neo4j_user, "neo4j")
+    password = os.environ.get(env_neo4j_pass, "password")
+
+    with GraphDatabase.driver(uri, auth=(user, password)) as driver:
+        server_info = driver.get_server_info()
+        version = parse_version_info(server_info.agent)
+
+    if version >= (5, 9):
+        suite = suite_5x9
+    elif version >= (5, 7):
         suite = suite_5x7
     elif version >= (5, 5):
         suite = suite_5x5
@@ -82,9 +102,9 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     import os
-    os.environ[env_neo4j_version] = os.environ.get(env_neo4j_version, version)
+    os.environ[env_neo4j_version] = f"{version[0]}.{version[1]}"
 
-    suite_name = f"Integration tests {name}"
+    suite_name = f"Integration tests {server_info.agent}"
     runner = unittest.TextTestRunner(
         resultclass=get_test_result_class(suite_name),
         verbosity=100, stream=sys.stdout,

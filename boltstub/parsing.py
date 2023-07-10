@@ -54,7 +54,8 @@ from .util import EvalContext
 
 
 def load_parser():
-    with open(path.join(path.dirname(__file__), "grammar.lark"), "r") as fd:
+    grammar_path = path.join(path.dirname(__file__), "grammar.lark")
+    with open(grammar_path, "r", encoding="utf-8") as fd:
         return lark.Lark(
             fd, propagate_positions=True  # , ambiguity="explicit"
         )
@@ -1557,7 +1558,7 @@ def parse(script: str, substitutions: Optional[dict] = None) -> Script:
 
 
 def parse_file(filename):
-    with open(filename) as fd:
+    with open(filename, encoding="utf-8") as fd:
         try:
             script = parse(fd.read())
         except Exception:

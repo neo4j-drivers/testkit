@@ -44,38 +44,63 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         self._server.start(path=self.script_path(script))
 
     def _assert_is_timeout_exception(self, e):
-        if get_driver_name() in ["python"]:
+        driver = get_driver_name()
+        if driver in ["python"]:
             self.assertEqual("<class 'neo4j.exceptions.ServiceUnavailable'>",
                              e.errorType)
-        elif get_driver_name() in ["java"]:
+        elif driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ConnectionReadTimeoutException",
                 e.errorType
             )
-        elif get_driver_name() in ["go"]:
+        elif driver in ["go"]:
             # remove second assertion once the context API PR is merged
             self.assertTrue("context deadline exceeded" in e.msg
                             or "i/o timeout" in e.msg)
-        elif get_driver_name() in ["ruby"]:
+        elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ConnectionReadTimeoutException",
                 e.errorType
             )
-        elif get_driver_name() in ["dotnet"]:
-            self.assertIn("ConnectionReadTimeoutError",
-                          e.errorType)
+        elif driver in ["dotnet"]:
+            self.assertIn("ConnectionReadTimeoutError", e.errorType)
+        elif driver in ["javascript"]:
+            self.assertEqual("ServiceUnavailable", e.code)
+            self.assertRegex(
+                e.msg.lower(),
+                r"server didn't respond in \d+ ?ms",
+            )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
 
-    def _assert_is_client_exception(self, e):
-        if get_driver_name() in ["java"]:
+    def _assert_is_tx_terminated_exception(self, e):
+        driver = get_driver_name()
+        if driver in ["java"]:
             self.assertEqual(
-                "org.neo4j.driver.exceptions.ClientException",
+                "org.neo4j.driver.exceptions.TransactionTerminatedException",
                 e.errorType
             )
-        elif get_driver_name() in ["ruby"]:
+        elif driver in ["ruby"]:
             self.assertEqual(
                 "Neo4j::Driver::Exceptions::ClientException",
                 e.errorType
             )
+        elif driver in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.TransactionError'>",
+                e.errorType
+            )
+        elif driver in ["go"]:
+            self.assertTrue(
+                e.errorType.startswith("cannot use this transaction")
+            )
+        elif driver in ["dotnet"]:
+            self.assertEqual("ClientError", e.errorType)
+            self.assertTrue(
+                e.msg.startswith("Cannot run query in this transaction")
+            )
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
 
     def _on_failed_retry_assertions(self):
         pass
@@ -150,7 +175,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
         with self.assertRaises(StubServerUncleanExitError):
             self._server.done()
         self._assert_is_timeout_exception(first_run_error.exception)
-        self._assert_is_client_exception(second_run_error.exception)
+        self._assert_is_tx_terminated_exception(second_run_error.exception)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
         self.assertEqual(self._server.count_responses("<HANGUP>"), 1)
         self.assertEqual(self._server.count_requests('RUN "timeout"'), 1)
