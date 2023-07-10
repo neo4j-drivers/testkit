@@ -170,7 +170,6 @@ def team_city_test_result(name):
         def format_error_list(self, test, flavour, errors):
             s = ""
             for err in errors:
-                # print("format_error_list", test, flavour, err)
                 s += self.separator1 + "\n"
                 s += "%s: %s\n" % (flavour, self.getDescription(test))
                 s += self.separator2 + "\n"
