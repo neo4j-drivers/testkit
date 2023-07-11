@@ -94,12 +94,13 @@ def team_city_test_result(name):
                 if key not in test_reports:
                     test_reports[key] = Report(sub_test, parent_test=test)
                 test_reports[key].failures.append(failure)
-            for sub_test, unexpected_successes in new_unexpected_successes:
+            breakpoint()
+            for sub_test in new_unexpected_successes:
                 key = str(sub_test)
                 if key not in test_reports:
                     test_reports[key] = Report(sub_test, parent_test=test)
                 test_reports[key].unexpected_successes.append(
-                    unexpected_successes
+                    True
                 )
             for sub_test, reason in new_skipped:
                 key = str(sub_test)
@@ -141,10 +142,8 @@ def team_city_test_result(name):
                     )
                 if report.unexpected_successes:
                     details += (
-                        self.format_error_list(test,
-                                               "UNEXPECTED SUCCESS",
-                                               report.unexpected_successes)
-                        + "\n"
+                        "UNEXPECTED SUCCESS: was marked as expected to fail "
+                        "but succeeded\n"
                     )
                 if report.parent_test is not None:
                     details += (
