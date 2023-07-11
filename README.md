@@ -37,7 +37,7 @@ Environment variables:
     as integration tests against nightly builds pulled from the CI. To download
     those builds (only when trying to run the respective integration tests),
     you also need to set:
-  * `TEST_AWS_ECR_URITEAMC`  
+  * `TEST_AWS_ECR_URI`  
     The URL to the docker container registry where nightly builds are stored.
 
 ```console
