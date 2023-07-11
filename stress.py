@@ -13,7 +13,7 @@ import urllib.parse
 
 import docker
 import driver
-import neo4j_container as neo4j
+import neo4j
 import settings as settings_module
 
 
