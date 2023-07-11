@@ -94,7 +94,6 @@ def team_city_test_result(name):
                 if key not in test_reports:
                     test_reports[key] = Report(sub_test, parent_test=test)
                 test_reports[key].failures.append(failure)
-            breakpoint()
             for sub_test in new_unexpected_successes:
                 key = str(sub_test)
                 if key not in test_reports:
