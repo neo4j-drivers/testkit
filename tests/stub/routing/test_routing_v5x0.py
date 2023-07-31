@@ -1222,6 +1222,7 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual(["Bob"], sequence)
         self.assertEqual(["BookmarkB"], first_bookmark)
         self.assertEqual(["BookmarkC"], second_bookmark)
+        self.assertEqual(self._writeServer1.count_requests("RUN"), 2)
 
     def _should_retry_read_tx_until_success_on_error(
         self, interrupting_reader_script
