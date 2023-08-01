@@ -179,6 +179,7 @@ class RoutingV5x0(RoutingBase):
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertEqual([1], sequence2)
+        self.assertEqual(self._writeServer1.count_requests("RUN"), 2)
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
         # TODO remove this block once all languages work
