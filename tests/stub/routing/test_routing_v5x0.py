@@ -728,9 +728,15 @@ class RoutingV5x0(RoutingBase):
             with self.assertRaises(types.DriverError) as exc:
                 tx.run("RETURN 1 as n")
 
-        if get_driver_name() in ["java"]:
+        driver_name = get_driver_name()
+        if driver_name in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.SessionExpiredException",
+                exc.exception.errorType
+            )
+        elif driver_name in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.SessionExpired'>",
                 exc.exception.errorType
             )
         session.close()
