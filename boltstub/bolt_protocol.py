@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+from threading import Lock
+
 from .errors import (
     BoltMissingVersionError,
     BoltUnknownMessageError,
@@ -34,6 +36,17 @@ jolt_package = {
     1: jolt_v1,
     2: jolt_v2,
 }
+
+auto_bolt_id = 1
+auto_bolt_id_lock = Lock()
+
+
+def next_auto_bolt_id():
+    global auto_bolt_id
+    with auto_bolt_id_lock:
+        current_id = auto_bolt_id
+        auto_bolt_id += 1
+        return f"bolt-{current_id}"
 
 
 def get_bolt_protocol(version):
@@ -282,7 +295,10 @@ class Bolt3Protocol(Bolt2Protocol):
         if request.tag == b"\x01":
             return TranslatedStructure(
                 "SUCCESS", b"\x70",
-                {"connection_id": "bolt-0", "server": cls.server_agent},
+                {
+                    "connection_id": next_auto_bolt_id(),
+                    "server": cls.server_agent
+                },
                 packstream_version=cls.packstream_version
             )
         else:
@@ -336,7 +352,10 @@ class Bolt4x0Protocol(Bolt3Protocol):
         if request.tag == b"\x01":
             return TranslatedStructure(
                 "SUCCESS", b"\x70",
-                {"connection_id": "bolt-0", "server": cls.server_agent},
+                {
+                    "connection_id": next_auto_bolt_id(),
+                    "server": cls.server_agent
+                },
                 packstream_version=cls.packstream_version
             )
         else:
@@ -383,7 +402,8 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
             return TranslatedStructure(
                 "SUCCESS", b"\x70",
                 {
-                    "connection_id": "bolt-0", "server": cls.server_agent,
+                    "connection_id": next_auto_bolt_id(),
+                    "server": cls.server_agent,
                     "routing": None,
                 },
                 packstream_version=cls.packstream_version
