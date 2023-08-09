@@ -723,6 +723,11 @@ class RoutingV5x0(RoutingBase):
                 "org.neo4j.driver.exceptions.SessionExpiredException",
                 exc.exception.errorType
             )
+        elif driver_name in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.SessionExpired'>",
+                exc.exception.errorType
+            )
         elif driver_name in ["go"]:
             self.assertEqual("ConnectivityError", exc.exception.errorType)
         session.close()
