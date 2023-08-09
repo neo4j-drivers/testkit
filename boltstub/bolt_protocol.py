@@ -37,16 +37,15 @@ jolt_package = {
     2: jolt_v2,
 }
 
-auto_bolt_id = 1
+auto_bolt_id = 0
 auto_bolt_id_lock = Lock()
 
 
 def next_auto_bolt_id():
     global auto_bolt_id
     with auto_bolt_id_lock:
-        current_id = auto_bolt_id
         auto_bolt_id += 1
-        return f"bolt-{current_id}"
+        return f"bolt-{auto_bolt_id}"
 
 
 def get_bolt_protocol(version):
