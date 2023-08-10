@@ -1,0 +1,20 @@
+!: BOLT 5.3
+
+C: HELLO {"{}": "*"}
+S: SUCCESS {"server": "Neo4j/5.11.0", "connection_id": "bolt-1", "hints": {"connection.recv_timeout_seconds": 2}}
+A: LOGON {"{}": "*"}
+
+*: RESET
+
+C: BEGIN {"{}": "*"}
+   RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+   PULL {"[n]": {"Z": "*"}}
+   COMMIT
+S: SUCCESS
+   SUCCESS {"fields": ["n"]}
+   RECORD [1]
+   SUCCESS {"has_more": false}
+   SUCCESS {}
+
+*: RESET
+?: GOODBYE

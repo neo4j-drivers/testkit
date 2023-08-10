@@ -128,6 +128,13 @@ class Feature(Enum):
     # a started job. All other connections should be re-established before
     # running the next job with them.
     OPT_AUTHORIZATION_EXPIRED_TREATMENT = "AuthorizationExpiredTreatment"
+    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
+    # pipelines a LOGIN right afterwards and consumes two messages after.
+    # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
+    # LOGON but pipelines it with the next message and consumes all three
+    # responses at once.
+    # Each saves a full round-trip.
+    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver caches connections (e.g., in a pool) and doesn't start a new
     # one (with hand-shake, HELLO, etc.) for each query.
     OPT_CONNECTION_REUSE = "Optimization:ConnectionReuse"
@@ -136,6 +143,10 @@ class Feature(Enum):
     # transaction function is not started until a working transaction has been
     # established.
     OPT_EAGER_TX_BEGIN = "Optimization:EagerTransactionBegin"
+    # For the executeQuery API, the driver doesn't wait for a SUCCESS after
+    # sending BEGIN but pipelines the RUN and PULL right afterwards and
+    # consumes three messages after that. This saves 2 full round-trips.
+    OPT_EXECUTE_QUERY_PIPELINING = "Optimization:ExecuteQueryPipelining"
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
@@ -149,13 +160,6 @@ class Feature(Enum):
     # * doesn't issue the cycle for newly established connections
     OPT_MINIMAL_VERIFY_AUTHENTICATION = \
         "Optimization:MinimalVerifyAuthentication"
-    # (Bolt 5.1+) The driver doesn't wait for a SUCCESS after HELLO but
-    # pipelines a LOGIN right afterwards and consumes two messages after.
-    # Likewise, doesn't wait for a SUCCESS after LOGOFF and the following
-    # LOGON but pipelines it with the next message and consumes all three
-    # responses at once.
-    # Each saves a full round-trip.
-    OPT_AUTH_PIPELINING = "Optimization:AuthPipelining"
     # The driver doesn't wait for a SUCCESS after calling RUN but pipelines a
     # PULL right afterwards and consumes two messages after that. This saves a
     # full round-trip.
