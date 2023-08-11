@@ -1,4 +1,6 @@
+import json
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 import nutkit.protocol as types
 from nutkit.frontend import (
@@ -10,13 +12,19 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
+@dataclass(frozen=True)
+class HandleSecurityExceptionArgs:
+    auth: types.AuthorizationToken
+    error_code: str
+
+
 class TrackingAuthTokenManager:
     def __init__(self, backend):
         self._backend = backend
         self._get_auth_count = 0
-        self._on_auth_expired_args = []
+        self._handle_security_exception_args = []
         self._manager = AuthTokenManager(
-            backend, self.get_auth, self.on_auth_expired
+            backend, self.get_auth, self.handle_security_exception
         )
 
     def get_auth(self):
@@ -30,20 +38,27 @@ class TrackingAuthTokenManager:
             credentials="pass"
         )
 
-    def on_auth_expired(self, auth):
-        self._on_auth_expired_args.append(auth)
+    def handle_security_exception(
+        self, auth: types.AuthorizationToken, code: str
+    ) -> bool:
+        args = HandleSecurityExceptionArgs(auth, code)
+        self._handle_security_exception_args.append(args)
+        return self._handles_security_exception(code)
+
+    def _handles_security_exception(self, code: str) -> bool:
+        return False
 
     @property
     def get_auth_count(self):
         return self._get_auth_count
 
     @property
-    def on_auth_expired_args(self):
-        return self._on_auth_expired_args
+    def handle_security_exception_args(self):
+        return self._handle_security_exception_args
 
     @property
-    def on_auth_expired_count(self):
-        return len(self._on_auth_expired_args)
+    def handle_security_exception_count(self):
+        return len(self._handle_security_exception_args)
 
     @property
     def manager(self):
@@ -127,7 +142,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
             if routing_:
                 self._router.done()
             self.assertEqual(auth_manager.get_auth_count, 2 if routing_ else 1)
-            self.assertEqual(auth_manager.on_auth_expired_count, 0)
+            self.assertEqual(auth_manager.handle_security_exception_count, 0)
             self.post_script_assertions(self._reader)
 
         for routing in (False, True):
@@ -142,7 +157,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
         def _test(routing_):
             get_auth_count = 0
             current_auth = ("neo4j", "pass")
-            on_auth_expired_count = 0
+            handle_security_exception_count = 0
 
             def get_auth():
                 nonlocal get_auth_count
@@ -154,12 +169,13 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                     credentials=password
                 )
 
-            def on_auth_expired(auth_token):
-                nonlocal on_auth_expired_count
-                on_auth_expired_count += 1
+            def handle_security_exception(auth_token, code):
+                nonlocal handle_security_exception_count
+                handle_security_exception_count += 1
+                return False
 
-            auth_manager = AuthTokenManager(self._backend,
-                                            get_auth, on_auth_expired)
+            auth_manager = AuthTokenManager(self._backend, get_auth,
+                                            handle_security_exception)
 
             self.start_server(
                 self._reader,
@@ -196,7 +212,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
             if routing_:
                 expected_get_auth_count *= 2
             self.assertEqual(get_auth_count, expected_get_auth_count)
-            self.assertEqual(on_auth_expired_count, 0)
+            self.assertEqual(handle_security_exception_count, 0)
             self.post_script_assertions(self._reader)
             logon_message = "HELLO" if self.backwards_compatible else "LOGON"
             if routing_:
@@ -213,8 +229,30 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                     self._reader.reset()
                     self._router.reset()
 
-    def _test_notify(self, error, error_assertion, script, session_cb):
-        def _test(routing_, session_auth_):
+    def _get_error_assertion(self, error, handled):
+        def retryable(f, can_retry):
+            def inner(*args, **kwargs):
+                kwargs["retryable"] = can_retry
+                f(*args, **kwargs)
+            return inner
+
+        if error == self._AUTH_EXPIRED:
+            return retryable(self.assert_is_authorization_error, handled)
+        elif error == self._TOKEN_EXPIRED:
+            return retryable(self.assert_is_token_error, handled)
+        elif error == self._UNAUTHORIZED:
+            return retryable(self.assert_is_unauthorized_error, handled)
+        elif error == self._SECURITY_EXC:
+            return retryable(self.assert_is_security_error, handled)
+        elif error == self._TRANSIENT_EXC:
+            return self.assert_is_transient_error
+        elif error == self._RANDOM_EXC:
+            return self.assert_is_random_error
+        else:
+            raise ValueError(f"Unknown error: {error}")
+
+    def _test_notify(self, script, session_cb):
+        def _test(routing_, session_auth_, should_notify_, handled_):
             if session_auth_:
                 session_auth_ = types.AuthorizationToken(
                     scheme="basic",
@@ -223,7 +261,12 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                 )
             else:
                 session_auth_ = None
-            manager = TrackingAuthTokenManager(self._backend)
+
+            class AuthManager(TrackingAuthTokenManager):
+                def _handles_security_exception(self, code: str) -> bool:
+                    return handled_
+
+            manager = AuthManager(self._backend)
             if routing_:
                 self.start_server(self._router, "router_single_reader.script")
             vars_ = self.get_vars()
@@ -232,6 +275,9 @@ class TestAuthTokenManager5x1(AuthorizationBase):
             with self.driver(manager.manager, routing=routing_) as driver:
                 with self.session(driver, auth_token=session_auth_) as session:
                     exc = session_cb(session)
+                    error_assertion = self._get_error_assertion(
+                        error, handled_
+                    )
                     error_assertion(exc.exception)
             self._reader.done()
             if routing_:
@@ -243,12 +289,15 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                     self.assertEqual(manager.get_auth_count, 2)
                 else:
                     self.assertEqual(manager.get_auth_count, 1)
-            if error == self._TOKEN_EXPIRED and not session_auth_:
-                self.assertEqual(manager.on_auth_expired_count, 1)
-                self.assertEqual(manager.on_auth_expired_args,
-                                 [manager.raw_get_auth()])
+            if should_notify_:
+                self.assertEqual(manager.handle_security_exception_count, 1)
+                self.assertEqual(
+                    manager.handle_security_exception_args,
+                    [HandleSecurityExceptionArgs(manager.raw_get_auth(),
+                                                 error_code)]
+                )
             else:
-                self.assertEqual(manager.on_auth_expired_count, 0)
+                self.assertEqual(manager.handle_security_exception_count, 0)
 
             self.post_script_assertions(self._reader)
 
@@ -258,37 +307,49 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
         for session_auth in session_auths:
             for routing in (False, True):
-                with self.subTest(routing=routing, session_auth=session_auth):
-                    try:
-                        _test(routing, session_auth)
-                    finally:
-                        self._reader.reset()
-                        self._router.reset()
+                for error in (
+                    self._AUTH_EXPIRED,
+                    self._TOKEN_EXPIRED,
+                    self._UNAUTHORIZED,
+                    self._SECURITY_EXC,
+                    self._TRANSIENT_EXC,
+                    self._RANDOM_EXC,
+                ):
+                    error_code = self._get_error_code(error)
+                    should_notify = (
+                        error_code.startswith("Neo.ClientError.Security.")
+                        and not session_auth
+                    )
+                    handles = [False]
+                    if should_notify:
+                        handles.append(True)
+                    for handled in handles:
+                        with self.subTest(
+                            routing=routing, session_auth=session_auth,
+                            error=error_code, handled=handled
+                        ):
+                            try:
+                                _test(routing, session_auth, should_notify,
+                                      handled)
+                            finally:
+                                self._reader.reset()
+                                self._router.reset()
 
-    def _notify_on_failed_pull_using_session_run(self, error, error_assertion):
+    @staticmethod
+    def _get_error_code(error):
+        print(error)
+        return json.loads(error)["code"]
+
+    def test_error_on_pull_using_session_run(self):
         def session_cb(session):
             result = session.run("RETURN 1 AS n")
             with self.assertRaises(types.DriverError) as exc:
                 result.next()
             return exc
 
-        self._test_notify(
-            error, error_assertion,
-            "reader_yielding_error_on_pull.script",
-            session_cb
-        )
+        self._test_notify("reader_yielding_error_on_pull.script", session_cb)
 
-    def test_not_notify_on_auth_expired_pull_using_session_run(self):
-        self._notify_on_failed_pull_using_session_run(
-            self._AUTH_EXPIRED, self.assert_is_authorization_error
-        )
-
-    def test_notify_on_token_expired_pull_using_session_run(self):
-        self._notify_on_failed_pull_using_session_run(
-            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
-        )
-
-    def _notify_on_failed_begin_using_tx_run(self, error, error_assertion):
+    def test_error_on_begin_using_tx_run(self):
         def session_cb(session):
             if not self.driver_supports_features(
                 types.Feature.OPT_EAGER_TX_BEGIN
@@ -302,26 +363,10 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                     session.begin_transaction()
             return exc
 
-        self._test_notify(
-            error, error_assertion,
-            "reader_tx_yielding_error_on_begin.script",
-            session_cb
-        )
+        self._test_notify("reader_tx_yielding_error_on_begin.script",
+                          session_cb)
 
-    def test_not_notify_on_auth_expired_begin_using_tx_run(self):
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Fails on sending RESET after auth-error and "
-                          "surfaces SessionExpired instead.")
-        self._notify_on_failed_begin_using_tx_run(
-            self._AUTH_EXPIRED, self.assert_is_authorization_error
-        )
-
-    def test_notify_on_token_expired_begin_using_tx_run(self):
-        self._notify_on_failed_begin_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
-        )
-
-    def _notify_on_failed_run_using_tx_run(self, error, error_assertion):
+    def test_error_on_run_using_tx_run(self):
         def session_cb(session):
             tx = session.begin_transaction()
             with self.assertRaises(types.DriverError) as exc:
@@ -332,23 +377,9 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                     result.consume()
             return exc
 
-        self._test_notify(
-            error, error_assertion,
-            "reader_tx_yielding_error_on_run.script",
-            session_cb
-        )
+        self._test_notify("reader_tx_yielding_error_on_run.script", session_cb)
 
-    def test_not_notify_on_auth_expired_run_using_tx_run(self):
-        self._notify_on_failed_run_using_tx_run(
-            self._AUTH_EXPIRED, self.assert_is_authorization_error
-        )
-
-    def test_notify_on_token_expired_run_using_tx_run(self):
-        self._notify_on_failed_run_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
-        )
-
-    def _notify_on_failed_pull_using_tx_run(self, error, error_assertion):
+    def test_error_on_pull_using_tx_run(self):
         def session_cb(session):
             tx = session.begin_transaction()
             with self.assertRaises(types.DriverError) as exc:
@@ -356,23 +387,10 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                 result.next()
             return exc
 
-        self._test_notify(
-            error, error_assertion,
-            "reader_tx_yielding_error_on_pull.script",
-            session_cb
-        )
+        self._test_notify("reader_tx_yielding_error_on_pull.script",
+                          session_cb)
 
-    def test_not_notify_on_auth_expired_pull_using_tx_run(self):
-        self._notify_on_failed_pull_using_tx_run(
-            self._AUTH_EXPIRED, self.assert_is_authorization_error
-        )
-
-    def test_notify_on_token_expired_pull_using_tx_run(self):
-        self._notify_on_failed_pull_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
-        )
-
-    def _notify_on_failed_commit_using_tx_run(self, error, error_assertion):
+    def test_error_on_commit_using_tx_run(self):
         def session_cb(session):
             tx = session.begin_transaction()
             tx.run("RETURN 1 AS n")
@@ -381,22 +399,11 @@ class TestAuthTokenManager5x1(AuthorizationBase):
             return exc
 
         self._test_notify(
-            error, error_assertion,
             "reader_tx_yielding_error_on_commit_with_pull_or_discard.script",
             session_cb
         )
 
-    def test_not_notify_on_auth_expired_commit_using_tx_run(self):
-        self._notify_on_failed_commit_using_tx_run(
-            self._AUTH_EXPIRED, self.assert_is_authorization_error
-        )
-
-    def test_notify_on_token_expired_commit_using_tx_run(self):
-        self._notify_on_failed_commit_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
-        )
-
-    def _notify_on_failed_rollback_using_tx_run(self, error, error_assertion):
+    def test_error_on_rollback_using_tx_run(self):
         def session_cb(session):
             tx = session.begin_transaction()
             tx.run("RETURN 1 AS n")
@@ -405,19 +412,8 @@ class TestAuthTokenManager5x1(AuthorizationBase):
             return exc
 
         self._test_notify(
-            error, error_assertion,
             "reader_tx_yielding_error_on_rollback_with_pull_or_discard.script",
             session_cb
-        )
-
-    def test_not_notify_on_auth_expired_rollback_using_tx_run(self):
-        self._notify_on_failed_rollback_using_tx_run(
-            self._AUTH_EXPIRED, self.assert_is_authorization_error
-        )
-
-    def test_notify_on_token_expired_rollback_using_tx_run(self):
-        self._notify_on_failed_rollback_using_tx_run(
-            self._TOKEN_EXPIRED, self.assert_is_retryable_token_error
         )
 
 
@@ -436,38 +432,20 @@ class TestAuthTokenManager5x0(TestAuthTokenManager5x1):
     def test_dynamic_auth_manager(self):
         super().test_dynamic_auth_manager()
 
-    def test_not_notify_on_auth_expired_pull_using_session_run(self):
-        super().test_not_notify_on_auth_expired_pull_using_session_run()
+    def test_error_on_pull_using_session_run(self):
+        super().test_error_on_pull_using_session_run()
 
-    def test_notify_on_token_expired_pull_using_session_run(self):
-        super().test_notify_on_token_expired_pull_using_session_run()
+    def test_error_on_begin_using_tx_run(self):
+        super().test_error_on_begin_using_tx_run()
 
-    def test_not_notify_on_auth_expired_begin_using_tx_run(self):
-        super().test_not_notify_on_auth_expired_begin_using_tx_run()
+    def test_error_on_run_using_tx_run(self):
+        super().test_error_on_run_using_tx_run()
 
-    def test_notify_on_token_expired_begin_using_tx_run(self):
-        super().test_notify_on_token_expired_begin_using_tx_run()
+    def test_error_on_pull_using_tx_run(self):
+        super().test_error_on_pull_using_tx_run()
 
-    def test_not_notify_on_auth_expired_run_using_tx_run(self):
-        super().test_not_notify_on_auth_expired_run_using_tx_run()
+    def test_error_on_commit_using_tx_run(self):
+        super().test_error_on_commit_using_tx_run()
 
-    def test_notify_on_token_expired_run_using_tx_run(self):
-        super().test_notify_on_token_expired_run_using_tx_run()
-
-    def test_not_notify_on_auth_expired_pull_using_tx_run(self):
-        super().test_not_notify_on_auth_expired_pull_using_tx_run()
-
-    def test_notify_on_token_expired_pull_using_tx_run(self):
-        super().test_notify_on_token_expired_pull_using_tx_run()
-
-    def test_not_notify_on_auth_expired_commit_using_tx_run(self):
-        super().test_not_notify_on_auth_expired_commit_using_tx_run()
-
-    def test_notify_on_token_expired_commit_using_tx_run(self):
-        super().test_notify_on_token_expired_commit_using_tx_run()
-
-    def test_not_notify_on_auth_expired_rollback_using_tx_run(self):
-        super().test_not_notify_on_auth_expired_rollback_using_tx_run()
-
-    def test_notify_on_token_expired_rollback_using_tx_run(self):
-        super().test_notify_on_token_expired_rollback_using_tx_run()
+    def test_error_on_rollback_using_tx_run(self):
+        super().test_error_on_rollback_using_tx_run()

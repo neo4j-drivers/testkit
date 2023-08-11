@@ -1,11 +1,9 @@
 !: BOLT #VERSION#
 !: ALLOW CONCURRENT
 
-C: HELLO {"user_agent": "*", "[routing]": "*"}
+A: HELLO {"user_agent": "*", "[routing]": "*"}
 {{
-    C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass"}
-    S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
-    S: SUCCESS {}
+    A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 
     *: RESET
 
@@ -24,23 +22,13 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
         *: RESET
 
         # now the second connection receives the token expired error => this connection needs to be re-authenticated
-        C: LOGOFF
-        C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
+        A: LOGOFF
+        A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 
-        {{
-            C: RESET
-            S: SUCCESS {}
-            S: SUCCESS {}
-            S: SUCCESS {}
+        *: RESET
 
-            C: BEGIN {"{}": "*"}
-        ----
-            C: BEGIN {"{}": "*"}
-            S: SUCCESS {}
-            S: SUCCESS {}
-        }}
+        C: BEGIN {"{}": "*"}
         S: SUCCESS {}
-
         C: RUN "RETURN 1.2 AS n" "*" "*"
         S: SUCCESS {"fields": ["n"]}
         C: PULL "*"
@@ -60,7 +48,7 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
         *: RESET
 
         C: RUN "RETURN 2.2 AS n" "*" "*"
-        S: FAILURE {"code": "Neo.ClientError.Security.TokenExpired", "message": "Token expired."}
+        S: FAILURE #ERROR#
         S: <EXIT>
     ----
         C: RUN "RETURN 3.1 AS n" "*" "*"
@@ -74,23 +62,13 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
         *: RESET
 
         # now the second connection receives the token expired error => this connection needs to be re-authenticated
-        C: LOGOFF
-        C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
+        A: LOGOFF
+        A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 
-        {{
-            C: RESET
-            S: SUCCESS {}
-            S: SUCCESS {}
-            S: SUCCESS {}
+        *: RESET
 
-            C: BEGIN {"{}": "*"}
-        ----
-            C: BEGIN {"{}": "*"}
-            S: SUCCESS {}
-            S: SUCCESS {}
-        }}
+        C: BEGIN {"{}": "*"}
         S: SUCCESS {}
-
         C: RUN "RETURN 3.2 AS n" "*" "*"
         S: SUCCESS {"fields": ["n"]}
         C: PULL "*"
@@ -100,9 +78,7 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
         S: SUCCESS {}
     }}
 ----
-    C: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++"}
-    S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/#VERSION#.0", "routing": null}
-    S: SUCCESS {}
+    A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
 
     *: RESET
 

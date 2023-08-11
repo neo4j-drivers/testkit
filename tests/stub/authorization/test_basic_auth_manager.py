@@ -2,8 +2,8 @@ from contextlib import contextmanager
 
 import nutkit.protocol as types
 from nutkit.frontend import (
+    BasicAuthTokenManager,
     Driver,
-    ExpirationBasedAuthTokenManager,
     FakeTime,
 )
 from tests.shared import driver_feature
@@ -11,7 +11,7 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
-class TestExpirationBasedAuthManager5x1(AuthorizationBase):
+class TestBearerAuthManager5x1(AuthorizationBase):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.AUTH_MANAGED)
@@ -72,15 +72,13 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            return types.AuthTokenAndExpiration(
-                types.AuthorizationToken(
-                    scheme="basic",
-                    principal="neo4j",
-                    credentials="pass"
-                )
+            return types.AuthorizationToken(
+                scheme="basic",
+                principal="neo4j",
+                credentials="pass"
             )
 
-        auth_manager = ExpirationBasedAuthTokenManager(self._backend, provider)
+        auth_manager = BasicAuthTokenManager(self._backend, provider)
 
         self.start_server(
             self._reader,
@@ -101,15 +99,13 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
         def provider():
             nonlocal count
             count += 1
-            return types.AuthTokenAndExpiration(
-                types.AuthorizationToken(
-                    scheme="basic",
-                    principal="neo4j",
-                    credentials="pass"
-                )
+            return types.AuthorizationToken(
+                scheme="basic",
+                principal="neo4j",
+                credentials="pass"
             )
 
-        auth_manager = ExpirationBasedAuthTokenManager(self._backend, provider)
+        auth_manager = BasicAuthTokenManager(self._backend, provider)
 
         self.start_server(
             self._reader,
@@ -132,54 +128,6 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
         self.assertEqual(count, 1)
         self.post_script_assertions(self._reader)
 
-    @driver_feature(types.Feature.BACKEND_MOCK_TIME)
-    def test_expiring_token_deadline(self):
-        count = 0
-
-        def provider():
-            nonlocal count
-            count += 1
-            credentials = "pass++" if count > 1 else "pass"
-            principal = "neo5j" if count > 1 else "neo4j"
-
-            return types.AuthTokenAndExpiration(
-                types.AuthorizationToken(
-                    scheme="basic",
-                    principal=principal,
-                    credentials=credentials
-                ),
-                10_000
-            )
-
-        auth_manager = ExpirationBasedAuthTokenManager(self._backend, provider)
-
-        self.start_server(self._reader,
-                          self.script_fn_with_features("reader_reauth.script"))
-        with FakeTime(self._backend) as time:
-            with self.driver(auth_manager) as driver:
-                with self.session(driver) as session:
-                    list(session.run("RETURN 1 AS n"))
-
-                time.tick(9_000)
-
-                with self.session(driver) as session:
-                    list(session.run("RETURN 2 AS n"))
-
-                self.assertEqual(1, count)
-
-                time.tick(1_001)
-
-                with self.session(driver) as session:
-                    list(session.run("RETURN 3 AS n"))
-
-                with self.session(driver) as session:
-                    list(session.run("RETURN 4 AS n"))
-
-                self.assertEqual(2, count)
-
-        self._reader.done()
-        self.post_script_assertions(self._reader)
-
     def test_renewing_on_expiration_error(self):
         def _test(error_, routing_):
             count = 0
@@ -190,31 +138,50 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                 credentials = "pass++" if count > 1 else "pass"
                 principal = "neo5j" if count > 1 else "neo4j"
 
-                return types.AuthTokenAndExpiration(
-                    types.AuthorizationToken(
-                        scheme="basic",
-                        principal=principal,
-                        credentials=credentials
-                    ),
-                    10_000
+                return types.AuthorizationToken(
+                    scheme="basic",
+                    principal=principal,
+                    credentials=credentials
                 )
 
-            auth_manager = ExpirationBasedAuthTokenManager(self._backend,
-                                                           provider)
+            auth_manager = BasicAuthTokenManager(self._backend, provider)
 
-            expected_call_count = 2 if error_ == "token_expired" else 1
-
-            self.start_server(
-                self._reader,
-                self.script_fn_with_features(f"reader_reauth_{error_}.script")
-            )
+            if error_ in ("authorization_expired",):
+                reader_script = self.script_fn_with_features(
+                    f"reader_reauth_{error_}.script"
+                )
+                writer_script = self.script_fn_with_features(
+                    f"writer_reauth_{error_}.script"
+                )
+                vars_ = None
+                expected_call_count = 1
+            elif error_ in ("unauthorized",):
+                reader_script = self.script_fn_with_features(
+                    "reader_reauth_handled.script"
+                )
+                writer_script = self.script_fn_with_features(
+                    "writer_reauth_handled.script"
+                )
+                vars_ = self.get_vars()
+                expected_call_count = 2
+                if error_ == "token_expired":
+                    vars_["#ERROR#"] = self._TOKEN_EXPIRED
+                elif error_ == "unauthorized":
+                    vars_["#ERROR#"] = self._UNAUTHORIZED
+            else:
+                reader_script = "reader_reauth_unhandled.script"
+                writer_script = "writer_reauth_unhandled.script"
+                expected_call_count = 1
+                vars_ = self.get_vars()
+                if error_ == "security":
+                    vars_["#ERROR#"] = self._SECURITY_EXC
+                elif error_ == "token_expired":
+                    vars_["#ERROR#"] = self._TOKEN_EXPIRED
+                else:
+                    self.fail(f"Unknown error type {error_}")
+            self.start_server(self._reader, reader_script, vars_=vars_)
             if routing_:
-                self.start_server(
-                    self._writer,
-                    self.script_fn_with_features(
-                        f"writer_reauth_{error_}.script"
-                    )
-                )
+                self.start_server(self._writer, writer_script, vars_=vars_)
                 self.start_server(self._router, "router_single_reader.script")
 
             with self.driver(auth_manager, routing=routing_,
@@ -248,11 +215,19 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                                 # connection 2 fails, gets closed
                                 list(session_r2.run("RETURN 2.2 AS n"))
                             if error_ == "token_expired":
-                                self.assert_is_retryable_token_error(
+                                self.assert_is_token_error(
                                     exc.exception
                                 )
                             elif error_ == "authorization_expired":
                                 self.assert_is_authorization_error(
+                                    exc.exception
+                                )
+                            elif error == "unauthorized":
+                                self.assert_is_unauthorized_error(
+                                    exc.exception, retryable=True
+                                )
+                            elif error == "security":
+                                self.assert_is_security_error(
                                     exc.exception
                                 )
                             else:
@@ -293,7 +268,8 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                 self._router.done()
                 self.post_script_assertions(self._router)
 
-        for error in ("authorization_expired", "token_expired"):
+        for error in ("authorization_expired", "token_expired",
+                      "unauthorized", "security"):
             for routing in (False, True):
                 with self.subTest(error=error, routing=routing):
                     try:
@@ -303,12 +279,8 @@ class TestExpirationBasedAuthManager5x1(AuthorizationBase):
                         self._writer.reset()
                         self._router.reset()
 
-    @driver_feature(types.Feature.API_DRIVER_SUPPORTS_SESSION_AUTH)
-    def test_not_renewing_on_user_switch_expiration_error(self):
-        ...
 
-
-class TestExpirationBasedAuthManager5x0(TestExpirationBasedAuthManager5x1):
+class TestBearerAuthManager5x0(TestBearerAuthManager5x1):
 
     required_features = (types.Feature.BOLT_5_0,
                          types.Feature.AUTH_MANAGED)
@@ -322,11 +294,5 @@ class TestExpirationBasedAuthManager5x0(TestExpirationBasedAuthManager5x1):
     def test_static_provider_long_time(self):
         super().test_static_provider_long_time()
 
-    def test_expiring_token_deadline(self):
-        super().test_expiring_token_deadline()
-
     def test_renewing_on_expiration_error(self):
         super().test_renewing_on_expiration_error()
-
-    def test_not_renewing_on_user_switch_expiration_error(self):
-        super().test_not_renewing_on_user_switch_expiration_error()
