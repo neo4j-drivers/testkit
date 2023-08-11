@@ -41,6 +41,11 @@ S: SUCCESS {}
 
     *: RESET
 
+    {?
+       C: BEGIN {"{}": "*"}
+       S: SUCCESS {}
+    ?}
+
     C: RUN "RETURN 2.2 AS n" "*" "*"
     S: FAILURE #ERROR#
     S: <EXIT>
