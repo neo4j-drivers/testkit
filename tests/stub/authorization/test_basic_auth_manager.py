@@ -11,7 +11,7 @@ from tests.stub.authorization.test_authorization import AuthorizationBase
 from tests.stub.shared import StubServer
 
 
-class TestBearerAuthManager5x1(AuthorizationBase):
+class TestBasicAuthManager5x1(AuthorizationBase):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.AUTH_MANAGED)
@@ -280,7 +280,7 @@ class TestBearerAuthManager5x1(AuthorizationBase):
                         self._router.reset()
 
 
-class TestBearerAuthManager5x0(TestBearerAuthManager5x1):
+class TestBasicAuthManager5x0(TestBasicAuthManager5x1):
 
     required_features = (types.Feature.BOLT_5_0,
                          types.Feature.AUTH_MANAGED)
