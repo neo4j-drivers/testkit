@@ -325,10 +325,7 @@ class TestBasicAuthManager5x1(AuthorizationBase):
                 )
                 vars_ = self.get_vars()
                 expected_call_count = 2
-                if error_ == "token_expired":
-                    vars_["#ERROR#"] = self._TOKEN_EXPIRED
-                elif error_ == "unauthorized":
-                    vars_["#ERROR#"] = self._UNAUTHORIZED
+                vars_["#ERROR#"] = self._UNAUTHORIZED
             else:
                 reader_script = "reader_reauth_unhandled.script"
                 writer_script = "writer_reauth_unhandled.script"
@@ -399,8 +396,7 @@ class TestBasicAuthManager5x1(AuthorizationBase):
                 self._router.done()
                 self.post_script_assertions(self._router)
 
-        for error in ("token_expired",
-                      "unauthorized", "security"):
+        for error in ("token_expired", "unauthorized", "security"):
             for routing in (False, True):
                 with self.subTest(error=error, routing=routing):
                     try:

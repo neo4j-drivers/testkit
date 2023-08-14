@@ -385,17 +385,14 @@ class TestBearerAuthManager5x1(AuthorizationBase):
                     vars_["#ERROR#"] = self._TOKEN_EXPIRED
                 elif error_ == "unauthorized":
                     vars_["#ERROR#"] = self._UNAUTHORIZED
-            else:
+            elif error_ in ("security",):
                 reader_script = "reader_reauth_unhandled.script"
                 writer_script = "writer_reauth_unhandled.script"
                 expected_call_count = 1
                 vars_ = self.get_vars()
-                if error_ == "security":
-                    vars_["#ERROR#"] = self._SECURITY_EXC
-                elif error_ == "token_expired":
-                    vars_["#ERROR#"] = self._TOKEN_EXPIRED
-                else:
-                    self.fail(f"Unknown error type {error_}")
+                vars_["#ERROR#"] = self._SECURITY_EXC
+            else:
+                self.fail(f"Unknown error type {error_}")
             self.start_server(self._reader, reader_script, vars_=vars_)
             if routing_:
                 self.start_server(self._writer, writer_script, vars_=vars_)
@@ -455,8 +452,7 @@ class TestBearerAuthManager5x1(AuthorizationBase):
                 self._router.done()
                 self.post_script_assertions(self._router)
 
-        for error in ("token_expired",
-                      "unauthorized", "security"):
+        for error in ("token_expired", "unauthorized", "security"):
             for routing in (False, True):
                 with self.subTest(error=error, routing=routing):
                     try:
