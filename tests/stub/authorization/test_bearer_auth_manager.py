@@ -425,6 +425,7 @@ class TestBearerAuthManager5x1(AuthorizationBase):
 
                         _trigger_error(session_r2, error_)
                         _trigger_error(s1_tx, error_)
+                        s1_tx.close()
 
                         # bind connection 2
                         s2_tx = session_r2.begin_transaction()

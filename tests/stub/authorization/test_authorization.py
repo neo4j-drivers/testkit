@@ -54,6 +54,9 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "AuthorizationExpired"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -98,6 +101,9 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "ClientError"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -121,6 +127,9 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "AuthenticationError"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.AuthenticationException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -136,6 +145,9 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "AuthenticationError"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -157,6 +169,8 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["dotnet"]:
             expected_type = "OtherSecurityException"
+        elif driver in ["java"]:
+            expected_type = "org.neo4j.driver.exceptions.SecurityException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -170,6 +184,9 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "<class 'neo4j.exceptions.ClientError'>"
         elif driver in ["javascript"]:
             pass
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -187,6 +204,8 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "<class 'neo4j.exceptions.TransientError'>"
         elif driver in ["javascript"]:
             pass
+        if driver in ["java"]:
+            expected_type = "org.neo4j.driver.exceptions.TransientException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
@@ -204,6 +223,8 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "<class 'neo4j.exceptions.ClientError'>"
         elif driver in ["javascript"]:
             pass
+        if driver in ["java"]:
+            expected_type = "org.neo4j.driver.exceptions.ClientException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
