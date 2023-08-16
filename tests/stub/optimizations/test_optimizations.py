@@ -98,6 +98,11 @@ class TestOptimizations(TestkitTestCase):
             self.assertEqual("ServiceUnavailable", exc.exception.code)
         elif driver_name in ["dotnet"]:
             expected_error = "ServiceUnavailableError"
+        elif driver_name in ["java"]:
+            expected_error = \
+                "org.neo4j.driver.exceptions.ServiceUnavailableException"
+        elif driver_name in ["go"]:
+            expected_error = "ConnectivityError"
         else:
             self.fail(f"no error mapping is defined for {driver_name} driver")
         self.assertEqual(expected_error, exc.exception.errorType)
