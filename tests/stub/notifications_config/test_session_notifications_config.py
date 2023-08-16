@@ -78,7 +78,7 @@ class TestSessionNotificationsConfig(NotificationsBase):
                         None,
                         notifications_min_severity="WARNING"
                     )
-                    cursor = session.run("RETURN 1 as n")
+                    cursor = session.run("RETURN 1 AS n")
                     cursor.consume()
                     self._server.done()
                 finally:
