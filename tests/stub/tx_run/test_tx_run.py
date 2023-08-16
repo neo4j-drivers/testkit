@@ -449,6 +449,58 @@ class TestTxRun(TestkitTestCase):
                 _test()
             self._server1.reset()
 
+    def test_should_prevent_commit_after_tx_termination(self):
+        def _test():
+            self._create_direct_driver()
+            self._server1.start(path=self.script_path(script))
+            self._session = self._driver.session("r")
+            tx = self._session.begin_transaction()
+            with self.assertRaises(types.DriverError) as exc:
+                list(tx.run("invalid"))
+            self.assertEqual(exc.exception.code,
+                             "Neo.ClientError.MadeUp.Code")
+            self._assert_is_client_exception(exc)
+
+            with self.assertRaises(types.DriverError) as exc:
+                tx.commit()
+            # new actions on the transaction result in a tx terminated
+            # exception, a subclass of the client exception
+            self._assert_is_tx_terminated_exception(exc)
+
+            tx.close()
+            self._session.close()
+            self._session = None
+            self._server1.done()
+
+        for script in ("tx_error_on_run.script", "tx_error_on_pull.script"):
+            with self.subTest(script=script):
+                _test()
+            self._server1.reset()
+
+    def test_should_prevent_rollback_message_after_tx_termination(self):
+        def _test():
+            self._create_direct_driver()
+            self._server1.start(path=self.script_path(script))
+            self._session = self._driver.session("r")
+            tx = self._session.begin_transaction()
+            with self.assertRaises(types.DriverError) as exc:
+                list(tx.run("invalid"))
+            self.assertEqual(exc.exception.code,
+                             "Neo.ClientError.MadeUp.Code")
+            self._assert_is_client_exception(exc)
+
+            tx.rollback()
+
+            tx.close()
+            self._session.close()
+            self._session = None
+            self._server1.done()
+
+        for script in ("tx_error_on_run.script", "tx_error_on_pull.script"):
+            with self.subTest(script=script):
+                _test()
+            self._server1.reset()
+
     def _assert_is_client_exception(self, e):
         driver = get_driver_name()
         if driver in ["java"]:

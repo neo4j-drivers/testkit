@@ -21,7 +21,7 @@ import traceback
 
 import docker
 import driver
-import neo4j_container as neo4j
+import neo4j
 import runner
 import settings
 from tests.testenv import in_teamcity

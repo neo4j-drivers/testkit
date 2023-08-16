@@ -179,6 +179,7 @@ class RoutingV5x0(RoutingBase):
         self._routingServer1.done()
         self._writeServer1.done()
         self.assertEqual([1], sequence2)
+        self.assertEqual(self._writeServer1.count_requests("RUN"), 2)
 
     def test_should_read_successfully_from_reader_using_tx_function(self):
         # TODO remove this block once all languages work
@@ -727,9 +728,15 @@ class RoutingV5x0(RoutingBase):
             with self.assertRaises(types.DriverError) as exc:
                 tx.run("RETURN 1 as n")
 
-        if get_driver_name() in ["java"]:
+        driver_name = get_driver_name()
+        if driver_name in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.SessionExpiredException",
+                exc.exception.errorType
+            )
+        elif driver_name in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.SessionExpired'>",
                 exc.exception.errorType
             )
         session.close()
@@ -1222,6 +1229,7 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual(["Bob"], sequence)
         self.assertEqual(["BookmarkB"], first_bookmark)
         self.assertEqual(["BookmarkC"], second_bookmark)
+        self.assertEqual(self._writeServer1.count_requests("RUN"), 2)
 
     def _should_retry_read_tx_until_success_on_error(
         self, interrupting_reader_script
