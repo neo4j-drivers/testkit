@@ -59,6 +59,7 @@ class TestSessionNotificationsConfig(NotificationsBase):
             self._server.reset()
 
     def test_session_config_with_database_not_specified(self):
+        driver = None
         uris = [self._uri, self._uri.replace("bolt", "neo4j")]
         for uri in uris:
             with self.subTest(uri=uri):
