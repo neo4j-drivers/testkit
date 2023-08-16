@@ -93,6 +93,9 @@ class TestOptimizations(TestkitTestCase):
         driver_name = get_driver_name()
         if driver_name in ["python"]:
             expected_error = "<class 'neo4j.exceptions.ServiceUnavailable'>"
+        elif driver_name in ["javascript"]:
+            expected_error = None
+            self.assertEqual("ServiceUnavailable", exc.exception.code)
         elif driver_name in ["dotnet"]:
             expected_error = "ServiceUnavailableError"
         else:
