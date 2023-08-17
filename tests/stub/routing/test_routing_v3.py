@@ -78,3 +78,6 @@ class RoutingV3(RoutingV4x4):
                 self.assertIn("routing", e.msg)
 
         self.assertTrue(failed)
+
+    def test_should_drop_connections_failing_liveness_check(self):
+        super().test_should_drop_connections_failing_liveness_check()

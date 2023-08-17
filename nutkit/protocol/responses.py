@@ -424,7 +424,7 @@ class Summary:
                 return True
 
         from tests.shared import get_driver_name
-        if get_driver_name() in ["javascript", "go", "dotnet", "ruby"]:
+        if get_driver_name() in ["javascript", "dotnet", "ruby"]:
             if "address" in data["serverInfo"]:
                 import warnings
                 warnings.warn(  # noqa: B028

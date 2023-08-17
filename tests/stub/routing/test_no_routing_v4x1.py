@@ -157,7 +157,7 @@ class NoRoutingV4x1(TestkitTestCase):
     def test_should_error_on_rollback_failure_using_tx_rollback(self):
         # TODO There is a pending unification task to fix this.
         # Once fixed, this block should be removed.
-        if get_driver_name() in ["javascript", "go"]:
+        if get_driver_name() in ["javascript"]:
             self.skipTest("There is a pending unification task to fix this.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
@@ -226,7 +226,7 @@ class NoRoutingV4x1(TestkitTestCase):
     ):
         # TODO There is a pending unification task to fix this.
         # Once fixed, this block should be removed.
-        if get_driver_name() in ["javascript", "go"]:
+        if get_driver_name() in ["javascript"]:
             self.skipTest("There is a pending unification task to fix this.")
 
         uri = "bolt://%s" % self._server.address
@@ -406,9 +406,6 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_check_multi_db_support(self):
-        # TODO remove this block once all drivers support this
-        if get_driver_name() in ["go"]:
-            self.skipTest("Does not support CheckMultiDBSupport request")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(self.version_dir, "optional_hello.script"),
@@ -490,9 +487,6 @@ class NoRoutingV4x1(TestkitTestCase):
         self._server.done()
 
     def test_should_error_on_database_shutdown_using_tx_run(self):
-        # TODO remove this block once all drivers support this
-        if get_driver_name() in ["go"]:
-            self.skipTest("Fails with pending transaction message")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(

@@ -112,16 +112,19 @@ class TestSummary(TestkitTestCase):
                     result = session.run("RETURN 1 AS n",
                                          params={"foo": types.CypherInt(123)})
                     result.consume()
-            if get_driver_name() == "python":
+            driver = get_driver_name()
+            if driver in ["python"]:
                 self.assertEqual(
                     e.exception.errorType,
                     "<class 'neo4j._exceptions.BoltProtocolError'>"
                 )
-            elif get_driver_name() == "java":
+            elif driver in ["java"]:
                 self.assertEqual(
                     e.exception.errorType,
                     "org.neo4j.driver.exceptions.ProtocolException"
                 )
+            elif driver in ["go"]:
+                self.assertEqual(e.exception.errorType, "ProtocolError")
 
         for query_type in ("wr",):
             with self.subTest(query_type=query_type):

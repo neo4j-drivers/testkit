@@ -6,18 +6,18 @@ A: HELLO {"{}": "*"}
 {{
     C: BEGIN {"db": "adb"}
     S: SUCCESS {}
-    C: RUN "RETURN 1 as n" {} {}
+    C: RUN "RETURN 1 AS n" {} {}
     S: SUCCESS {"fields": ["n"]}
     C: PULL {"n": 1000}
     S: SUCCESS {"type": "w"}
     C: COMMIT
     S: SUCCESS {}
-    C: RESET
-    S: SUCCESS {}
+    IF: #RESET_ON_POOL_RETURN#
+        A: RESET
     C: RESET
     S: <EXIT>
 ----
-    C: RUN "RETURN 1 as n" {} {"db": "adb"}
+    C: RUN "RETURN 1 AS n" {} {"db": "adb"}
     S: SUCCESS {"fields": ["n"]}
     C: PULL {"n": 1000}
     S: RECORD [1]

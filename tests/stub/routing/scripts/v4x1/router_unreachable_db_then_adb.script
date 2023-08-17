@@ -11,7 +11,10 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
     S: RECORD [1000, []]
        SUCCESS {"type": "r"}
     *: RESET
-    ?: GOODBYE
+    {?
+        A: GOODBYE
+        S: <EXIT>
+    ?}
 ?}
 C: RUN "CALL dbms.routing.getRoutingTable($context, $database)" {"context": #ROUTINGCTX#, "database": "adb"} {"[mode]": "r", "db": "system", "[bookmarks]": "*"}
 S: SUCCESS {"fields": ["ttl", "servers"]}
