@@ -704,7 +704,7 @@ def test_assert_order_failure(server_factory, connection_factory):
     server_exc = server.service.exceptions[0]
     assert isinstance(server_exc, ScriptFailure)
     exc_str = str(server_exc)
-    assert ("Expected the driver to not send anything, but received GOODBYE"
+    assert ("Expected the driver to not send anything, but received: GOODBYE"
             in exc_str)
     with pytest.raises(BrokenSocket):
         con.read(1)
