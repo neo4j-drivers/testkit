@@ -385,7 +385,7 @@ class TestAutoLine(TestClientLine):
     LINE_CLS = AutoLine
 
 
-@pytest.fixture()
+@pytest.fixture
 def channel_mock():
     class ChannelMock:
         def __init__(self):
@@ -456,6 +456,30 @@ class TestServerLine:
     @pytest.mark.parametrize("string", ("", "-1", "a", "None"))
     def test_sleep_server_line_with_invalid_arg(self, string):
         content = "<SLEEP> " + string
+        with pytest.raises(LineError):
+            ServerLine(10, "S: " + content, content)
+
+    @pytest.mark.parametrize("duration", (None, 0, 0.5, 1.5, 200))
+    def test_assert_order_server_line(self, duration, channel_mock, mocker):
+        if duration is None:
+            duration_str = ""
+            expected_sleep = 1
+        else:
+            duration_str = f" {duration}"
+            expected_sleep = duration
+        assert_no_input_mock = mocker.Mock()
+        channel_mock.assert_no_input = assert_no_input_mock
+        sleep_path = __name__.rsplit(".", 2)[0] + ".parsing.sleep"
+        with patch(sleep_path, return_value=None) as patched_sleep:
+            content = f"<ASSERT ORDER>{duration_str}"
+            line = ServerLine(10, "S: " + content, content)
+            assert line.try_run_command(channel_mock)
+            patched_sleep.assert_called_once_with(expected_sleep)
+            assert_no_input_mock.assert_called_once()
+
+    @pytest.mark.parametrize("string", ("-1", "a", "None"))
+    def test_assert_order_server_line_with_invalid_arg(self, string):
+        content = "<ASSERT ORDER> " + string
         with pytest.raises(LineError):
             ServerLine(10, "S: " + content, content)
 

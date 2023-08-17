@@ -174,7 +174,7 @@ class WebSocket:
         """
         frame = self._socket.recv(2)
         if len(frame) == 0:
-            return None
+            return frame
 
         fin = frame[0] >> 7
         # rsv1 = frame[0] & 0b0100_0000 == 0b0100_0000
@@ -243,6 +243,7 @@ class Wire(object):
         self._socket = s
         self._input = bytearray()
         self._output = bytearray()
+        self._no_input_check_end = None
 
     def secure(self, verify=True, hostname=None):
         """Apply a layer of security onto this connection."""
@@ -270,16 +271,38 @@ class Wire(object):
 
     def read(self, n):
         """Read bytes from the network."""
+        self._read_to_buffer(n)
+        data = self._input[:n]
+        self._input[:n] = []
+        return data
+
+    def check_no_input(self):
+        if len(self._input) > 0:
+            return False
+        socket_timeout = self._socket.gettimeout()
+        self._socket.settimeout(0)
+        try:
+            received = self._socket.recv(1)
+            self._input.extend(received)
+            return False
+        except OSError:
+            # probably no data, as expected
+            # but could also be a broken socket or such...
+            return True
+        finally:
+            self._socket.settimeout(socket_timeout)
+
+    def _read_to_buffer(self, n):
         while len(self._input) < n:
             required = n - len(self._input)
             requested = max(required, 8192)
             try:
                 received = self._socket.recv(requested)
             except timeout:
-                raise ReadWakeup
-            except OSError:
+                raise ReadWakeup from None
+            except OSError as exc:
                 self._broken = True
-                raise BrokenWireError("Broken")
+                raise BrokenWireError("Broken") from exc
             else:
                 if received:
                     self._input.extend(received)
@@ -288,9 +311,6 @@ class Wire(object):
                     raise BrokenWireError("Network read incomplete "
                                           "(received %d of %d bytes)" %
                                           (len(self._input), n))
-        data = self._input[:n]
-        self._input[:n] = []
-        return data
 
     def write(self, b):
         """Write bytes to the output buffer."""

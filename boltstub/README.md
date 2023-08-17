@@ -130,6 +130,17 @@ There are server lines that contain instructions to the bolt server rather than 
    E.g., `S: <RAW> 00 00` is equivalent to `S: <NOOP>`.
  * `S: <SLEEP> ${SECONDS}` will make the server wait for the specified amount of time.  
    E.g. `S: <SLEEP> 0.5`.
+* `S: <ASSERT ORDER> [${SECONDS}]` will make the server wait for the specified amount of time and then check that no data was received from the client in the meantime.
+  This is helpful to assert that the following message was not pipelined.  
+  The argument is optional and defaults to `1`.  
+  Example:
+  ```
+  C: MSG1
+  S: <ASSERT ORDER> 1
+     RESPONSE_MSG
+  # MSG2 shall not be pipelined
+  C: MSG2
+  ```
 
 
 ### Python Lines

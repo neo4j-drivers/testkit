@@ -391,7 +391,7 @@ class ServerLine(MessageLine):
 
     def __new__(cls, *args, **kwargs):
         obj = super(ServerLine, cls).__new__(cls, *args, **kwargs)
-        obj.command_match = re.match(r"^<(\S+)>(.*)$", obj.content)
+        obj.command_match = re.match(r"^<(.+?)>(.*)$", obj.content)
         obj.is_command = bool(obj.command_match)
         if not obj.is_command:
             obj.parsed = cls._parse_line(obj)
@@ -429,6 +429,15 @@ class ServerLine(MessageLine):
                         raise LineError(obj, "Duration must be non-negative")
                 except ValueError as e:
                     raise LineError(obj, "Invalid duration") from e
+            elif tag == "ASSERT ORDER":
+                if not args.strip():
+                    return
+                try:
+                    f = float(args)
+                    if f < 0:
+                        raise LineError(obj, "Duration must be non-negative")
+                except ValueError as e:
+                    raise LineError(obj, "Invalid duration") from e
             else:
                 raise LineError(obj, "Unknown command %r" % (tag,))
 
@@ -453,6 +462,9 @@ class ServerLine(MessageLine):
                 channel.send_raw(bytearray(int(_, 16) for _ in wrap(args, 2)))
             elif tag == "SLEEP":
                 sleep(float(args))
+            elif tag == "ASSERT ORDER":
+                sleep(float(args.strip() or 1))
+                channel.assert_no_input()
             else:
                 raise ValueError("Unknown command %r" % (tag,))
             return True

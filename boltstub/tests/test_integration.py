@@ -18,6 +18,7 @@
 
 import socket
 import threading
+import time
 import traceback
 from contextlib import contextmanager
 from struct import unpack as struct_unpack
@@ -111,6 +112,7 @@ class ThreadedServer(threading.Thread):
             script = parse(script)
         self.service = BoltStubService(script, address, timeout=1)
         self.exc = None
+        self._stopped = False
 
     def run(self):
         try:
@@ -120,6 +122,9 @@ class ThreadedServer(threading.Thread):
             self.exc = e
 
     def stop(self):
+        if self._stopped:
+            return
+        self._stopped = True
         self.service.stop()
 
     def join(self, timeout=None):
@@ -132,6 +137,8 @@ def server_factory():
 
     def factory(script, address="localhost:7687"):
         nonlocal server
+        if server is not None:
+            raise RuntimeError("server already running")
         server = ThreadedServer(script, address)
         server.start()
         return server
@@ -640,3 +647,94 @@ def test_unknown_message(server_factory, connection_factory):
     with pytest.raises(BrokenSocket):
         con.read(6)
     assert not server.service.exceptions
+
+
+def test_assert_order_success(server_factory, connection_factory):
+    script = """
+    !: BOLT 5.3
+
+    C: HELLO
+    S: <ASSERT ORDER> 0.5
+    S: SUCCESS
+    C: GOODBYE
+    S: SUCCESS
+    """
+    server = server_factory(parse(script))
+    con = connection_factory("localhost", 7687)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(server_version_to_version_request((5, 3)))
+    con.read(4)
+    t0 = time.monotonic()
+    con.write(b"\x00\x02\xb0\x01\x00\x00")  # HELLO
+    timeout = con._socket.gettimeout()
+    con._socket.settimeout(1)
+    msg = con.read_message()
+    t1 = time.monotonic()
+    con._socket.settimeout(timeout)
+    assert t1 - t0 >= 0.5
+    assert msg == b"\xb0\x70"  # SUCCESS
+    # waited long enough, now send the next message
+    con.write(b"\x00\x02\xb0\x02\x00\x00")  # GOODBYE
+    msg = con.read_message()
+    assert msg == b"\xb0\x70"  # SUCCESS
+    assert not server.service.exceptions
+
+
+def test_assert_order_failure(server_factory, connection_factory):
+    script = """
+    !: BOLT 5.3
+
+    C: HELLO
+    S: <ASSERT ORDER> 1
+    S: SUCCESS
+    C: GOODBYE
+    S: SUCCESS
+    """
+    server = server_factory(parse(script))
+    con = connection_factory("localhost", 7687)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(server_version_to_version_request((5, 3)))
+    con.read(4)
+    con.write(b"\x00\x02\xb0\x01\x00\x00")  # HELLO
+    time.sleep(0.5)
+    # send something too early while the server still waits to assert order
+    con.write(b"\x00\x02\xb0\x02\x00\x00")  # GOODBYE
+    time.sleep(1)
+    assert len(server.service.exceptions) == 1
+    server_exc = server.service.exceptions[0]
+    assert isinstance(server_exc, ScriptFailure)
+    exc_str = str(server_exc)
+    assert ("Expected the driver to not send anything, but received GOODBYE"
+            in exc_str)
+    with pytest.raises(BrokenSocket):
+        con.read(1)
+
+
+def test_assert_order_protocol_failure(server_factory, connection_factory):
+    script = """
+    !: BOLT 5.3
+
+    C: HELLO
+    S: <ASSERT ORDER> 1
+    S: SUCCESS
+    C: GOODBYE
+    S: SUCCESS
+    """
+    server = server_factory(parse(script), address="localhost:7688")
+    con = connection_factory("localhost", 7688)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(server_version_to_version_request((5, 3)))
+    con.read(4)
+    con.write(b"\x00\x02\xb0\x01\x00\x00")  # HELLO
+    time.sleep(0.5)
+    # send something too early while the server still waits to assert order
+    con.write(b"\x00\x02\xb0\xff\x00\x00")  # made up message
+    time.sleep(1)
+    assert len(server.service.exceptions) == 1
+    server_exc = server.service.exceptions[0]
+    assert isinstance(server_exc, ScriptFailure)
+    exc_str = str(server_exc)
+    assert "Expected the driver to not send anything, but received" in exc_str
+    assert "Unknown response message type FF" in exc_str
+    with pytest.raises(BrokenSocket):
+        con.read(1)

@@ -4,13 +4,9 @@ import nutkit.protocol as types
 from nutkit.frontend import Driver
 from tests.shared import (
     driver_feature,
-    get_driver_name,
     TestkitTestCase,
 )
-from tests.stub.shared import (
-    StubServer,
-    StubServerUncleanExitError,
-)
+from tests.stub.shared import StubServer
 
 
 class TestOptimizations(TestkitTestCase):
@@ -74,45 +70,6 @@ class TestOptimizations(TestkitTestCase):
 
         driver.close()
         self._server.done()
-
-    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY,
-                    types.Feature.OPT_EXECUTE_QUERY_PIPELINING,
-                    types.Feature.BOLT_5_3)
-    def test_execute_query_does_not_pipeline_commit(self):
-        script = "commit_pipeline.script"
-        self._server.start(path=self.script_path("v5x3", script))
-
-        auth = types.AuthorizationToken("basic", principal="neo4j",
-                                        credentials="pass")
-        driver = Driver(self._backend, f"bolt://{self._server.address}", auth,
-                        max_tx_retry_time_ms=1500)
-
-        with self.assertRaises(types.DriverError) as exc:
-            driver.execute_query("RETURN 1 AS n")
-
-        driver_name = get_driver_name()
-        if driver_name in ["python"]:
-            expected_error = "<class 'neo4j.exceptions.ServiceUnavailable'>"
-        elif driver_name in ["javascript"]:
-            expected_error = None
-            self.assertEqual("ServiceUnavailable", exc.exception.code)
-        elif driver_name in ["dotnet"]:
-            expected_error = "ServiceUnavailableError"
-        elif driver_name in ["java"]:
-            expected_error = \
-                "org.neo4j.driver.exceptions.ServiceUnavailableException"
-        elif driver_name in ["go"]:
-            expected_error = "ConnectivityError"
-        else:
-            self.fail(f"no error mapping is defined for {driver_name} driver")
-        self.assertEqual(expected_error, exc.exception.errorType)
-
-        driver.close()
-
-        # assert server did not receive a commit
-        with self.assertRaises(StubServerUncleanExitError):
-            self._server.done()
-        self.assertEqual(self._server.count_requests("COMMIT"), 0)
 
     def double_read(self, mode, new_session, use_tx, routing,
                     version="v4x3", consume=False,

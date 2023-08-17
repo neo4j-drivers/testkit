@@ -11,6 +11,7 @@ C: BEGIN {"{}": "*"}
 S: SUCCESS {}
    SUCCESS {"fields": ["n"]}
    RECORD [1]
+   <ASSERT ORDER> 1
    SUCCESS {"has_more": false}
 C: COMMIT
 S: SUCCESS {}
