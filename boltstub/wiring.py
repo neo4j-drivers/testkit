@@ -243,7 +243,6 @@ class Wire(object):
         self._socket = s
         self._input = bytearray()
         self._output = bytearray()
-        self._no_input_check_end = None
 
     def secure(self, verify=True, hostname=None):
         """Apply a layer of security onto this connection."""
