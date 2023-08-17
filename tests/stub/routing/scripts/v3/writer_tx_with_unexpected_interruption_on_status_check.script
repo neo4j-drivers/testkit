@@ -6,18 +6,18 @@ A: HELLO {"{}": "*"}
 {{
     C: BEGIN {}
     S: SUCCESS {}
-    C: RUN "RETURN 1 as n" {} {}
+    C: RUN "RETURN 1 AS n" {} {}
     S: SUCCESS {"fields": ["n"]}
     C: PULL_ALL
     S: SUCCESS {"type": "w"}
     C: COMMIT
     S: SUCCESS {}
-    C: RESET
-    S: SUCCESS {}
+    IF: #RESET_ON_POOL_RETURN#
+        A: RESET
     C: RESET
     S: <EXIT>
 ----
-    C: RUN "RETURN 1 as n" {} {}
+    C: RUN "RETURN 1 AS n" {} {}
     S: SUCCESS {"fields": ["n"]}
     C: PULL_ALL
     S: RECORD [1]
