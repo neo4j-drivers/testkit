@@ -809,6 +809,10 @@ def test_message_tags_are_verified(version, message, exists):
     ("<NOOP>", True),
     ("<RAW> FF", True),
     ("<SLEEP> 1", True),
+    ("<SLEEP> 1.2", True),
+    ("<ASSERT ORDER>", True),
+    ("<ASSERT ORDER> 1", True),
+    ("<ASSERT ORDER> 1.2", True),
     ("<FOOBAR> 1", False),
 ))
 def test_checks_command_server_lines(version, command, exists):

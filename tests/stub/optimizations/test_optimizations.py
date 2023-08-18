@@ -55,6 +55,22 @@ class TestOptimizations(TestkitTestCase):
                     test()
                 self._server.reset()
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY,
+                    types.Feature.OPT_EXECUTE_QUERY_PIPELINING,
+                    types.Feature.BOLT_5_3)
+    def test_execute_query_pipelines_begin(self):
+        script = "begin_pipeline.script"
+        self._server.start(path=self.script_path("v5x3", script))
+
+        auth = types.AuthorizationToken("basic", principal="neo4j",
+                                        credentials="pass")
+        driver = Driver(self._backend, f"bolt://{self._server.address}", auth)
+
+        driver.execute_query("RETURN 1 AS n")
+
+        driver.close()
+        self._server.done()
+
     def double_read(self, mode, new_session, use_tx, routing,
                     version="v4x3", consume=False,
                     check_single_connection=False, check_no_reset=False):

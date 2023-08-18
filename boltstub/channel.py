@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import traceback
 from time import sleep
 from typing import Iterable
 
@@ -126,7 +127,7 @@ class Channel:
 
     def consume(self, line_no=None):
         if self._buffered_msg is not None:
-            if line_no:
+            if line_no is not None:
                 self.log("(%3i) C: %s", line_no, self._buffered_msg)
             else:
                 self.log("(%3i) C: %s", self._buffered_msg)
@@ -139,6 +140,22 @@ class Channel:
         if self._buffered_msg is None:
             self._buffered_msg = self._consume()
         return self._buffered_msg
+
+    def assert_no_input(self):
+        no_input = self.wire.check_no_input()
+        if not no_input:
+            try:
+                msg = self.peek()
+            except BaseException:
+                msg = (
+                    "some data (encountered error while trying to peek):\n"
+                    f"{traceback.format_exc()}"
+                )
+            self.wire.close()
+            raise ScriptFailure(
+                "Expected the driver to not send anything, but received: "
+                f"{msg}",
+            )
 
     def auto_respond(self, msg):
         self.log("AUTO response:")
