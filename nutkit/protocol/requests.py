@@ -178,15 +178,16 @@ class AuthTokenManagerGetAuthCompleted:
         self.auth = auth
 
 
-class AuthTokenManagerOnAuthExpiredCompleted:
+class AuthTokenManagerHandleSecurityExceptionCompleted:
     """
-    Result of a completed auth token provider function call.
+    Result of a completed security exception handler call.
 
     No response is expected.
     """
 
-    def __init__(self, request_id):
+    def __init__(self, request_id, handled):
         self.requestId = request_id
+        self.handled = bool(handled)
 
 
 class AuthTokenManagerClose:
@@ -203,20 +204,46 @@ class AuthTokenManagerClose:
         self.id = id
 
 
-class NewExpirationBasedAuthTokenManager:
+class NewBasicAuthTokenManager:
     """
-    Create a new auth temporal token manager on the backend.
+    Create a new token manager for password rotation on the backend.
 
-    The manager will wrap a temporal token provider function on the backend.
+    The manager will wrap a plain token provider function on the backend.
 
-    The backend should respond with `ExpirationBasedAuthTokenManager`.
+    The backend should respond with `BasicAuthTokenManager`.
     """
 
     def __init__(self):
         pass
 
 
-class ExpirationBasedAuthTokenProviderCompleted:
+class BasicAuthTokenProviderCompleted:
+    """
+    Result of a completed auth token provider function call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id, auth):
+        self.requestId = request_id
+        assert isinstance(auth, AuthorizationToken)
+        self.auth = auth
+
+
+class NewBearerAuthTokenManager:
+    """
+    Create a new manager for potentially expiring bearer tokens on the backend.
+
+    The manager will wrap a temporal token provider function on the backend.
+
+    The backend should respond with `BearerAuthTokenManager`.
+    """
+
+    def __init__(self):
+        pass
+
+
+class BearerAuthTokenProviderCompleted:
     """
     Result of a completed auth token provider function call.
 

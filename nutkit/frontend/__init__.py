@@ -1,6 +1,7 @@
 from .auth_token_manager import (
     AuthTokenManager,
-    ExpirationBasedAuthTokenManager,
+    BasicAuthTokenManager,
+    BearerAuthTokenManager,
 )
 from .bookmark_manager import (
     BookmarkManager,

@@ -59,8 +59,12 @@ C: HELLO {"user_agent": "*", "[routing]": "*"}
 
         *: RESET
 
+        {?
+            C: BEGIN {"{}": "*"}
+            S: SUCCESS {}
+        ?}
         C: RUN "RETURN 2.2 AS n" "*" "*"
-        S: FAILURE {"code": "Neo.ClientError.Security.TokenExpired", "message": "Token expired."}
+        S: FAILURE #ERROR#
         S: <EXIT>
     ----
         C: RUN "RETURN 3.1 AS n" "*" "*"

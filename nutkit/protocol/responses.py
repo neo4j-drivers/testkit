@@ -87,63 +87,96 @@ class AuthTokenManagerGetAuthRequest:
         self.auth_token_manager_id = authTokenManagerId
 
 
-class AuthTokenManagerOnAuthExpiredRequest:
+class AuthTokenManagerHandleSecurityExceptionRequest:
     """
-    Represents the need for getting an auth token from the manager.
+    Represents the driver notifying the manger of a security exception.
 
     This message may be sent by the backend at any time should the driver call
-    OnAuthExpired() on the manager that was previously created in response to
-    `NewAuthTokenManager`.
+    HandleSecurityException() on the manager that was previously created in
+    esponse to `NewAuthTokenManager`.
 
-    TestKit will respond with `TemporalAuthTokenProviderCompleted` with the
+    TestKit will respond with
+    `AuthTokenManagerHandleSecurityExceptionRequestCompleted`.
     """
 
-    def __init__(self, id, authTokenManagerId, auth):
+    def __init__(self, id, authTokenManagerId, auth, errorCode):
         # Id of the request. TestKit will send the same id back as `requestId`
         # in the `TemporalTemporalAuthTokenProviderCompleted` response.
         self.id = id
         # Id of the auth token manager that spawned this request.
         self.auth_token_manager_id = authTokenManagerId
         from .requests import AuthorizationToken
-
-        # The expired auth data.
-        assert isinstance(auth, AuthorizationToken)
+        assert isinstance(auth, AuthorizationToken)  # The expired auth data
         self.auth = auth
+        self.error_code = errorCode
 
 
-class ExpirationBasedAuthTokenManager:
+class BasicAuthTokenManager:
     """
-    Represents a new expiration based auth token manager.
+    Represents a new auth manager to handle password rotation.
 
     The passed id is used when creating a new driver (`NewDriver`) to refer to
     this auth token manager
     """
 
     def __init__(self, id):
-        # Id of ExpirationBasedAuthTokenManager instance on backend.
+        # Id of BasicAuthTokenManager instance on backend.
         # Note that the id space needs to be shared with AuthTokenManager.
         self.id = id
 
 
-class ExpirationBasedAuthTokenProviderRequest:
+class BasicAuthTokenProviderRequest:
     """
     Represents the need for a fresh auth token.
 
     This message may be sent by the backend at any time should the driver call
     a temporal auth token provider function that was previously created in
-    response to `NewExpirationBasedAuthTokenManager`.
+    response to `BearerAuthTokenManager`.
 
-    TestKit will respond with `ExpirationBasedAuthTokenProviderCompleted`.
+    TestKit will respond with `BasicAuthTokenProviderCompleted`.
     """
 
-    def __init__(self, id, expirationBasedAuthTokenManagerId):
+    def __init__(self, id, basicAuthTokenManagerId):
         # Id of the request. TestKit will send the same id back as `requestId`
-        # in the `ExpirationBasedAuthTokenProviderCompleted` response.
+        # in the `BasicAuthTokenProviderCompleted` response.
         self.id = id
         # Id of the temporal auth token manager that called its provider
         # function.
-        self.expiration_based_auth_token_manager_id = \
-            expirationBasedAuthTokenManagerId
+        self.basic_auth_token_manager_id = basicAuthTokenManagerId
+
+
+class BearerAuthTokenManager:
+    """
+    Represents a new auth manager to handle potentially expiring bearer tokens.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this auth token manager
+    """
+
+    def __init__(self, id):
+        # Id of BearerAuthTokenManager instance on backend.
+        # Note that the id space needs to be shared with AuthTokenManager.
+        self.id = id
+
+
+class BearerAuthTokenProviderRequest:
+    """
+    Represents the need for a fresh auth token.
+
+    This message may be sent by the backend at any time should the driver call
+    a temporal auth token provider function that was previously created in
+    response to `BearerAuthTokenManager`.
+
+    TestKit will respond with `BearerAuthTokenProviderCompleted`.
+    """
+
+    def __init__(self, id, bearerAuthTokenManagerId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `BearerAuthTokenProviderCompleted` response.
+        self.id = id
+        # Id of the temporal auth token manager that called its provider
+        # function.
+        self.bearer_auth_token_manager_id = bearerAuthTokenManagerId
 
 
 class ResolverResolutionRequired:
@@ -652,11 +685,13 @@ class DriverError(BaseError):
     test framework needs to check detailed error handling.
     """
 
-    def __init__(self, id=None, errorType=None, msg="", code=""):
+    def __init__(self, id=None, errorType=None, msg="", code="",
+                 retryable=None):
         self.id = id
         self.errorType = errorType
         self.msg = msg
         self.code = code
+        self.retryable = retryable
 
     def __str__(self):
         return f"DriverError(type={self.errorType}, msg={self.msg!r})"
