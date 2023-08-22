@@ -18,6 +18,7 @@ class RoutingV5x0(RoutingBase):
     bolt_version = "5.0"
     server_agent = "Neo4j/5.0.0"
     adb = "adb"
+    bdb = "bdb"
 
     def route_call_count(self, server):
         return server.count_requests("ROUTE")
@@ -847,21 +848,24 @@ class RoutingV5x0(RoutingBase):
     ):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._routingServer1, "router_adb_then_bdb.script")
         self.start_server(
             self._writeServer1,
-            "writer_yielding_failure_on_run.script",
+            "writer_yielding_failure_on_2nd_run.script",
             vars_={
                 **self.get_vars(),
                 "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader", '
                              '"message": "blabla"}'
             }
         )
-
         session = driver.session("w", database=self.adb)
+        list(session.run("RETURN 1 AS n"))
+        session.close()
+
+        session = driver.session("w", database=self.bdb)
         failed = False
         try:
-            session.run("RETURN 1 as n").consume()
+            session.run("RETURN 1 AS n").consume()
         except types.DriverError as e:
             driver_name = get_driver_name()
             if driver_name in ["java"]:
@@ -893,7 +897,11 @@ class RoutingV5x0(RoutingBase):
         session.close()
 
         self.assertNotIn(self._writeServer1.address,
-                         driver.get_routing_table(self.adb).writers)
+                         driver.get_routing_table(self.bdb).writers)
+        if self.adb != self.bdb:
+            # should not invalidate writer for other databases
+            self.assertIn(self._writeServer1.address,
+                          driver.get_routing_table(self.adb).writers)
 
         driver.close()
 
@@ -907,10 +915,10 @@ class RoutingV5x0(RoutingBase):
     ):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._routingServer1, "router_adb_then_bdb.script")
         self.start_server(
             self._writeServer1,
-            "writer_yielding_failure_on_run.script",
+            "writer_yielding_failure_on_2nd_run.script",
             vars_={
                 **self.get_vars(),
                 "#FAILURE#":
@@ -919,11 +927,14 @@ class RoutingV5x0(RoutingBase):
                     '"message": "Unable to write"}'
             }
         )
-
         session = driver.session("w", database=self.adb)
+        list(session.run("RETURN 1 AS n"))
+        session.close()
+
+        session = driver.session("w", database=self.bdb)
         failed = False
         try:
-            session.run("RETURN 1 as n").consume()
+            session.run("RETURN 1 AS n").consume()
         except types.DriverError as e:
             self.assertEqual(
                 "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase",
@@ -941,7 +952,11 @@ class RoutingV5x0(RoutingBase):
         session.close()
 
         self.assertNotIn(self._writeServer1.address,
-                         driver.get_routing_table(self.adb).writers)
+                         driver.get_routing_table(self.bdb).writers)
+        if self.adb != self.bdb:
+            # should not invalidate writer for other databases
+            self.assertIn(self._writeServer1.address,
+                          driver.get_routing_table(self.adb).writers)
 
         driver.close()
 
@@ -955,10 +970,10 @@ class RoutingV5x0(RoutingBase):
     ):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._routingServer1, "router_adb_then_bdb.script")
         self.start_server(
             self._writeServer1,
-            "writer_yielding_failure_on_run.script",
+            "writer_yielding_failure_on_2nd_run.script",
             vars_={
                 **self.get_vars(),
                 "#FAILURE#":
@@ -967,11 +982,14 @@ class RoutingV5x0(RoutingBase):
                     '"message": "Database is busy doing store copy"}'
             }
         )
-
         session = driver.session("w", database=self.adb)
+        list(session.run("RETURN 1 AS n"))
+        session.close()
+
+        session = driver.session("w", database=self.bdb)
         failed = False
         try:
-            session.run("RETURN 1 as n").consume()
+            session.run("RETURN 1 AS n").consume()
         except types.DriverError as e:
             self.assertEqual(
                 "Neo.ClientError.General.DatabaseUnavailable",
@@ -989,6 +1007,9 @@ class RoutingV5x0(RoutingBase):
         session.close()
 
         self.assertIn(self._writeServer1.address,
+                      driver.get_routing_table(self.bdb).writers)
+        # should not invalidate writer for other databases either
+        self.assertIn(self._writeServer1.address,
                       driver.get_routing_table(self.adb).writers)
 
         driver.close()
@@ -1003,23 +1024,26 @@ class RoutingV5x0(RoutingBase):
     ):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._routingServer1, "router_adb_then_bdb.script")
         self.start_server(
             self._writeServer1,
-            "writer_yielding_failure_on_run.script",
+            "writer_yielding_failure_on_2nd_run.script",
             vars_={
                 **self.get_vars(),
                 "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader",'
                              ' "message": "blabla"}'
             }
         )
-
         session = driver.session("w", database=self.adb)
+        list(session.run("RETURN 1 AS n"))
+        session.close()
+
+        session = driver.session("w", database=self.bdb)
         failed = False
 
         try:
             # drivers doing eager loading will fail here
-            result = session.run("RETURN 1 as n")
+            result = session.run("RETURN 1 AS n")
             # drivers doing lazy loading should fail here
             result.next()
         except types.DriverError:
@@ -1055,7 +1079,11 @@ class RoutingV5x0(RoutingBase):
                 failed = True
 
         self.assertNotIn(self._writeServer1.address,
-                         driver.get_routing_table(self.adb).writers)
+                         driver.get_routing_table(self.bdb).writers)
+        if self.adb != self.bdb:
+            # should not invalidate writer for other databases
+            self.assertIn(self._writeServer1.address,
+                          driver.get_routing_table(self.adb).writers)
 
         driver.close()
 
@@ -1069,22 +1097,25 @@ class RoutingV5x0(RoutingBase):
     ):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._routingServer1, "router_adb_then_bdb.script")
         self.start_server(
             self._writeServer1,
-            "writer_tx_yielding_failure_on_run.script",
+            "writer_tx_yielding_failure_on_2nd_run.script",
             vars_={
                 **self.get_vars(),
                 "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader", '
                              '"message": "blabla"}'
             }
         )
-
         session = driver.session("w", database=self.adb)
+        list(session.run("RETURN 1 AS n"))
+        session.close()
+
+        session = driver.session("w", database=self.bdb)
         tx = session.begin_transaction()
         failed = False
         try:
-            tx.run("RETURN 1 as n").consume()
+            tx.run("RETURN 1 AS n").consume()
         except types.DriverError as e:
             driver_name = get_driver_name()
             if driver_name in ["java"]:
@@ -1109,7 +1140,11 @@ class RoutingV5x0(RoutingBase):
         session.close()
 
         self.assertNotIn(self._writeServer1.address,
-                         driver.get_routing_table(self.adb).writers)
+                         driver.get_routing_table(self.bdb).writers)
+        if self.adb != self.bdb:
+            # should not invalidate writer for other databases
+            self.assertIn(self._writeServer1.address,
+                          driver.get_routing_table(self.adb).writers)
 
         driver.close()
 
@@ -1123,23 +1158,26 @@ class RoutingV5x0(RoutingBase):
     ):
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
-        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._routingServer1, "router_adb_then_bdb.script")
         self.start_server(
             self._writeServer1,
-            "writer_tx_yielding_failure_on_run.script",
+            "writer_tx_yielding_failure_on_2nd_run.script",
             vars_={
                 **self.get_vars(),
                 "#FAILURE#": '{"code": "Neo.ClientError.Cluster.NotALeader", '
                              '"message": "blabla"}'
             }
         )
-
         session = driver.session("w", database=self.adb)
+        list(session.run("RETURN 1 AS n"))
+        session.close()
+
+        session = driver.session("w", database=self.bdb)
         tx = session.begin_transaction()
         failed = False
         try:
             # drivers doing eager loading will fail here
-            tx.run("RETURN 1 as n")
+            tx.run("RETURN 1 AS n")
             # else they should fail here
             tx.commit()
         except types.DriverError as e:
@@ -1166,7 +1204,11 @@ class RoutingV5x0(RoutingBase):
         session.close()
 
         self.assertNotIn(self._writeServer1.address,
-                         driver.get_routing_table(self.adb).writers)
+                         driver.get_routing_table(self.bdb).writers)
+        if self.adb != self.bdb:
+            # should not invalidate writer for other databases
+            self.assertIn(self._writeServer1.address,
+                          driver.get_routing_table(self.adb).writers)
 
         driver.close()
 

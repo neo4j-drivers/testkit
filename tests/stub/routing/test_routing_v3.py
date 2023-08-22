@@ -35,6 +35,7 @@ class RoutingV3(RoutingV4x4):
         return v
 
     adb = None
+    bdb = None
 
     def route_call_count(self, server):
         return server.count_requests(
