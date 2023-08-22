@@ -1050,7 +1050,6 @@ class Repeat1Block(_RepeatBlock):
 
 
 class ConditionalBlock(Block):
-
     def __init__(self, conditions: List[str], blocks: List[Block],
                  line_number: int):
         super().__init__(line_number)
@@ -1120,7 +1119,7 @@ class ConditionalBlock(Block):
         block = self._probe_selection(channel, None)
         if not block:
             return False
-        return block.can_consume(channel)
+        return block.can_consume_after_reset(channel)
         pass
 
     def has_deterministic_end(self):
