@@ -337,7 +337,6 @@ class TestAuthTokenManager5x1(AuthorizationBase):
 
     @staticmethod
     def _get_error_code(error):
-        print(error)
         return json.loads(error)["code"]
 
     def test_error_on_pull_using_session_run(self):
