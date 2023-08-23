@@ -1,7 +1,8 @@
 from .. import protocol
 from .auth_token_manager import (
     AuthTokenManager,
-    ExpirationBasedAuthTokenManager,
+    BasicAuthTokenManager,
+    BearerAuthTokenManager,
 )
 from .bookmark_manager import BookmarkManager
 from .session import Session
@@ -29,7 +30,9 @@ class Driver:
             self._auth_token = auth_token
         else:
             assert isinstance(
-                auth_token, (AuthTokenManager, ExpirationBasedAuthTokenManager)
+                auth_token, (AuthTokenManager,
+                             BearerAuthTokenManager,
+                             BasicAuthTokenManager)
             )
             self._auth_token_manager = auth_token
             auth_token_manager_id = auth_token.id
@@ -73,9 +76,10 @@ class Driver:
                     )
                     continue
             for cb_processor in (
-                    BookmarkManager,
-                    ExpirationBasedAuthTokenManager,
                     AuthTokenManager,
+                    BasicAuthTokenManager,
+                    BearerAuthTokenManager,
+                    BookmarkManager,
             ):
                 cb_response = cb_processor.process_callbacks(res)
                 if cb_response is not None:

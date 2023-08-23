@@ -2,9 +2,9 @@ from contextlib import contextmanager
 
 import nutkit.protocol as types
 from nutkit.frontend import (
-    AuthTokenManager,
+    BasicAuthTokenManager,
+    BearerAuthTokenManager,
     Driver,
-    ExpirationBasedAuthTokenManager,
 )
 from tests.shared import driver_feature
 from tests.stub.authorization.test_authorization import AuthorizationBase
@@ -65,7 +65,7 @@ class _TestTokenExpiredRetryBase(AuthorizationBase):
                 with self.assertRaises(types.DriverError) as exc:
                     res = tx.run("RETURN 1 AS n")
                     list(res)
-                self.assert_is_retryable_token_error(exc.exception)
+                self.assert_is_token_error(exc.exception, retryable=True)
                 raise exc.exception
             else:
                 res = tx.run(f"RETURN {count} AS n")
@@ -116,7 +116,25 @@ class TestTokenExpiredRetryV5x1(_TestTokenExpiredRetryBase):
             self._router.reset()
 
     @driver_feature(types.Feature.AUTH_MANAGED)
-    def test_retry_with_temporal_token(self):
+    def test_no_retry_with_basic_manager(self):
+        def provider():
+            nonlocal count
+            count += 1
+            if count == 1:
+                return self._auth1
+            return self._auth2
+
+        for routing in (True, False):
+            with self.subTest(routing=routing):
+                count = 0
+                auth = BasicAuthTokenManager(self._backend, provider)
+                self._test_no_retry(auth, routing=routing)
+                self.assertEqual(count, 1)
+            self._reader.reset()
+            self._router.reset()
+
+    @driver_feature(types.Feature.AUTH_MANAGED)
+    def test_retry_with_bearer_manager(self):
         count = 0
 
         def provider():
@@ -128,42 +146,12 @@ class TestTokenExpiredRetryV5x1(_TestTokenExpiredRetryBase):
 
         for routing in (True, False):
             with self.subTest(routing=routing):
-                auth = ExpirationBasedAuthTokenManager(self._backend, provider)
+                auth = BearerAuthTokenManager(self._backend, provider)
                 self._test_retry(auth, routing=routing)
                 self.assertEqual(count, 2)
             self._reader.reset()
             self._router.reset()
             count = 0
-
-    @driver_feature(types.Feature.AUTH_MANAGED)
-    def test_retry_with_static_token(self):
-        expired_count = 0
-        get_count = 0
-
-        def get_auth():
-            nonlocal get_count
-            nonlocal expired_count
-            get_count += 1
-            if expired_count == 0:
-                return self._auth1
-            return self._auth2
-
-        def on_auth_expired(auth_):
-            nonlocal expired_count
-            expired_count += 1
-            assert auth_ == self._auth1
-
-        for routing in (True, False):
-            with self.subTest(routing=routing):
-                auth = AuthTokenManager(self._backend, get_auth,
-                                        on_auth_expired)
-                self._test_retry(auth, routing=routing)
-                self.assertEqual(expired_count, 1)
-                self.assertEqual(get_count, 3 if routing else 2)
-            self._reader.reset()
-            self._router.reset()
-            expired_count = 0
-            get_count = 0
 
 
 class TestTokenExpiredRetryV5x0(TestTokenExpiredRetryV5x1):
@@ -176,8 +164,8 @@ class TestTokenExpiredRetryV5x0(TestTokenExpiredRetryV5x1):
     def test_no_retry_with_static_token(self):
         super().test_no_retry_with_static_token()
 
-    def test_retry_with_temporal_token(self):
-        super().test_retry_with_temporal_token()
+    def test_no_retry_with_basic_manager(self):
+        super().test_no_retry_with_basic_manager()
 
-    def test_retry_with_static_token(self):
-        super().test_retry_with_static_token()
+    def test_retry_with_bearer_manager(self):
+        super().test_retry_with_bearer_manager()

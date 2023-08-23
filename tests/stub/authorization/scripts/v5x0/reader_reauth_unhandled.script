@@ -1,8 +1,7 @@
 !: BOLT #VERSION#
 !: ALLOW CONCURRENT
 
-A: HELLO {"user_agent": "*", "[routing]": "*"}
-A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+A: HELLO {"user_agent": "*", "[routing]": "*", "scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 
 *: RESET
 
@@ -18,13 +17,8 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 
-    *: RESET
-
-    # now the second connection receives the authorization expired error
-    # => this connection needs to be re-authenticated (with the same credentials)
-    A: LOGOFF
-    A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
-
+    # now the second connection receives the error
+    # => this connection should not be affected
     *: RESET
 
     C: BEGIN {"{}": "*"}
@@ -48,13 +42,21 @@ S: SUCCESS {}
     *: RESET
 
     {?
-        C: BEGIN {"{}": "*"}
-        S: SUCCESS {}
+       C: BEGIN {"{}": "*"}
+       S: SUCCESS {}
     ?}
 
     C: RUN "RETURN 2.2 AS n" "*" "*"
-    S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired."}
+    S: FAILURE #ERROR#
     S: <EXIT>
+----
+    C: RUN "RETURN 2.3 AS n" "*" "*"
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL "*"
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
 ----
     C: RUN "RETURN 3.1 AS n" "*" "*"
     S: SUCCESS {"fields": ["n"]}
@@ -64,26 +66,13 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 
-    *: RESET
-
-    # now the second connection receives the authorization expired error
-    # => this connection needs to be re-authenticated (with the same credentials)
-    A: LOGOFF
-    A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
-
+    # now the second connection receives the error
+    # => this connection should not be affected
     *: RESET
 
     C: BEGIN {"{}": "*"}
     S: SUCCESS {}
     C: RUN "RETURN 3.2 AS n" "*" "*"
-    S: SUCCESS {"fields": ["n"]}
-    C: PULL "*"
-    S: RECORD [1]
-       SUCCESS {"type": "r"}
-    C: COMMIT
-    S: SUCCESS {}
-----
-    C: RUN "RETURN 2.3 AS n" "*" "*"
     S: SUCCESS {"fields": ["n"]}
     C: PULL "*"
     S: RECORD [1]

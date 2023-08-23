@@ -15,10 +15,14 @@ class AuthorizationBase(TestkitTestCase):
     # While there is no unified language agnostic error type mapping, a
     # dedicated driver mapping is required to determine if the expected
     # error is returned.
-    def assert_is_authorization_error(self, error):
-        driver = get_driver_name()
+    def assert_is_authorization_error(self, error, retryable=False):
         self.assertEqual("Neo.ClientError.Security.AuthorizationExpired",
                          error.code)
+
+        if retryable:
+            return self._assert_is_retryable_authorization_error(error)
+
+        driver = get_driver_name()
         expected_type = None
         if driver in ["java"]:
             expected_type = \
@@ -38,12 +42,35 @@ class AuthorizationBase(TestkitTestCase):
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
             self.assertEqual(expected_type, error.errorType)
+        # This exception should always be considered retryable
+        self._assert_retryable(error)
 
-    def assert_is_token_error(self, error):
+    def _assert_is_retryable_authorization_error(self, error):
         driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.TransientError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["dotnet"]:
+            expected_type = "AuthorizationExpired"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_retryable(error)
+
+    def assert_is_token_error(self, error, retryable=False):
         self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
         self.assertIn("Token expired", error.msg)
 
+        if retryable:
+            return self._assert_is_retryable_token_error(error)
+
+        driver = get_driver_name()
         expected_type = None
         if driver in ["python"]:
             expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
@@ -63,29 +90,146 @@ class AuthorizationBase(TestkitTestCase):
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
             self.assertEqual(expected_type, error.errorType)
+        self._assert_not_retryable(error)
 
-    def assert_is_retryable_token_error(self, error):
+    def _assert_is_retryable_token_error(self, error):
         driver = get_driver_name()
-        self.assertEqual("Neo.ClientError.Security.TokenExpired", error.code)
-        self.assertIn("Token expired", error.msg)
-
         expected_type = None
         if driver in ["python"]:
-            expected_type = "<class 'neo4j.exceptions.TokenExpiredRetryable'>"
-        elif driver in ["go", "javascript"]:
-            pass  # code and msg check are enough
+            expected_type = "<class 'neo4j.exceptions.TokenExpired'>"
+        elif driver in ["javascript"]:
+            pass
         elif driver in ["dotnet"]:
             expected_type = "ClientError"
-        elif driver == "java":
+        elif driver in ["java"]:
             expected_type = \
-                "org.neo4j.driver.exceptions.TokenExpiredRetryableException"
-        elif driver == "ruby":
-            expected_type = \
-                "Neo4j::Driver::Exceptions::TokenExpiredRetryableException"
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
         if expected_type is not None:
             self.assertEqual(expected_type, error.errorType)
+        self._assert_retryable(error)
+
+    def assert_is_unauthorized_error(self, error, retryable=False):
+        self.assertEqual(
+            "Neo.ClientError.Security.Unauthorized", error.code
+        )
+        self.assertIn("Wrong credentials. Kthxbye!", error.msg)
+
+        if retryable:
+            return self._assert_is_retryable_unauthorized_error(error)
+
+        driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.AuthError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["dotnet"]:
+            expected_type = "AuthenticationError"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.AuthenticationException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_not_retryable(error)
+
+    def _assert_is_retryable_unauthorized_error(self, error):
+        driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.AuthError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["dotnet"]:
+            expected_type = "AuthenticationError"
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_retryable(error)
+
+    def assert_is_security_error(self, error, retryable=False):
+        self.assertEqual("Neo.ClientError.Security.MadeUp", error.code)
+        self.assertIn(r"Some security issue ¯\_(ツ)_/¯", error.msg)
+
+        if retryable:
+            return self._assert_is_retryable_security_error(error)
+
+        driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.ClientError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["dotnet"]:
+            expected_type = "OtherSecurityException"
+        elif driver in ["java"]:
+            expected_type = "org.neo4j.driver.exceptions.SecurityException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_not_retryable(error)
+
+    def _assert_is_retryable_security_error(self, error):
+        driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.ClientError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["java"]:
+            expected_type = \
+                "org.neo4j.driver.exceptions.SecurityRetryableException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_retryable(error)
+
+    def assert_is_transient_error(self, error):
+        self.assertEqual("Neo.TransientError.General.TransactionMemoryLimit",
+                         error.code)
+        self.assertIn(r"RAM sticks", error.msg)
+
+        driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.TransientError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["java"]:
+            expected_type = "org.neo4j.driver.exceptions.TransientException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_retryable(error)
+
+    def assert_is_random_error(self, error):
+        self.assertEqual("Neo.ClientError.Procedure.ProcedureCallFailed",
+                         error.code)
+        self.assertIn(r"A thing happened...", error.msg)
+
+        driver = get_driver_name()
+        expected_type = None
+        if driver in ["python"]:
+            expected_type = "<class 'neo4j.exceptions.ClientError'>"
+        elif driver in ["javascript"]:
+            pass
+        elif driver in ["java"]:
+            expected_type = "org.neo4j.driver.exceptions.ClientException"
+        else:
+            self.fail("no error mapping is defined for %s driver" % driver)
+        if expected_type is not None:
+            self.assertEqual(expected_type, error.errorType)
+        self._assert_not_retryable(error)
 
     def assert_re_auth_unsupported_error(self, error):
         self.assertIsInstance(error, types.DriverError)
@@ -127,6 +271,18 @@ class AuthorizationBase(TestkitTestCase):
             self.assertIn("session auth", error.msg)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
+
+    def _assert_not_retryable(self, error):
+        if self.driver_supports_features(
+            types.Feature.API_RETRYABLE_EXCEPTION
+        ):
+            self.assertFalse(error.retryable)
+
+    def _assert_retryable(self, error):
+        if self.driver_supports_features(
+            types.Feature.API_RETRYABLE_EXCEPTION
+        ):
+            self.assertTrue(error.retryable)
 
     def _find_version_script(self, script_fns):
         if isinstance(script_fns, str):
@@ -206,6 +362,18 @@ class AuthorizationBase(TestkitTestCase):
     )
     _TOKEN_EXPIRED = ('{"code": "Neo.ClientError.Security.TokenExpired", '
                       '"message": "Token expired"}')
+    _UNAUTHORIZED = ('{"code": "Neo.ClientError.Security.Unauthorized", '
+                     '"message": "Wrong credentials. Kthxbye!"}')
+    _SECURITY_EXC = ('{"code": "Neo.ClientError.Security.MadeUp", '
+                     r'"message": "Some security issue ¯\\_(ツ)_/¯"}')
+    _TRANSIENT_EXC = (
+        '{"code": "Neo.TransientError.General.TransactionMemoryLimit", '
+        '"message": "These are not the RAM sticks you\'re looking for!"}'
+    )
+    _RANDOM_EXC = (
+        '{"code": "Neo.ClientError.Procedure.ProcedureCallFailed", '
+        '"message": "A thing happened..."}'
+    )
 
 
 # TODO: find a way to test that driver ditches all open connection in the pool

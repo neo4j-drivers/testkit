@@ -54,6 +54,8 @@ class Feature(Enum):
     # If there are more than records, the driver emits a warning.
     # This method is supposed to always exhaust the result stream.
     API_RESULT_SINGLE_OPTIONAL = "Feature:API:Result.SingleOptional"
+    # The driver offers a way to determine if exceptions are retryable or not.
+    API_RETRYABLE_EXCEPTION = "Feature:API:RetryableExceptions"
     # The session configuration allows to switch the authentication context
     # by supplying new credentials. This new context is only valid for the
     # current session.
