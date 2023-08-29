@@ -1,0 +1,26 @@
+!: BOLT #VERSION#
+
+A: HELLO {"{}": "*"}
+*: RESET
+
+C: RUN "RETURN 1 AS n" {} {}
+S: SUCCESS {"fields": ["n"]}
+C: PULL_ALL
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+
+*: RESET
+
+C: BEGIN {}
+S: SUCCESS {}
+C: RUN "RETURN 1 AS n" {} {}
+S: FAILURE #FAILURE#
+{?
+    C: PULL_ALL
+    S: IGNORED
+?}
+C: RESET
+S: SUCCESS {}
+
+*: RESET
+?: GOODBYE
