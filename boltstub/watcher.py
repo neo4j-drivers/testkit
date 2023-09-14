@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import time
 from logging import (
     CRITICAL,
     DEBUG,
@@ -110,6 +111,14 @@ class ColourFormatter(Formatter):
         elif record.levelno == DEBUG:
             bits[1] = cyan(bits[1])
         return "  ".join(bits)
+
+    def formatTime(self, record, datefmt=None):  # noqa: N802
+        if datefmt:
+            raise NotImplementedError("custom datefmt not supported")
+        ct = self.converter(record.created)
+        t = time.strftime("%H:%M:%S", ct)
+        ms = int(record.msecs)
+        return f"{t}.{ms:03d}"
 
 
 class Watcher(object):
