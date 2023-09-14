@@ -325,7 +325,8 @@ class StubServer:
         self._wait_for_silence(silence_period)
         res = []
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # lines start with something like
+            # "2023-01-01 10:08:33,420  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
             line = re.sub(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\s+"
@@ -352,7 +353,8 @@ class StubServer:
         self._wait_for_silence(silence_period)
         res = []
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # lines start with something like
+            # "2023-01-01 10:08:33,420  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
             line = re.sub(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\s+"
@@ -376,7 +378,8 @@ class StubServer:
         self._wait_for_silence(silence_period)
         lines = []
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # lines start with something like
+            # "2023-01-01 10:08:33,420  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
             line = re.sub(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\s+"
