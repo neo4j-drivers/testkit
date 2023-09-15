@@ -325,11 +325,11 @@ class StubServer:
         self._wait_for_silence(silence_period)
         res = []
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # lines start with something like "10:08:33.420  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
-            line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
-                          line)
+            line = re.sub(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+\[[0-9A-Fa-f#>]+\]\s+",
+                          "", line)
             match = re.match(r"^(C: )|(\(\s*\d+\) C: )", line)
             if not match:
                 continue
@@ -352,11 +352,11 @@ class StubServer:
         self._wait_for_silence(silence_period)
         res = []
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # lines start with something like "10:08:33.420  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
-            line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
-                          line)
+            line = re.sub(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+\[[0-9A-Fa-f#>]+\]\s+",
+                          "", line)
             match = re.match(r"^(S: )|(\(\s*\d+\) S: )|(\(\s*\d+\)\s+)", line)
             if not match:
                 continue
@@ -376,11 +376,11 @@ class StubServer:
         self._wait_for_silence(silence_period)
         lines = []
         for line in self._stdout_lines:
-            # lines start with something like "10:08:33  [#EBE0>#2332]  "
+            # lines start with something like "10:08:33.420  [#EBE0>#2332]  "
             # plus some color escape sequences and ends on a newline
             line = re.sub(r"\x1b\[[\d;]+m", "", line[:-1])
-            line = re.sub(r"^\d{2}:\d{2}:\d{2}\s+\[[0-9A-Fa-f#>]+\]\s+", "",
-                          line)
+            line = re.sub(r"^\d{2}:\d{2}:\d{2}\.\d{3}\s+\[[0-9A-Fa-f#>]+\]\s+",
+                          "", line)
             match = re.match(
                 r"^((?:C: )|(?:\(\s*\d+\) C: ))"
                 r"|((?:S: )|(?:\(\s*\d+\) S: )|(?:\(\s*\d+\)\s+))",

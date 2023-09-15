@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import time
 from logging import (
     CRITICAL,
     DEBUG,
@@ -111,6 +112,14 @@ class ColourFormatter(Formatter):
             bits[1] = cyan(bits[1])
         return "  ".join(bits)
 
+    def formatTime(self, record, datefmt=None):  # noqa: N802
+        if datefmt:
+            raise NotImplementedError("custom datefmt not supported")
+        ct = self.converter(record.created)
+        t = time.strftime("%H:%M:%S", ct)
+        ms = int(record.msecs)
+        return f"{t}.{ms:03d}"
+
 
 class Watcher(object):
     """Log watcher for monitoring driver and protocol activity."""
@@ -121,8 +130,7 @@ class Watcher(object):
         super(Watcher, self).__init__()
         self.logger_name = logger_name
         self.logger = getLogger(self.logger_name)
-        self.formatter = ColourFormatter("%(asctime)s  %(message)s",
-                                         "%H:%M:%S")
+        self.formatter = ColourFormatter("%(asctime)s  %(message)s")
 
     def watch(self, level=INFO, out=stdout):
         self.stop()
