@@ -74,7 +74,8 @@ class NewDriver:
         liveness_check_timeout_ms=None, max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None,
         notifications_min_severity=None,
-        notifications_disabled_categories=None
+        notifications_disabled_categories=None,
+        telemetry_disabled=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -96,6 +97,8 @@ class NewDriver:
             self.notificationsMinSeverity = notifications_min_severity
         if notifications_disabled_categories is not None:
             self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
+        if telemetry_disabled is not None:
+            self.telemetryDisabled = telemetry_disabled
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:

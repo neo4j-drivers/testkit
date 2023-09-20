@@ -1,0 +1,49 @@
+!: BOLT 5.4
+!: ALLOW RESTART
+!: PY connection_count = 0
+
+PY: connection_count += 1
+C: HELLO {"{}": "*"}
+S: SUCCESS {"server": "Neo4j/5.14.0", "connection_id": "bolt-1", "hints": {"telemetry.enabled": true}}
+A: LOGON {"{}": "*"}
+*: RESET
+
+IF: connection_count == 1
+{{
+    C: TELEMETRY {"Z": "*"}
+    S: <EXIT>
+    # oopsies... dead connection... time for a retry
+}}
+ELIF: connection_count == 2
+{{
+    # The driver is expected to send the TELEMETRY message again.
+    # This time, it'll be successful.
+    A: TELEMETRY {"Z": "*"}
+    C: BEGIN {"{}": "*"}
+    S: FAILURE {"code": "Neo.TransientError.General.PleaseRetry", "message": "something went wrong™"}
+
+    {?
+        C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+        S: IGNORED
+    ?}
+    {?
+        C: PULL {"{}": "*"}
+        S: IGNORED
+    ?}
+
+    +: RESET
+
+    # The previous TELEMETRY message was successful, so the driver should not send it again.
+    C: BEGIN {"{}": "*"}
+    S: SUCCESS {}
+    C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"{}": "*"}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+}}
+
+*: RESET
+?: GOODBYE

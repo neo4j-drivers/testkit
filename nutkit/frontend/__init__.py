@@ -10,3 +10,4 @@ from .bookmark_manager import (
 from .driver import Driver
 from .exceptions import ApplicationCodeError
 from .fake_time import FakeTime
+from .session import Session
