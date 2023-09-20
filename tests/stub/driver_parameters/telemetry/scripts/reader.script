@@ -10,17 +10,23 @@ A: LOGON {"{}": "*"}
 
 {{
     {{
-        # transaction function
-        ?: TELEMETRY {"Z": "0"}
-        ----
-        # unmanaged transaction
-        ?: TELEMETRY {"Z": "1"}
-        ----
-        # driver level
-        ?: TELEMETRY {"Z": "3"}
+        {{
+            # transaction function
+            C: TELEMETRY {"Z": "0"}
+            ----
+            # unmanaged transaction
+            C: TELEMETRY {"Z": "1"}
+            ----
+            # driver level
+            C: TELEMETRY {"Z": "3"}
+        }}
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        S: SUCCESS {}
+    ----
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
     }}
-    C: BEGIN {"{}": "*"}
-    S: SUCCESS {}
     C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
     S: SUCCESS {"fields": ["n"]}
     C: PULL {"{}": "*"}
@@ -30,9 +36,15 @@ A: LOGON {"{}": "*"}
     S: SUCCESS {}
 ----
     # auto commit
-    ?: TELEMETRY {"Z": "2"}
-    C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
-    S: SUCCESS {"fields": ["n"]}
+    {{
+        C: TELEMETRY {"Z": "2"}
+        C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+        S: SUCCESS {}
+        S: SUCCESS {"fields": ["n"]}
+    ----
+        C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+        S: SUCCESS {"fields": ["n"]}
+    }}
     C: PULL {"{}": "*"}
     S: RECORD [1]
     S: SUCCESS {"type": "r"}

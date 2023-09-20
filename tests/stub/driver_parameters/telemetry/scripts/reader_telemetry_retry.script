@@ -18,8 +18,9 @@ ELIF: connection_count == 2
 {{
     # The driver is expected to send the TELEMETRY message again.
     # This time, it'll be successful.
-    A: TELEMETRY {"Z": "*"}
+    C: TELEMETRY {"Z": "*"}
     C: BEGIN {"{}": "*"}
+    S: SUCCESS {}
     S: FAILURE {"code": "Neo.TransientError.General.PleaseRetry", "message": "something went wrong™"}
 
     {?
