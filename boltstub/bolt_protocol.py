@@ -526,3 +526,20 @@ class Bolt5x3Protocol(Bolt5x2Protocol):
     equivalent_versions = set()
 
     server_agent = "Neo4j/5.9.0"
+
+
+class Bolt5x4Protocol(Bolt5x3Protocol):
+    protocol_version = (5, 4)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    server_agent = "Neo4j/5.14.0"
+
+    messages = {
+        "C": {
+            **Bolt5x3Protocol.messages["C"],
+            b"\x54": "TELEMETRY",
+        },
+        "S": Bolt5x3Protocol.messages["S"],
+    }

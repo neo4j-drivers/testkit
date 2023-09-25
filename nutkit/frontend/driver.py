@@ -17,7 +17,8 @@ class Driver:
                  max_connection_pool_size=None,
                  connection_acquisition_timeout_ms=None,
                  notifications_min_severity=None,
-                 notifications_disabled_categories=None):
+                 notifications_disabled_categories=None,
+                 telemetry_disabled=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -48,7 +49,8 @@ class Driver:
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
             notifications_min_severity=notifications_min_severity,
-            notifications_disabled_categories=notifications_disabled_categories
+            notifications_disabled_categories=notifications_disabled_categories,  # noqa: E501
+            telemetry_disabled=telemetry_disabled
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):

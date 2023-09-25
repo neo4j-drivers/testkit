@@ -1,0 +1,17 @@
+!: BOLT 5.4
+!: AUTO RESET
+!: ALLOW RESTART
+
+C: HELLO {"{}": "*"}
+IF: #SERVER_TELEMETRY_ENABLED#
+    S: SUCCESS {"server": "Neo4j/5.14.0", "connection_id": "bolt-2", "hints": {"telemetry.enabled": true}}
+ELSE:
+    S: SUCCESS {"server": "Neo4j/5.14.0", "connection_id": "bolt-2"}
+A: LOGON {"{}": "*"}
+*: RESET
+{+
+    C: ROUTE "*" "*" "*"
+    S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9010"], "role":"ROUTE"}, {"addresses": ["#HOST#:9000"], "role":"READ"}, {"addresses": ["#HOST#:9000"], "role":"WRITE"}]}}
+    *: RESET
++}
+?: GOODBYE

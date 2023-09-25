@@ -1,0 +1,54 @@
+!: BOLT 5.4
+
+C: HELLO {"{}": "*"}
+IF: #SERVER_TELEMETRY_ENABLED#
+    S: SUCCESS {"server": "Neo4j/5.14.0", "connection_id": "bolt-1", "hints": {"telemetry.enabled": true}}
+ELSE:
+    S: SUCCESS {"server": "Neo4j/5.14.0", "connection_id": "bolt-1"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+{{
+    {{
+        {{
+            # transaction function
+            C: TELEMETRY {"Z": "0"}
+            ----
+            # unmanaged transaction
+            C: TELEMETRY {"Z": "1"}
+            ----
+            # driver level
+            C: TELEMETRY {"Z": "3"}
+        }}
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        S: SUCCESS {}
+    ----
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+    }}
+    C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"{}": "*"}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+----
+    # auto commit
+    {{
+        C: TELEMETRY {"Z": "2"}
+        C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+        S: SUCCESS {}
+        S: SUCCESS {"fields": ["n"]}
+    ----
+        C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+        S: SUCCESS {"fields": ["n"]}
+    }}
+    C: PULL {"{}": "*"}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+}}
+
+*: RESET
+?: GOODBYE
