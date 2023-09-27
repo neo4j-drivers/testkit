@@ -8,7 +8,10 @@ from nutkit.frontend import (
     Driver,
     Session,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
 
 
@@ -143,6 +146,7 @@ class TestTelemetry(TestkitTestCase):
 
         self._test_telemetry(work, 2)
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_execute_query(self):
         def work(driver_telemetry_disabled_):
             with self.driver(
@@ -188,6 +192,7 @@ class TestTelemetry(TestkitTestCase):
 
         self._test_telemetry_retry(work, 0)
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_execute_query_retry(self):
         def work():
             with self.driver() as driver:
