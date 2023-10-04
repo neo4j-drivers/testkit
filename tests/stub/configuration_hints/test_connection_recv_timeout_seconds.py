@@ -99,6 +99,8 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             self.assertTrue(
                 e.msg.startswith("Cannot run query in this transaction")
             )
+        elif driver in ["javascript"]:
+            self.assertEqual("Neo4jError", e.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
