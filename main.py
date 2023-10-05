@@ -108,6 +108,10 @@ def initialise_configurations(settings):
             ("5.1",    True,        True,     "neo4j",  0),
             # Bolt 5.1
             ("5.5",    True,        True,     "neo4j",  0),
+            # Bolt 5.2
+            ("5.7",    True,        True,     "neo4j",  0),
+            # Bolt 5.3
+            ("5.9",    True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
