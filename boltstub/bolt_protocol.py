@@ -534,7 +534,7 @@ class Bolt5x4Protocol(Bolt5x3Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
-    server_agent = "Neo4j/5.14.0"
+    server_agent = "Neo4j/5.13.0"
 
     messages = {
         "C": {
