@@ -156,6 +156,38 @@ class TestNotificationMapping(NotificationsBase):
             {
                 "notifications": [
                     {
+                        "category": "SECURITY",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "SECURITY",
+                        "category_string": "SECURITY",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
+                        "category": "TOPOLOGY",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "TOPOLOGY",
+                        "category_string": "TOPOLOGY",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
                         "category": "MADE_UP",
                         "severity": "WARNING"
                     }
