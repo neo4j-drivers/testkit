@@ -95,10 +95,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
                 e.errorType.startswith("cannot use this transaction")
             )
         elif driver in ["dotnet"]:
-            self.assertEqual("ClientError", e.errorType)
-            self.assertTrue(
-                e.msg.startswith("Cannot run query in this transaction")
-            )
+            self.assertEqual("TransactionTerminatedError", e.errorType)
         elif driver in ["javascript"]:
             self.assertEqual("Neo4jError", e.errorType)
         else:
