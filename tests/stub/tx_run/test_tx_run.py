@@ -544,11 +544,9 @@ class TestTxRun(TestkitTestCase):
                 e.exception.errorType.startswith("cannot use this transaction")
             )
         elif driver in ["dotnet"]:
-            self.assertEqual("ClientError", e.exception.errorType)
-            self.assertTrue(
-                e.exception.msg.startswith(
-                    "Cannot run query in this transaction"
-                )
+            self.assertEqual(
+                "TransactionTerminatedError",
+                e.exception.errorType
             )
         elif driver in ["javascript"]:
             self.assertEqual("Neo4jError", e.exception.errorType)
