@@ -706,10 +706,6 @@ class RoutingV5x0(RoutingBase):
 
         session = driver.session("w", database=self.adb)
         tx = session.begin_transaction()
-        # TODO: It will be removed as soon as JS Driver
-        #       has async iterator api
-        if get_driver_name() in ["javascript"]:
-            fails_on_next = True
         if fails_on_next:
             result = tx.run("RETURN 1 as n")
             with self.assertRaises(types.DriverError) as exc:

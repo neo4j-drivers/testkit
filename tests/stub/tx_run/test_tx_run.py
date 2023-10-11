@@ -247,8 +247,8 @@ class TestTxRun(TestkitTestCase):
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 AS n")
-            # needed for driver which not fail on run, such as JS and .net.
-            result.consume()
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
         if rollback:
             tx.rollback()
@@ -275,8 +275,8 @@ class TestTxRun(TestkitTestCase):
             # initiate another stream that fails on RUN
             with self.assertRaises(types.DriverError) as exc:
                 result = tx.run("invalid")
-                # needed for driver which not fail on run, such as JS and .net.
-                result.consume()
+                if get_driver_name() in ["javascript", "dotnet"]:
+                    result.next()
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.Statement.SyntaxError")
             self._assert_is_client_exception(exc)
@@ -318,8 +318,8 @@ class TestTxRun(TestkitTestCase):
         # initiate another stream that fails on RUN
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("invalid")
-            # needed for driver which not fail on run, such as JS and .net.
-            result.consume()
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
         self._assert_is_client_exception(exc)
@@ -342,16 +342,16 @@ class TestTxRun(TestkitTestCase):
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("invalid")
-            # needed for driver which not fail on run, such as JS and .net.
-            result.consume()
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.MadeUp.Code")
         self._assert_is_client_exception(exc)
 
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 AS n")
-            # needed for driver which not fail on run, such as JS and .net.
-            result.consume()
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         # new actions on the transaction result in a tx terminated
         # exception, a subclass of the client exception
         self._assert_is_tx_terminated_exception(exc)
@@ -389,8 +389,8 @@ class TestTxRun(TestkitTestCase):
 
             with self.assertRaises(types.DriverError) as exc2:
                 result = tx.run("invalid")
-                # needed for driver which not fail on run, such as JS and .net.
-                result.consume()
+                if get_driver_name() in ["javascript", "dotnet"]:
+                    result.next()
             driver = get_driver_name()
             if driver in ["go"]:
                 # Go will return the same error the transaction failed with
