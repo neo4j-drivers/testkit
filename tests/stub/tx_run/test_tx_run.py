@@ -246,7 +246,9 @@ class TestTxRun(TestkitTestCase):
         self._session = self._driver.session("r")
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
-            tx.run("RETURN 1 AS n").consume()
+            result = tx.run("RETURN 1 AS n")
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
         if rollback:
             tx.rollback()
@@ -272,7 +274,9 @@ class TestTxRun(TestkitTestCase):
 
             # initiate another stream that fails on RUN
             with self.assertRaises(types.DriverError) as exc:
-                tx.run("invalid")
+                result = tx.run("invalid")
+                if get_driver_name() in ["javascript", "dotnet"]:
+                    result.next()
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.Statement.SyntaxError")
             self._assert_is_client_exception(exc)
@@ -313,7 +317,9 @@ class TestTxRun(TestkitTestCase):
 
         # initiate another stream that fails on RUN
         with self.assertRaises(types.DriverError) as exc:
-            tx.run("invalid")
+            result = tx.run("invalid")
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
         self._assert_is_client_exception(exc)
@@ -335,13 +341,17 @@ class TestTxRun(TestkitTestCase):
         self._session = self._driver.session("r")
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
-            tx.run("invalid")
+            result = tx.run("invalid")
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.MadeUp.Code")
         self._assert_is_client_exception(exc)
 
         with self.assertRaises(types.DriverError) as exc:
-            tx.run("RETURN 1 AS n")
+            result = tx.run("RETURN 1 AS n")
+            if get_driver_name() in ["javascript", "dotnet"]:
+                result.next()
         # new actions on the transaction result in a tx terminated
         # exception, a subclass of the client exception
         self._assert_is_tx_terminated_exception(exc)
@@ -378,7 +388,9 @@ class TestTxRun(TestkitTestCase):
             self._assert_is_client_exception(exc1)
 
             with self.assertRaises(types.DriverError) as exc2:
-                tx.run("invalid")
+                result = tx.run("invalid")
+                if get_driver_name() in ["javascript", "dotnet"]:
+                    result.next()
             driver = get_driver_name()
             if driver in ["go"]:
                 # Go will return the same error the transaction failed with
@@ -522,6 +534,8 @@ class TestTxRun(TestkitTestCase):
             self.assertIn("Neo.ClientError.", e.exception.msg)
         elif driver in ["dotnet"]:
             self.assertEqual("ClientError", e.exception.errorType)
+        elif driver in ["javascript"]:
+            self.assertEqual("Neo4jError", e.exception.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
@@ -542,12 +556,12 @@ class TestTxRun(TestkitTestCase):
                 e.exception.errorType.startswith("cannot use this transaction")
             )
         elif driver in ["dotnet"]:
-            self.assertEqual("ClientError", e.exception.errorType)
-            self.assertTrue(
-                e.exception.msg.startswith(
-                    "Cannot run query in this transaction"
-                )
+            self.assertEqual(
+                "TransactionTerminatedError",
+                e.exception.errorType
             )
+        elif driver in ["javascript"]:
+            self.assertEqual("Neo4jError", e.exception.errorType)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 
