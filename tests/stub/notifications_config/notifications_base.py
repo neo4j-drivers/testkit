@@ -124,6 +124,28 @@ class NotificationsBase(TestkitTestCase):
             {
                 "protocol": {
                     "min_sev": "WARNING",
+                    "dis_cats": ["SECURITY"]
+                },
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
+                               '["SECURITY"], '
+                }
+            },
+            {
+                "protocol": {
+                    "min_sev": "WARNING",
+                    "dis_cats": ["TOPOLOGY"]
+                },
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity": "WARNING", '
+                               '"notifications_disabled_categories": '
+                               '["TOPOLOGY"], '
+                }
+            },
+            {
+                "protocol": {
+                    "min_sev": "WARNING",
                     "dis_cats": ["HINT"]
                 },
                 "script": {
