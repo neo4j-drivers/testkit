@@ -575,7 +575,10 @@ class TestTxRun(TestkitTestCase):
             match = re.match(r"<class '(?:.+\.)*(.*)'>",
                              original_exception.exception.errorType)
             self.assertIn(match.group(1), e.exception.msg)
-
+        elif driver in ["go"]:
+            self.assertTrue(
+                e.exception.errorType.startswith("result failed")
+            )
         else:
             self.assertEqual(e.exception.code,
                              original_exception.exception.code)
