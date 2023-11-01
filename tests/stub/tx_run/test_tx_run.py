@@ -391,18 +391,7 @@ class TestTxRun(TestkitTestCase):
                 result = tx.run("invalid")
                 if get_driver_name() in ["javascript", "dotnet"]:
                     result.next()
-            driver = get_driver_name()
-            if driver in ["go"]:
-                # Go will return the same error the transaction failed with
-                # over and over again when reusing a failed transaction
-                self.assertEqual(exc1.exception.errorType,
-                                 exc2.exception.errorType)
-                self.assertEqual(exc1.exception.msg,
-                                 exc2.exception.msg)
-            else:
-                # new actions on the transaction result in a tx terminated
-                # exception, a subclass of the client exception
-                self._assert_is_tx_terminated_exception(exc2)
+            self._assert_is_tx_terminated_exception(exc2)
 
             tx.close()
             self._session.close()
