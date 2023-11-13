@@ -1,0 +1,12 @@
+!: BOLT 5.1
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+
+*: RESET
+
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+S: FAILURE {"code": "Neo.ClientError.Security.AuthorizationExpired", "message": "Authorization expired"}

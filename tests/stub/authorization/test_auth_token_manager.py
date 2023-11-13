@@ -229,6 +229,30 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                     self._reader.reset()
                     self._router.reset()
 
+    def test_concurrent_auth_expired_error(self):
+        self.start_server(self._reader,
+                          "reader_concurrent_auth_expired.script")
+        auth_manager = TrackingAuthTokenManager(self._backend)
+        with self.driver(auth_manager.manager) as driver:
+            with self.session(driver) as session1:
+                with self.session(driver) as session2:
+                    tx1 = session1.begin_transaction()
+                    tx2 = session2.begin_transaction()
+                    with self.assertRaises(types.DriverError) as exc:
+                        list(tx1.run("RETURN 1 AS n"))
+                    self.assert_is_authorization_error(exc.exception)
+                    with self.assertRaises(types.DriverError) as exc:
+                        list(tx2.run("RETURN 1 AS n"))
+                    self.assert_is_authorization_error(exc.exception)
+        self._reader.done()
+        self.assertEqual(auth_manager.handle_security_exception_count, 2)
+        self.assertTrue(
+            all(
+                args.auth == auth_manager.raw_get_auth()
+                for args in auth_manager.handle_security_exception_args
+            )
+        )
+
     def _get_error_assertion(self, error, handled):
         def retryable(f, can_retry):
             def inner(*args, **kwargs):
@@ -430,6 +454,9 @@ class TestAuthTokenManager5x0(TestAuthTokenManager5x1):
 
     def test_dynamic_auth_manager(self):
         super().test_dynamic_auth_manager()
+
+    def test_concurrent_auth_expired_error(self):
+        super().test_concurrent_auth_expired_error()
 
     def test_error_on_pull_using_session_run(self):
         super().test_error_on_pull_using_session_run()
