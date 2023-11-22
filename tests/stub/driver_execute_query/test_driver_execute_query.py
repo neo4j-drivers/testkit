@@ -129,6 +129,44 @@ class TestDriverExecuteQuery(TestkitTestCase):
             query_type="r"
         )
 
+    def test_configure_transaction_metadata(self):
+        self._start_server(self._router, "router.script")
+        self._start_server(
+            self._writer, "tx_return_1_with_tx_meta.script"
+        )
+        self._driver = self._new_driver()
+
+        eager_result = self._driver.execute_query(
+            "RETURN 1 AS n",
+            tx_meta={"foo": types.CypherString("bar")}
+        )
+
+        self._assert_eager_result(
+            eager_result,
+            keys=["n"],
+            records=[types.Record(values=[types.CypherInt(1)])],
+            query_type="r"
+        )
+
+    def test_configure_transaction_timeout(self):
+        self._start_server(self._router, "router.script")
+        self._start_server(
+            self._writer, "tx_return_1_with_tx_timeout.script"
+        )
+        self._driver = self._new_driver()
+
+        eager_result = self._driver.execute_query(
+            "RETURN 1 AS n",
+            timeout=1234,
+        )
+
+        self._assert_eager_result(
+            eager_result,
+            keys=["n"],
+            records=[types.Record(values=[types.CypherInt(1)])],
+            query_type="r"
+        )
+
     def test_causal_consistency_between_query_executions(self):
         self._start_server(self._router, "router.script")
         self._start_server(
