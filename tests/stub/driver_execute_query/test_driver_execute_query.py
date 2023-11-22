@@ -50,8 +50,10 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN $a AS n",
-                                                  {"a": types.CypherInt(1)})
+        eager_result = self._driver.execute_query(
+            "RETURN $a AS n",
+            params={"a": types.CypherInt(1)}
+        )
 
         self._assert_eager_result(
             eager_result,
@@ -65,9 +67,11 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._writer, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN $a AS n",
-                                                  {"a": types.CypherInt(1)},
-                                                  routing="w")
+        eager_result = self._driver.execute_query(
+            "RETURN $a AS n",
+            params={"a": types.CypherInt(1)},
+            routing="w"
+        )
 
         self._assert_eager_result(
             eager_result,
@@ -81,9 +85,11 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._start_server(self._reader, "tx_return_1_with_params.script")
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN $a AS n",
-                                                  {"a": types.CypherInt(1)},
-                                                  routing="r")
+        eager_result = self._driver.execute_query(
+            "RETURN $a AS n",
+            params={"a": types.CypherInt(1)},
+            routing="r"
+        )
 
         self._assert_eager_result(
             eager_result,
@@ -99,9 +105,11 @@ class TestDriverExecuteQuery(TestkitTestCase):
         )
         self._driver = self._new_driver()
 
-        eager_result = self._driver.execute_query("RETURN $a AS n",
-                                                  {"a": types.CypherInt(1)},
-                                                  database="neo4j")
+        eager_result = self._driver.execute_query(
+            "RETURN $a AS n",
+            params={"a": types.CypherInt(1)},
+            database="neo4j"
+        )
 
         self._assert_eager_result(
             eager_result,
@@ -177,7 +185,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         # CREATING NODE
         eager_result = self._driver.execute_query(
             "CREATE (p:Person {name:$name}) RETURN p.name AS name",
-            {"name": types.CypherString("the person")}
+            params={"name": types.CypherString("the person")}
         )
 
         self._assert_eager_result(
@@ -190,7 +198,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         # READING SAME NODE
         eager_result2 = self._driver.execute_query(
             "MATCH (p:Person {name:$name}) RETURN p.name AS name",
-            {"name": types.CypherString("the person")}
+            params={"name": types.CypherString("the person")}
         )
 
         self._assert_eager_result(
@@ -210,7 +218,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         # CREATING NODE
         eager_result = self._driver.execute_query(
             "CREATE (p:Person {name:$name}) RETURN p.name AS name",
-            {"name": types.CypherString("the person")},
+            params={"name": types.CypherString("the person")},
             bookmark_manager=None
         )
 
@@ -224,7 +232,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         # READING SAME NODE
         eager_result2 = self._driver.execute_query(
             "MATCH (p:Person {name:$name}) RETURN p.name AS name",
-            {"name": types.CypherString("the person")},
+            params={"name": types.CypherString("the person")},
             bookmark_manager=None
         )
 
@@ -251,7 +259,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         # CREATING NODE
         eager_result = self._driver.execute_query(
             "CREATE (p:Person {name:$name}) RETURN p.name AS name",
-            {"name": types.CypherString("a person")},
+            params={"name": types.CypherString("a person")},
             bookmark_manager=bookmark_manager
         )
 
@@ -265,7 +273,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         # READING SAME NODE
         eager_result2 = self._driver.execute_query(
             "MATCH (p:Person {name:$name}) RETURN p.name AS name",
-            {"name": types.CypherString("a person")},
+            params={"name": types.CypherString("a person")},
             bookmark_manager=bookmark_manager
         )
 
