@@ -103,11 +103,13 @@ class Driver:
 
     def execute_query(self, cypher, params=None,
                       routing=None, database=None,
-                      impersonated_user=None, bookmark_manager=...):
+                      auth_token=None, impersonated_user=None,
+                      bookmark_manager=...):
         config = {
             "routing": routing,
             "database": database,
-            "impersonatedUser": impersonated_user
+            "impersonatedUser": impersonated_user,
+            "authorizationToken": auth_token,
         }
 
         if bookmark_manager is None:

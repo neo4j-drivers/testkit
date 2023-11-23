@@ -771,7 +771,9 @@ class ExecuteQuery:
     :param config.database: The database where the query will run.
     :param config.routing: The type of routing ("w" for Writers,
          "r" for "Readers")
-    :param config.impersonatedUser: The user which will be impersonated
+    :param config.impersonatedUser: The user which will be impersonate
+    :param config.authorizationToken: The authorization token to use for the
+        underlying session(s)
     :param config.bookmarkManagerId: The id of the bookmark manager
         used in the query. None or not define for using the default,
         -1 for disabling the BookmarkManager
