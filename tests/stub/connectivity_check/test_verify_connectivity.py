@@ -14,4 +14,3 @@ class TestVerifyConnectivity(TestGetServerInfo):
 
     def _test_call(self, driver, result_check_cb=None):
         driver.verify_connectivity()
-    

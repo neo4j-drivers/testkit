@@ -3,9 +3,7 @@ import time
 from nutkit import protocol as types
 from nutkit.frontend import Driver
 from tests.shared import TestkitTestCase
-from tests.stub.shared import (
-    StubServer,
-)
+from tests.stub.shared import StubServer
 
 
 class TestDriverReconnectsUsingInitialAddress(TestkitTestCase):
@@ -17,7 +15,7 @@ class TestDriverReconnectsUsingInitialAddress(TestkitTestCase):
                          StubServer(9040), StubServer(9050), StubServer(9060)]
         self._uri = "neo4j://%s" % self._router.address
         self._auth = types.AuthorizationToken("basic", principal="",
-                                                 credentials="")
+                                              credentials="")
 
     def tearDown(self):
         self._router.reset()
@@ -78,4 +76,3 @@ class TestDriverReconnectsUsingInitialAddress(TestkitTestCase):
             driver.close()
             for s in self._servers:
                 s.reset()
-
