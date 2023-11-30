@@ -103,9 +103,9 @@ class TestLivenessCheck(TestkitTestCase):
                 driver.execute_query("warmup", database=self._DB)
 
                 # count RESETs without timeout
-                counts = self.get_reset_counts()
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("reference", database=self._DB)
-                counts_ref = self.get_new_reset_counts(counts)
+                counts_ref = self.get_new_reset_counts(counts_pre)
 
                 # can't test more than 60 minutes to not trip the default
                 # max connection lifetime
@@ -114,8 +114,9 @@ class TestLivenessCheck(TestkitTestCase):
                 # count RESETs after potential timeout
                 # abusing impersonation to identify the request also in the
                 # stub router
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("test", database=self._DB)
-                counts = self.get_new_reset_counts(counts_ref)
+                counts = self.get_new_reset_counts(counts_pre)
 
                 # assert no extra RESETs
                 self.assertEqual(counts_ref, counts)
@@ -129,24 +130,26 @@ class TestLivenessCheck(TestkitTestCase):
                 driver.execute_query("warmup", database=self._DB)
 
                 # count RESETs without timeout
-                counts = self.get_reset_counts()
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("reference", database=self._DB)
-                counts_ref = self.get_new_reset_counts(counts)
+                counts_ref = self.get_new_reset_counts(counts_pre)
 
                 time_mock.tick_to_before_timeout()
 
                 # abusing impersonation to identify the request also in the
                 # stub router
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("test pre timeout", database=self._DB)
-                counts = self.get_new_reset_counts(counts_ref)
+                counts = self.get_new_reset_counts(counts_pre)
 
                 # assert no extra RESETs
                 self.assertEqual(counts_ref, counts)
 
                 time_mock.tick_to_after_timeout()
                 # now we should have an extra RESET
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("test post timeout", database=self._DB)
-                counts = self.get_new_reset_counts(counts)
+                counts = self.get_new_reset_counts(counts_pre)
 
                 # assert no extra RESETs
                 self.assert_one_more_reset(counts_ref, counts)
@@ -168,27 +171,29 @@ class TestLivenessCheck(TestkitTestCase):
                 driver.execute_query("warmup", database=self._DB)
 
                 # count RESETs without timeout
-                counts = self.get_reset_counts()
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("reference", database=self._DB,
                                      auth_token=next(auth_gen))
-                counts_ref = self.get_new_reset_counts(counts)
+                counts_ref = self.get_new_reset_counts(counts_pre)
 
                 time_mock.tick_to_before_timeout()
 
                 # abusing impersonation to identify the request also in the
                 # stub router
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("test pre timeout", database=self._DB,
                                      auth_token=next(auth_gen))
-                counts = self.get_new_reset_counts(counts_ref)
+                counts = self.get_new_reset_counts(counts_pre)
 
                 # assert no extra RESETs
                 self.assertEqual(counts_ref, counts)
 
                 time_mock.tick_to_after_timeout()
                 # now we should have an extra RESET
+                counts_pre = self.get_reset_counts()
                 driver.execute_query("test post timeout", database=self._DB,
                                      auth_token=next(auth_gen))
-                counts = self.get_new_reset_counts(counts)
+                counts = self.get_new_reset_counts(counts_pre)
 
                 # assert no extra RESETs
                 self.assert_one_more_reset(counts_ref, counts)
