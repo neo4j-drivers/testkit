@@ -1,0 +1,22 @@
+!: BOLT 5.4
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+
+*: RESET
+
+{*
+    {?
+        # Optional re-auth.
+        # Important: liveness RESET must happen before re-auth to not interfere.
+        A: LOGOFF
+        A: LOGON {"{}": "*"}
+    ?}
+
+    C: ROUTE "*" "*" "*"
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+
+    *: RESET
+*}
+
+?: GOODBYE

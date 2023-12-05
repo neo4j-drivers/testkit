@@ -1,0 +1,29 @@
+!: BOLT 5.4
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+
+*: RESET
+
+{*
+    {?
+        # Optional re-auth.
+        # Important: liveness RESET must happen before re-auth to not interfere.
+        A: LOGOFF
+        A: LOGON {"{}": "*"}
+    ?}
+
+    C: BEGIN {"db": "adb"}
+    S: SUCCESS {}
+    C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": {"Z": "*"}}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+
+    *: RESET
+*}
+
+?: GOODBYE
