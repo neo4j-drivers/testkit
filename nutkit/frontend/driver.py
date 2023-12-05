@@ -107,7 +107,7 @@ class Driver:
         config = {
             "routing": routing,
             "database": database,
-            "impersonatedUser": impersonated_user
+            "impersonatedUser": impersonated_user,
         }
 
         if bookmark_manager is None:
