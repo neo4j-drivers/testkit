@@ -4,9 +4,9 @@
 A: HELLO {"{}": "*"}
 *: RESET
 {{
-    C: ROUTE {"{}": "*"} null {"[db]": null, "[imp_user]": null}
+    C: ROUTE {"{}": "*"} null {"[db]": "db", "[imp_user]": null}
 ----
-    C: ROUTE {"{}": "*"} [] {"[db]": null, "[imp_user]": null}
+    C: ROUTE {"{}": "*"} [] {"[db]": "db", "[imp_user]": null}
 }}
 S: SUCCESS {"rt": {"ttl": 1000, "db": "db", "servers": [{"addresses": ["#HOST#:9040", "#HOST#:9050", "#HOST#:9060"], "role":"ROUTE"}, {"addresses": ["#HOST#:9040"], "role":"READ"}, {"addresses": ["#HOST#:9060"], "role":"WRITE"}]}}
 *: RESET
