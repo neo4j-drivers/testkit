@@ -101,13 +101,15 @@ class Driver:
         return self.receive(timeout=timeout, hooks=hooks,
                             allow_resolution=allow_resolution)
 
-    def execute_query(self, cypher, params=None,
-                      routing=None, database=None,
-                      impersonated_user=None, bookmark_manager=...):
+    def execute_query(self, cypher, *, params=None, routing=None,
+                      database=None, impersonated_user=None,
+                      bookmark_manager=..., tx_meta=None, timeout=None):
         config = {
             "routing": routing,
             "database": database,
             "impersonatedUser": impersonated_user,
+            "txMeta": tx_meta,
+            "timeout": timeout,
         }
 
         if bookmark_manager is None:
