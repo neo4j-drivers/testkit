@@ -60,8 +60,13 @@ class TestLivenessCheck(TestkitTestCase):
         self._router.reset()
 
     def _start_server(self, server, script):
+        extra_reset = ""
+        if not self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            extra_reset = "A: RESET"
+
         server.start(self.script_path("v5x4", script),
-                     vars_={"#HOST#": self._router.host})
+                     vars_={"#HOST#": self._router.host,
+                            "#EXTRA_RESET#": extra_reset})
 
     def start_servers(self, server_script="liveness_check.script"):
         self._start_server(self._server, server_script)

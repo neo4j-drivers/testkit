@@ -43,8 +43,7 @@ S: SUCCESS {}
     C: COMMIT
     S: SUCCESS {}
 
-    C: RESET
-    S: SUCCESS {}
+    #EXTRA_RESET#
 
     C: RESET
 *}
