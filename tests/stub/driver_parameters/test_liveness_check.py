@@ -63,7 +63,7 @@ class TestLivenessCheck(TestkitTestCase):
         server.start(self.script_path("v5x4", script),
                      vars_={"#HOST#": self._router.host})
 
-    def start_servers(self, server_script = "liveness_check.script"):
+    def start_servers(self, server_script="liveness_check.script"):
         self._start_server(self._server, server_script)
 
     def servers_done(self):
@@ -171,7 +171,6 @@ class TestLivenessCheck(TestkitTestCase):
                 self.assert_one_more_reset(counts_ref, counts)
         self.servers_done()
 
-    
     def test_timeout_recv_timeout(self):
         timeout = 2000
         self.start_servers("liveness_check_recv_timeout.script")
