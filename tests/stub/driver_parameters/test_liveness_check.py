@@ -63,8 +63,8 @@ class TestLivenessCheck(TestkitTestCase):
         server.start(self.script_path("v5x4", script),
                      vars_={"#HOST#": self._router.host})
 
-    def start_servers(self):
-        self._start_server(self._server, "liveness_check.script")
+    def start_servers(self, server_script = "liveness_check.script"):
+        self._start_server(self._server, server_script)
 
     def servers_done(self):
         self._server.done()
@@ -171,6 +171,42 @@ class TestLivenessCheck(TestkitTestCase):
                 self.assert_one_more_reset(counts_ref, counts)
         self.servers_done()
 
+    
+    def test_timeout_recv_timeout(self):
+        timeout = 2000
+        self.start_servers("liveness_check_recv_timeout.script")
+        with TimeoutManager(self, timeout) as time_mock:
+            with self.driver(liveness_check_timeout_ms=timeout) as driver:
+                self._execute_query(driver, "warmup", database=self._DB)
+
+                # count RESETs without timeout
+                counts_pre = self.get_reset_counts()
+                self._execute_query(driver, "reference", database=self._DB)
+                counts_ref = self.get_new_reset_counts(counts_pre)
+
+                time_mock.tick_to_before_timeout()
+
+                # abusing impersonation to identify the request also in the
+                # stub router
+                counts_pre = self.get_reset_counts()
+                self._execute_query(driver, "test pre timeout",
+                                    database=self._DB)
+                counts = self.get_new_reset_counts(counts_pre)
+
+                # assert no extra RESETs
+                self.assertEqual(counts_ref, counts)
+
+                time_mock.tick_to_after_timeout()
+                # now we should have an extra RESET
+                counts_pre = self.get_reset_counts()
+                self._execute_query(driver, "test post timeout",
+                                    database=self._DB)
+                counts = self.get_new_reset_counts(counts_pre)
+
+                # assert no extra RESETs
+                self.assert_one_more_reset(counts_ref, counts)
+        self.servers_done()
+
     @staticmethod
     def auth_generator():
         i = 0
@@ -223,9 +259,9 @@ class TestLivenessCheck(TestkitTestCase):
 class TestLivenessCheckRouting(TestLivenessCheck):
     _DB = None
 
-    def start_servers(self):
+    def start_servers(self, server_script="liveness_check.script"):
         self._start_server(self._router, "liveness_check_router.script")
-        super().start_servers()
+        super().start_servers(server_script)
 
     def servers_done(self):
         self._server.done()
