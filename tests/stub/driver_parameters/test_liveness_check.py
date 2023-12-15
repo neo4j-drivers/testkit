@@ -131,8 +131,6 @@ class TestLivenessCheck(TestkitTestCase):
                 time_mock.tick(59 * 60 * 1000)  # 59 minutes
 
                 # count RESETs after potential timeout
-                # abusing impersonation to identify the request also in the
-                # stub router
                 counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test", database=self._DB)
                 counts = self.get_new_reset_counts(counts_pre)
@@ -155,8 +153,6 @@ class TestLivenessCheck(TestkitTestCase):
 
                 time_mock.tick_to_before_timeout()
 
-                # abusing impersonation to identify the request also in the
-                # stub router
                 counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test pre timeout",
                                     database=self._DB)
@@ -166,13 +162,13 @@ class TestLivenessCheck(TestkitTestCase):
                 self.assertEqual(counts_ref, counts)
 
                 time_mock.tick_to_after_timeout()
-                # now we should have an extra RESET
+                # now we should get an extra RESET
                 counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test post timeout",
                                     database=self._DB)
                 counts = self.get_new_reset_counts(counts_pre)
 
-                # assert no extra RESETs
+                # assert one extra RESET
                 self.assert_one_more_reset(counts_ref, counts)
         self.servers_done()
 
@@ -190,8 +186,6 @@ class TestLivenessCheck(TestkitTestCase):
 
                 time_mock.tick_to_before_timeout()
 
-                # abusing impersonation to identify the request also in the
-                # stub router
                 counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test pre timeout",
                                     database=self._DB)
@@ -201,13 +195,13 @@ class TestLivenessCheck(TestkitTestCase):
                 self.assertEqual(counts_ref, counts)
 
                 time_mock.tick_to_after_timeout()
-                # now we should have an extra RESET
+                # now we should get an extra RESET
                 counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test post timeout",
                                     database=self._DB)
                 counts = self.get_new_reset_counts(counts_pre)
 
-                # assert no extra RESETs
+                # assert one extra RESET
                 self.assert_one_more_reset(counts_ref, counts)
         self.servers_done()
 
@@ -234,8 +228,6 @@ class TestLivenessCheck(TestkitTestCase):
 
                 time_mock.tick_to_before_timeout()
 
-                # abusing impersonation to identify the request also in the
-                # stub router
                 counts_pre = self.get_reset_counts()
                 self._execute_query(
                     driver, "test pre timeout", database=self._DB,
@@ -247,7 +239,7 @@ class TestLivenessCheck(TestkitTestCase):
                 self.assertEqual(counts_ref, counts)
 
                 time_mock.tick_to_after_timeout()
-                # now we should have an extra RESET
+                # now we should get an extra RESET
                 counts_pre = self.get_reset_counts()
                 self._execute_query(
                     driver, "test post timeout", database=self._DB,
@@ -255,7 +247,7 @@ class TestLivenessCheck(TestkitTestCase):
                 )
                 counts = self.get_new_reset_counts(counts_pre)
 
-                # assert no extra RESETs
+                # assert one extra RESET
                 self.assert_one_more_reset(counts_ref, counts)
         self.servers_done()
 
