@@ -211,6 +211,7 @@ class TestLivenessCheck(TestkitTestCase):
         while True:
             yield types.AuthorizationToken("basic", principal=f"neo4j_{i}",
                                            credentials="pass")
+            i += 1
 
     def test_timeout_with_re_auth(self):
         timeout = 2000
