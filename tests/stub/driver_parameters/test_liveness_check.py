@@ -100,6 +100,12 @@ class TestLivenessCheck(TestkitTestCase):
         expected_resets = tuple(count + 1 for count in counts_old)
         self.assertEqual(expected_resets, counts_new)
 
+    def get_connection_count(self):
+        return self._server.count_responses("<ACCEPT>")
+
+    def get_new_connection_count(self, count_old):
+        return self._server.count_responses("<ACCEPT>") - count_old
+
     @staticmethod
     def _execute_query(driver, query, database=None, auth_token=None):
         def work(tx):
@@ -180,29 +186,36 @@ class TestLivenessCheck(TestkitTestCase):
                 self._execute_query(driver, "warmup", database=self._DB)
 
                 # count RESETs without timeout
-                counts_pre = self.get_reset_counts()
+                reset_counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "reference", database=self._DB)
-                counts_ref = self.get_new_reset_counts(counts_pre)
+                counts_ref = self.get_new_reset_counts(reset_counts_pre)
 
                 time_mock.tick_to_before_timeout()
 
-                counts_pre = self.get_reset_counts()
+                reset_counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test pre timeout",
                                     database=self._DB)
-                counts = self.get_new_reset_counts(counts_pre)
+                reset_counts = self.get_new_reset_counts(reset_counts_pre)
 
                 # assert no extra RESETs
-                self.assertEqual(counts_ref, counts)
+                self.assertEqual(counts_ref, reset_counts)
 
                 time_mock.tick_to_after_timeout()
                 # now we should get an extra RESET
-                counts_pre = self.get_reset_counts()
+                # the RESET should time out and a new connection should be
+                # established
+                con_count_pre = self.get_connection_count()
+                reset_counts_pre = self.get_reset_counts()
                 self._execute_query(driver, "test post timeout",
                                     database=self._DB)
-                counts = self.get_new_reset_counts(counts_pre)
+                reset_counts = self.get_new_reset_counts(reset_counts_pre)
 
                 # assert one extra RESET
-                self.assert_one_more_reset(counts_ref, counts)
+                self.assert_one_more_reset(counts_ref, reset_counts)
+                # assert new connection was established
+                new_con_count = self.get_new_connection_count(con_count_pre)
+                self.assertEqual(1, new_con_count)
+        self._server._dump()
         self.servers_done()
 
     @staticmethod
