@@ -9,7 +9,7 @@ from tests.stub.shared import StubServer
 
 class TestRetry(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_3,
+    required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
         super().setUp()
@@ -222,4 +222,3 @@ class TestRetry(TestkitTestCase):
         for failure in failures:
             with self.subTest(failure=failure):
                 _test()
-            self._server.reset()
