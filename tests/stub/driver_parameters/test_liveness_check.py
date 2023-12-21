@@ -14,12 +14,15 @@ from tests.stub.shared import StubServer
 
 
 class TimeoutManager:
-    def __init__(self, test_case: TestkitTestCase, timeout_ms: int):
+    def __init__(
+        self, test_case: TestkitTestCase, timeout_ms: int,
+        use_real_timers: bool = False
+    ):
         self._timeout_ms = timeout_ms
         self._fake_time = None
         if test_case.driver_supports_features(
             types.Feature.BACKEND_MOCK_TIME
-        ):
+        ) and not use_real_timers:
             self._fake_time = FakeTime(test_case._backend)
 
     def __enter__(self):
@@ -181,7 +184,9 @@ class TestLivenessCheck(TestkitTestCase):
     def test_timeout_recv_timeout(self):
         timeout = 2000
         self.start_servers("liveness_check_recv_timeout.script")
-        with TimeoutManager(self, timeout) as time_mock:
+        # tests should use real timers since mocking timers can mess
+        # with connection receive timeout implementations.
+        with TimeoutManager(self, timeout, use_real_timers=True) as time_mock:
             with self.driver(liveness_check_timeout_ms=timeout) as driver:
                 self._execute_query(driver, "warmup", database=self._DB)
 
