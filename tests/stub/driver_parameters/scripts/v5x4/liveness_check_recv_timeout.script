@@ -1,0 +1,51 @@
+!: BOLT 5.4
+!: ALLOW RESTART
+
+C: HELLO {"{}": "*"}
+C: LOGON {"{}": "*"}
+S: SUCCESS {"server": "Neo4j/4.4.1", "hints": {"connection.recv_timeout_seconds": 2}, "connection_id": "bolt-1"}
+S: SUCCESS {}
+
+*: RESET
+
+C: BEGIN {"db": "adb"}
+S: SUCCESS {}
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+S: SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {}
+
+*: RESET
+
+{*
+    C: BEGIN {"db": "adb"}
+    S: SUCCESS {}
+    C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": {"Z": "*"}}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+
+    *: RESET
+
+    C: BEGIN {"db": "adb"}
+    S: SUCCESS {}
+    C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": {"Z": "*"}}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+    C: COMMIT
+    S: SUCCESS {}
+
+    #EXTRA_RESET#
+
+    C: RESET
+*}
+
+?: GOODBYE
