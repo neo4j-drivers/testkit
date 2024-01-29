@@ -1,0 +1,26 @@
+!: BOLT 5.1
+
+A: HELLO {"user_agent": "*", "[routing]": "*"}
+A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
+*: RESET
+{+
+    C: ROUTE "*" "*" "*"
+    S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
+    ?: RESET
++}
+
+A: LOGOFF
+A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+*: RESET
+
+C: BEGIN {"db": "adb"}
+S: SUCCESS {}
+C: RUN "RETURN 1 AS n" {} {}
+S: SUCCESS {"fields": ["n"], "qid": 1}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
+*: RESET
+?: GOODBYE

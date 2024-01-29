@@ -137,6 +137,32 @@ class TestDriverExecuteQuery(TestkitTestCase):
             query_type="r"
         )
 
+    def test_configure_auth(self):
+        self._start_server(
+            self._writer, "tx_return_1_with_auth.script"
+        )
+        self._driver = self._new_driver(False)
+
+        eager_result = self._driver.execute_query(
+            "RETURN 1 AS n",
+            database="adb",
+            auth={"principal": "neo5j", "credentials": "pass++"}
+        )
+
+    def test_configure_re_auth(self):
+        self._start_server(
+            self._writer, "tx_return_1_with_re_auth.script"
+        )
+        self._driver = self._new_driver(False)
+
+        self._driver.verify_connectivity()
+
+        eager_result = self._driver.execute_query(
+            "RETURN 1 AS n",
+            database="adb",
+            auth={"principal": "neo5j", "credentials": "pass++"}
+        )
+
     def test_configure_transaction_metadata(self):
         self._start_server(self._router, "router.script")
         self._start_server(
@@ -332,8 +358,11 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "#DB#": database
         })
 
-    def _new_driver(self):
-        uri = "neo4j://%s" % self._router.address
+    def _new_driver(self, routing=True):
+        if routing:
+            uri = "neo4j://%s" % self._router.address
+        else:
+            uri = "bolt://%s" % self._writer.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         driver = Driver(self._backend, uri, auth)
