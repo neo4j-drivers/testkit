@@ -146,7 +146,10 @@ class TestDriverExecuteQuery(TestkitTestCase):
         eager_result = self._driver.execute_query(
             "RETURN 1 AS n",
             database="adb",
-            auth={"principal": "neo5j", "credentials": "pass++"}
+            auth=types.AuthorizationToken(
+                "basic", principal="neo5j",
+                credentials="pass++"
+            )
         )
 
     def test_configure_re_auth(self):
@@ -160,7 +163,10 @@ class TestDriverExecuteQuery(TestkitTestCase):
         eager_result = self._driver.execute_query(
             "RETURN 1 AS n",
             database="adb",
-            auth={"principal": "neo5j", "credentials": "pass++"}
+            auth=types.AuthorizationToken(
+                "basic", principal="neo5j",
+                credentials="pass++"
+            )
         )
 
     def test_configure_transaction_metadata(self):
