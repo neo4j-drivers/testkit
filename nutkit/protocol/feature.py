@@ -16,6 +16,10 @@ class Feature(Enum):
     # The driver offers a method to run a query in a retryable context at the
     # driver object level.
     API_DRIVER_EXECUTE_QUERY = "Feature:API:Driver.ExecuteQuery"
+    # The driver allows users to specify a session scoped auth token when
+    # invoking driver.executeQuery.
+    API_DRIVER_EXECUTE_QUERY_WITH_AUTH = \
+        "Feature:API:Driver.ExecuteQuery:WithAuth"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established and retrieve the server info of the
     # reached remote.

@@ -4,7 +4,7 @@ from nutkit.frontend import (
     Driver,
     Neo4jBookmarkManagerConfig,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (TestkitTestCase, driver_feature)
 from tests.stub.shared import StubServer
 
 
@@ -137,6 +137,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
             query_type="r"
         )
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY_WITH_AUTH)
     def test_configure_auth(self):
         self._start_server(
             self._writer, "tx_return_1_with_auth.script"
@@ -152,6 +153,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         )
         self._writer.done()
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY_WITH_AUTH)
     def test_configure_re_auth(self):
         self._start_server(
             self._writer, "tx_return_1_with_re_auth.script"
