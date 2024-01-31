@@ -143,7 +143,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         )
         self._driver = self._new_driver(False)
 
-        eager_result = self._driver.execute_query(
+        self._driver.execute_query(
             "RETURN 1 AS n",
             database="adb",
             auth=types.AuthorizationToken(
@@ -151,6 +151,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 credentials="pass++"
             )
         )
+        self._writer.done()
 
     def test_configure_re_auth(self):
         self._start_server(
@@ -158,9 +159,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         )
         self._driver = self._new_driver(False)
 
-        self._driver.verify_connectivity()
-
-        eager_result = self._driver.execute_query(
+        self._driver.execute_query(
             "RETURN 1 AS n",
             database="adb",
             auth=types.AuthorizationToken(
@@ -168,6 +167,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
                 credentials="pass++"
             )
         )
+        self._writer.done()
 
     def test_configure_transaction_metadata(self):
         self._start_server(self._router, "router.script")
