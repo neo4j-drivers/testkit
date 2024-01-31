@@ -775,7 +775,7 @@ class ExecuteQuery:
     :param config.bookmarkManagerId: The id of the bookmark manager
         used in the query. None or not define for using the default,
         -1 for disabling the BookmarkManager
-        :param config.txMeta: The metadata to attach to the transaction.
+    :param config.txMeta: The metadata to attach to the transaction.
     :param config.timeout: The timeout for the transaction in milliseconds.
     :param config.auth: The auth token used by the session.
     """
