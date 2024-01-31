@@ -147,8 +147,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "RETURN 1 AS n",
             database="adb",
             auth=types.AuthorizationToken(
-                "basic", principal="neo5j",
-                credentials="pass++"
+                "basic", principal="neo5j", credentials="pass++"
             )
         )
         self._writer.done()
@@ -159,14 +158,16 @@ class TestDriverExecuteQuery(TestkitTestCase):
         )
         self._driver = self._new_driver(False)
 
-        self._driver.execute_query(
-            "RETURN 1 AS n",
-            database="adb",
-            auth=types.AuthorizationToken(
-                "basic", principal="neo5j",
-                credentials="pass++"
+        for i, (user, password) in enumerate((
+            ("neo4j", "pass"), ("neo5j", "pass++")
+        )):
+            self._driver.execute_query(
+                f"RETURN {i + 1} AS n",
+                database="adb",
+                auth=types.AuthorizationToken(
+                    "basic", principal=user, credentials=password
+                )
             )
-        )
         self._writer.done()
 
     def test_configure_transaction_metadata(self):

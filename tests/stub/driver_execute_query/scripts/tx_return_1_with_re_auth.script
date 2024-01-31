@@ -4,10 +4,6 @@ A: HELLO {"user_agent": "*", "[routing]": "*"}
 A: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass", "[realm]": ""}
 *: RESET
 
-A: LOGOFF
-A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
-*: RESET
-
 C: BEGIN {"db": "adb"}
 S: SUCCESS {}
 C: RUN "RETURN 1 AS n" {} {}
@@ -17,5 +13,23 @@ S: RECORD [1]
    SUCCESS {"type": "r"}
 C: COMMIT
 S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx424242"}
+
+*: RESET
+
+A: LOGOFF
+A: LOGON {"scheme": "basic", "principal": "neo5j", "credentials": "pass++", "[realm]": ""}
+
+*: RESET
+
+C: BEGIN {"db": "adb", "[bookmarks]": {"[]": "*"}}
+S: SUCCESS {}
+C: RUN "RETURN 2 AS n" {} {}
+S: SUCCESS {"fields": ["n"], "qid": 2}
+C: PULL {"n": 1000}
+S: RECORD [1]
+   SUCCESS {"type": "r"}
+C: COMMIT
+S: SUCCESS {"bookmark": "neo4j:bookmark:v1:tx434343"}
+
 *: RESET
 ?: GOODBYE
