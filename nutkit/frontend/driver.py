@@ -104,14 +104,14 @@ class Driver:
     def execute_query(self, cypher, *, params=None, routing=None,
                       database=None, impersonated_user=None,
                       bookmark_manager=..., tx_meta=None, timeout=None,
-                      auth=None):
+                      auth_token=None):
         config = {
             "routing": routing,
             "database": database,
             "impersonatedUser": impersonated_user,
             "txMeta": tx_meta,
             "timeout": timeout,
-            "auth": auth,
+            "authorizationToken": auth_token,
         }
 
         if bookmark_manager is None:

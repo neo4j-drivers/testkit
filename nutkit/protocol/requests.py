@@ -777,7 +777,7 @@ class ExecuteQuery:
         -1 for disabling the BookmarkManager
     :param config.txMeta: The metadata to attach to the transaction.
     :param config.timeout: The timeout for the transaction in milliseconds.
-    :param config.auth: The auth token used by the session.
+    :param config.authorizationToken: The auth token used by the session.
     """
 
     def __init__(self, driver_id, cypher, params, config):

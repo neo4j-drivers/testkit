@@ -150,7 +150,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
         self._driver.execute_query(
             "RETURN 1 AS n",
             database="adb",
-            auth=types.AuthorizationToken(
+            auth_token=types.AuthorizationToken(
                 "basic", principal="neo5j", credentials="pass++"
             )
         )
@@ -169,7 +169,7 @@ class TestDriverExecuteQuery(TestkitTestCase):
             self._driver.execute_query(
                 f"RETURN {i + 1} AS n",
                 database="adb",
-                auth=types.AuthorizationToken(
+                auth_token=types.AuthorizationToken(
                     "basic", principal=user, credentials=password
                 )
             )
