@@ -4,7 +4,10 @@ from nutkit.frontend import (
     Driver,
     Neo4jBookmarkManagerConfig,
 )
-from tests.shared import (TestkitTestCase, driver_feature)
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
 
 
