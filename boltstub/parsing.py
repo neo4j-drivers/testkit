@@ -969,8 +969,24 @@ class _RepeatBlock(Block, abc.ABC):
     def can_be_skipped(self, channel):
         pass
 
+    def _can_consume_deterministic(self, channel):
+        if self.block_list.can_consume(channel):
+            return True
+        if self.block_list.done(channel):
+            return self.block_list.can_consume_after_reset(channel)
+        return False
+
+    def _can_consume_nondeterministic(self, channel):
+        if self.block_list.can_consume(channel):
+            return True
+        if self.block_list.can_be_skipped(channel):
+            return self.block_list.can_consume_after_reset(channel)
+        return False
+
     def can_consume(self, channel) -> bool:
-        return self.block_list.can_consume(channel)
+        if self.block_list.has_deterministic_end():
+            return self._can_consume_deterministic(channel)
+        return self._can_consume_nondeterministic(channel)
 
     def can_consume_after_reset(self, channel) -> bool:
         return self.block_list.can_consume_after_reset(channel)
@@ -1222,7 +1238,7 @@ class BlockList(Block):
         return self.index >= len(self.blocks)
 
     def has_deterministic_end(self) -> bool:
-        return self.blocks[-1].has_deterministic_end()
+        return not self.blocks or self.blocks[-1].has_deterministic_end()
 
     def init(self, channel):
         while self.index < len(self.blocks):
@@ -1250,11 +1266,7 @@ class BlockList(Block):
                     else:
                         break
                 return True
-            if (
-                not block.can_be_skipped(channel)
-                and block.has_deterministic_end()
-                and not block.done(channel)
-            ):
+            if not block.can_be_skipped(channel):
                 break
         return False
 
