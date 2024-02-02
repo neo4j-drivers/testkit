@@ -177,7 +177,7 @@ def _assert_accepted_messages_after_reset(channel, block, messages):
 
 
 class TestAlternativeBlock:
-    @pytest.fixture()
+    @pytest.fixture
     def block_read(self):
         return AlternativeBlock([  # noqa: PAR103
             BlockList([ClientBlock([  # noqa: PAR103
@@ -188,7 +188,7 @@ class TestAlternativeBlock:
             ], 3)], 3),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_write(self):
         return AlternativeBlock([  # noqa: PAR103
             BlockList([  # noqa: PAR103
@@ -209,7 +209,7 @@ class TestAlternativeBlock:
             ], 5),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_with_non_det_end(self):
         return AlternativeBlock([  # noqa: PAR103
             BlockList([  # noqa: PAR103
@@ -226,7 +226,7 @@ class TestAlternativeBlock:
             ], 7)
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_with_non_det_block(self):
         return AlternativeBlock([  # noqa: PAR103
             BlockList([  # noqa: PAR103
@@ -336,7 +336,11 @@ class TestAlternativeBlock:
 
 
 class TestBlockList:
-    @pytest.fixture()
+    @pytest.fixture
+    def block_empty(self):
+        return BlockList([], 1)
+
+    @pytest.fixture
     def block_det(self):
         return BlockList([  # noqa: PAR103
             ClientBlock([  # noqa: PAR103
@@ -350,7 +354,7 @@ class TestBlockList:
             ClientBlock([ClientLine(5, "C: MSG3", "MSG3")], 5),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_non_det(self):
         return BlockList([  # noqa: PAR103
             OptionalBlock(BlockList([  # noqa: PAR103
@@ -362,7 +366,7 @@ class TestBlockList:
             ClientBlock([ClientLine(7, "C: MSG3", "MSG3")], 7),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_only_non_det(self):
         return BlockList([  # noqa: PAR103
             OptionalBlock(BlockList([  # noqa: PAR103
@@ -376,6 +380,15 @@ class TestBlockList:
             ], 8), 7),
         ], 1)
 
+    @pytest.fixture
+    def block_non_det_skippable(self):
+        return BlockList([  # noqa: PAR103
+            Repeat1Block(BlockList([  # noqa: PAR103
+                ClientBlock([ClientLine(2, "C: MSG1", "MSG1")], 2)
+            ], 2), 1),
+            ClientBlock([ClientLine(4, "C: MSG2", "MSG2")], 4),
+        ], 1)
+
     @staticmethod
     def _skip_messages(messages, *skips):
         messages = [m for i, m in enumerate(messages)
@@ -385,6 +398,14 @@ class TestBlockList:
     @staticmethod
     def _skipping_channel(messages, *skips):
         return channel_factory(TestBlockList._skip_messages(messages, *skips))
+
+    def test_block_empty(self, block_empty):
+        channel = channel_factory(["NOMATCH"])
+        assert block_empty.has_deterministic_end()
+        assert block_empty.done(channel)
+        assert block_empty.can_be_skipped(channel)
+        assert not block_empty.can_consume(channel)
+        assert not block_empty.try_consume(channel)
 
     def test_consecutive_deterministic(self, block_det):
         messages = ["MSG1", "MSG2", "MSG3", "NOMATCH"]
@@ -505,6 +526,37 @@ class TestBlockList:
         _test_block_reset_nondeterministic_end(block_only_non_det, channel,
                                                reset_idx, skippable={0, 1, 2})
 
+    @pytest.mark.parametrize("repetitions", range(1, 4))
+    def test_block_non_det_skippable(
+        self, block_non_det_skippable, repetitions
+    ):
+        block = block_non_det_skippable
+        channel_repetitions = channel_factory(["MSG1"] * (repetitions + 1))
+        channel_end = channel_factory(["MSG2", "NOMATCH"])
+        # share an eval context
+        channel_end.eval_context = channel_repetitions.eval_context
+        for r in range(repetitions):
+            assert block.has_deterministic_end()
+            assert not block.done(channel_repetitions)
+            assert not block.can_be_skipped(channel_repetitions)
+            assert block.can_consume(channel_repetitions)
+            if r == 0:
+                assert not block.can_consume(channel_end)
+                assert not block.try_consume(channel_end)
+            else:
+                assert block.can_consume(channel_end)
+            assert block.try_consume(channel_repetitions)
+        assert block.has_deterministic_end()
+        assert not block.done(channel_end)
+        assert not block.can_be_skipped(channel_end)
+        assert block.can_consume(channel_end)
+        assert block.try_consume(channel_end)
+        assert block.done(channel_end)
+        assert not block.can_consume(channel_end)
+        assert not block.try_consume(channel_end)
+        assert not block.can_consume(channel_repetitions)
+        assert not block.try_consume(channel_repetitions)
+
 
 class TestOptionalBlock:
     def test_block_cant_skip_out(self):
@@ -589,7 +641,7 @@ class TestOptionalBlock:
 
 
 class TestParallelBlock:
-    @pytest.fixture()
+    @pytest.fixture
     def block_read(self):
         return ParallelBlock([  # noqa: PAR103
             BlockList([ClientBlock([  # noqa: PAR103
@@ -602,7 +654,7 @@ class TestParallelBlock:
             ], 3)], 3),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_write(self):
         return ParallelBlock([  # noqa: PAR103
             BlockList([  # noqa: PAR103
@@ -623,7 +675,7 @@ class TestParallelBlock:
             ], 5),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_with_non_det_end(self):
         return ParallelBlock([  # noqa: PAR103
             BlockList([  # noqa: PAR103
@@ -640,7 +692,7 @@ class TestParallelBlock:
             ], 7)
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_with_non_det_block(self):
         return ParallelBlock([  # noqa: PAR103
             BlockList([  # noqa: PAR103
@@ -745,17 +797,17 @@ class TestParallelBlock:
 
 
 class TestClientBlock:
-    @pytest.fixture()
+    @pytest.fixture
     def single_block(self):
         return ClientBlock([  # noqa: PAR103
             ClientLine(1, "C: MSG1", "MSG1"),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def single_channel(self):
         return channel_factory(["MSG1", "NOMATCH"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def multi_block(self):
         return ClientBlock([  # noqa: PAR103
             ClientLine(1, "C: MSG1", "MSG1"),
@@ -763,7 +815,7 @@ class TestClientBlock:
             ClientLine(3, "C: MSG3", "MSG3"),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def multi_channel(self):
         return channel_factory(["MSG1", "MSG2", "MSG3", "NOMATCH"])
 
@@ -820,11 +872,11 @@ class TestClientBlock:
 
 
 class TestAutoBlock:
-    @pytest.fixture()
+    @pytest.fixture
     def single_block(self):
         return AutoBlock(AutoLine(1, "A: MSG1", "MSG1"), 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def single_channel(self):
         return channel_factory(["MSG1", "NOMATCH"])
 
@@ -859,17 +911,17 @@ class TestAutoBlock:
 
 
 class TestServerBlock:
-    @pytest.fixture()
+    @pytest.fixture
     def single_block(self):
         return ServerBlock([  # noqa: PAR103
             ServerLine(1, "S: SMSG1", "SMSG1"),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def single_channel(self):
         return channel_factory(["SMSG1", "NOMATCH"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def multi_block(self):
         return ServerBlock([  # noqa: PAR103
             ServerLine(1, "S: SMSG1", "SMSG1"),
@@ -877,7 +929,7 @@ class TestServerBlock:
             ServerLine(3, "S: SMSG3", "SMSG3"),
         ], 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def multi_channel(self):
         return channel_factory(["NOMATCH"])
 
@@ -933,7 +985,7 @@ class _TestRepeatBlock:
     must_run_once = None
     block_cls = None
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_1(self):
         return self.block_cls(BlockList([  # noqa: PAR103
             ClientBlock([  # noqa: PAR103
@@ -941,11 +993,11 @@ class _TestRepeatBlock:
             ], 2)
         ], 2), 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_1(self):
         return channel_factory(["MSG1", "NOMATCH"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_2(self):
         return self.block_cls(BlockList([  # noqa: PAR103
             ClientBlock([  # noqa: PAR103
@@ -954,11 +1006,11 @@ class _TestRepeatBlock:
             ], 2)
         ], 2), 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_2(self):
         return channel_factory(["MSG1", "MSG2", "NOMATCH"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_optional_end(self):
         return self.block_cls(BlockList([  # noqa: PAR103
             ClientBlock([  # noqa: PAR103
@@ -970,11 +1022,11 @@ class _TestRepeatBlock:
             ], 5), 4),
         ], 2), 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_optional_end(self):
         return channel_factory(["MSG1", "MSG2",  "MSG3", "NOMATCH"])
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_all_optional(self):
         return self.block_cls(BlockList([  # noqa: PAR103
             OptionalBlock(BlockList([  # noqa: PAR103
@@ -985,7 +1037,7 @@ class _TestRepeatBlock:
             ], 6), 5),
         ], 2), 1)
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_all_optional(self):
         return channel_factory(["MSG1", "MSG2", "NOMATCH"])
 
@@ -1127,7 +1179,7 @@ class TestRepeat1Block(_TestRepeatBlock):
 
 
 class TestConditionalBlock:
-    @pytest.fixture()
+    @pytest.fixture
     def block(self):
         return ConditionalBlock(
             ["if_", "elif_"],
@@ -1144,7 +1196,7 @@ class TestConditionalBlock:
             1
         )
 
-    @pytest.fixture()
+    @pytest.fixture
     def block_else(self):
         return ConditionalBlock(
             ["if_"],
@@ -1161,26 +1213,26 @@ class TestConditionalBlock:
             1
         )
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_if(self):
         channel = channel_factory(["MSG_IF_1", "MSG_IF_2", "NOMATCH"])
         channel.eval_context["if_"] = True
         return channel
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_elif(self):
         channel = channel_factory(["MSG_ELIF_1", "MSG_ELIF_2", "NOMATCH"])
         channel.eval_context["if_"] = False
         channel.eval_context["elif_"] = True
         return channel
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_else(self):
         channel = channel_factory(["MSG_ELSE_1", "MSG_ELSE_2", "NOMATCH"])
         channel.eval_context["if_"] = False
         return channel
 
-    @pytest.fixture()
+    @pytest.fixture
     def channel_none(self):
         channel = channel_factory(["NOMATCH"])
         channel.eval_context["if_"] = False
