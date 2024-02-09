@@ -57,13 +57,13 @@ class BoltStubServer(TCPServer):
     timed_out = False
 
     def __init__(self, *args, **kwargs):
-        super(BoltStubServer, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def handle_timeout(self):
         self.timed_out = True
 
     def server_activate(self):
-        super(BoltStubServer, self).server_activate()
+        super().server_activate()
         # Must be here, testkit waits for something to be written on stdout to
         # know when the server is listening.
         print("Listening")
