@@ -95,6 +95,10 @@ def main():
             "-v", "--verbose", action="store_true",
             help="Show more detail about the client-server exchange."
         )
+        parser.add_argument(
+            "-6", "--ipv6", action="store_true",
+            help="Force the server to only listen on IPv6 interfaces."
+        )
         parser.add_argument("script", nargs="+")
         parsed = parser.parse_args()
 
@@ -103,7 +107,7 @@ def main():
 
         scripts = map(parse_file, parsed.script)
         service = BoltStubService(*scripts, listen_addr=parsed.listen_addr,
-                                  timeout=parsed.timeout)
+                                  timeout=parsed.timeout, ipv6=parsed.ipv6)
 
         try:
             service.start()

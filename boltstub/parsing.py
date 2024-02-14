@@ -100,20 +100,20 @@ class LineError(lark.GrammarError):
 
 class Line(str, abc.ABC):
     def __new__(cls, line_number: int, raw_line, content: str):
-        obj = super(Line, cls).__new__(cls, raw_line)
+        obj = super().__new__(cls, raw_line)
         obj.line_number = line_number
         obj.content = content
         return obj
 
     def __str__(self):
         return "({:3}) {}".format(self.line_number,
-                                  super(Line, self).__str__())
+                                  super().__str__())
 
     def __repr__(self):
         return "<{}>{}".format(self.__class__.__name__, self.__str__())
 
     def __getnewargs__(self):
-        return self.line_number, super(Line, self).__str__(), self.content
+        return self.line_number, super().__str__(), self.content
 
     @abc.abstractmethod
     def canonical(self):
@@ -390,7 +390,7 @@ class ServerLine(MessageLine):
     always_parse = False
 
     def __new__(cls, *args, **kwargs):
-        obj = super(ServerLine, cls).__new__(cls, *args, **kwargs)
+        obj = super().__new__(cls, *args, **kwargs)
         obj.command_match = re.match(r"^<(.+?)>(.*)$", obj.content)
         obj.is_command = bool(obj.command_match)
         if not obj.is_command:
@@ -623,7 +623,7 @@ class AutoBlock(ClientBlock):
         #   A: RESET
         # This is to avoid ambiguity when it comes to `?:`, `*:`, and `+:`
         # macros.
-        super(AutoBlock, self).__init__([line], line_number)
+        super().__init__([line], line_number)
 
     def _consume(self, channel):
         msg = channel.consume(self.lines[self.index].line_number)

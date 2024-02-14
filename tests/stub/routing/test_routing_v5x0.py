@@ -50,13 +50,12 @@ class RoutingV5x0(RoutingBase):
         self._routingServer1.done()
         rt = driver.get_routing_table(self.adb)
         driver.close()
+        host = self.host_in_address(vars_["#HOST#"])
         assert rt.database == self.adb
         assert rt.ttl == 1000
-        assert rt.routers == [vars_["#HOST#"] + ":9000"]
-        assert sorted(rt.readers) == [vars_["#HOST#"] + ":9010",
-                                      vars_["#HOST#"] + ":9011"]
-        assert sorted(rt.writers) == [vars_["#HOST#"] + ":9020",
-                                      vars_["#HOST#"] + ":9021"]
+        assert rt.routers == [f"{host}:9000"]
+        assert sorted(rt.readers) == [f"{host}:9010", f"{host}:9011"]
+        assert sorted(rt.writers) == [f"{host}:9020", f"{host}:9021"]
 
     # Checks that routing is used to connect to correct server and that
     # parameters for session run is passed on to the target server
@@ -1667,10 +1666,10 @@ class RoutingV5x0(RoutingBase):
         # routing table. Since this test is not for testing DNS resolution,
         # it has been switched to IP-based address model.
         ip_address = get_ip_addresses()[0]
+        address = f"{ip_address:s}:{self._routingServer1.port:d}"
         driver = Driver(
             self._backend,
-            self._uri_template_with_context % (ip_address,
-                                               self._routingServer1.port),
+            self._uri_template_with_context % address,
             self._auth,
             self._userAgent
         )
@@ -1705,9 +1704,10 @@ class RoutingV5x0(RoutingBase):
         # routing table. Since this test is not for testing DNS resolution,
         # it has been switched to IP-based address model.
         ip_address = get_ip_addresses()[0]
+        address = f"{ip_address:s}:{self._routingServer1.port:d}"
         driver = Driver(
             self._backend,
-            self._uri_template % (ip_address, self._routingServer1.port),
+            self._uri_template % address,
             self._auth,
             self._userAgent
         )
@@ -3054,3 +3054,60 @@ class RoutingV5x0(RoutingBase):
 
         self.assertNotEqual(read_summary.server_info.address,
                             write_summary.server_info.address)
+
+    def test_ipv6_read(self):
+        # *IPv6*
+        # So... *clears throat*
+        # You'd think after over a decade, IPv6 would be nice and smooth to
+        # use. Na-ah! Docker's IPv6 support is still experimental and only
+        # available on Linux hosts (see also
+        # https://github.com/docker/roadmap/issues/282).
+        # To enable it, have a look at
+        # https://docs.docker.com/config/daemon/ipv6/
+        #
+        # *TL;DR:*
+        # you need to edit the docker daemon config and restart the docker
+        # service. Sample config (read the docs, and adjust as needed)
+        # `/etc/docker/daemon.json`:
+        # ```json
+        # {
+        #   "ipv6": true,
+        #   "fixed-cidr-v6": "fd12:0ac8:1::/64",
+        #   "experimental": true,
+        #   "ip6tables": true,
+        #   "default-address-pools": [
+        #     { "base": "172.17.0.0/16", "size": 16 },
+        #     { "base": "172.18.0.0/16", "size": 16 },
+        #     { "base": "172.19.0.0/16", "size": 16 },
+        #     { "base": "172.20.0.0/14", "size": 16 },
+        #     { "base": "172.24.0.0/14", "size": 16 },
+        #     { "base": "172.28.0.0/14", "size": 16 },
+        #     { "base": "192.168.0.0/16", "size": 20 },
+        #     { "base": "fd12:0ac8::/104", "size": 112 }
+        #   ]
+        # }
+        # ```
+        # ```bash
+        # sudo systemctl restart docker
+        # ```
+        self.set_up_servers(ipv6=True)
+        driver = Driver(self._backend, self._uri_with_context, self._auth,
+                        self._userAgent)
+        self.start_server(self._routingServer1, "router_adb.script")
+        self.start_server(self._readServer1, "reader.script")
+
+        session = driver.session("r", database=self.adb)
+        result = session.run("RETURN 1 as n")
+        sequence = self.collect_records(result)
+        summary = result.consume()
+        session.close()
+        driver.close()
+
+        target_address = get_dns_resolved_server_address(
+            self._readServer1, ipv4=False, ipv6=True
+        )
+        self._routingServer1.done()
+        self._readServer1.done()
+        self.assertTrue(summary.server_info.address in
+                        [target_address, self._readServer1.address])
+        self.assertEqual([1], sequence)

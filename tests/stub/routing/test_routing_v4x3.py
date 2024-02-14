@@ -250,3 +250,6 @@ class RoutingV4x3(RoutingV4x4):
 
     def test_should_fail_when_driver_closed_using_session_run(self):
         super().test_should_fail_when_driver_closed_using_session_run()
+
+    def test_ipv6_read(self):
+        super().test_ipv6_read()

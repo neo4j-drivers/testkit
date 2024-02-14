@@ -61,21 +61,36 @@ def get_ip_addresses(exclude_loopback=True):
     return ips
 
 
-def dns_resolve(host_name):
-    _, _, ip_addresses = socket.gethostbyname_ex(host_name)
-    return ip_addresses
+def dns_resolve(host_name, ipv4=True, ipv6=False):
+    return list({
+        address[0]
+        for family, _type, _proto, _canonname, address in socket.getaddrinfo(
+            host_name, None
+        )
+        if (
+            (family == socket.AF_INET and ipv4)
+            or (family == socket.AF_INET6 and ipv6)
+        )
+    })
 
 
-def dns_resolve_single(host_name):
-    ips = dns_resolve(host_name)
+def dns_resolve_single(host_name, ipv4=True, ipv6=False):
+    ips = dns_resolve(host_name, ipv4=ipv4, ipv6=ipv6)
     if len(ips) != 1:
         raise ValueError("%s resolved to %i instead of 1 IP address"
                          % (host_name, len(ips)))
     return ips[0]
 
 
-def get_dns_resolved_server_address(server):
-    return "%s:%i" % (dns_resolve_single(server.host), server.port)
+def format_address(host, port):
+    if ":" in host:
+        return f"[{host}]:{port}"
+    return f"{host}:{port}"
+
+
+def get_dns_resolved_server_address(server, ipv4=True, ipv6=False):
+    host = dns_resolve_single(server.host, ipv4=ipv4, ipv6=ipv6)
+    return format_address(host, server.port)
 
 
 def driver_feature(*features):

@@ -12,8 +12,7 @@ class RoutingV4x1(RoutingV4x4):
     server_agent = "Neo4j/4.1.0"
 
     def get_vars(self, host=None):
-        if host is None:
-            host = self._routingServer1.host
+        host = self.host_in_address(host)
         v = {
             "#VERSION#": self.bolt_version,
             "#HOST#": host,
@@ -65,3 +64,6 @@ class RoutingV4x1(RoutingV4x4):
 
     def test_should_ignore_system_bookmark_when_getting_rt_for_multi_db(self):
         pass
+
+    def test_ipv6_read(self):
+        super().test_ipv6_read()

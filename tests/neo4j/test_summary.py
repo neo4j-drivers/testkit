@@ -5,12 +5,15 @@ from tests.neo4j.shared import (
     cluster_unsafe_test,
     get_driver,
     get_neo4j_host_and_port,
-    get_neo4j_resolved_host_and_port,
+    get_neo4j_host_and_port_resolutions,
     get_server_info,
     QueryBuilder,
     requires_multi_db_support,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    format_address,
+    TestkitTestCase,
+)
 
 
 class TestSummary(TestkitTestCase):
@@ -120,9 +123,13 @@ class TestSummary(TestkitTestCase):
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
         summary = self.get_summary("RETURN 1 AS number")
-        self.assertTrue(summary.server_info.address in
-                        ["%s:%s" % get_neo4j_resolved_host_and_port(),
-                         "%s:%s" % get_neo4j_host_and_port()])
+
+        expected = [
+            format_address(host, port)
+            for (host, port) in
+            (*get_neo4j_host_and_port_resolutions(), get_neo4j_host_and_port())
+        ]
+        self.assertTrue(summary.server_info.address in expected)
 
     def _assert_counters(self, summary, nodes_created=0, nodes_deleted=0,
                          relationships_created=0, relationships_deleted=0,

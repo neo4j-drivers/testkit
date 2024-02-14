@@ -13,21 +13,7 @@ from tests.stub.shared import StubServer
 class RoutingBase(TestkitTestCase):
     def setUp(self):
         super().setUp()
-        self._routingServer1 = StubServer(9000)
-        self._routingServer2 = StubServer(9001)
-        self._routingServer3 = StubServer(9002)
-        self._readServer1 = StubServer(9010)
-        self._readServer2 = StubServer(9011)
-        self._readServer3 = StubServer(9012)
-        self._writeServer1 = StubServer(9020)
-        self._writeServer2 = StubServer(9021)
-        self._writeServer3 = StubServer(9022)
-        self._uri_template = "neo4j://%s:%d"
-        self._uri_template_with_context = \
-            self._uri_template + "?region=china&policy=my_policy"
-        self._uri_with_context = self._uri_template_with_context % (
-            self._routingServer1.host, self._routingServer1.port
-        )
+        self.set_up_servers()
         self._auth = types.AuthorizationToken(
             "basic", principal="p", credentials="c"
         )
@@ -45,6 +31,26 @@ class RoutingBase(TestkitTestCase):
         self._writeServer3.reset()
         super().tearDown()
 
+    def set_up_servers(self, ipv6=False):
+        self._routingServer1 = StubServer(9000, ipv6=ipv6)
+        self._routingServer2 = StubServer(9001, ipv6=ipv6)
+        self._routingServer3 = StubServer(9002, ipv6=ipv6)
+        self._readServer1 = StubServer(9010, ipv6=ipv6)
+        self._readServer2 = StubServer(9011, ipv6=ipv6)
+        self._readServer3 = StubServer(9012, ipv6=ipv6)
+        self._writeServer1 = StubServer(9020, ipv6=ipv6)
+        self._writeServer2 = StubServer(9021, ipv6=ipv6)
+        self._writeServer3 = StubServer(9022, ipv6=ipv6)
+        self._set_up_uris()
+
+    def _set_up_uris(self):
+        self._uri_template = "neo4j://%s"
+        self._uri_template_with_context = \
+            self._uri_template + "?region=china&policy=my_policy"
+        self._uri_with_context = self._uri_template_with_context % (
+            self._routingServer1.address
+        )
+
     @property
     @abstractmethod
     def bolt_version(self):
@@ -60,9 +66,15 @@ class RoutingBase(TestkitTestCase):
     def adb(self):
         pass
 
-    def get_vars(self, host=None):
+    def host_in_address(self, host=None):
         if host is None:
             host = self._routingServer1.host
+        if ":" in host:
+            host = f"[{host}]"
+        return host
+
+    def get_vars(self, host=None):
+        host = self.host_in_address(host)
         v = {
             "#VERSION#": self.bolt_version,
             "#HOST#": host,

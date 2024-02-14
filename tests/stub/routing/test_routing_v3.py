@@ -11,8 +11,7 @@ class RoutingV3(RoutingV4x4):
     server_agent = "Neo4j/3.5.0"
 
     def get_vars(self, host=None):
-        if host is None:
-            host = self._routingServer1.host
+        host = self.host_in_address(host)
         v = {
             "#VERSION#": self.bolt_version,
             "#HOST#": host,
@@ -82,3 +81,6 @@ class RoutingV3(RoutingV4x4):
 
     def test_should_drop_connections_failing_liveness_check(self):
         super().test_should_drop_connections_failing_liveness_check()
+
+    def test_ipv6_read(self):
+        super().test_ipv6_read()

@@ -97,7 +97,7 @@ def bright_white(s):
 class ColourFormatter(Formatter):
 
     def format(self, record):
-        s = super(ColourFormatter, self).format(record)
+        s = super().format(record)
         bits = s.split("  ", maxsplit=1)
         bits[0] = bright_black(bits[0])
         if record.levelno == CRITICAL:
@@ -121,13 +121,13 @@ class ColourFormatter(Formatter):
         return f"{t}.{ms:03d}"
 
 
-class Watcher(object):
+class Watcher:
     """Log watcher for monitoring driver and protocol activity."""
 
     handlers = {}
 
     def __init__(self, logger_name):
-        super(Watcher, self).__init__()
+        super().__init__()
         self.logger_name = logger_name
         self.logger = getLogger(self.logger_name)
         self.formatter = ColourFormatter("%(asctime)s  %(message)s")

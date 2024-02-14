@@ -34,13 +34,13 @@ class Address(tuple):
                 # IPv6
                 host, _, port = s[1:].rpartition("]")
                 return cls((host or default_host or "localhost",
-                            port.lstrip(":") or default_port or 0,
+                            int(port.lstrip(":")) or default_port or 0,
                             0, 0))
             else:
                 # IPv4
                 host, _, port = s.partition(":")
                 return cls((host or default_host or "localhost",
-                            port or default_port or 0))
+                            int(port) or default_port or 0))
         else:
             raise TypeError("Address.parse requires a string argument")
 

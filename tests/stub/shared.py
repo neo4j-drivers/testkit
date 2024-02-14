@@ -48,10 +48,15 @@ def _poll_pipe(pipe, queue):
 
 
 class StubServer:
-    def __init__(self, port):
-        self.host = os.environ.get("TEST_STUB_HOST", "127.0.0.1")
-        self.address = "%s:%d" % (self.host, port)
+    def __init__(self, port, ipv6=False):
+        self.host = os.environ.get("TEST_STUB_HOST",
+                                   "::1" if ipv6 else "127.0.0.1")
+        if ":" in self.host:
+            self.address = f"[{self.host}]:{port}"
+        else:
+            self.address = f"{self.host}:{port}"
         self.port = port
+        self.ipv6 = ipv6
         self._process = None
         self._stdout_buffer = Queue()
         self._stdout_lines = []
@@ -93,10 +98,12 @@ class StubServer:
                 os.fsync(f)
             self._script_path = path
 
+        listen_addr = f"{'[::]' if self.ipv6 else '0.0.0.0'}:{self.port}"
+        extra_options = ["-6"] if self.ipv6 else []
         self._process = subprocess.Popen(
             [
-                sys.executable, "-m", "boltstub", "-l",
-                "0.0.0.0:%d" % self.port, "-v", path
+                sys.executable, "-m", "boltstub", "-l", listen_addr, "-v",
+                *extra_options, path
             ],
             **POPEN_EXTRA_KWARGS,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True,
