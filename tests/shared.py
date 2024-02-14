@@ -82,11 +82,15 @@ def dns_resolve_single(host_name, ipv4=True, ipv6=False):
     return ips[0]
 
 
+def format_address(host, port):
+    if ":" in host:
+        return f"[{host}]:{port}"
+    return f"{host}:{port}"
+
+
 def get_dns_resolved_server_address(server, ipv4=True, ipv6=False):
     host = dns_resolve_single(server.host, ipv4=ipv4, ipv6=ipv6)
-    if ":" in host:
-        return f"[{host}]:{server.port}"
-    return f"{host}:{server.port}"
+    return format_address(host, server.port)
 
 
 def driver_feature(*features):
