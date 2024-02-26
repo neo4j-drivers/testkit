@@ -39,6 +39,8 @@ env_neo4j_http_port = "TEST_NEO4J_HTTP_PORT"
 env_neo4j_version = "TEST_NEO4J_VERSION"
 env_neo4j_edition = "TEST_NEO4J_EDITION"
 env_neo4j_cluster = "TEST_NEO4J_CLUSTER"
+env_neo4j_client_cert = "TEST_NEO4J_SSL_CLIENT_CERT"
+env_neo4j_client_key = "TEST_NEO4J_SSL_CLIENT_KEY"
 
 
 def get_authorization():
@@ -74,7 +76,19 @@ def get_neo4j_scheme():
     return scheme
 
 
-def get_driver(backend, uri=None, auth=None, **kwargs):
+def get_client_certificate():
+    client_certificate_key = os.environ.get(env_neo4j_client_key)
+    client_certificate_cert = os.environ.get(env_neo4j_client_cert)
+    if client_certificate_cert is None or client_certificate_key is None:
+        if client_certificate_cert is not None or \
+                client_certificate_key is not None:
+            raise Exception("Miss configuration of client certificate.")
+        return None
+    return client_certificate_cert, client_certificate_key
+
+
+def get_driver(backend, uri=None, auth=None,
+               client_certificate=None, **kwargs):
     """Return default driver for tests that do not test this aspect."""
     if uri is None:
         scheme = get_neo4j_scheme()
@@ -82,7 +96,10 @@ def get_driver(backend, uri=None, auth=None, **kwargs):
         uri = "%s://%s:%d" % (scheme, host, port)
     if auth is None:
         auth = get_authorization()
-    return Driver(backend, uri, auth, **kwargs)
+    if client_certificate is None:
+        client_certificate = get_client_certificate()
+    return Driver(backend, uri, auth, client_certificate=client_certificate,
+                  **kwargs)
 
 
 class ServerInfo:

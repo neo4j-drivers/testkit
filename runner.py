@@ -78,8 +78,15 @@ class Container:
             "TEST_NEO4J_SCHEME": neo4j_config.scheme,
             "TEST_NEO4J_VERSION": neo4j_config.version,
             "TEST_NEO4J_EDITION": neo4j_config.edition,
-            "TEST_NEO4J_CLUSTER": neo4j_config.cluster
+            "TEST_NEO4J_CLUSTER": neo4j_config.cluster,
+
         })
+        if neo4j_config.mtls:
+            self._env.update({
+                "TEST_NEO4J_SSL_CLIENT_CERT": "/certificates/certificate.pem",
+                "TEST_NEO4J_SSL_CLIENT_KEY": "/certificates/privatekey.pem"
+            })
+
         self._container.exec(
             ["python3", "-m", "tests.neo4j.suites", suite, neo4j_config.name],
             env_map=self._env
@@ -92,7 +99,9 @@ class Container:
                     "TEST_NEO4J_SCHEME",
                     "TEST_NEO4J_VERSION",
                     "TEST_NEO4J_EDITION",
-                    "TEST_NEO4J_CLUSTER"):
+                    "TEST_NEO4J_CLUSTER",
+                    "TEST_NEO4J_SSL_CLIENT_CERT",
+                    "TEST_NEO4J_SSL_CLIENT_KEY"):
             self._env.update({key: os.environ.get(key)})
         if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
@@ -127,6 +136,11 @@ class Container:
             "TEST_NEO4J_EDITION": neo4j_config.edition,
             "TEST_NEO4J_CLUSTER": neo4j_config.cluster
         })
+        if neo4j_config.mtls:
+            self._env.update({
+                "TEST_NEO4J_SSL_CLIENT_CERT": "/certificates/certificate.pem",
+                "TEST_NEO4J_SSL_CLIENT_KEY": "/certificates/privatekey.pem"
+            })
         self._container.exec(
             ["python3", "-m", "unittest", "-v", test_pattern],
             env_map=self._env
@@ -139,7 +153,9 @@ class Container:
                     "TEST_NEO4J_SCHEME",
                     "TEST_NEO4J_VERSION",
                     "TEST_NEO4J_EDITION",
-                    "TEST_NEO4J_CLUSTER"):
+                    "TEST_NEO4J_CLUSTER",
+                    "TEST_NEO4J_SSL_CLIENT_CERT",
+                    "TEST_NEO4J_SSL_CLIENT_KEY"):
             self._env.update({key: os.environ.get(key)})
         if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})

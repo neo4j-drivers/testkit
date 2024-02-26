@@ -42,9 +42,12 @@ test_flags = {
 
 
 def initialise_configurations(settings):
-    def generate_config(version, enterprise, cluster, scheme, stress_test):
-        assert (cluster and scheme == "neo4j"
-                or not cluster and scheme in ("neo4j", "bolt"))
+    def generate_config(version, enterprise, cluster, scheme, stress_test,
+                        mtls=False):
+        assert (cluster
+                and scheme in ("neo4j", "neo4j+s", "neo4j+ssc")
+                or not cluster
+                and scheme in ("neo4j", "bolt", "neo4j+s", "neo4j+ssc"))
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
@@ -57,7 +60,8 @@ def initialise_configurations(settings):
             cluster=cluster,
             suite=version,
             scheme=scheme,
-            stress_test_duration=stress_test
+            stress_test_duration=stress_test,
+            mtls=mtls
         )
 
     def generate_tc_config(
@@ -89,29 +93,34 @@ def initialise_configurations(settings):
     # neo4j:4.4-enterprise, ...) grouped together. Else, TestKit will download
     # the same image multiple times if `TEST_DOCKER_RMI` is set to `true`.
     configurations = [
-        generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
-        for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
+        generate_config(version_, enterprise_,
+                        cluster_, scheme_, stress_test_, mtls_)
+        for (version_, enterprise_,
+             cluster_, scheme_, stress_test_, mtls_)
+        in (
             # not officially supported versions
-            ("4.2",    True,        False,    "neo4j",  0),
-            ("4.3",    True,        False,    "neo4j",  0),
+            ("4.2",    True,        False,    "neo4j",  0, False),
+            ("4.3",    True,        False,    "neo4j",  0, False),
             # official backwards-compatibility
             # LTS version
-            ("4.4",    False,       False,    "bolt",   0),
-            ("4.4",    False,       False,    "neo4j",  0),
-            ("4.4",    True,        False,    "bolt",   0),
-            ("4.4",    True,        False,    "neo4j",  0),
-            ("4.4",    True,        True,     "neo4j", 90),
+            ("4.4",    False,       False,    "bolt",   0, False),
+            ("4.4",    False,       False,    "neo4j",  0, False),
+            ("4.4",    True,        False,    "bolt",   0, False),
+            ("4.4",    True,        False,    "neo4j",  0, False),
+            ("4.4",    True,        True,     "neo4j", 90, False),
             # Selected 5.x versions
             # Oldest 5.x version (BOLT 5.0) would be 5.0.
             # However, that has no tag at dockerhub, so we use 5.1
             # https://github.com/neo4j/docker-neo4j/issues/391
-            ("5.1",    True,        True,     "neo4j",  0),
+            ("5.1",    True,        True,     "neo4j",  0, False),
             # Bolt 5.1
-            ("5.5",    True,        True,     "neo4j",  0),
+            ("5.5",    True,        True,     "neo4j",  0, False),
             # Bolt 5.2
-            ("5.7",    True,        True,     "neo4j",  0),
+            ("5.7",    True,        True,     "neo4j",  0, False),
             # Bolt 5.3
-            ("5.9",    True,        True,     "neo4j",  0),
+            ("5.9",    True,        True,     "neo4j",  0, False),
+            # mtls
+            ("5.15",    True,       False,     "neo4j+ssc",  0, True),
         )
     ]
     configurations += [
@@ -417,13 +426,15 @@ def main(settings, configurations):
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
                                    neo4j_artifacts_path,
-                                   neo4j_config.version)
+                                   neo4j_config.version,
+                                   mtls=neo4j_config.mtls)
         else:
             print("\n    Starting neo4j standalone server (%s)\n"
                   % server_name)
             server = neo4j.Standalone(
                 neo4j_config.image, server_name, neo4j_artifacts_path,
-                "neo4jserver", 7687, neo4j_config.version, neo4j_config.edition
+                "neo4jserver", 7687, neo4j_config.version,
+                neo4j_config.edition, neo4j_config.mtls
             )
         server.start(networks[0])
         addresses = server.addresses()

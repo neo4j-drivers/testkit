@@ -75,7 +75,8 @@ class NewDriver:
         connection_acquisition_timeout_ms=None,
         notifications_min_severity=None,
         notifications_disabled_categories=None,
-        telemetry_disabled=None
+        telemetry_disabled=None,
+        client_certificate=None
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -112,6 +113,12 @@ class NewDriver:
                 self.trustedCertificates = None
             else:
                 self.trustedCertificates = trustedCertificates
+        if client_certificate is not None:
+            # missing password and formalization of protocol.
+            self.clientCertificate = {
+                "certfile": client_certificate[0],
+                "keyfile": client_certificate[1]
+            }
 
 
 class AuthorizationToken:
