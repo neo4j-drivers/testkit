@@ -99,8 +99,9 @@ class Standalone:
                 "public.crt"
 
             # SHARE CERTIFICATES
-            # NEED TO GENERATE
-            mount_map["/Users/bigmontz/neo4j_mtls_test/server"] = \
+            certificates_path = join(os.path.curdir,
+                                     "tests", "tls", "certs", "server")
+            mount_map[certificates_path] = \
                 "/certificates:ro"
 
         self._container = docker.run(
@@ -254,8 +255,9 @@ class Core:
                 "public.crt"
 
             # SHARE CERTIFICATES
-            # NEED TO GENERATE
-            mount_map["/Users/bigmontz/neo4j_mtls_test/server"] = \
+            certificates_path = join(os.path.curdir,
+                                     "tests", "tls", "certs", "server")
+            mount_map[certificates_path] = \
                 "/certificates:ro"
 
         self._container = docker.run(
