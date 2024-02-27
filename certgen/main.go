@@ -7,9 +7,9 @@ package main
 
 import (
 	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -123,7 +123,7 @@ func generateServer(parent *x509.Certificate, parentPrivate interface{}, notBefo
 	return key, derBytes
 }
 
-func generateRsa4096Sha512(notBefore, notAfter time.Time, commonName string)(interface{}, []byte) {
+func generateRsa4096Sha512(notBefore, notAfter time.Time, commonName string) (interface{}, []byte) {
 	key, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
 		panic(err)
@@ -211,7 +211,6 @@ func main() {
 	untrustedRoot_server1Key, untrustedRoot_server1Der := generateServer(untrustedRootCert, untrustedRootKey, anHourAgo, tenYearsFromNow, "untrustedRoot_thehost", "thehost")
 	writeKey(path.Join(basePath, "server", "untrustedRoot_thehost.key"), untrustedRoot_server1Key)
 	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
-
 
 	// Generate Server Certificate
 	serverKey, serverDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")

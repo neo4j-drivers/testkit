@@ -21,7 +21,7 @@ THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class TlsServer:
     def __init__(self, server_cert, min_tls="0", max_tls="2",
-                 disable_tls=False):
+                 disable_tls=False, client_cert=None):
         # Name of server certificate, corresponds to a .pem and .key file.
         server_path = os.path.join(THIS_PATH, "..", "..", "tlsserver",
                                    "tlsserver")
@@ -39,6 +39,8 @@ class TlsServer:
         ]
         if disable_tls:
             params.append("--disableTls")
+        if client_cert is not None:
+            params.append("--clientCert", client_cert)
         self._process = subprocess.Popen(
             params,
             stdout=subprocess.PIPE,

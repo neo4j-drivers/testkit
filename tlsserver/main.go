@@ -24,6 +24,7 @@ func main() {
 		address        string
 		certPath       string
 		keyPath        string
+		clientCertPath string
 		minTlsMinorVer int
 		maxTlsMinorVer int
 		disableTls     bool
@@ -34,6 +35,7 @@ func main() {
 	flag.StringVar(&address, "bind", "0.0.0.0:6666", "Address to bind to")
 	flag.StringVar(&certPath, "cert", "", "Path to server certificate")
 	flag.StringVar(&keyPath, "key", "", "Path to server private key")
+	flag.StringVar(&clientCertPath, "clientCert", "", "Path to the client certificate")
 	flag.IntVar(&minTlsMinorVer, "minTls", 0, "Minimum TLS version, minor part")
 	flag.IntVar(&maxTlsMinorVer, "maxTls", 2, "Maximum TLS version, minor part")
 	flag.Parse()
@@ -48,6 +50,9 @@ func main() {
 			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 				// TODO: Set cert.OCSPStaple
 				return &cert, nil
+			},
+			GetClientCertificate: func(hello *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+				return nil, nil
 			},
 			MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
 			MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
