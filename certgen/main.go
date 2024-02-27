@@ -7,6 +7,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"crypto/rsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
@@ -37,6 +38,15 @@ func writeKey(path string, keyx interface{}) {
 			panic(err)
 		}
 		err = pem.Encode(file, &pem.Block{Type: "EC PRIVATE KEY", Bytes: m})
+		if err != nil {
+			panic(err)
+		}
+	case *rsa.PrivateKey:
+		m, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			panic(err)
+		}
+		err = pem.Encode(file, &pem.Block{Type: "PRIVATE KEY", Bytes: m})
 		if err != nil {
 			panic(err)
 		}
@@ -113,6 +123,30 @@ func generateServer(parent *x509.Certificate, parentPrivate interface{}, notBefo
 	return key, derBytes
 }
 
+func generateRsa4096Sha512(notBefore, notAfter time.Time, commonName string)(interface{}, []byte) {
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		panic(err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber:          newSerialNumber(),
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		Subject:               pkix.Name{CommonName: commonName},
+		KeyUsage:              x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		panic(err)
+	}
+	return key, derBytes
+}
+
 func main() {
 	basePath := path.Join(os.Args[1], "certs")
 
@@ -179,19 +213,22 @@ func main() {
 	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
 
 
-	// Generate Client Certificate
-	clientCert, clientKey, clientDer := generateRoot(anHourAgo, tenYearsFromNow, "client")
+	// Generate Server Certificate
+	serverKey, serverDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
 	// Write client certificate to server
-	writeCert(path.Join(basePath, "server", "bolt", "public.crt"), clientDer)
-	writeCert(path.Join(basePath, "server", "https", "public.crt"), clientDer)
-	writeCert(path.Join(basePath, "server", "bolt", "trusted", "public.crt"), clientDer)
-	writeCert(path.Join(basePath, "server", "https", "trusted", "public.crt"), clientDer)
+	writeCert(path.Join(basePath, "server", "bolt", "public.crt"), serverDer)
+	writeCert(path.Join(basePath, "server", "https", "public.crt"), serverDer)
+	writeCert(path.Join(basePath, "server", "bolt", "trusted", "public.crt"), serverDer)
+	writeCert(path.Join(basePath, "server", "https", "trusted", "public.crt"), serverDer)
 	// Write client private key to server
-	writeKey(path.Join(basePath, "server", "bolt", "private.key"), clientKey)
-	writeKey(path.Join(basePath, "server", "https", "private.key"), clientKey)
+	writeKey(path.Join(basePath, "server", "bolt", "private.key"), serverKey)
+	writeKey(path.Join(basePath, "server", "https", "private.key"), serverKey)
 
 	// Generate certificate.pem
-	clientKeyPem, clientCertificatePemDer := generateServer(clientCert, customRootKey, tenYearsAgo, anHourAgo, "client_host", "the_client")
-	writeCert(path.Join(basePath, "driver", "certificate.pem"), clientCertificatePemDer)
-	writeKey(path.Join(basePath, "driver", "privatekey.pem"), clientKeyPem)
+	clientKey, clientDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
+	writeCert(path.Join(basePath, "driver", "certificate.pem"), clientDer)
+	writeKey(path.Join(basePath, "driver", "privatekey.pem"), clientKey)
+	// Copy to
+	writeCert(path.Join(basePath, "server", "bolt", "trusted", "client.pem"), clientDer)
+	writeCert(path.Join(basePath, "server", "https", "trusted", "client.pem"), clientDer)
 }
