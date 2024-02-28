@@ -37,14 +37,36 @@ class TestClientCertificate(TestkitTlsTestCase):
 
     required_features = types.Feature.API_SSL_SCHEMES,
     extra_driver_configs = {
-        "client_certificate": (client_certificate_cert, client_certificate_key)
     },
 
-    def test_driver_is_encrypted_with_ssc(self):
+    def test_ssc_and_client_certificate_present(self):
         schemes = "neo4j+ssc", "bolt+ssc"
-        self._server = TlsServer("trustedRoot_thehost",
-                                 client_cert=self.client_cert_on_server)
         for driver_config in self.extra_driver_configs:
             for scheme in schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
-                    self._test_reports_encrypted(True, scheme, **driver_config)
+                    self._start_server("trustedRoot_thehost",
+                                       client_cert=self.client_cert_on_server)
+                    self.assertTrue(self._try_connect(
+                        self._server, scheme, "thehost",
+                        client_certificate=self._get_client_certificate(),
+                        **driver_config
+                    ))
+                self._server.reset()
+
+    def test_scc_and_certificate_not_present(self):
+        schemes = "neo4j+ssc", "bolt+ssc"
+        for driver_config in self.extra_driver_configs:
+            for scheme in schemes:
+                with self.subTest(scheme=scheme, driver_config=driver_config):
+                    self._start_server("trustedRoot_thehost",
+                                       client_cert=self.client_cert_on_server)
+                    self.assertFalse(self._try_connect(
+                        self._server, scheme, "thehost", **driver_config
+                    ))
+                self._server.reset()
+
+    def _start_server(self, cert, **kwargs):
+        self._server = TlsServer(cert, **kwargs)
+
+    def _get_client_certificate(self):
+        return (self.client_certificate_cert, self.client_certificate_key)

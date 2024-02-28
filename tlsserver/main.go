@@ -48,9 +48,13 @@ func main() {
 			exitWithError(err)
 		}
 
-		rootCAs, _ := x509.SystemCertPool()
-		if rootCAs == nil {
-			rootCAs = x509.NewCertPool()
+		config := tls.Config{
+			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				// TODO: Set cert.OCSPStaple
+				return &cert, nil
+			},
+			MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
+			MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
 		}
 
 		if clientCertPath != "" {
@@ -58,20 +62,14 @@ func main() {
 			if err != nil {
 				exitWithError(err)
 			}
-			if ok := rootCAs.AppendCertsFromPEM(clientCert); !ok {
-				exitWithError("No certs appended, using system certs only")
-			}
+
+			certPool := x509.NewCertPool()
+			certPool.AppendCertsFromPEM(clientCert)
+
+			config.ClientCAs =            certPool
+			config.ClientAuth = tls.RequireAndVerifyClientCert
 		}
 
-		config := tls.Config{
-			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-				// TODO: Set cert.OCSPStaple
-				return &cert, nil
-			},
-			RootCAs:            rootCAs,
-			MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
-			MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
-		}
 		listener, err = tls.Listen("tcp", address, &config)
 		if err != nil {
 			exitWithError(err)
