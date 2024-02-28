@@ -2,16 +2,18 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"time"
 )
 
-func exitWithError(err error) {
+func exitWithError(err interface{}) {
 	fmt.Println(err)
 	os.Exit(-1)
 }
@@ -46,14 +48,27 @@ func main() {
 			exitWithError(err)
 		}
 
+		rootCAs, _ := x509.SystemCertPool()
+		if rootCAs == nil {
+			rootCAs = x509.NewCertPool()
+		}
+
+		if clientCertPath != "" {
+			clientCert, err := ioutil.ReadFile(clientCertPath)
+			if err != nil {
+				exitWithError(err)
+			}
+			if ok := rootCAs.AppendCertsFromPEM(clientCert); !ok {
+				exitWithError("No certs appended, using system certs only")
+			}
+		}
+
 		config := tls.Config{
 			GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 				// TODO: Set cert.OCSPStaple
 				return &cert, nil
 			},
-			GetClientCertificate: func(hello *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-				return nil, nil
-			},
+			RootCAs:            rootCAs,
 			MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
 			MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
 		}

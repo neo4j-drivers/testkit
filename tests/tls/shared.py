@@ -40,7 +40,8 @@ class TlsServer:
         if disable_tls:
             params.append("--disableTls")
         if client_cert is not None:
-            params.append("--clientCert", client_cert)
+            params.append("--clientCert")
+            params.append(client_cert)
         self._process = subprocess.Popen(
             params,
             stdout=subprocess.PIPE,
