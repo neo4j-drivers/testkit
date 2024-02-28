@@ -39,6 +39,32 @@ class TestClientCertificate(TestkitTlsTestCase):
     extra_driver_configs = {
     },
 
+    def test_s_and_client_certificate_present(self):
+        schemes = "neo4j+s", "bolt+s"
+        for driver_config in self.extra_driver_configs:
+            for scheme in schemes:
+                with self.subTest(scheme=scheme, driver_config=driver_config):
+                    self._start_server("thehost",
+                                       client_cert=self.client_cert_on_server)
+                    self.assertTrue(self._try_connect(
+                        self._server, scheme, "thehost",
+                        client_certificate=self._get_client_certificate(),
+                        **driver_config
+                    ))
+                self._server.reset()
+
+    def test_s_and_certificate_not_present(self):
+        schemes = "neo4j+s", "bolt+s"
+        for driver_config in self.extra_driver_configs:
+            for scheme in schemes:
+                with self.subTest(scheme=scheme, driver_config=driver_config):
+                    self._start_server("thehost",
+                                       client_cert=self.client_cert_on_server)
+                    self.assertFalse(self._try_connect(
+                        self._server, scheme, "thehost", **driver_config
+                    ))
+                self._server.reset()
+
     def test_ssc_and_client_certificate_present(self):
         schemes = "neo4j+ssc", "bolt+ssc"
         for driver_config in self.extra_driver_configs:
