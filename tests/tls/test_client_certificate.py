@@ -95,4 +95,5 @@ class TestClientCertificate(TestkitTlsTestCase):
         self._server = TlsServer(cert, **kwargs)
 
     def _get_client_certificate(self):
-        return (self.client_certificate_cert, self.client_certificate_key)
+        return types.ClientCertificate(self.client_certificate_cert,
+                                       self.client_certificate_key)

@@ -94,6 +94,7 @@ class NewDriver:
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        self.clientCertificate = client_certificate
         if notifications_min_severity is not None:
             self.notificationsMinSeverity = notifications_min_severity
         if notifications_disabled_categories is not None:
@@ -113,12 +114,6 @@ class NewDriver:
                 self.trustedCertificates = None
             else:
                 self.trustedCertificates = trustedCertificates
-        if client_certificate is not None:
-            # missing password and formalization of protocol.
-            self.clientCertificate = {
-                "certfile": client_certificate[0],
-                "keyfile": client_certificate[1]
-            }
 
 
 class AuthorizationToken:
@@ -264,6 +259,20 @@ class BearerAuthTokenProviderCompleted:
         self.requestId = request_id
         assert isinstance(auth, AuthTokenAndExpiration)
         self.auth = auth
+
+
+class ClientCertificate:
+    """
+    Not a request but used in `NewDriver`.
+
+    This property is used for configuring client certificates
+    for mutual TLS configuration.
+    """
+
+    def __init__(self, certfile, keyfile, password=None):
+        self.certfile = certfile
+        self.keyfile = keyfile
+        self.password = password
 
 
 class VerifyConnectivity:

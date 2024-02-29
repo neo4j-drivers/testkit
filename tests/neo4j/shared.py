@@ -23,7 +23,10 @@ from warnings import warn
 
 from nutkit import protocol
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken
+from nutkit.protocol import (
+    AuthorizationToken,
+    ClientCertificate,
+)
 from tests.shared import (
     dns_resolve_single,
     Potential,
@@ -84,7 +87,7 @@ def get_client_certificate():
                 client_certificate_key is not None:
             raise Exception("Miss configuration of client certificate.")
         return None
-    return client_certificate_cert, client_certificate_key
+    return ClientCertificate(client_certificate_cert, client_certificate_key)
 
 
 def get_driver(backend, uri=None, auth=None,
