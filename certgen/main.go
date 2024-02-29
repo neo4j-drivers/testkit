@@ -212,22 +212,10 @@ func main() {
 	writeKey(path.Join(basePath, "server", "untrustedRoot_thehost.key"), untrustedRoot_server1Key)
 	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
 
-	// Generate Server Certificate
-	serverKey, serverDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
-	// Write client certificate to server
-	writeCert(path.Join(basePath, "server", "bolt", "public.crt"), serverDer)
-	writeCert(path.Join(basePath, "server", "https", "public.crt"), serverDer)
-	writeCert(path.Join(basePath, "server", "bolt", "trusted", "public.crt"), serverDer)
-	writeCert(path.Join(basePath, "server", "https", "trusted", "public.crt"), serverDer)
-	// Write client private key to server
-	writeKey(path.Join(basePath, "server", "bolt", "private.key"), serverKey)
-	writeKey(path.Join(basePath, "server", "https", "private.key"), serverKey)
-
 	// Generate certificate.pem
 	clientKey, clientDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
 	writeCert(path.Join(basePath, "driver", "certificate.pem"), clientDer)
 	writeKey(path.Join(basePath, "driver", "privatekey.pem"), clientKey)
 	// Copy to
 	writeCert(path.Join(basePath, "server", "bolt", "trusted", "client.pem"), clientDer)
-	writeCert(path.Join(basePath, "server", "https", "trusted", "client.pem"), clientDer)
 }

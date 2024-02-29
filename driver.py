@@ -70,13 +70,10 @@ def start_container(testkit_path, branch_name, driver_name, driver_path,
                           branch_name, driver_name, artifacts_path_build,
                           build_args=_get_build_args())
     container_name = "driver"
-    certificates_path = os.path.join(testkit_path,
-                                     "tests", "tls", "certs", "driver")
     # Configure volume map for the driver container
     mount_map = {
         testkit_path: "/testkit",
-        driver_path: "/driver",
-        certificates_path: "/certificates:ro"
+        driver_path: "/driver"
     }
     if os.environ.get("TEST_BUILD_CACHE_ENABLED") == "true":
         if driver_name == "java":
