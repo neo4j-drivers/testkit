@@ -35,7 +35,8 @@ class TestClientCertificate(TestkitTlsTestCase):
                                           "certs", "driver",
                                           "privatekey.pem")
 
-    required_features = types.Feature.API_SSL_SCHEMES,
+    required_features = types.Feature.API_SSL_SCHEMES, \
+        types.Feature.API_SSL_CLIENT_CERTIFICATE
     extra_driver_configs = {
     },
 
