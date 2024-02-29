@@ -134,8 +134,8 @@ func generateRsa4096Sha512(notBefore, notAfter time.Time, commonName string) (in
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		Subject:               pkix.Name{CommonName: commonName},
-		KeyUsage:              x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}

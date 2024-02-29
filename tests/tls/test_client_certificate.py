@@ -44,7 +44,7 @@ class TestClientCertificate(TestkitTlsTestCase):
         for driver_config in self.extra_driver_configs:
             for scheme in schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
-                    self._start_server("thehost",
+                    self._start_server("trustedRoot_thehost",
                                        client_cert=self.client_cert_on_server)
                     self.assertTrue(self._try_connect(
                         self._server, scheme, "thehost",
@@ -58,7 +58,7 @@ class TestClientCertificate(TestkitTlsTestCase):
         for driver_config in self.extra_driver_configs:
             for scheme in schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
-                    self._start_server("thehost",
+                    self._start_server("trustedRoot_thehost",
                                        client_cert=self.client_cert_on_server)
                     self.assertFalse(self._try_connect(
                         self._server, scheme, "thehost", **driver_config

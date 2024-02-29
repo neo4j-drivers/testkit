@@ -66,7 +66,7 @@ func main() {
 			certPool := x509.NewCertPool()
 			certPool.AppendCertsFromPEM(clientCert)
 
-			config.ClientCAs =            certPool
+			config.ClientCAs = certPool
 			config.ClientAuth = tls.RequireAndVerifyClientCert
 		}
 
