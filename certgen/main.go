@@ -55,6 +55,38 @@ func writeKey(path string, keyx interface{}) {
 	}
 }
 
+func writeKeyEncrypted(password, path string, keyx interface{}) {
+	file := createFile(path)
+	defer file.Close()
+
+	switch key := keyx.(type) {
+	case *rsa.PrivateKey:
+		m, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			panic(err)
+		}
+
+		block := &pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: m,
+		}
+
+		block, err = x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes,
+			[]byte(password), x509.PEMCipherAES256)
+		if err != nil {
+			panic(err)
+		}
+
+		err = pem.Encode(file, block)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		panic("Unknown key type")
+	}
+
+}
+
 func writeCert(path string, der []byte) {
 	file := createFile(path)
 	defer file.Close()
@@ -216,6 +248,7 @@ func main() {
 	clientKey, clientDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
 	writeCert(path.Join(basePath, "driver", "certificate.pem"), clientDer)
 	writeKey(path.Join(basePath, "driver", "privatekey.pem"), clientKey)
+	writeKeyEncrypted("thepassword", path.Join(basePath, "driver", "privatekey_with_thepassword.pem"), clientKey)
 	// Copy to
 	writeCert(path.Join(basePath, "server", "bolt", "trusted", "client.pem"), clientDer)
 }
