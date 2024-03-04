@@ -5,6 +5,7 @@ from .auth_token_manager import (
     BearerAuthTokenManager,
 )
 from .bookmark_manager import BookmarkManager
+from .client_certificate_provider import ClientCertificateProvider
 from .session import Session
 
 
@@ -38,6 +39,16 @@ class Driver:
             )
             self._auth_token_manager = auth_token
             auth_token_manager_id = auth_token.id
+        client_certificate_, client_certificate_provider_id_ = None, None
+        if client_certificate is not None:
+            assert isinstance(
+                client_certificate,
+                (protocol.ClientCertificate, ClientCertificateProvider)
+            )
+            if isinstance(client_certificate, protocol.ClientCertificate):
+                client_certificate_ = client_certificate
+            else:
+                client_certificate_provider_id_ = client_certificate.id
 
         req = protocol.NewDriver(
             uri, self._auth_token, auth_token_manager_id,
@@ -52,7 +63,8 @@ class Driver:
             notifications_min_severity=notifications_min_severity,
             notifications_disabled_categories=notifications_disabled_categories,  # noqa: E501
             telemetry_disabled=telemetry_disabled,
-            client_certificate=client_certificate
+            client_certificate=client_certificate_,
+            client_certificate_provider_id=client_certificate_provider_id_,
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -80,10 +92,11 @@ class Driver:
                     )
                     continue
             for cb_processor in (
-                    AuthTokenManager,
-                    BasicAuthTokenManager,
-                    BearerAuthTokenManager,
-                    BookmarkManager,
+                AuthTokenManager,
+                BasicAuthTokenManager,
+                BearerAuthTokenManager,
+                BookmarkManager,
+                ClientCertificateProvider,
             ):
                 cb_response = cb_processor.process_callbacks(res)
                 if cb_response is not None:

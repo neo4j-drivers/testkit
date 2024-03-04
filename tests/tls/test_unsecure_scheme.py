@@ -39,9 +39,10 @@ class TestUnsecureScheme(TestkitTlsTestCase):
         for scheme in schemes:
             with self.subTest(scheme=scheme):
                 self._server = TlsServer("trustedRoot_thehost")
-                self.assertFalse(self._try_connect(
-                    self._server, scheme, "thehost"
-                ))
+                with self._make_driver(scheme, "thehost") as driver:
+                    self.assertFalse(self._try_connect(
+                        self._server, driver
+                    ))
             self._server.reset()
 
     @driver_feature(types.Feature.API_SSL_CONFIG)
@@ -49,7 +50,10 @@ class TestUnsecureScheme(TestkitTlsTestCase):
         for scheme in schemes:
             with self.subTest(scheme=scheme):
                 self._server = TlsServer("trustedRoot_thehost")
-                self.assertFalse(self._try_connect(
-                    self._server, scheme, "thehost", encrypted=False
-                ))
+                with self._make_driver(
+                    scheme, "thehost", encrypted=False
+                ) as driver:
+                    self.assertFalse(self._try_connect(
+                        self._server, driver
+                    ))
             self._server.reset()

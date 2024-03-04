@@ -13,6 +13,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"path"
@@ -244,11 +245,14 @@ func main() {
 	writeKey(path.Join(basePath, "server", "untrustedRoot_thehost.key"), untrustedRoot_server1Key)
 	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
 
-	// Generate certificate.pem
-	clientKey, clientDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
-	writeCert(path.Join(basePath, "driver", "certificate.pem"), clientDer)
-	writeKey(path.Join(basePath, "driver", "privatekey.pem"), clientKey)
-	writeKeyEncrypted("thepassword", path.Join(basePath, "driver", "privatekey_with_thepassword.pem"), clientKey)
-	// Copy to
-	writeCert(path.Join(basePath, "server", "bolt", "trusted", "client.pem"), clientDer)
+	// Generate client's certificates
+	for i := 1; i <= 2; i++ {
+		clientKey, clientDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
+		writeCert(path.Join(basePath, "driver", fmt.Sprintf("certificate%d.pem", i)), clientDer)
+		writeKey(path.Join(basePath, "driver", fmt.Sprintf("privatekey%d.pem", i)), clientKey)
+		writeKeyEncrypted(fmt.Sprintf("thepassword%d", i),
+			path.Join(basePath, "driver", fmt.Sprintf("privatekey%d_with_thepassword%d.pem", i, i)), clientKey)
+		// Copy to
+		writeCert(path.Join(basePath, "server", "bolt", "trusted", fmt.Sprintf("client%d.pem", i)), clientDer)
+	}
 }
