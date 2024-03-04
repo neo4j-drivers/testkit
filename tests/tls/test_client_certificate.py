@@ -191,7 +191,7 @@ class TestClientCertificateRotation(_TestClientCertificateBase):
                         self._server, driver
                     ))
                     self._server.reset()
-                    assert cert_calls == 1
+                    self.assertEqual(1, cert_calls)
                     cert_calls = 0
 
                 cert_buffer = CertBuffer(self._get_client_certificate(i + 1))
