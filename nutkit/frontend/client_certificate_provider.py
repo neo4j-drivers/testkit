@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -25,7 +24,6 @@ __all__ = [
 ]
 
 
-@dataclass
 class ClientCertificateProvider:
     _registry: ClassVar[Dict[Any, ClientCertificateProvider]] = {}
 
