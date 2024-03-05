@@ -1,8 +1,10 @@
 import os
-from dataclasses import dataclass
 
 import nutkit.protocol as types
-from nutkit.frontend import ClientCertificateProvider
+from nutkit.frontend import (
+    ClientCertificateHolder,
+    ClientCertificateProvider,
+)
 from tests.shared import get_driver_name
 from tests.tls.shared import (
     TestkitTlsTestCase,
@@ -153,12 +155,6 @@ class TestClientCertificate(_TestClientCertificateBase):
                 self._server.reset()
 
 
-@dataclass
-class CertBuffer:
-    cert: types.ClientCertificate
-    has_update: bool = True
-
-
 class TestClientCertificateRotation(_TestClientCertificateBase):
     required_features = (
         *_TestClientCertificateBase.required_features,
@@ -167,14 +163,14 @@ class TestClientCertificateRotation(_TestClientCertificateBase):
 
     def test_client_rotation(self):
         cert_calls = 0
-        cert_buffer = CertBuffer(self._get_client_certificate(1))
+        cert_holder = ClientCertificateHolder(self._get_client_certificate(1))
 
-        def get_cert():
-            nonlocal cert_calls, cert_buffer
+        def get_cert() -> ClientCertificateHolder:
+            nonlocal cert_calls, cert_holder
             cert_calls += 1
-            has_update = cert_buffer.has_update
-            cert_buffer.has_update = False
-            return has_update, cert_buffer.cert
+            has_update = cert_holder.has_update
+            cert_holder.has_update = False
+            return ClientCertificateHolder(cert_holder.cert, has_update)
 
         cert_provider = ClientCertificateProvider(self._backend, get_cert)
 
@@ -194,4 +190,6 @@ class TestClientCertificateRotation(_TestClientCertificateBase):
                     self.assertEqual(1, cert_calls)
                     cert_calls = 0
 
-                cert_buffer = CertBuffer(self._get_client_certificate(i + 1))
+                cert_holder = ClientCertificateHolder(
+                    self._get_client_certificate(i + 1)
+                )

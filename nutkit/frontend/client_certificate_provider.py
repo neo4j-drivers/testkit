@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -20,17 +21,26 @@ from ..protocol import (
 )
 
 __all__ = [
+    "ClientCertificateHolder",
     "ClientCertificateProvider",
 ]
 
 
+@dataclass
+class ClientCertificateHolder:
+    cert: ClientCertificate
+    has_update: bool = True
+
+
 class ClientCertificateProvider:
     _registry: ClassVar[Dict[Any, ClientCertificateProvider]] = {}
+    _backend: Any
+    _handler: Callable[[], ClientCertificateHolder]
 
     def __init__(
         self,
         backend: Backend,
-        handler: Callable[[], (bool, ClientCertificate)],
+        handler: Callable[[], ClientCertificateHolder],
     ):
         self._backend = backend
         self._handler = handler
@@ -58,9 +68,9 @@ class ClientCertificateProvider:
                     f"id: {request.client_certificate_provider_id} not found"
                 )
             manager = cls._registry[request.client_certificate_provider_id]
-            has_update, cert = manager._handler()
+            cert_holder = manager._handler()
             return ClientCertificateProviderCompleted(
-                request.id, has_update, cert
+                request.id, cert_holder.has_update, cert_holder.cert
             )
 
     def close(self, hooks=None):
