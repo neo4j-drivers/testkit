@@ -156,10 +156,6 @@ class TestClientCertificate(_TestClientCertificateBase):
 
 
 class TestClientCertificateRotation(_TestClientCertificateBase):
-    required_features = (
-        *_TestClientCertificateBase.required_features,
-        types.Feature.API_LIVENESS_CHECK,
-    )
 
     def test_client_rotation(self):
         cert_calls = 0
