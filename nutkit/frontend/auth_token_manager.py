@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -42,7 +41,6 @@ __all__ = [
 ]
 
 
-@dataclass
 class AuthTokenManager:
     _registry: ClassVar[Dict[Any, AuthTokenManager]] = {}
 
@@ -105,7 +103,6 @@ class AuthTokenManager:
         del self._registry[self.id]
 
 
-@dataclass
 class BasicAuthTokenManager:
     _registry: ClassVar[Dict[Any, BasicAuthTokenManager]] = {}
 
@@ -163,7 +160,6 @@ class BasicAuthTokenManager:
         del self._registry[self.id]
 
 
-@dataclass
 class BearerAuthTokenManager:
     _registry: ClassVar[Dict[Any, BearerAuthTokenManager]] = {}
 

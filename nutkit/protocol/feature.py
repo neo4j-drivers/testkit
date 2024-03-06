@@ -67,6 +67,8 @@ class Feature(Enum):
     # The session supports notification filters configuration.
     API_SESSION_NOTIFICATIONS_CONFIG = \
         "Feature:API:Session:NotificationsConfig"
+    # The driver implements configuration for client certificates.
+    API_SSL_CLIENT_CERTIFICATE = "Feature:API:SSLClientCertificate"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all

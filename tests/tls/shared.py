@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import time
+from contextlib import contextmanager
 
 from nutkit.frontend import Driver
 from nutkit.protocol import (
@@ -21,7 +22,7 @@ THIS_PATH = os.path.dirname(os.path.abspath(__file__))
 
 class TlsServer:
     def __init__(self, server_cert, min_tls="0", max_tls="2",
-                 disable_tls=False):
+                 disable_tls=False, client_cert=None):
         # Name of server certificate, corresponds to a .pem and .key file.
         server_path = os.path.join(THIS_PATH, "..", "..", "tlsserver",
                                    "tlsserver")
@@ -39,6 +40,9 @@ class TlsServer:
         ]
         if disable_tls:
             params.append("--disableTls")
+        if client_cert is not None:
+            params.append("--clientCert")
+            params.append(client_cert)
         self._process = subprocess.Popen(
             params,
             stdout=subprocess.PIPE,
@@ -97,19 +101,32 @@ class TlsServer:
 
 
 class TestkitTlsTestCase(TestkitTestCase):
-    def _try_connect(self, server, scheme, host, **driver_config):
+    @contextmanager
+    def _make_driver(self, scheme, host, **driver_config):
         url = "%s://%s:6666" % (scheme, host)
         # Doesn't really matter
         auth = AuthorizationToken("basic", principal="neo4j",
                                   credentials="pass")
         driver = Driver(self._backend, url, auth, **driver_config)
-        session = driver.session("r")
         try:
-            session.run("RETURN 1 as n")
-        except DriverError:
-            pass
-        session.close()
-        driver.close()
+            yield driver
+        finally:
+            driver.close()
+
+    @contextmanager
+    def _make_session(self, driver, mode, **session_config):
+        session = driver.session(mode, **session_config)
+        try:
+            yield session
+        finally:
+            session.close()
+
+    def _try_connect(self, server, driver):
+        with self._make_session(driver, "r") as session:
+            try:
+                session.run("RETURN 1 AS n")
+            except DriverError:
+                pass
         return server.connected()
 
     @driver_feature(Feature.API_DRIVER_IS_ENCRYPTED)

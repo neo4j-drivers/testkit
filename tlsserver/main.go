@@ -2,16 +2,18 @@ package main
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"time"
 )
 
-func exitWithError(err error) {
+func exitWithError(err interface{}) {
 	fmt.Println(err)
 	os.Exit(-1)
 }
@@ -24,6 +26,7 @@ func main() {
 		address        string
 		certPath       string
 		keyPath        string
+		clientCertPath string
 		minTlsMinorVer int
 		maxTlsMinorVer int
 		disableTls     bool
@@ -34,6 +37,7 @@ func main() {
 	flag.StringVar(&address, "bind", "0.0.0.0:6666", "Address to bind to")
 	flag.StringVar(&certPath, "cert", "", "Path to server certificate")
 	flag.StringVar(&keyPath, "key", "", "Path to server private key")
+	flag.StringVar(&clientCertPath, "clientCert", "", "Path to the client certificate")
 	flag.IntVar(&minTlsMinorVer, "minTls", 0, "Minimum TLS version, minor part")
 	flag.IntVar(&maxTlsMinorVer, "maxTls", 2, "Maximum TLS version, minor part")
 	flag.Parse()
@@ -52,6 +56,20 @@ func main() {
 			MinVersion: 0x0300 | uint16(minTlsMinorVer+1),
 			MaxVersion: 0x0300 | uint16(maxTlsMinorVer+1),
 		}
+
+		if clientCertPath != "" {
+			clientCert, err := ioutil.ReadFile(clientCertPath)
+			if err != nil {
+				exitWithError(err)
+			}
+
+			certPool := x509.NewCertPool()
+			certPool.AppendCertsFromPEM(clientCert)
+
+			config.ClientCAs = certPool
+			config.ClientAuth = tls.RequireAndVerifyClientCert
+		}
+
 		listener, err = tls.Listen("tcp", address, &config)
 		if err != nil {
 			exitWithError(err)

@@ -40,9 +40,12 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("trustedRoot_thehost")
-                    self.assertTrue(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertTrue(self._try_connect(
+                            self._server, driver
+                        ))
                 if self._server is not None:
                     self._server.reset()
 
@@ -54,9 +57,12 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("trustedRoot_thehost_expired")
-                    self.assertTrue(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertTrue(self._try_connect(
+                            self._server, driver
+                        ))
                 if self._server is not None:
                     self._server.reset()
 
@@ -73,10 +79,12 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("trustedRoot_thehost")
-                    self.assertTrue(self._try_connect(
-                        self._server, scheme, "thehostbutwrong",
-                        **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehostbutwrong", **driver_config
+                    ) as driver:
+                        self.assertTrue(self._try_connect(
+                            self._server, driver
+                        ))
                 if self._server is not None:
                     self._server.reset()
 
@@ -86,9 +94,12 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("untrustedRoot_thehost")
-                    self.assertTrue(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertTrue(self._try_connect(
+                            self._server, driver
+                        ))
                 if self._server is not None:
                     self._server.reset()
 
@@ -98,10 +109,12 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("untrustedRoot_thehost")
-                    self.assertTrue(self._try_connect(
-                        self._server, scheme, "thehostbutwrong",
-                        **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehostbutwrong", **driver_config
+                    ) as driver:
+                        self.assertTrue(self._try_connect(
+                            self._server, driver
+                        ))
                 if self._server is not None:
                     self._server.reset()
 
@@ -115,9 +128,12 @@ class TestSelfSignedScheme(TestkitTlsTestCase):
                     # one that would work if TLS happens to be on.
                     self._server = TlsServer("untrustedRoot_thehost",
                                              disable_tls=True)
-                    self.assertFalse(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertFalse(self._try_connect(
+                            self._server, driver
+                        ))
                 if self._server is not None:
                     self._server.reset()
 

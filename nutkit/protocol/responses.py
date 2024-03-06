@@ -116,11 +116,11 @@ class BasicAuthTokenManager:
     Represents a new auth manager to handle password rotation.
 
     The passed id is used when creating a new driver (`NewDriver`) to refer to
-    this auth token manager
+    this auth token manager.
     """
 
     def __init__(self, id):
-        # Id of BasicAuthTokenManager instance on backend.
+        # Id of BasicAuthTokenManager instance on the backend.
         # Note that the id space needs to be shared with AuthTokenManager.
         self.id = id
 
@@ -150,7 +150,7 @@ class BearerAuthTokenManager:
     Represents a new auth manager to handle potentially expiring bearer tokens.
 
     The passed id is used when creating a new driver (`NewDriver`) to refer to
-    this auth token manager
+    this auth token manager.
     """
 
     def __init__(self, id):
@@ -177,6 +177,39 @@ class BearerAuthTokenProviderRequest:
         # Id of the temporal auth token manager that called its provider
         # function.
         self.bearer_auth_token_manager_id = bearerAuthTokenManagerId
+
+
+class ClientCertificateProvider:
+    """
+    Represents a new auth manager to handle password rotation.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this client certificate provider.
+    """
+
+    def __init__(self, id):
+        # Id of ClientCertificateProvider instance on the backend.
+        self.id = id
+
+
+class ClientCertificateProviderRequest:
+    """
+    Represents the need for a fresh client certificate.
+
+    This message may be sent by the backend at any time should the driver call
+    the `provide` method of a client certificate provider's that was previously
+    created in response to `ClientCertificateProvider`.
+
+    TestKit will respond with `ClientCertificateProviderCompleted`.
+    """
+
+    def __init__(self, id, clientCertificateProviderId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `ClientCertificateProviderCompleted` response.
+        self.id = id
+        # Id of the client certificate provider whose provide method was
+        # called.
+        self.client_certificate_provider_id = clientCertificateProviderId
 
 
 class ResolverResolutionRequired:
