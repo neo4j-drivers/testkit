@@ -1,0 +1,18 @@
+!: BOLT 4.4
+!: ALLOW RESTART
+!: PY request = 0
+
+A: HELLO {"{}": "*"}
+*: RESET
+{{
+    C: ROUTE {"{}": "*"} null {"[db]": "db", "[imp_user]": null}
+----
+    C: ROUTE {"{}": "*"} [] {"[db]": "db", "[imp_user]": null}
+}}
+IF: request == 0
+{{
+    S: SUCCESS {"rt": {"ttl": 1000, "db": "db", "servers": [{"addresses": ["#HOST#:9010", "#HOST#:9020", "#HOST#:9030"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9030"], "role":"WRITE"}]}}
+    PY: request = 1
+}}
+ELSE:
+    S: SUCCESS {"rt": {"ttl": 1000, "db": "db", "servers": [{"addresses": ["#HOST#:9040", "#HOST#:9050", "#HOST#:9060"], "role":"ROUTE"}, {"addresses": ["#HOST#:9040"], "role":"READ"}, {"addresses": ["#HOST#:9060"], "role":"WRITE"}]}}
