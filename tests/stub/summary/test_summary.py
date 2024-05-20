@@ -125,7 +125,7 @@ class TestSummaryBasicInfo(_TestSummaryBase):
         self.assertEqual(summary.result_consumed_after, None)
 
 
-class TestSummaryNotifications(_TestSummaryBase):
+class TestSummaryNotifications4x4(_TestSummaryBase):
     required_features = types.Feature.BOLT_4_4,
     version_folder = "v4x4",
 
@@ -146,7 +146,6 @@ class TestSummaryNotifications(_TestSummaryBase):
     def test_full_notification(self):
         in_notifications = [{
             "severity": "WARNING",
-
             "description": "If a part of a query contains multiple "
                            "disconnected patterns, ...",
             "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
@@ -235,6 +234,177 @@ class TestSummaryNotifications(_TestSummaryBase):
             self.assertEqual(summary.notifications, notifications)
         else:
             self.assertEqual(summary.notifications, notifications)
+
+
+SUCCESS_GQL_STATUS_OBJECT = {
+    "gql_status": "00000",
+    "status_description": "note: successful completion",
+    "diagnostic_record": {
+        "OPERATION": "",
+        "OPERATION_CODE": "0",
+        "CURRENT_SCHEMA": "/",
+    },
+}
+
+NO_DATA_GQL_STATUS_OBJECT = {
+    "gql_status": "02000",
+    "status_description": "note: no data",
+    "diagnostic_record": {
+        "OPERATION": "",
+        "OPERATION_CODE": "0",
+        "CURRENT_SCHEMA": "/",
+    },
+}
+
+
+class TestSummaryNotifications5x5(_TestSummaryBase):
+    required_features = types.Feature.BOLT_5_5,
+    version_folder = "v5x5",
+
+    def test_no_notifications(self):
+        summary = self._get_summary("empty_summary_type_r.script")
+        self.assertEqual(summary.notifications, None)
+
+    def test_empty_notifications(self):
+        notifications = []
+        summary = self._get_summary(
+            "summary_with_notifications.script",
+            vars_={
+                "#NOTIFICATIONS#": json.dumps(notifications)
+            }
+        )
+        self.assertEqual(summary.notifications, notifications)
+
+    def test_full_notification(self):
+        in_statuses = [
+            {
+                "gql_status": "01N01",
+                "status_description": "warn: warning - test subcat. "
+                                      "Don't do this™.",
+                "neo4j_code": "Neo.ClientNotification.Foo.Bar",
+                "title": "Legacy warning title",
+                "diagnostic_record": {
+                    "OPERATION": "SOME_OP",
+                    "OPERATION_CODE": "42",
+                    "CURRENT_SCHEMA": "/foo",
+                    "_status_parameters": {
+                        "action": "this™",
+                    },
+                    "_severity": "WARNING",
+                    "_classification": "GENERIC",
+                    "_position": {"column": 9, "offset": 8, "line": 1},
+                },
+            },
+            SUCCESS_GQL_STATUS_OBJECT
+        ]
+        summary = self._get_summary(
+            "summary_with_notifications.script",
+            vars_={
+                "#STATUSES#": json.dumps(in_statuses)
+            }
+        )
+        out_notifications = [{
+            "severity": "WARNING",
+            "description": "warn: warning - test subcat. Don't do this™.",
+            "code": "Neo.ClientNotification.Foo.Bar",
+            "position": {"column": 9, "offset": 8, "line": 1},
+            "title": "Legacy warning title",
+            "rawSeverityLevel": "WARNING",
+            "severityLevel": "WARNING",
+            "rawCategory": "GENERIC",
+            "category": "GENERIC",
+        }]
+
+        self.assertEqual(summary.notifications, out_notifications)
+
+    def test_full_notifications_unknown_fields(self):
+        in_statuses = [
+            {
+                "gql_status": "01N01",
+                "status_description": "warn: warning - test subcat. "
+                                      "Don't do this™.",
+                "neo4j_code": "Neo.ClientNotification.Foo.Bar",
+                "title": "Legacy warning title",
+                "diagnostic_record": {
+                    "OPERATION": "SOME_OP",
+                    "OPERATION_CODE": "42",
+                    "CURRENT_SCHEMA": "/foo",
+                    "_status_parameters": {
+                        "action": "this™",
+                    },
+                    "_severity": "ANYSEV",
+                    "_classification": "ANYCAT",
+                    "_position": {"column": 9, "offset": 8, "line": 1},
+                },
+            },
+            SUCCESS_GQL_STATUS_OBJECT
+        ]
+        summary = self._get_summary(
+            "summary_with_notifications.script",
+            vars_={
+                "#STATUSES#": json.dumps(in_statuses)
+            }
+        )
+        out_notifications = [{
+            "severity": "ANYSEV",
+            "description": "warn: warning - test subcat. Don't do this™.",
+            "code": "Neo.ClientNotification.Foo.Bar",
+            "position": {"column": 9, "offset": 8, "line": 1},
+            "title": "Legacy warning title",
+            "rawSeverityLevel": "ANYSEV",
+            "severityLevel": "UNKNOWN",
+            "rawCategory": "ANYCAT",
+            "category": "UNKNOWN",
+        }]
+
+        self.assertEqual(summary.notifications, out_notifications)
+
+    def test_multiple_notifications(self):
+        in_statuses = [
+            {
+                "gql_status": "01N01",
+                "status_description":
+                    f"warn: warning - test subcat. Don't do this™ {i}.",
+                "neo4j_code": f"Neo.ClientNotification.Foo.Bar{i}",
+                "title": f"Legacy warning title {i}",
+                "diagnostic_record": {
+                    "OPERATION": "SOME_OP",
+                    "OPERATION_CODE": "42",
+                    "CURRENT_SCHEMA": "/foo",
+                    "_status_parameters": {
+                        "action": "this™",
+                    },
+                    "_severity": "WARNING",
+                    "_classification": "GENERIC",
+                    "_position": {"column": 9, "offset": 8, "line": 1 + i},
+                },
+            }
+            for i in range(1, 4)
+        ]
+        in_statuses = [
+            NO_DATA_GQL_STATUS_OBJECT,
+            *in_statuses
+        ]
+        summary = self._get_summary(
+            "summary_with_notifications.script",
+            vars_={"#STATUSES#": json.dumps(in_statuses)}
+        )
+        out_notifications = [
+            {
+                "severity": "WARNING",
+                "description":
+                    f"warn: warning - test subcat. Don't do this™ {i}.",
+                "code": f"Neo.ClientNotification.Foo.Bar{i}",
+                "position": {"column": 9, "offset": 8, "line": 1 + i},
+                "title": f"Legacy warning title {i}",
+                "rawSeverityLevel": "WARNING",
+                "severityLevel": "WARNING",
+                "rawCategory": "GENERIC",
+                "category": "GENERIC",
+            }
+            for i in range(1, 4)
+        ]
+        self.assertEqual(summary.notifications, out_notifications)
 
 
 class TestSummaryPlan(_TestSummaryBase):
