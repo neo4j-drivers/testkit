@@ -11,7 +11,7 @@ from tests.shared import (
 from tests.stub.shared import StubServer
 
 
-class TestSummary(TestkitTestCase):
+class _TestSummaryBase(TestkitTestCase):
     """Test result summary contents."""
 
     full_notifications = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
@@ -40,33 +40,13 @@ class TestSummary(TestkitTestCase):
             driver.close()
             self._server.reset()
 
-    def _assert_counters(self, summary,
-                         constraints_added=0, constraints_removed=0,
-                         indexes_added=0, indexes_removed=0,
-                         labels_added=0, labels_removed=0,
-                         nodes_created=0, nodes_deleted=0,
-                         properties_set=0,
-                         relationships_created=0, relationships_deleted=0,
-                         system_updates=0,
-                         contains_updates=False,
-                         contains_system_updates=False):
-        attrs = (
-            "constraints_added", "constraints_removed", "indexes_added",
-            "indexes_removed", "labels_added", "labels_removed",
-            "nodes_created", "nodes_deleted", "properties_set",
-            "relationships_created", "relationships_deleted", "system_updates",
-            "contains_updates", "contains_system_updates"
-        )
-        for attr in attrs:
-            val = locals()[attr]
-            self.assertIsInstance(getattr(summary.counters, attr), type(val))
-            self.assertEqual(getattr(summary.counters, attr), val)
-
     def _get_summary(self, script, vars_=None):
         with self._get_session(script, vars_=vars_) as session:
             result = session.run("RETURN 1 AS n")
             return result.consume()
 
+
+class TestSummaryBasicInfo(_TestSummaryBase):
     def test_server_info(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.server_info.address,
@@ -140,6 +120,8 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.result_available_after, None)
         self.assertEqual(summary.result_consumed_after, None)
 
+
+class TestSummaryNotifications(_TestSummaryBase):
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.notifications, None)
@@ -247,6 +229,8 @@ class TestSummary(TestkitTestCase):
         else:
             self.assertEqual(summary.notifications, notifications)
 
+
+class TestSummaryPlan(_TestSummaryBase):
     def test_plan(self):
         plan = {
             "args": {
@@ -331,6 +315,30 @@ class TestSummary(TestkitTestCase):
             vars_={"#PROFILE#": json.dumps(profile)}
         )
         self.assertEqual(summary.profile, profile)
+
+
+class TestSummaryCounters(_TestSummaryBase):
+    def _assert_counters(self, summary,
+                         constraints_added=0, constraints_removed=0,
+                         indexes_added=0, indexes_removed=0,
+                         labels_added=0, labels_removed=0,
+                         nodes_created=0, nodes_deleted=0,
+                         properties_set=0,
+                         relationships_created=0, relationships_deleted=0,
+                         system_updates=0,
+                         contains_updates=False,
+                         contains_system_updates=False):
+        attrs = (
+            "constraints_added", "constraints_removed", "indexes_added",
+            "indexes_removed", "labels_added", "labels_removed",
+            "nodes_created", "nodes_deleted", "properties_set",
+            "relationships_created", "relationships_deleted", "system_updates",
+            "contains_updates", "contains_system_updates"
+        )
+        for attr in attrs:
+            val = locals()[attr]
+            self.assertIsInstance(getattr(summary.counters, attr), type(val))
+            self.assertEqual(getattr(summary.counters, attr), val)
 
     def test_empty_summary(self):
         summary = self._get_summary("empty_summary_type_r.script")
