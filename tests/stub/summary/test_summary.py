@@ -14,8 +14,8 @@ from tests.stub.shared import StubServer
 class _TestSummaryBase(TestkitTestCase):
     """Test result summary contents."""
 
-    full_notifications = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
-    required_features = types.Feature.BOLT_4_4,
+    full_notifications_feat = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
+    version_folder = ()
 
     def setUp(self):
         super().setUp()
@@ -31,7 +31,8 @@ class _TestSummaryBase(TestkitTestCase):
         driver = Driver(self._backend, uri,
                         types.AuthorizationToken("basic", principal="",
                                                  credentials=""))
-        self._server.start(path=self.script_path(script), vars_=vars_)
+        script_path = self.script_path(*self.version_folder, script)
+        self._server.start(path=script_path, vars_=vars_)
         session = driver.session("w", fetch_size=1000)
         try:
             yield session
@@ -47,6 +48,9 @@ class _TestSummaryBase(TestkitTestCase):
 
 
 class TestSummaryBasicInfo(_TestSummaryBase):
+    required_features = types.Feature.BOLT_4_4,
+    version_folder = "v4x4",
+
     def test_server_info(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.server_info.address,
@@ -122,6 +126,9 @@ class TestSummaryBasicInfo(_TestSummaryBase):
 
 
 class TestSummaryNotifications(_TestSummaryBase):
+    required_features = types.Feature.BOLT_4_4,
+    version_folder = "v4x4",
+
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
         self.assertEqual(summary.notifications, None)
@@ -146,7 +153,7 @@ class TestSummaryNotifications(_TestSummaryBase):
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "This query builds a cartesian product between..."
         }]
-        if self.driver_supports_features(self.full_notifications):
+        if self.driver_supports_features(self.full_notifications_feat):
             for n in in_notifications:
                 n.update({"category": "GENERIC"})
         summary = self._get_summary(
@@ -164,7 +171,7 @@ class TestSummaryNotifications(_TestSummaryBase):
             "title": "This query builds a cartesian product between..."
         }]
 
-        if self.driver_supports_features(self.full_notifications):
+        if self.driver_supports_features(self.full_notifications_feat):
             for notification in out_notifications:
                 notification.update({
                     "rawSeverityLevel": "WARNING",
@@ -188,7 +195,7 @@ class TestSummaryNotifications(_TestSummaryBase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        if self.driver_supports_features(self.full_notifications):
+        if self.driver_supports_features(self.full_notifications_feat):
             for notification in notifications:
                 notification.update({
                     "rawSeverityLevel": "ANYTHING",
@@ -217,7 +224,7 @@ class TestSummaryNotifications(_TestSummaryBase):
             "summary_with_notifications.script",
             vars_={"#NOTIFICATIONS#": json.dumps(notifications)}
         )
-        if self.driver_supports_features(self.full_notifications):
+        if self.driver_supports_features(self.full_notifications_feat):
             for notification in notifications:
                 notification.update({
                     "rawSeverityLevel": "WARNING",
@@ -231,6 +238,9 @@ class TestSummaryNotifications(_TestSummaryBase):
 
 
 class TestSummaryPlan(_TestSummaryBase):
+    required_features = types.Feature.BOLT_4_4,
+    version_folder = "v4x4",
+
     def test_plan(self):
         plan = {
             "args": {
@@ -318,6 +328,9 @@ class TestSummaryPlan(_TestSummaryBase):
 
 
 class TestSummaryCounters(_TestSummaryBase):
+    required_features = types.Feature.BOLT_4_4,
+    version_folder = "v4x4",
+
     def _assert_counters(self, summary,
                          constraints_added=0, constraints_removed=0,
                          indexes_added=0, indexes_removed=0,
