@@ -80,7 +80,7 @@ class Feature(Enum):
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
     # The result summary provides a way to access the transaction's
     # GqlStatusObject.
-    API_SUMMARY_GQL_STATUS_OBJECT = "Feature:API:Summary:GqlStatusObject"
+    API_SUMMARY_GQL_STATUS_OBJECTS = "Feature:API:Summary:GqlStatusObjects"
     # The driver supports sending and receiving geospatial data types.
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
