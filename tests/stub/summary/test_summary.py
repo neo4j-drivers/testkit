@@ -243,6 +243,32 @@ SUCCESS_GQL_STATUS_OBJECT = {
         "OPERATION": "",
         "OPERATION_CODE": "0",
         "CURRENT_SCHEMA": "/",
+        "_severity": "",
+        "_classification": "",
+        "_status_parameters": {},
+        "_position": {
+            "offset": -1,
+            "line": -1,
+            "column": -1,
+        },
+    },
+}
+
+OMITTED_GQL_STATUS_OBJECT = {
+    "gql_status": "00001",
+    "status_description": "note: successful completion - omitted result",
+    "diagnostic_record": {
+        "OPERATION": "",
+        "OPERATION_CODE": "0",
+        "CURRENT_SCHEMA": "/",
+        "_severity": "",
+        "_classification": "",
+        "_status_parameters": {},
+        "_position": {
+            "offset": -1,
+            "line": -1,
+            "column": -1,
+        },
     },
 }
 
@@ -253,6 +279,14 @@ NO_DATA_GQL_STATUS_OBJECT = {
         "OPERATION": "",
         "OPERATION_CODE": "0",
         "CURRENT_SCHEMA": "/",
+        "_severity": "",
+        "_classification": "",
+        "_status_parameters": {},
+        "_position": {
+            "offset": -1,
+            "line": -1,
+            "column": -1,
+        },
     },
 }
 
@@ -263,17 +297,17 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
 
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
-        self.assertEqual(summary.notifications, None)
+        self.assertEqual(summary.notifications, [])
 
     def test_empty_notifications(self):
-        notifications = []
+        statuses = [SUCCESS_GQL_STATUS_OBJECT]
         summary = self._get_summary(
-            "summary_with_notifications.script",
+            "summary_with_statuses.script",
             vars_={
-                "#NOTIFICATIONS#": json.dumps(notifications)
+                "#STATUSES#": json.dumps(statuses)
             }
         )
-        self.assertEqual(summary.notifications, notifications)
+        self.assertEqual(summary.notifications, [])
 
     def test_full_notification(self):
         in_statuses = [
@@ -298,7 +332,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             SUCCESS_GQL_STATUS_OBJECT
         ]
         summary = self._get_summary(
-            "summary_with_notifications.script",
+            "summary_with_statuses.script",
             vars_={
                 "#STATUSES#": json.dumps(in_statuses)
             }
@@ -340,7 +374,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             SUCCESS_GQL_STATUS_OBJECT
         ]
         summary = self._get_summary(
-            "summary_with_notifications.script",
+            "summary_with_statuses.script",
             vars_={
                 "#STATUSES#": json.dumps(in_statuses)
             }
@@ -386,7 +420,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             *in_statuses
         ]
         summary = self._get_summary(
-            "summary_with_notifications.script",
+            "summary_with_statuses.script",
             vars_={"#STATUSES#": json.dumps(in_statuses)}
         )
         out_notifications = [
@@ -421,38 +455,38 @@ class _TestSummaryGqlStatusObjectsBase(_TestSummaryBase):
             "CURRENT_SCHEMA": types.CypherString("/"),
             "_severity": types.CypherString(""),
             "_classification": types.CypherString(""),
+            "_status_parameters": types.CypherMap({}),
             "_position": types.CypherMap({
                 "column": types.CypherInt(-1),
                 "offset": types.CypherInt(-1),
                 "line": types.CypherInt(-1),
             }),
-            "_status_parameters": types.CypherMap({}),
         })
         self.assertEqual(status.is_notification, False)
 
     def assert_is_success(self, status):
-        self.assert_is_non_notification_status(status)
         self.assertEqual(status.gql_status, "00000")
         self.assertEqual(status.status_description,
                          "note: successful completion")
+        self.assert_is_non_notification_status(status)
 
     def assert_is_omitted_result(self, status):
-        self.assert_is_non_notification_status(status)
         self.assertEqual(status.gql_status, "00001")
         self.assertEqual(status.status_description,
                          "note: successful completion - omitted result")
+        self.assert_is_non_notification_status(status)
 
     def assert_is_no_data(self, status):
-        self.assert_is_non_notification_status(status)
         self.assertEqual(status.gql_status, "02000")
         self.assertEqual(status.status_description,
                          "note: no data")
+        self.assert_is_non_notification_status(status)
 
     def assert_is_no_data_unknown_subclass(self, status):
-        self.assert_is_non_notification_status(status)
         self.assertEqual(status.gql_status, "02N42")
         self.assertEqual(status.status_description,
                          "note: no data - unknown subcondition")
+        self.assert_is_non_notification_status(status)
 
 
 class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
@@ -508,11 +542,13 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             )
 
     @classmethod
-    def make_test_notification(cls, i=None, severity="WARNING"):
+    def make_test_notification(
+        cls, i=None, severity="WARNING", category="HINT"
+    ):
         if i is None:
             return {
                 "severity": severity,
-                "category": "HINT",
+                "category": category,
                 "description": "If a part of a query contains multiple "
                                "disconnected patterns, ...",
                 "code": "Neo.ClientNotification.Statement."
@@ -523,7 +559,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         else:
             return {
                 "severity": severity,
-                "category": "HINT",
+                "category": category,
                 "description": "If a part of a query contains multiple "
                                f"disconnected patterns, ... [{i}]",
                 "code": "Neo.ClientNotification.Statement."
@@ -533,21 +569,32 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             }
 
     def assert_is_test_notification_as_gql_status_object(
-        self, status, i=None, severity="WARNING", parsed_severity="WARNING"
+        self, status, i=None,
+        raw_pos=..., description=...,
+        severity="WARNING", parsed_severity="WARNING",
+        category="HINT", parsed_category="HINT",
     ):
-        raw_notification = self.make_test_notification(i, severity)
-        raw_pos = raw_notification["position"]
+        raw_notification = self.make_test_notification(
+            i, severity=severity, category=category
+        )
+        if raw_pos is ...:
+            expected_pos = raw_notification["position"]
+            raw_pos = expected_pos
+        elif raw_pos is None:
+            expected_pos = {"column": -1, "offset": -1, "line": -1}
+        else:
+            expected_pos = raw_pos
         assert isinstance(status, types.GqlStatusObject)
         if severity == "WARNING":
             self.assertEqual(status.gql_status, "01N42")
         else:
             self.assertEqual(status.gql_status, "03N42")
-        self.assertEqual(status.status_description,
-                         raw_notification["description"])
+        if description is ...:
+            description = raw_notification["description"]
+        self.assertEqual(status.status_description, description)
         self.assertEqual(status.position, raw_pos)
-        self.assertEqual(status.classification, "HINT")
-        self.assertEqual(status.raw_classification,
-                         raw_notification["category"])
+        self.assertEqual(status.classification, parsed_category)
+        self.assertEqual(status.raw_classification, category)
         self.assertEqual(status.severity, parsed_severity)
         self.assertEqual(status.raw_severity,
                          raw_notification["severity"])
@@ -555,14 +602,14 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             "OPERATION": types.CypherString(""),
             "OPERATION_CODE": types.CypherString("0"),
             "CURRENT_SCHEMA": types.CypherString("/"),
-            "_severity": types.CypherString(""),
-            "_classification": types.CypherString(""),
-            "_position": types.CypherMap({
-                "column": types.CypherInt(raw_pos["column"]),
-                "offset": types.CypherInt(raw_pos["offset"]),
-                "line": types.CypherInt(raw_pos["line"]),
-            }),
+            "_severity": types.CypherString(severity),
+            "_classification": types.CypherString(category),
             "_status_parameters": types.CypherMap({}),
+            "_position": types.CypherMap({
+                "column": types.CypherInt(expected_pos["column"]),
+                "offset": types.CypherInt(expected_pos["offset"]),
+                "line": types.CypherInt(expected_pos["line"]),
+            }),
         })
         self.assertEqual(status.is_notification, True)
 
@@ -625,12 +672,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         )
         self.assertEqual(len(summary.gql_status_objects), 2)
         if self._server.count_requests("PULL"):
-            self.assert_is_test_notification_as_gql_status_object(
-                summary.gql_status_objects[0],
-                severity="INFORMATION",
-                parsed_severity="INFORMATION"
-            )
-            self.assert_is_success(summary.gql_status_objects[1])
+            self.assert_is_success(summary.gql_status_objects[0])
         else:
             # For drivers that lazily PULL records.
             # They cannot know whether there is no data until the user
@@ -638,11 +680,35 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             self.assert_is_no_data_unknown_subclass(
                 summary.gql_status_objects[0]
             )
-            self.assert_is_test_notification_as_gql_status_object(
-                summary.gql_status_objects[1],
-                severity="INFORMATION",
-                parsed_severity="INFORMATION"
+        self.assert_is_test_notification_as_gql_status_object(
+            summary.gql_status_objects[1],
+            severity="INFORMATION", parsed_severity="INFORMATION"
+        )
+
+    def test_information_omitted_result(self):
+        in_notifications = [
+            self.make_test_notification(severity="INFORMATION")
+        ]
+        summary = self._get_summary(
+            "summary_with_notifications_omitted_result.script",
+            vars_={
+                "#NOTIFICATIONS#": json.dumps(in_notifications)
+            }
+        )
+        self.assertEqual(len(summary.gql_status_objects), 2)
+        if self._server.count_requests("PULL"):
+            self.assert_is_omitted_result(summary.gql_status_objects[0])
+        else:
+            # For drivers that lazily PULL records.
+            # They cannot know whether there is no data until the user
+            # makes the driver try to pull records.
+            self.assert_is_no_data_unknown_subclass(
+                summary.gql_status_objects[0]
             )
+        self.assert_is_test_notification_as_gql_status_object(
+            summary.gql_status_objects[1],
+            severity="INFORMATION", parsed_severity="INFORMATION"
+        )
 
     def test_information_no_data(self):
         in_notifications = [
@@ -666,8 +732,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             )
         self.assert_is_test_notification_as_gql_status_object(
             summary.gql_status_objects[1],
-            severity="INFORMATION",
-            parsed_severity="INFORMATION"
+            severity="INFORMATION", parsed_severity="INFORMATION"
         )
 
     def test_unknown_severity(self):
@@ -682,12 +747,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         )
         self.assertEqual(len(summary.gql_status_objects), 2)
         if self._server.count_requests("PULL"):
-            self.assert_is_test_notification_as_gql_status_object(
-                summary.gql_status_objects[0],
-                severity="INFORMATION",
-                parsed_severity="INFORMATION"
-            )
-            self.assert_is_success(summary.gql_status_objects[1])
+            self.assert_is_success(summary.gql_status_objects[0])
         else:
             # For drivers that lazily PULL records.
             # They cannot know whether there is no data until the user
@@ -695,38 +755,85 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             self.assert_is_no_data_unknown_subclass(
                 summary.gql_status_objects[0]
             )
-            self.assert_is_test_notification_as_gql_status_object(
-                summary.gql_status_objects[1],
-                severity="FOOBAR",
-                parsed_severity="UNKNOWN"
+        self.assert_is_test_notification_as_gql_status_object(
+            summary.gql_status_objects[1],
+            severity="FOOBAR", parsed_severity="UNKNOWN"
+        )
+
+    def _test_notification_with_missing_data(
+        self, del_key, severity="WARNING"
+    ):
+        notification = self.make_test_notification(severity=severity)
+        del notification[del_key]
+        in_notifications = [notification]
+        summary = self._get_summary(
+            "summary_with_notifications.script",
+            vars_={
+                "#NOTIFICATIONS#": json.dumps(in_notifications)
+            }
+        )
+
+        self.assertEqual(len(summary.gql_status_objects), 2)
+        if self._server.count_requests("PULL"):
+            if severity == "WARNING":
+                self.assert_is_success(summary.gql_status_objects[1])
+                return_index = 0
+            else:
+                self.assert_is_success(summary.gql_status_objects[0])
+                return_index = 1
+        else:
+            # For drivers that lazily PULL records.
+            # They cannot know whether there is no data until the user
+            # makes the driver try to pull records.
+            self.assert_is_no_data_unknown_subclass(
+                summary.gql_status_objects[0]
             )
+            return_index = 1
+        return summary.gql_status_objects[return_index]
 
-    def test_notification_with_missing_data(self):
-        notification = self.make_test_notification()
-        for missing_key in ("severity", "category", "code", "position"):
-            with self.subTest(missing_key=missing_key):
-                notification = notification.copy()
-                del notification[missing_key]
-                in_notifications = [notification]
-                summary = self._get_summary(
-                    "summary_with_notifications.script",
-                    vars_={
-                        "#NOTIFICATIONS#": json.dumps(in_notifications)
-                    }
-                )
+    def test_notification_with_missing_severity(self):
+        status = self._test_notification_with_missing_data(
+            "severity", severity="INFORMATION"
+        )
+        self.assert_is_test_notification_as_gql_status_object(
+            status, severity="", parsed_severity="UNKNOWN"
+        )
 
-                # incomplete notifications should be ignored in the
-                # GqlStatusObject list
-                self.assertEqual(len(summary.gql_status_objects), 1)
-                if self._server.count_requests("PULL"):
-                    self.assert_is_success(summary.gql_status_objects[0])
-                else:
-                    # For drivers that lazily PULL records.
-                    # They cannot know whether there is no data until the user
-                    # makes the driver try to pull records.
-                    self.assert_is_no_data_unknown_subclass(
-                        summary.gql_status_objects[0]
-                    )
+    def test_notification_with_missing_category(self):
+        status = self._test_notification_with_missing_data("category")
+        self.assert_is_test_notification_as_gql_status_object(
+            status, category="", parsed_category="UNKNOWN"
+        )
+
+    def test_notification_with_missing_position(self):
+        status = self._test_notification_with_missing_data("position")
+        self.assert_is_test_notification_as_gql_status_object(
+            status, raw_pos=None
+        )
+
+    def test_warn_with_missing_description(self):
+        status = self._test_notification_with_missing_data("description")
+        self.assert_is_test_notification_as_gql_status_object(
+            status, description="warn: warning - unknown warning",
+        )
+
+    def test_info_with_missing_description(self):
+        status = self._test_notification_with_missing_data(
+            "description", severity="INFORMATION"
+        )
+        self.assert_is_test_notification_as_gql_status_object(
+            status, description="info: informational - unknown notification",
+            severity="INFORMATION", parsed_severity="INFORMATION",
+        )
+
+    def test_info_fallback_with_missing_description(self):
+        status = self._test_notification_with_missing_data(
+            "description", severity="BANANA"
+        )
+        self.assert_is_test_notification_as_gql_status_object(
+            status, description="info: informational - unknown notification",
+            severity="BANANA", parsed_severity="UNKNOWN",
+        )
 
     def test_multiple_notifications(self):
         notifications = [
@@ -743,8 +850,8 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         if self._server.count_requests("PULL"):
             # !!! following assertions only work with len(xyz_indexes) == 2 !!!
             warning_indexes = (0, 1)
-            information_indexes = (2, 3)
-            self.assert_is_success(summary.gql_status_objects[4])
+            self.assert_is_success(summary.gql_status_objects[2])
+            information_indexes = (3, 4)
         else:
             # For drivers that lazily PULL records.
             # They cannot know whether there is no data until the user
@@ -792,8 +899,167 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
 
 
 class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
-    def test_todo(self):
-        self.assertTrue(False, "TODO: Implement test")
+    required_features = types.Feature.BOLT_5_5,
+    version_folder = "v5x5",
+
+    @classmethod
+    def make_test_status(
+        cls, status, condition, subcondition=None,
+        classification="HINT", severity="WARNING",
+        i=None,
+    ):
+        if condition in ("successful completion", "no data"):
+            prefix = "note: "
+        elif condition == "informational":
+            prefix = "info: "
+        elif condition == "warning":
+            prefix = "warn: "
+        else:
+            raise ValueError(f"Unknown condition: {condition}")
+
+        if subcondition is not None:
+            description = f"{prefix}{condition} - {subcondition}"
+        else:
+            description = f"{prefix}{condition}"
+
+        if i is None:
+            return {
+                "gql_status": status,
+                "status_description": description,
+                "neo4j_code": "Neo.ClientNotification.Statement."
+                              "CartesianProductWarning",
+                "title": "This query builds a cartesian product between...",
+                "diagnostic_record": {
+                    "OPERATION": "",
+                    "OPERATION_CODE": "0",
+                    "CURRENT_SCHEMA": "/",
+                    "_status_parameters": {"foo": 1},
+                    "_severity": severity,
+                    "_classification": classification,
+                    "_position": {"column": 9, "offset": 8, "line": 1},
+                }
+            }
+        else:
+            return {
+                "gql_status": status,
+                "status_description": f"{description}. Bonus: {i}",
+                "neo4j_code": f"Neo.ClientNotification.Statement."
+                              f"CartesianProductWarning{i}",
+                "title": f"This query builds a cartesian product ... [{i}]",
+                "diagnostic_record": {
+                    "OPERATION": "",
+                    "OPERATION_CODE": "0",
+                    "CURRENT_SCHEMA": "/",
+                    "_status_parameters": {"foo": 1 - i},
+                    "_severity": severity,
+                    "_classification": classification,
+                    "_position": {"column": 9, "offset": 8, "line": 1 + i},
+                }
+            }
+
+    def assert_is_test_gql_status_object(
+        self, received_status, status, condition, subcondition=None,
+        raw_classification="HINT", classification="HINT",
+        severity="WARNING", raw_severity="WARNING", i=None,
+    ):
+        expected_status = self.make_test_status(
+            status, condition, subcondition,
+            classification=raw_classification, severity=raw_severity, i=i
+        )
+        self.assertEqual(received_status.status_description,
+                         expected_status["status_description"])
+        self.assertEqual(received_status.position,
+                         expected_status["diagnostic_record"]["_position"])
+        self.assertEqual(received_status.classification, classification)
+        self.assertEqual(received_status.raw_classification,
+                         raw_classification)
+        self.assertEqual(received_status.severity, severity)
+        self.assertEqual(received_status.raw_severity, raw_severity)
+        self.assertEqual(
+            received_status.diagnostic_record,
+            types.as_cypher_type(expected_status["diagnostic_record"]).value
+        )
+        self.assertEqual(received_status.is_notification, True)
+
+    def test_success(self):
+        summary = self._get_summary("empty_summary_type_r.script")
+        self.assertEqual(len(summary.gql_status_objects), 1)
+        self.assert_is_success(summary.gql_status_objects[0])
+
+    def test_omitted_result(self):
+        summary = self._get_summary(
+            "empty_summary_type_r_omitted_result.script"
+        )
+        self.assertEqual(len(summary.gql_status_objects), 1)
+        self.assert_is_omitted_result(summary.gql_status_objects[0])
+
+    def test_no_data(self):
+        summary = self._get_summary(
+            "empty_summary_type_r_no_data.script"
+        )
+        self.assertEqual(len(summary.gql_status_objects), 1)
+        self.assert_is_no_data(summary.gql_status_objects[0])
+
+    def test_multiple_statuses(self):
+        # order is not GQL compliant, but the driver should not touch it
+        in_statuses = [
+            self.make_test_status(
+                "01N01", "warning",
+                subcondition="test subcondition. Don't do this™.", i=1,
+            ),
+            SUCCESS_GQL_STATUS_OBJECT,
+            NO_DATA_GQL_STATUS_OBJECT,
+            self.make_test_status(
+                "03N01", "informational",
+                subcondition="test subcondition. Do that™.", i=2,
+            ),
+            self.make_test_status(
+                "01N00", "warning",
+                subcondition="test subcondition", i=3,
+            ),
+            self.make_test_status(
+                "01N00", "warning",
+                subcondition="test subcondition",
+                classification="FOOBAR", severity="", i=4,
+            ),
+            OMITTED_GQL_STATUS_OBJECT,
+            self.make_test_status(
+                "03N03", "informational",
+                subcondition="test subcondition. Here we go again.™.", i=5,
+            ),
+        ]
+
+        summary = self._get_summary(
+            "summary_with_statuses.script",
+            vars_={"#STATUSES#": json.dumps(in_statuses)}
+        )
+
+        self.assertEqual(len(summary.gql_status_objects), 8)
+        self.assert_is_test_gql_status_object(
+            summary.gql_status_objects[0], "01N01", "warning",
+            subcondition="test subcondition. Don't do this™.", i=1,
+        )
+        self.assert_is_success(summary.gql_status_objects[1])
+        self.assert_is_no_data(summary.gql_status_objects[2])
+        self.assert_is_test_gql_status_object(
+            summary.gql_status_objects[3], "03N01", "informational",
+            subcondition="test subcondition. Do that™.", i=2,
+        )
+        self.assert_is_test_gql_status_object(
+            summary.gql_status_objects[4], "01N00", "warning",
+            subcondition="test subcondition", i=3,
+        )
+        self.assert_is_test_gql_status_object(
+            summary.gql_status_objects[5], "01N00", "warning",
+            subcondition="test subcondition",
+            raw_classification="FOOBAR", classification="UNKNOWN",
+            raw_severity="", severity="UNKNOWN", i=4,
+        )
+        self.assert_is_omitted_result(summary.gql_status_objects[6])
+        self.assert_is_test_gql_status_object(
+            summary.gql_status_objects[7], "03N03", "informational",
+            subcondition="test subcondition. Here we go again.™.", i=5,
+        )
 
 
 class TestSummaryPlan(_TestSummaryBase):

@@ -1,0 +1,16 @@
+!: BOLT 5.5
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"t_first": 2001, "fields": ["n"]}
+{{
+    C: PULL {"n": "*"}
+    S: RECORD [1]
+----
+    C: DISCARD {"n": -1}
+}}
+S: SUCCESS {"type": "r", "db": "apple", "t_last": 2002, "stats": {}, "statuses": [{"gql_status": "00000", "status_description": "note: successful completion", "diagnostic_record": {"OPERATION": "", "OPERATION_CODE": "0", "CURRENT_SCHEMA": "/", "_classification": "", "_severity": "", "_position": {"line": -1, "column": -1, "offset": -1}, "_status_parameters": {}}}]}
+*: RESET
+?: GOODBYE

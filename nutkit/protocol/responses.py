@@ -637,9 +637,11 @@ class GqlStatusObject:
         self.gql_status = gqlStatus
         assert isinstance(statusDescription, str)
         self.status_description = statusDescription
-        assert isinstance(position, dict)
-        assert sorted(list(position.keys())) == ["column", "line", "offset"]
-        assert all(isinstance(v, int) for v in position.values())
+        assert position is None or isinstance(position, dict)
+        if position is not None:
+            assert (sorted(list(position.keys()))
+                    == ["column", "line", "offset"])
+            assert all(isinstance(v, int) for v in position.values())
         self.position = position
         assert isinstance(classification, str)
         self.classification = classification
