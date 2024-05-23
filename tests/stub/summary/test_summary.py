@@ -594,22 +594,27 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         self.assertEqual(status.status_description, description)
         self.assertEqual(status.position, raw_pos)
         self.assertEqual(status.classification, parsed_category)
-        self.assertEqual(status.raw_classification, category)
+        self.assertEqual(status.raw_classification,
+                         category if category is not None else "")
         self.assertEqual(status.severity, parsed_severity)
         self.assertEqual(status.raw_severity,
-                         raw_notification["severity"])
+                         severity if severity is not None else "")
         self.assertEqual(status.diagnostic_record, {
             "OPERATION": types.CypherString(""),
             "OPERATION_CODE": types.CypherString("0"),
             "CURRENT_SCHEMA": types.CypherString("/"),
-            "_severity": types.CypherString(severity),
-            "_classification": types.CypherString(category),
+            "_severity": types.CypherString(
+                severity
+            ) if severity is not None else types.CypherNull(),
+            "_classification": types.CypherString(
+                category
+            ) if category is not None else types.CypherNull(),
             "_status_parameters": types.CypherMap({}),
             "_position": types.CypherMap({
                 "column": types.CypherInt(expected_pos["column"]),
                 "offset": types.CypherInt(expected_pos["offset"]),
                 "line": types.CypherInt(expected_pos["line"]),
-            }),
+            }) if raw_pos is not None else types.CypherNull(),
         })
         self.assertEqual(status.is_notification, True)
 
@@ -796,13 +801,13 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             "severity", severity="INFORMATION"
         )
         self.assert_is_test_notification_as_gql_status_object(
-            status, severity="", parsed_severity="UNKNOWN"
+            status, severity=None, parsed_severity="UNKNOWN"
         )
 
     def test_notification_with_missing_category(self):
         status = self._test_notification_with_missing_data("category")
         self.assert_is_test_notification_as_gql_status_object(
-            status, category="", parsed_category="UNKNOWN"
+            status, category=None, parsed_category="UNKNOWN"
         )
 
     def test_notification_with_missing_position(self):
