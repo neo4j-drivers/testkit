@@ -239,55 +239,16 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
 SUCCESS_GQL_STATUS_OBJECT = {
     "gql_status": "00000",
     "status_description": "note: successful completion",
-    "diagnostic_record": {
-        "OPERATION": "",
-        "OPERATION_CODE": "0",
-        "CURRENT_SCHEMA": "/",
-        "_severity": "",
-        "_classification": "",
-        "_status_parameters": {},
-        "_position": {
-            "offset": -1,
-            "line": -1,
-            "column": -1,
-        },
-    },
 }
 
 OMITTED_GQL_STATUS_OBJECT = {
     "gql_status": "00001",
     "status_description": "note: successful completion - omitted result",
-    "diagnostic_record": {
-        "OPERATION": "",
-        "OPERATION_CODE": "0",
-        "CURRENT_SCHEMA": "/",
-        "_severity": "",
-        "_classification": "",
-        "_status_parameters": {},
-        "_position": {
-            "offset": -1,
-            "line": -1,
-            "column": -1,
-        },
-    },
 }
 
 NO_DATA_GQL_STATUS_OBJECT = {
     "gql_status": "02000",
     "status_description": "note: no data",
-    "diagnostic_record": {
-        "OPERATION": "",
-        "OPERATION_CODE": "0",
-        "CURRENT_SCHEMA": "/",
-        "_severity": "",
-        "_classification": "",
-        "_status_parameters": {},
-        "_position": {
-            "offset": -1,
-            "line": -1,
-            "column": -1,
-        },
-    },
 }
 
 
