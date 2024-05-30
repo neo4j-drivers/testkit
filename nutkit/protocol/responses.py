@@ -645,11 +645,13 @@ class GqlStatusObject:
         self.position = position
         assert isinstance(classification, str)
         self.classification = classification
-        assert isinstance(rawClassification, str)
+        if rawClassification is not None:
+            assert isinstance(rawClassification, str)
         self.raw_classification = rawClassification
         assert isinstance(severity, str)
         self.severity = severity
-        assert isinstance(rawSeverity, str)
+        if rawSeverity is not None:
+            assert isinstance(rawSeverity, str)
         self.raw_severity = rawSeverity
         assert isinstance(diagnosticRecord, dict)
         self.diagnostic_record = diagnosticRecord

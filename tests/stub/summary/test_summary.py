@@ -404,24 +404,15 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
 
 class _TestSummaryGqlStatusObjectsBase(_TestSummaryBase):
     def assert_is_non_notification_status(self, status):
-        self.assertEqual(status.position,
-                         {"column": -1, "offset": -1, "line": -1})
+        self.assertEqual(status.position, None)
         self.assertEqual(status.classification, "UNKNOWN")
-        self.assertEqual(status.raw_classification, "")
+        self.assertEqual(status.raw_classification, None)
         self.assertEqual(status.severity, "UNKNOWN")
-        self.assertEqual(status.raw_severity, "")
+        self.assertEqual(status.raw_severity, None)
         self.assertEqual(status.diagnostic_record, {
             "OPERATION": types.CypherString(""),
             "OPERATION_CODE": types.CypherString("0"),
-            "CURRENT_SCHEMA": types.CypherString("/"),
-            "_severity": types.CypherString(""),
-            "_classification": types.CypherString(""),
-            "_status_parameters": types.CypherMap({}),
-            "_position": types.CypherMap({
-                "column": types.CypherInt(-1),
-                "offset": types.CypherInt(-1),
-                "line": types.CypherInt(-1),
-            }),
+            "CURRENT_SCHEMA": types.CypherString("/")
         })
         self.assertEqual(status.is_notification, False)
 
@@ -555,11 +546,9 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         self.assertEqual(status.status_description, description)
         self.assertEqual(status.position, raw_pos)
         self.assertEqual(status.classification, parsed_category)
-        self.assertEqual(status.raw_classification,
-                         category if category is not None else "")
+        self.assertEqual(status.raw_classification, category)
         self.assertEqual(status.severity, parsed_severity)
-        self.assertEqual(status.raw_severity,
-                         severity if severity is not None else "")
+        self.assertEqual(status.raw_severity, severity)
         self.assertEqual(status.diagnostic_record, {
             "OPERATION": types.CypherString(""),
             "OPERATION_CODE": types.CypherString("0"),
@@ -570,7 +559,6 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             "_classification": types.CypherString(
                 category
             ) if category is not None else types.CypherNull(),
-            "_status_parameters": types.CypherMap({}),
             "_position": types.CypherMap({
                 "column": types.CypherInt(expected_pos["column"]),
                 "offset": types.CypherInt(expected_pos["offset"]),
@@ -986,7 +974,7 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             self.make_test_status(
                 "01N00", "warning",
                 subcondition="test subcondition",
-                classification="FOOBAR", severity="", i=4,
+                classification="FOOBAR", severity=None, i=4,
             ),
             OMITTED_GQL_STATUS_OBJECT,
             self.make_test_status(
@@ -1019,7 +1007,7 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             summary.gql_status_objects[5], "01N00", "warning",
             subcondition="test subcondition",
             raw_classification="FOOBAR", classification="UNKNOWN",
-            raw_severity="", severity="UNKNOWN", i=4,
+            raw_severity=None, severity="UNKNOWN", i=4,
         )
         self.assert_is_omitted_result(summary.gql_status_objects[6])
         self.assert_is_test_gql_status_object(
