@@ -405,9 +405,9 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
 class _TestSummaryGqlStatusObjectsBase(_TestSummaryBase):
     def assert_is_non_notification_status(self, status):
         self.assertEqual(status.position, None)
-        self.assertEqual(status.classification, "UNKNOWN")
+        self.assertEqual(status.classification, None)
         self.assertEqual(status.raw_classification, None)
-        self.assertEqual(status.severity, "UNKNOWN")
+        self.assertEqual(status.severity, None)
         self.assertEqual(status.raw_severity, None)
         self.assertEqual(status.diagnostic_record, {
             "OPERATION": types.CypherString(""),
@@ -532,8 +532,6 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         if raw_pos is ...:
             expected_pos = raw_notification["position"]
             raw_pos = expected_pos
-        elif raw_pos is None:
-            expected_pos = {"column": -1, "offset": -1, "line": -1}
         else:
             expected_pos = raw_pos
         assert isinstance(status, types.GqlStatusObject)
@@ -549,22 +547,26 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         self.assertEqual(status.raw_classification, category)
         self.assertEqual(status.severity, parsed_severity)
         self.assertEqual(status.raw_severity, severity)
-        self.assertEqual(status.diagnostic_record, {
+        expected_diag_record = {
             "OPERATION": types.CypherString(""),
             "OPERATION_CODE": types.CypherString("0"),
             "CURRENT_SCHEMA": types.CypherString("/"),
-            "_severity": types.CypherString(
+        }
+        if severity is not None:
+            expected_diag_record["_severity"] = types.CypherString(
                 severity
-            ) if severity is not None else types.CypherNull(),
-            "_classification": types.CypherString(
+            )
+        if category is not None:
+            expected_diag_record["_classification"] = types.CypherString(
                 category
-            ) if category is not None else types.CypherNull(),
-            "_position": types.CypherMap({
+            )
+        if expected_pos is not None:
+            expected_diag_record["_position"] = types.CypherMap({
                 "column": types.CypherInt(expected_pos["column"]),
                 "offset": types.CypherInt(expected_pos["offset"]),
                 "line": types.CypherInt(expected_pos["line"]),
-            }) if raw_pos is not None else types.CypherNull(),
-        })
+            })
+        self.assertEqual(status.diagnostic_record, expected_diag_record)
         self.assertEqual(status.is_notification, True)
 
     def test_warning(self):
@@ -750,13 +752,13 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             "severity", severity="INFORMATION"
         )
         self.assert_is_test_notification_as_gql_status_object(
-            status, severity=None, parsed_severity="UNKNOWN"
+            status, severity=None, parsed_severity=None
         )
 
     def test_notification_with_missing_category(self):
         status = self._test_notification_with_missing_data("category")
         self.assert_is_test_notification_as_gql_status_object(
-            status, category=None, parsed_category="UNKNOWN"
+            status, category=None, parsed_category=None
         )
 
     def test_notification_with_missing_position(self):
@@ -1007,7 +1009,7 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             summary.gql_status_objects[5], "01N00", "warning",
             subcondition="test subcondition",
             raw_classification="FOOBAR", classification="UNKNOWN",
-            raw_severity=None, severity="UNKNOWN", i=4,
+            raw_severity=None, severity=None, i=4,
         )
         self.assert_is_omitted_result(summary.gql_status_objects[6])
         self.assert_is_test_gql_status_object(
