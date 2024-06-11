@@ -643,14 +643,12 @@ class GqlStatusObject:
                     == ["column", "line", "offset"])
             assert all(isinstance(v, int) for v in position.values())
         self.position = position
-        if classification is not None:
-            assert isinstance(classification, str)
+        assert isinstance(classification, str)
         self.classification = classification
         if rawClassification is not None:
             assert isinstance(rawClassification, str)
         self.raw_classification = rawClassification
-        if severity is not None:
-            assert isinstance(severity, str)
+        assert isinstance(severity, str)
         self.severity = severity
         if rawSeverity is not None:
             assert isinstance(rawSeverity, str)
