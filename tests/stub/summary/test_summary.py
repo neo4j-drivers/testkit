@@ -532,8 +532,6 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         if raw_pos is ...:
             expected_pos = raw_notification["position"]
             raw_pos = expected_pos
-        elif raw_pos is None:
-            expected_pos = {"column": -1, "offset": -1, "line": -1}
         else:
             expected_pos = raw_pos
         assert isinstance(status, types.GqlStatusObject)
@@ -549,22 +547,26 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
         self.assertEqual(status.raw_classification, category)
         self.assertEqual(status.severity, parsed_severity)
         self.assertEqual(status.raw_severity, severity)
-        self.assertEqual(status.diagnostic_record, {
+        expected_diag_record = {
             "OPERATION": types.CypherString(""),
             "OPERATION_CODE": types.CypherString("0"),
             "CURRENT_SCHEMA": types.CypherString("/"),
-            "_severity": types.CypherString(
+        }
+        if severity is not None:
+            expected_diag_record["_severity"] = types.CypherString(
                 severity
-            ) if severity is not None else types.CypherNull(),
-            "_classification": types.CypherString(
+            )
+        if category is not None:
+            expected_diag_record["_classification"] = types.CypherString(
                 category
-            ) if category is not None else types.CypherNull(),
-            "_position": types.CypherMap({
+            )
+        if expected_pos is not None:
+            expected_diag_record["_position"] = types.CypherMap({
                 "column": types.CypherInt(expected_pos["column"]),
                 "offset": types.CypherInt(expected_pos["offset"]),
                 "line": types.CypherInt(expected_pos["line"]),
-            }) if raw_pos is not None else types.CypherNull(),
-        })
+            })
+        self.assertEqual(status.diagnostic_record, expected_diag_record)
         self.assertEqual(status.is_notification, True)
 
     def test_warning(self):
