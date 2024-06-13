@@ -652,15 +652,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             }
         )
         self.assertEqual(len(summary.gql_status_objects), 2)
-        if self._server.count_requests("PULL"):
-            self.assert_is_omitted_result(summary.gql_status_objects[0])
-        else:
-            # For drivers that lazily PULL records.
-            # They cannot know whether there is no data until the user
-            # makes the driver try to pull records.
-            self.assert_is_no_data_unknown_subclass(
-                summary.gql_status_objects[0]
-            )
+        self.assert_is_omitted_result(summary.gql_status_objects[0])
         self.assert_is_test_notification_as_gql_status_object(
             summary.gql_status_objects[1],
             severity="INFORMATION", parsed_severity="INFORMATION"
