@@ -274,8 +274,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         in_statuses = [
             {
                 "gql_status": "01N01",
-                "status_description": "warn: warning - test subcat. "
-                                      "Don't do this™.",
+                "status_description": "warn: test subcat. Don't do this™.",
                 "neo4j_code": "Neo.ClientNotification.Foo.Bar",
                 "title": "Legacy warning title",
                 "diagnostic_record": {
@@ -300,7 +299,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         )
         out_notifications = [{
             "severity": "WARNING",
-            "description": "warn: warning - test subcat. Don't do this™.",
+            "description": "warn: test subcat. Don't do this™.",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "Legacy warning title",
@@ -316,8 +315,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         in_statuses = [
             {
                 "gql_status": "01N01",
-                "status_description": "warn: warning - test subcat. "
-                                      "Don't do this™.",
+                "status_description": "warn: test subcat. Don't do this™.",
                 "neo4j_code": "Neo.ClientNotification.Foo.Bar",
                 "title": "Legacy warning title",
                 "diagnostic_record": {
@@ -342,7 +340,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         )
         out_notifications = [{
             "severity": "ANYSEV",
-            "description": "warn: warning - test subcat. Don't do this™.",
+            "description": "warn: test subcat. Don't do this™.",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "Legacy warning title",
@@ -359,7 +357,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             {
                 "gql_status": "01N01",
                 "status_description":
-                    f"warn: warning - test subcat. Don't do this™ {i}.",
+                    f"warn: test subcat. Don't do this™ {i}.",
                 "neo4j_code": f"Neo.ClientNotification.Foo.Bar{i}",
                 "title": f"Legacy warning title {i}",
                 "diagnostic_record": {
@@ -388,7 +386,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             {
                 "severity": "WARNING",
                 "description":
-                    f"warn: warning - test subcat. Don't do this™ {i}.",
+                    f"warn: test subcat. Don't do this™ {i}.",
                 "code": f"Neo.ClientNotification.Foo.Bar{i}",
                 "position": {"column": 9, "offset": 8, "line": 1 + i},
                 "title": f"Legacy warning title {i}",
@@ -762,7 +760,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
     def test_warn_with_missing_description(self):
         status = self._test_notification_with_missing_data("description")
         self.assert_is_test_notification_as_gql_status_object(
-            status, description="warn: warning - unknown warning",
+            status, description="warn: unknown warning",
         )
 
     def test_info_with_missing_description(self):
@@ -770,7 +768,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             "description", severity="INFORMATION"
         )
         self.assert_is_test_notification_as_gql_status_object(
-            status, description="info: informational - unknown notification",
+            status, description="info: unknown notification",
             severity="INFORMATION", parsed_severity="INFORMATION",
         )
 
@@ -779,7 +777,7 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             "description", severity="BANANA"
         )
         self.assert_is_test_notification_as_gql_status_object(
-            status, description="info: informational - unknown notification",
+            status, description="info: unknown notification",
             severity="BANANA", parsed_severity="UNKNOWN",
         )
 
