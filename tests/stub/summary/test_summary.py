@@ -1,5 +1,6 @@
 import json
 from contextlib import contextmanager
+from copy import deepcopy
 
 from nutkit import protocol as types
 from nutkit.frontend import Driver
@@ -863,7 +864,7 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
         else:
             raise ValueError(f"Unknown condition: {condition}")
 
-        if subcondition is not None:
+        if prefix not in ("info: ", "warn: ") and subcondition is not None:
             description = f"{prefix}{condition} - {subcondition}"
         else:
             description = f"{prefix}{condition}"
@@ -926,6 +927,26 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             types.as_cypher_type(expected_status["diagnostic_record"]).value
         )
         self.assertEqual(received_status.is_notification, True)
+
+    def assert_is_test_gql_status_object_raw(
+        self, received_status, raw_status
+    ):
+        self.assertEqual(received_status.gql_status, raw_status["gql_status"])
+        self.assertEqual(received_status.status_description,
+                         raw_status["status_description"])
+        diag_record = raw_status["diagnostic_record"] or {}
+        self.assertEqual(received_status.position,
+                         diag_record.get("_position"))
+        self.assertEqual(received_status.raw_classification,
+                         diag_record.get("_classification"))
+        self.assertEqual(received_status.raw_severity,
+                         diag_record.get("_severity"))
+        self.assertEqual(
+            received_status.diagnostic_record,
+            types.as_cypher_type(raw_status["diagnostic_record"]).value
+        )
+        self.assertEqual(received_status.is_notification,
+                         raw_status.get("neo4j_code") is not None)
 
     def test_success(self):
         summary = self._get_summary("empty_summary_type_r.script")
@@ -1006,6 +1027,94 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             summary.gql_status_objects[7], "03N03", "informational",
             subcondition="test subcondition. Here we go again.™.", i=5,
         )
+
+    @staticmethod
+    def _set_diagnostic_record(status, value):
+        status["diagnostic_record"] = value
+        return status
+
+    @staticmethod
+    def _set_diagnostic_record_entry(status, key, value):
+        status["diagnostic_record"][key] = value
+        return status
+
+    @staticmethod
+    def _del_from_diag_record(status, *keys):
+        for key in keys:
+            del status["diagnostic_record"][key]
+        return status
+
+    @staticmethod
+    def _del(status, *keys):
+        for key in keys:
+            del status[key]
+        return status
+
+    def test_fill_diagnostic_record_values(self):
+        def fill_expected_status(status_):
+            diagnostic_record = status_.setdefault("diagnostic_record", {})
+            if not isinstance(diagnostic_record, dict):
+                return status_
+            if "OPERATION" not in diagnostic_record:
+                diagnostic_record["OPERATION"] = ""
+            if "OPERATION_CODE" not in diagnostic_record:
+                diagnostic_record["OPERATION_CODE"] = "0"
+            if "CURRENT_SCHEMA" not in diagnostic_record:
+                diagnostic_record["CURRENT_SCHEMA"] = "/"
+            return status_
+
+        status = self.make_test_status("01N01", "warning")
+        in_statuses = [
+            # missing diagnostic record should be filled with defaults
+            self._del(deepcopy(status), "diagnostic_record"),
+            # missing OPERATION key should be filled with ""
+            self._del_from_diag_record(deepcopy(status), "OPERATION"),
+            # missing OPERATION_CODE key should be filled with "0"
+            self._del_from_diag_record(deepcopy(status), "OPERATION_CODE"),
+            # missing CURRENT_SCHEMA key should be filled with "/"
+            self._del_from_diag_record(deepcopy(status), "CURRENT_SCHEMA"),
+            self._del_from_diag_record(
+                deepcopy(status),
+                "OPERATION", "OPERATION_CODE", "CURRENT_SCHEMA"
+            ),
+            # None values should be kept as is
+            self._set_diagnostic_record_entry(
+                deepcopy(status), "OPERATION", None
+            ),
+            self._set_diagnostic_record_entry(
+                deepcopy(status), "OPERATION_CODE", None
+            ),
+            self._set_diagnostic_record_entry(
+                deepcopy(status), "CURRENT_SCHEMA", None
+            ),
+            # invalid/unexpected types should be kept as is
+            self._set_diagnostic_record_entry(
+                deepcopy(status), "OPERATION", [123, None]
+            ),
+            self._set_diagnostic_record_entry(
+                deepcopy(status), "OPERATION_CODE", {"foo": "bar", "baz": 42.2}
+            ),
+            self._set_diagnostic_record_entry(
+                deepcopy(status), "CURRENT_SCHEMA", False
+            ),
+            # only the keys above have defaults are filled
+            self._del_from_diag_record(
+                deepcopy(status), "_status_parameters", "_severity",
+                "_classification", "_position",
+            ),
+        ]
+
+        summary = self._get_summary(
+            "summary_with_statuses.script",
+            vars_={"#STATUSES#": json.dumps(in_statuses)}
+        )
+        received_statuses = summary.gql_status_objects
+
+        expected_statuses = list(map(fill_expected_status, in_statuses))
+
+        self.assertEqual(len(received_statuses), len(expected_statuses))
+        for received, expected in zip(received_statuses, expected_statuses):
+            self.assert_is_test_gql_status_object_raw(received, expected)
 
 
 class TestSummaryPlan(_TestSummaryBase):
