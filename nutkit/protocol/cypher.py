@@ -486,10 +486,10 @@ def as_cypher_type(value):
         return CypherList([as_cypher_type(v) for v in value])
     if isinstance(value, dict):
         return CypherMap({k: as_cypher_type(v) for k, v in value.items()})
-    if isinstance(value, int):
-        return CypherInt(value)
     if isinstance(value, bool):
         return CypherBool(value)
+    if isinstance(value, int):
+        return CypherInt(value)
     if isinstance(value, float):
         return CypherFloat(value)
     if isinstance(value, str):
