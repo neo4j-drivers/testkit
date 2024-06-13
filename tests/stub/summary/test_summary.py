@@ -1,6 +1,5 @@
 import json
 from contextlib import contextmanager
-from copy import deepcopy
 
 from nutkit import protocol as types
 from nutkit.frontend import Driver
@@ -1063,43 +1062,62 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
                 diagnostic_record["CURRENT_SCHEMA"] = "/"
             return status_
 
-        status = self.make_test_status("01N01", "warning")
         in_statuses = [
             # missing diagnostic record should be filled with defaults
-            self._del(deepcopy(status), "diagnostic_record"),
+            self._del(
+                self.make_test_status("01N01", "warning", i=1),
+                "diagnostic_record"
+            ),
             # missing OPERATION key should be filled with ""
-            self._del_from_diag_record(deepcopy(status), "OPERATION"),
-            # missing OPERATION_CODE key should be filled with "0"
-            self._del_from_diag_record(deepcopy(status), "OPERATION_CODE"),
-            # missing CURRENT_SCHEMA key should be filled with "/"
-            self._del_from_diag_record(deepcopy(status), "CURRENT_SCHEMA"),
             self._del_from_diag_record(
-                deepcopy(status),
+                self.make_test_status("01N01", "warning", i=2),
+                "OPERATION"
+            ),
+            # missing OPERATION_CODE key should be filled with "0"
+            self._del_from_diag_record(
+                self.make_test_status("01N01", "warning", i=3),
+                "OPERATION_CODE"
+            ),
+            # missing CURRENT_SCHEMA key should be filled with "/"
+            self._del_from_diag_record(
+                self.make_test_status("01N01", "warning", i=4),
+                "CURRENT_SCHEMA"
+            ),
+            self._del_from_diag_record(
+                self.make_test_status("01N01", "warning", i=5),
+
                 "OPERATION", "OPERATION_CODE", "CURRENT_SCHEMA"
             ),
             # None values should be kept as is
             self._set_diagnostic_record_entry(
-                deepcopy(status), "OPERATION", None
+                self.make_test_status("01N01", "warning", i=6),
+                "OPERATION", None
             ),
             self._set_diagnostic_record_entry(
-                deepcopy(status), "OPERATION_CODE", None
+                self.make_test_status("01N01", "warning", i=7),
+                "OPERATION_CODE", None
             ),
             self._set_diagnostic_record_entry(
-                deepcopy(status), "CURRENT_SCHEMA", None
+                self.make_test_status("01N01", "warning", i=8),
+                "CURRENT_SCHEMA", None
             ),
             # invalid/unexpected types should be kept as is
             self._set_diagnostic_record_entry(
-                deepcopy(status), "OPERATION", [123, None]
+                self.make_test_status("01N01", "warning", i=9),
+                "OPERATION", [123, None]
             ),
             self._set_diagnostic_record_entry(
-                deepcopy(status), "OPERATION_CODE", {"foo": "bar", "baz": 42.2}
+                self.make_test_status("01N01", "warning", i=10),
+                "OPERATION_CODE", {"foo": "bar", "baz": 42.2}
             ),
             self._set_diagnostic_record_entry(
-                deepcopy(status), "CURRENT_SCHEMA", False
+                self.make_test_status("01N01", "warning", i=11),
+                "CURRENT_SCHEMA", False
             ),
             # only the keys above have defaults are filled
             self._del_from_diag_record(
-                deepcopy(status), "_status_parameters", "_severity",
+                self.make_test_status("01N01", "warning", i=12),
+                "_status_parameters", "_severity",
                 "_classification", "_position",
             ),
         ]
