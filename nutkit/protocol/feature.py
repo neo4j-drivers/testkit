@@ -78,6 +78,9 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The result summary provides a way to access the transaction's
+    # GqlStatusObject.
+    API_SUMMARY_GQL_STATUS_OBJECTS = "Feature:API:Summary:GqlStatusObjects"
     # The driver supports sending and receiving geospatial data types.
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
@@ -115,6 +118,8 @@ class Feature(Enum):
     BOLT_5_3 = "Feature:Bolt:5.3"
     # The driver supports Bolt protocol version 5.4
     BOLT_5_4 = "Feature:Bolt:5.4"
+    # The driver supports Bolt protocol version 5.5
+    BOLT_5_5 = "Feature:Bolt:5.5"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation

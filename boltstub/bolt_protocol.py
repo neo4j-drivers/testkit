@@ -543,3 +543,12 @@ class Bolt5x4Protocol(Bolt5x3Protocol):
         },
         "S": Bolt5x3Protocol.messages["S"],
     }
+
+
+class Bolt5x5Protocol(Bolt5x4Protocol):
+    protocol_version = (5, 5)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    server_agent = "Neo4j/5.21.0"

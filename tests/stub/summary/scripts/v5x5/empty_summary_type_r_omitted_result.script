@@ -1,0 +1,15 @@
+!: BOLT 5.5
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"t_first": 2001, "fields": []}
+{{
+    C: PULL {"n": "*"}
+----
+    C: DISCARD {"n": -1}
+}}
+S: SUCCESS {"type": "r", "db": "apple", "t_last": 2002, "stats": {}, "statuses": [{"gql_status": "00001", "status_description": "note: successful completion - omitted result"}]}
+*: RESET
+?: GOODBYE

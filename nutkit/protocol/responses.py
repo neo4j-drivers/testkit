@@ -564,6 +564,10 @@ class Summary:
         self.counters = SummaryCounters(**data["counters"])
         self.database = data["database"]
         self.notifications = data["notifications"]
+        self.gql_status_objects = [
+            GqlStatusObject(**obj)
+            for obj in data.get("gqlStatusObjects", [])
+        ]
         self.plan = data["plan"]
         self.profile = data["profile"]
         self.query = SummaryQuery(**data["query"])
@@ -615,6 +619,44 @@ class SummaryQuery:
     def __init__(self, text, parameters):
         self.text = text
         self.parameters = parameters
+
+
+class GqlStatusObject:
+    """
+    Represents a GQL status object included in the Summary response.
+
+    All fields but diagnosticRecord are encoded as plain JSON.
+    diagnosticRecord is a JSON dict with the values being encoded as cypher
+    types.
+    """
+
+    def __init__(self, gqlStatus, statusDescription, position, classification,
+                 rawClassification, severity, rawSeverity, diagnosticRecord,
+                 isNotification):
+        assert isinstance(gqlStatus, str)
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, str)
+        self.status_description = statusDescription
+        assert position is None or isinstance(position, dict)
+        if position is not None:
+            assert (sorted(list(position.keys()))
+                    == ["column", "line", "offset"])
+            assert all(isinstance(v, int) for v in position.values())
+        self.position = position
+        assert isinstance(classification, str)
+        self.classification = classification
+        if rawClassification is not None:
+            assert isinstance(rawClassification, str)
+        self.raw_classification = rawClassification
+        assert isinstance(severity, str)
+        self.severity = severity
+        if rawSeverity is not None:
+            assert isinstance(rawSeverity, str)
+        self.raw_severity = rawSeverity
+        assert isinstance(diagnosticRecord, dict)
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(isNotification, bool)
+        self.is_notification = isNotification
 
 
 class Bookmarks:

@@ -1,0 +1,16 @@
+!: BOLT 5.5
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN "*" "*" "*"
+S: SUCCESS {"t_first": 2001, "fields": ["n"]}
+{{
+    C: PULL {"n": "*"}
+    S: RECORD [1]
+----
+    C: DISCARD {"n": -1}
+}}
+S: SUCCESS {"type": "r", "db": "apple", "t_last": 2002, "statuses": #STATUSES#}
+*: RESET
+?: GOODBYE

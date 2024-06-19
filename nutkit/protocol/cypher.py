@@ -477,3 +477,23 @@ class CypherDuration:
 
         return all(getattr(self, attr) == getattr(other, attr)
                    for attr in ("months", "days", "seconds", "nanoseconds"))
+
+
+def as_cypher_type(value):
+    if value is None:
+        return CypherNull()
+    if isinstance(value, (list, tuple)):
+        return CypherList([as_cypher_type(v) for v in value])
+    if isinstance(value, dict):
+        return CypherMap({k: as_cypher_type(v) for k, v in value.items()})
+    if isinstance(value, bool):
+        return CypherBool(value)
+    if isinstance(value, int):
+        return CypherInt(value)
+    if isinstance(value, float):
+        return CypherFloat(value)
+    if isinstance(value, str):
+        return CypherString(value)
+    if isinstance(value, (bytes, bytearray)):
+        return CypherBytes(value)
+    raise TypeError("Unsupported type: {}".format(type(value)))
