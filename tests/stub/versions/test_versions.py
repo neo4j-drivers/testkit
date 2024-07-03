@@ -157,9 +157,13 @@ class TestProtocolVersions(TestkitTestCase):
     def test_supports_bolt5x5(self):
         self._run("5x5")
 
+    @driver_feature(types.Feature.BOLT_5_6)
+    def test_supports_bolt5x6(self):
+        self._run("5x6")
+
     def test_server_version(self):
         for version in (
-            "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x6", "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             if not self.driver_supports_bolt(version):
@@ -169,7 +173,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_agent(self):
         for version in (
-            "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x6", "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             for agent, reject in (
@@ -204,7 +208,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in (
-            "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x6", "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             if not self.driver_supports_bolt(version):
@@ -329,6 +333,15 @@ class TestProtocolVersions(TestkitTestCase):
             self.skipTest("Driver does not check server agent string")
         self._test_should_reject_server_using_verify_connectivity(
             version="5.5", script="v5x1_and_up_optional_hello.script"
+        )
+
+    @driver_feature(types.Feature.BOLT_5_6)
+    def test_should_reject_server_using_verify_connectivity_bolt_5x6(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Driver does not check server agent string")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="5.6", script="v5x1_and_up_optional_hello.script"
         )
 
     def _test_should_reject_server_using_verify_connectivity(
