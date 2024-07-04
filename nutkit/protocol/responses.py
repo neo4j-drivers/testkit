@@ -20,9 +20,6 @@ For example response to NewDriver request should be sent from backend as:
 """
 
 
-from .cypher import CypherMap
-
-
 class FeatureList:
     """
     Response to GetFeatures.
@@ -782,7 +779,7 @@ class DriverError(BaseError):
             # driver.
             assert cause.id is None
         self.cause = cause
-        assert isinstance(diagnosticRecord, (CypherMap, type(None)))
+        assert isinstance(diagnosticRecord, (dict, type(None)))
         self.diagnostic_record = diagnosticRecord
         assert isinstance(classification, (str, type(None)))
         self.classification = classification

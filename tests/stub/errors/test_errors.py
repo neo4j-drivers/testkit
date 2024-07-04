@@ -96,7 +96,7 @@ class TestError5x5(_ErrorTestCase):
                     self.assertIsNone(error.cause)
                     self.assertEqual(
                         error.diagnostic_record,
-                        types.as_cypher_type(DEFAULT_DIAG_REC)
+                        types.as_cypher_type(DEFAULT_DIAG_REC).value
                     )
                     self.assertEqual(error.classification, "UNKNOWN")
 
@@ -150,13 +150,14 @@ class TestError5x6(_ErrorTestCase):
         )
         self.assertIsNone(error.cause)
         self.assertEqual(error.diagnostic_record,
-                         types.as_cypher_type(diagnostic_record))
+                         types.as_cypher_type(diagnostic_record).value)
         self.assertEqual(error.classification, "UNKNOWN")
 
     # TODO: test driver fills in default values in diag. rec.
 
     def test_nested_error(self):
         error_status = "01ABC"
+        error_code = "Neo.Foo.Bar.Baz"
         cause_status = "01N00"
         cause_message = "Sever ain't cool with this, John Doe!"
         cause_explanation = "cool class - mediocre subclass"
@@ -174,7 +175,7 @@ class TestError5x6(_ErrorTestCase):
             "gql_status": error_status,
             "status_message": "msg",
             "status_explanation": "explanation",
-            "neo4j_code": "Neo.Foo.Bar.Bza",
+            "neo4j_code": error_code,
             "diagnostic_record": DEFAULT_DIAG_REC,
             "cause": {
                 "gql_status": cause_status,
@@ -188,7 +189,7 @@ class TestError5x6(_ErrorTestCase):
         error = self.get_error(error_data)
 
         self.assertIsInstance(error, types.DriverError)
-        self.assertEqual(error.code, error_status)
+        self.assertEqual(error.code, error_code)
 
         cause = error.cause
         self.assertIsNotNone(cause)
@@ -200,7 +201,7 @@ class TestError5x6(_ErrorTestCase):
                          f"error: {cause_explanation}. {cause_message}")
         self.assertIsNone(cause.cause)
         self.assertEqual(cause.diagnostic_record,
-                         types.as_cypher_type(diagnostic_record))
+                         types.as_cypher_type(diagnostic_record).value)
         self.assertEqual(cause.classification, "UNKNOWN")
 
     def test_deeply_nested_error(self):
