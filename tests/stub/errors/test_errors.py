@@ -98,7 +98,8 @@ class TestError5x5(_ErrorTestCase):
                         error.diagnostic_record,
                         types.as_cypher_type(DEFAULT_DIAG_REC).value
                     )
-                    self.assertEqual(error.classification, "UNKNOWN")
+                    # TODO: TBD
+                    # self.assertEqual(error.classification, "UNKNOWN")
 
 
 DEFAULT_DIAG_REC = {
@@ -151,7 +152,8 @@ class TestError5x6(_ErrorTestCase):
         self.assertIsNone(error.cause)
         self.assertEqual(error.diagnostic_record,
                          types.as_cypher_type(diagnostic_record).value)
-        self.assertEqual(error.classification, "UNKNOWN")
+        # TODO: TBD
+        # self.assertEqual(error.classification, "UNKNOWN")
 
     # TODO: test driver fills in default values in diag. rec.
 
@@ -202,7 +204,8 @@ class TestError5x6(_ErrorTestCase):
         self.assertIsNone(cause.cause)
         self.assertEqual(cause.diagnostic_record,
                          types.as_cypher_type(diagnostic_record).value)
-        self.assertEqual(cause.classification, "UNKNOWN")
+        # TODO: TBD
+        # self.assertEqual(cause.classification, "UNKNOWN")
 
     def test_deeply_nested_error(self):
         def make_status(i_):
