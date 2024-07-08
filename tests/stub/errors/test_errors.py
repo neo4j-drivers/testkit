@@ -120,7 +120,7 @@ class TestError5x6(_ErrorTestCase):
         error_status = "01N00"
         error_message = "Sever ain't cool with this, John Doe!"
         error_explanation = "cool class - mediocre subclass"
-        error_code = "Noe.ClientError.User.Uncool"
+        error_code = "Neo.ClientError.User.Uncool"
         diagnostic_record = {
             "CURRENT_SCHEMA": "/",
             "OPERATION": "",
@@ -159,11 +159,11 @@ class TestError5x6(_ErrorTestCase):
 
     def test_nested_error(self):
         error_status = "01ABC"
-        error_code = "Neo.Foo.Bar.Baz"
+        error_code = "Neo.ClientError.Bar.Baz"
         cause_status = "01N00"
         cause_message = "Sever ain't cool with this, John Doe!"
         cause_explanation = "cool class - mediocre subclass"
-        cause_code = "Noe.ClientError.User.Uncool"
+        cause_code = "Neo.ClientError.User.Uncool"
         diagnostic_record = {
             "CURRENT_SCHEMA": "/",
             "OPERATION": "",
@@ -215,7 +215,7 @@ class TestError5x6(_ErrorTestCase):
             "gql_status": make_status(0),
             "status_message": "msg",
             "status_explanation": "explanation",
-            "neo4j_code": "Neo.Foo.Bar.Baz0",
+            "neo4j_code": "Neo.ClientError.Bar.Baz0",
             "diagnostic_record": DEFAULT_DIAG_REC,
         }
         parent_data = error_data
@@ -224,7 +224,7 @@ class TestError5x6(_ErrorTestCase):
                 "gql_status": make_status(i),
                 "status_message": f"msg{i}",
                 "status_explanation": f"explanation{i}",
-                "neo4j_code": f"Neo.Foo.Bar.Baz{i}",
+                "neo4j_code": f"Neo.ClientError.Bar.Baz{i}",
                 "diagnostic_record": DEFAULT_DIAG_REC,
             }
             parent_data = parent_data["cause"]
@@ -233,6 +233,6 @@ class TestError5x6(_ErrorTestCase):
 
         for i in range(10):
             self.assertIsInstance(error, types.DriverError)
-            self.assertEqual(error.code, f"Neo.Foo.Bar.Baz{i}")
+            self.assertEqual(error.code, f"Neo.ClientError.Bar.Baz{i}")
             self.assertEqual(error.gql_status, make_status(i))
             error = error.cause
