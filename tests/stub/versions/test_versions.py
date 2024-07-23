@@ -204,7 +204,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in (
-            "5x5", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             if not self.driver_supports_bolt(version):
