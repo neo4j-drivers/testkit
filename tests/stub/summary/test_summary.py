@@ -252,9 +252,9 @@ NO_DATA_GQL_STATUS_OBJECT = {
 }
 
 
-class TestSummaryNotifications5x5(_TestSummaryBase):
-    required_features = types.Feature.BOLT_5_5,
-    version_folder = "v5x5",
+class TestSummaryNotifications5x6(_TestSummaryBase):
+    required_features = types.Feature.BOLT_5_6,
+    version_folder = "v5x6",
 
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
@@ -275,6 +275,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             {
                 "gql_status": "01N01",
                 "status_description": "warn: test subcat. Don't do this™.",
+                "description": "Please, don't do this™.",
                 "neo4j_code": "Neo.ClientNotification.Foo.Bar",
                 "title": "Legacy warning title",
                 "diagnostic_record": {
@@ -299,7 +300,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         )
         out_notifications = [{
             "severity": "WARNING",
-            "description": "warn: test subcat. Don't do this™.",
+            "description": "Please, don't do this™.",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": {"column": 9, "offset": 8, "line": 1},
             "title": "Legacy warning title",
@@ -316,6 +317,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
             {
                 "gql_status": "01N01",
                 "status_description": "warn: test subcat. Don't do this™.",
+                "description": "Please, don't do this™.",
                 "neo4j_code": "Neo.ClientNotification.Foo.Bar",
                 "title": "Legacy warning title",
                 "diagnostic_record": {
@@ -340,9 +342,9 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         )
         out_notifications = [{
             "severity": "ANYSEV",
-            "description": "warn: test subcat. Don't do this™.",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": {"column": 9, "offset": 8, "line": 1},
+            "description": "Please, don't do this™.",
             "title": "Legacy warning title",
             "rawSeverityLevel": "ANYSEV",
             "severityLevel": "UNKNOWN",
@@ -358,6 +360,7 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
                 "gql_status": "01N01",
                 "status_description":
                     f"warn: test subcat. Don't do this™ {i}.",
+                "description": f"Please, don't do this™ {i}.",
                 "neo4j_code": f"Neo.ClientNotification.Foo.Bar{i}",
                 "title": f"Legacy warning title {i}",
                 "diagnostic_record": {
@@ -385,10 +388,9 @@ class TestSummaryNotifications5x5(_TestSummaryBase):
         out_notifications = [
             {
                 "severity": "WARNING",
-                "description":
-                    f"warn: test subcat. Don't do this™ {i}.",
                 "code": f"Neo.ClientNotification.Foo.Bar{i}",
                 "position": {"column": 9, "offset": 8, "line": 1 + i},
+                "description": f"Please, don't do this™ {i}.",
                 "title": f"Legacy warning title {i}",
                 "rawSeverityLevel": "WARNING",
                 "severityLevel": "WARNING",
@@ -844,9 +846,9 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             )
 
 
-class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
-    required_features = types.Feature.BOLT_5_5,
-    version_folder = "v5x5",
+class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
+    required_features = types.Feature.BOLT_5_6,
+    version_folder = "v5x6",
 
     @classmethod
     def make_test_status(
@@ -872,6 +874,7 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             return {
                 "gql_status": status,
                 "status_description": description,
+                "description": "The old notification description™.",
                 "neo4j_code": "Neo.ClientNotification.Statement."
                               "CartesianProductWarning",
                 "title": "This query builds a cartesian product between...",
@@ -889,6 +892,7 @@ class TestSummaryGqlStatusObjects5x5(_TestSummaryGqlStatusObjectsBase):
             return {
                 "gql_status": status,
                 "status_description": f"{description}. Bonus: {i}",
+                "description": f"The old notification description™ {i}.",
                 "neo4j_code": f"Neo.ClientNotification.Statement."
                               f"CartesianProductWarning{i}",
                 "title": f"This query builds a cartesian product ... [{i}]",
