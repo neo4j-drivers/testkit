@@ -312,6 +312,51 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
 
         self.assertEqual(summary.notifications, out_notifications)
 
+    def test_notification_without_position(self):
+        in_statuses = [
+            {
+                "gql_status": "01N01",
+                "status_description": "warn: test subcat. Don't do this™.",
+                "description": "Please, don't do this™.",
+                "neo4j_code": "Neo.ClientNotification.Foo.Bar",
+                "title": "Legacy warning title",
+                "diagnostic_record": {
+                    "OPERATION": "SOME_OP",
+                    "OPERATION_CODE": "42",
+                    "CURRENT_SCHEMA": "/foo",
+                    "_status_parameters": {
+                        "action": "this™",
+                    },
+                    "_severity": "WARNING",
+                    "_classification": "GENERIC",
+                },
+            },
+            SUCCESS_GQL_STATUS_OBJECT
+        ]
+        summary = self._get_summary(
+            "summary_with_statuses.script",
+            vars_={
+                "#STATUSES#": json.dumps(in_statuses)
+            }
+        )
+        out_notification = {
+            "severity": "WARNING",
+            "description": "Please, don't do this™.",
+            "code": "Neo.ClientNotification.Foo.Bar",
+            "position": None,
+            "title": "Legacy warning title",
+            "rawSeverityLevel": "WARNING",
+            "severityLevel": "WARNING",
+            "rawCategory": "GENERIC",
+            "category": "GENERIC",
+        }
+
+        self.assertEqual(len(summary.notifications), 1)
+        notification = summary.notifications[0]
+        notification.setdefault("position", None)
+
+        self.assertEqual(notification, out_notification)
+
     def test_full_notifications_unknown_fields(self):
         in_statuses = [
             {
