@@ -1,3 +1,4 @@
+import time
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import _TestTypesBase
 from tests.shared import get_driver_name
@@ -50,6 +51,7 @@ class TestDataTypes(_TestTypesBase):
 
             types.CypherBytes(bytearray([0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF])),
         ]
+        time.sleep(1)
 
         for val in vals:
             # TODO: remove this block once all languages work
