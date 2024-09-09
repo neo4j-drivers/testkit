@@ -443,7 +443,7 @@ def main(settings, configurations):
             # before it starts the databases. This will mean the port will be
             # available before queries can be executed for clusters and for
             # the enterprise edition in stand-alone mode.
-            time.sleep(10)
+            time.sleep(20)
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:

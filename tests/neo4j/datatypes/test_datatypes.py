@@ -1,5 +1,3 @@
-import time
-
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import _TestTypesBase
 from tests.shared import get_driver_name
@@ -52,8 +50,8 @@ class TestDataTypes(_TestTypesBase):
 
             types.CypherBytes(bytearray([0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF])),
         ]
-        time.sleep(1)
 
+        self._create_driver_and_session()
         for val in vals:
             # TODO: remove this block once all languages work
             if get_driver_name() in ["javascript", "dotnet"]:
@@ -73,7 +71,6 @@ class TestDataTypes(_TestTypesBase):
                 if isinstance(val, types.CypherBytes):
                     continue
             with self.subTest(x=val):
-                self._create_driver_and_session()
                 self._verify_can_echo(val)
 
     def test_should_echo_very_long_list(self):
