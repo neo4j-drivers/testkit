@@ -1,4 +1,5 @@
 import time
+
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import _TestTypesBase
 from tests.shared import get_driver_name
