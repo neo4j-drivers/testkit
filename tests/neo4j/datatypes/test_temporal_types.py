@@ -90,7 +90,8 @@ class TestDataTypes(_TestTypesBase):
                             "timezone library cannot tell the difference "
                             "between named UTC and 0s offset timezone"
                         )
-                self._verify_can_echo(val)
+                with self.subTest(x=val):
+                    self._verify_can_echo(val)
 
     def _timezone_server_support(self, tz_id):
         def work(tx):
