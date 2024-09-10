@@ -443,7 +443,9 @@ def main(settings, configurations):
             # before it starts the databases. This will mean the port will be
             # available before queries can be executed for clusters and for
             # the enterprise edition in stand-alone mode.
-            time.sleep(20)
+            if not configurations.version.startswith("4"):
+                print("Waiting as Bolt server availability does not guarantuee database availability")
+                time.sleep(25)
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:
