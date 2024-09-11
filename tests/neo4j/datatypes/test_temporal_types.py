@@ -9,7 +9,10 @@ from tests.neo4j.datatypes._base import (
     MIN_INT64,
 )
 from tests.neo4j.datatypes._util import TZ_IDS
-from tests.neo4j.shared import get_server_info
+from tests.neo4j.shared import (
+    get_server_info,
+    requires_min_bolt_version,
+)
 from tests.shared import (
     get_driver_name,
     Potential,
@@ -110,6 +113,7 @@ class TestDataTypes(_TestTypesBase):
             assert tz_id in e.msg
             return False
 
+    @requires_min_bolt_version("4.4")
     def test_should_echo_all_timezone_ids(self):
         times = (
             # 1970-01-01 00:00:00
