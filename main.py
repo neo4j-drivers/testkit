@@ -16,7 +16,6 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 import traceback
 
 import docker
@@ -24,6 +23,7 @@ import driver
 import neo4j
 import runner
 import settings
+import waiter
 from tests.testenv import in_teamcity
 
 # TODO: Move to docker.py
@@ -299,6 +299,8 @@ def main(settings, configurations):
     driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
     runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
     backend_artifacts_path = os.path.join(artifacts_path, "driver_backend")
+    waiter_artifacts_path = os.path.join(artifacts_path, "waiter")
+    waiter_build_artifacts_path = os.path.join(artifacts_path, "waiter_build")
     docker_artifacts_path = os.path.join(artifacts_path, "docker")
     # wipe artifacts path
     try:
@@ -310,6 +312,8 @@ def main(settings, configurations):
     os.makedirs(driver_build_artifacts_path)
     os.makedirs(runner_build_artifacts_path)
     os.makedirs(backend_artifacts_path)
+    os.makedirs(waiter_artifacts_path)
+    os.makedirs(waiter_build_artifacts_path)
     os.makedirs(docker_artifacts_path)
     print("Putting artifacts in %s" % artifacts_path)
 
@@ -390,6 +394,12 @@ def main(settings, configurations):
         # no need to download any snapshots or start any servers
         return _exit()
 
+    waiter_container = waiter.start_container(
+        this_path, testkit_branch, networks[0],
+        docker_artifacts_path, waiter_build_artifacts_path,
+        waiter_artifacts_path,
+    )
+
     """
     Neo4j server test matrix
     """
@@ -438,13 +448,15 @@ def main(settings, configurations):
             print("Waiting for neo4j service at %s to be available"
                   % (address,))
             driver_container.poll_host_and_port_until_available(*address)
-            # Wait some more seconds for server to be ready.
+            # Wait some more for server to be ready.
             # Especially starting with 5.0, the server starts the bolt server
             # before it starts the databases. This will mean the port will be
             # available before queries can be executed for clusters and for
             # the enterprise edition in stand-alone mode.
             if int(neo4j_config.version.split(".", 1)[0]) >= 5:
-                time.sleep(25)
+                waiter_container.wait_for_all_dbs(
+                    hostname, port, neo4j.username, neo4j.password
+                )
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:
