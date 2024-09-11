@@ -112,7 +112,7 @@ class TestDataTypes(_TestTypesBase):
 
     def test_should_echo_all_timezone_ids(self):
         times = (
-            # 1970-01-01 06:00:00
+            # 1970-01-01 00:00:00
             (1970, 1, 1, 0, 0, 0, 0),
             # 2022-06-17 13:24:34.699546224
             (2022, 6, 17, 13, 24, 34, 699546224),
@@ -132,19 +132,23 @@ class TestDataTypes(_TestTypesBase):
                 except pytz.UnknownTimeZoneError:
                     # Can't test this timezone as Python doesn't know it :(
                     continue
-                # FIXME: while there is a bug in the bolt protocol that
-                #        makes it incapable of representing datetimes with
-                #        timezone ids when there is ambiguity, we will
-                #        avoid those.
-                # ---------------------------------------------------------
                 naive_dt = datetime.datetime(*time[:-1])
-                dst_local_dt = tz.localize(naive_dt, is_dst=True)
-                no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
-                while dst_local_dt != no_dst_local_dt:
-                    naive_dt += datetime.timedelta(hours=1)
-                    dst_local_dt = tz.localize(naive_dt, is_dst=True)
-                    no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
-                # ---------------------------------------------------------
+                while True:
+                    try:
+                        local_dt = tz.localize(naive_dt, is_dst=None)
+                        break
+                    except pytz.AmbiguousTimeError:
+                        # FIXME: while there is a bug in the bolt protocol that
+                        #        makes it incapable of representing datetimes
+                        #        with timezone ids when there is ambiguity, we
+                        #        will avoid those.
+                        # -----------------------------------------------------
+                        naive_dt += datetime.timedelta(hours=1)
+                        # -----------------------------------------------------
+                    except pytz.NonExistentTimeError:
+                        # The chose wall time does not exist in this timezone.
+                        # Try an hour later.
+                        naive_dt += datetime.timedelta(hours=1)
 
                 dt = types.CypherDateTime(
                     naive_dt.year,
@@ -154,7 +158,7 @@ class TestDataTypes(_TestTypesBase):
                     naive_dt.minute,
                     naive_dt.second,
                     time[-1],
-                    utc_offset_s=dst_local_dt.utcoffset().total_seconds(),
+                    utc_offset_s=local_dt.utcoffset().total_seconds(),
                     timezone_id=tz_id
                 )
                 with self.subTest(dt=dt):
