@@ -183,7 +183,10 @@ class TestDataTypes(_TestTypesBase):
                             continue
                         break
                 if not leeway:
-                    raise AssertionError("Why you no exist??")
+                    raise AssertionError(
+                        "Couldn't find a wall time that exists:"
+                        f"{time!r} {tz_id}"
+                    )
 
                 dt = types.CypherDateTime(
                     naive_dt.year,
