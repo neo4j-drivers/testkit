@@ -59,7 +59,7 @@ class Standalone:
             # Config options renamed in 5.0
             env_map.update({
                 "NEO4J_server_bolt_advertised__address":
-                    f"{self.name}:7687",
+                    f"{self._hostname}:{self._port}",
             })
         if self._version >= (5, 3) and len(password) < 8:
             env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
