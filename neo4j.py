@@ -187,6 +187,8 @@ class Core:
                     "0.0.0.0:%d" % (Core.RAFT_PORT + self._index),
                 "NEO4J_server_cluster_listen__address":
                     "0.0.0.0:%d" % (Core.TRANSACTION_PORT + self._index),
+                "NEO4J_initial_dbms_default__primaries__count":
+                    str(len(initial_members)),
             })
 
         logs_path = join(self._artifacts_path, "logs")
