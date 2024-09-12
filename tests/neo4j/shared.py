@@ -202,13 +202,6 @@ def requires_multi_db_support(func):
 
 
 def requires_min_bolt_version(min_version):
-    server_max_version = get_server_info().max_protocol_version
-    all_viable_versions = [
-        f for f in protocol.Feature
-        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
-            and min_version <= f.value.split(":")[-1] <= server_max_version)
-    ]
-
     def get_valid_test_case(*args, **kwargs):
         if not args or not isinstance(args[0], TestkitTestCase):
             raise TypeError("Should only decorate TestkitTestCase methods")
@@ -218,17 +211,42 @@ def requires_min_bolt_version(min_version):
         @wraps(func)
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
-            if server_max_version < min_version:
-                test_case.skipTest("Server does not support minimum required "
-                                   "Bolt version: " + min_version)
-            missing = test_case.driver_missing_features(*all_viable_versions)
-            if len(missing) == len(all_viable_versions):
-                test_case.skipTest("There is no common version between server "
-                                   "and driver that fulfills the minimum "
-                                   "required protocol version: " + min_version)
+            require_min_bolt_version(min_version, test_case)
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
+
+
+def require_min_bolt_version(min_version, test_case):
+    if not isinstance(test_case, TestkitTestCase):
+        raise TypeError("test_case should be a TestkitTestCase")
+    reason = _skip_reason_min_bolt_version(min_version, test_case)
+    if reason:
+        test_case.skipTest(reason)
+
+
+def has_min_bolt_version(min_version, test_case):
+    if not isinstance(test_case, TestkitTestCase):
+        raise TypeError("test_case should be a TestkitTestCase")
+    return not _skip_reason_min_bolt_version(min_version, test_case)
+
+
+def _skip_reason_min_bolt_version(min_version, test_case):
+    server_max_version = get_server_info().max_protocol_version
+    all_viable_versions = [
+        f for f in protocol.Feature
+        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
+            and min_version <= f.value.split(":")[-1] <= server_max_version)
+    ]
+
+    if server_max_version < min_version:
+        test_case.skipTest("Server does not support minimum required "
+                           "Bolt version: " + min_version)
+    missing = test_case.driver_missing_features(*all_viable_versions)
+    if len(missing) == len(all_viable_versions):
+        test_case.skipTest("There is no common version between server "
+                           "and driver that fulfills the minimum "
+                           "required protocol version: " + min_version)
 
 
 class QueryBuilder:
