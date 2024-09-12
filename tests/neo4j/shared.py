@@ -28,7 +28,7 @@ from nutkit.protocol import (
     ClientCertificate,
 )
 from tests.shared import (
-    dns_resolve_single,
+    dns_resolve,
     Potential,
     TestkitTestCase,
 )
@@ -61,9 +61,10 @@ def get_neo4j_host_and_port():
     return host, port
 
 
-def get_neo4j_resolved_host_and_port():
+def get_neo4j_host_and_port_resolutions():
     host, port = get_neo4j_host_and_port()
-    return dns_resolve_single(host), port
+    return [(resolved, port)
+            for resolved in dns_resolve(host, ipv4=True, ipv6=True)]
 
 
 def get_neo4j_host_and_http_port():

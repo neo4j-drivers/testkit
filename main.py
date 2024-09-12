@@ -324,7 +324,7 @@ def main(settings, configurations):
     # address to be able to start services on the network that the driver
     # connects to (stub server and TLS server).
     for network in networks:
-        cmd = ["docker", "network", "create", network]
+        cmd = ["docker", "network", "create", "--ipv6", network]
         print(cmd)
         subprocess.run(cmd)
 

@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import socket
 import time
 import traceback
 from copy import deepcopy
@@ -25,7 +26,6 @@ from socketserver import (
     TCPServer,
     ThreadingMixIn,
 )
-from sys import stdout
 from threading import (
     Lock,
     Thread,
@@ -56,18 +56,27 @@ class BoltStubServer(TCPServer):
 
     timed_out = False
 
-    def __init__(self, *args, **kwargs):
-        super(BoltStubServer, self).__init__(*args, **kwargs)
+    _ipv6: bool
+
+    def __init__(self, *args, ipv6=False, **kwargs) -> None:
+        self._ipv6 = ipv6
+        if self._ipv6:
+            self.address_family = socket.AF_INET6
+        super().__init__(*args, **kwargs)
 
     def handle_timeout(self):
         self.timed_out = True
 
-    def server_activate(self):
-        super(BoltStubServer, self).server_activate()
+    def server_bind(self) -> None:
+        if self._ipv6:
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+        super().server_bind()
+
+    def server_activate(self) -> None:
+        super().server_activate()
         # Must be here, testkit waits for something to be written on stdout to
         # know when the server is listening.
-        print("Listening")
-        stdout.flush()
+        print("Listening", flush=True)
 
 
 class ThreadedBoltStubServer(ThreadingMixIn, BoltStubServer):
@@ -86,13 +95,14 @@ class BoltStubService:
     def load(cls, *script_filenames, **kwargs):
         return cls(*map(parse_file, script_filenames), **kwargs)
 
-    def __init__(self, script: Script, listen_addr=None, timeout=None):
+    def __init__(self, script: Script, listen_addr=None, timeout=None,
+                 ipv6=False):
         if listen_addr:
             listen_addr = Address.parse(listen_addr)
         else:
             listen_addr = Address(("localhost", self.default_base_port))
         self.host = listen_addr.host
-        self.address = Address((listen_addr.host, listen_addr.port_number))
+        self.address = Address(listen_addr)
         self.script = script
         self.exceptions = []
         self.actors = []
@@ -153,7 +163,8 @@ class BoltStubService:
             server_cls = ThreadedBoltStubServer
         else:
             server_cls = BoltStubServer
-        self.server = server_cls(self.address, BoltStubRequestHandler)
+        self.server = server_cls(self.address, BoltStubRequestHandler,
+                                 ipv6=ipv6)
         self.server.timeout = timeout or self.default_timeout
 
     def start(self):
