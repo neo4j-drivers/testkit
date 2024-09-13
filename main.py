@@ -454,8 +454,9 @@ def main(settings, configurations):
             # available before queries can be executed for clusters and for
             # the enterprise edition in stand-alone mode.
             if int(neo4j_config.version.split(".", 1)[0]) >= 5:
+                core_address, core_port = address
                 waiter_container.wait_for_all_dbs(
-                    address, neo4j.username, neo4j.password
+                    core_address, core_port, neo4j.username, neo4j.password
                 )
         print("Neo4j is reachable from driver")
 

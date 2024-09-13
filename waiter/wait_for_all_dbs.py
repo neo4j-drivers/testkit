@@ -15,9 +15,9 @@ TIMEOUT = 120
 LAST_ERROR = ""
 
 
-def check_availability(driver, address):
+def check_availability(driver, host, port):
     global LAST_ERROR
-    address = f"{address}"
+    address = f"{host}:{port}"
     try:
         records, _, _ = driver.execute_query(
             "SHOW DATABASES "
@@ -66,24 +66,24 @@ def check_availability(driver, address):
         return False
 
 
-def main(address, user, password):
-    url = f"bolt://{address}"
+def main(host, port, user, password):
+    url = f"bolt://{host}:{port}"
     auth = (user, password)
     t0 = time.perf_counter()
 
     with neo4j.GraphDatabase.driver(url, auth=auth) as driver:
         while time.perf_counter() - t0 < TIMEOUT:
             print("Checking availability...")
-            if check_availability(driver, address):
+            if check_availability(driver, host, port):
                 break
             time.sleep(.5)
         else:
             print("Last error:", LAST_ERROR, file=sys.stderr, flush=True)
             raise TimeoutError(
                 "Timed out waiting for databases to become available at "
-                f"{address}"
+                f"{host}:{port}"
             )
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    main(*sys.argv[1:5])
