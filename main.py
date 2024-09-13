@@ -395,7 +395,7 @@ def main(settings, configurations):
         return _exit()
 
     waiter_container = waiter.start_container(
-        this_path, testkit_branch, networks[0],
+        this_path, testkit_branch, networks[0], networks[1],
         docker_artifacts_path, waiter_build_artifacts_path,
         waiter_artifacts_path,
     )
