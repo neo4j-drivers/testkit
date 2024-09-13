@@ -162,6 +162,10 @@ class TestDataTypes(_TestTypesBase):
                     leeway -= 1
                     try:
                         local_dt = tz.localize(naive_dt, is_dst=None)
+                    except pytz.NonExistentTimeError:
+                        # The chosen wall time does not exist in this timezone.
+                        # Try an hour later.
+                        naive_dt += datetime.timedelta(hours=1)
                     except pytz.AmbiguousTimeError:
                         if not has_min_bolt_version("4.4", self):
                             # There is a bug in bolt protocol 4.4 and before
@@ -171,10 +175,6 @@ class TestDataTypes(_TestTypesBase):
                             # ambiguous times.
                             naive_dt += datetime.timedelta(hours=1)
                         raise
-                    except pytz.NonExistentTimeError:
-                        # The chose wall time does not exist in this timezone.
-                        # Try an hour later.
-                        naive_dt += datetime.timedelta(hours=1)
                     else:
                         if not self._server_thinks_wall_time_exists(
                             naive_dt, tz_id
