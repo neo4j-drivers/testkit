@@ -43,11 +43,11 @@ class Container:
             log_path=self._build_artifacts_path
         )
 
-    def wait_for_all_dbs(self, hostname, port, user, password):
+    def wait_for_all_dbs(self, address, user, password):
         self._container.exec(
             [
                 "venv/bin/python", "wait_for_all_dbs.py",
-                hostname, "%d" % port, user, password,
+                address, user, password,
             ],
             log_path=self._artifacts_path,
         )

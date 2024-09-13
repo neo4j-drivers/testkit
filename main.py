@@ -455,7 +455,7 @@ def main(settings, configurations):
             # the enterprise edition in stand-alone mode.
             if int(neo4j_config.version.split(".", 1)[0]) >= 5:
                 waiter_container.wait_for_all_dbs(
-                    hostname, port, neo4j.username, neo4j.password
+                    address, neo4j.username, neo4j.password
                 )
         print("Neo4j is reachable from driver")
 
