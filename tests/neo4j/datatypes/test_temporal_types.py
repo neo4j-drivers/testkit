@@ -9,7 +9,10 @@ from tests.neo4j.datatypes._base import (
     MIN_INT64,
 )
 from tests.neo4j.datatypes._util import TZ_IDS
-from tests.neo4j.shared import get_server_info
+from tests.neo4j.shared import (
+    get_server_info,
+    has_min_bolt_version,
+)
 from tests.shared import (
     get_driver_name,
     Potential,
@@ -111,9 +114,30 @@ class TestDataTypes(_TestTypesBase):
             assert tz_id in e.msg
             return False
 
+    def _server_thinks_wall_time_exists(self, naive_dt, tz_id):
+        dt_str = (
+            f"{naive_dt.year:04d}-{naive_dt.month:02d}-{naive_dt.day:02d}T"
+            f"{naive_dt.hour:02d}:{naive_dt.minute:02d}:{naive_dt.second:02d}"
+        )
+        dt_str_tz = f"{dt_str}[{tz_id}]"
+
+        def work(tx):
+            res = tx.run("RETURN toString(localdatetime(datetime($s1))) = $s2",
+                         params={
+                             "s1": types.CypherString(dt_str_tz),
+                             "s2": types.CypherString(dt_str),
+                         })
+            rec = res.next()
+            assert isinstance(rec, types.Record)
+            assert isinstance(rec.values[0], types.CypherBool)
+            return rec.values[0].value
+
+        assert self._driver and self._session
+        return self._session.execute_read(work)
+
     def test_should_echo_all_timezone_ids(self):
         times = (
-            # 1970-01-01 06:00:00
+            # 1970-01-01 00:00:00
             (1970, 1, 1, 0, 0, 0, 0),
             # 2022-06-17 13:24:34.699546224
             (2022, 6, 17, 13, 24, 34, 699546224),
@@ -133,19 +157,37 @@ class TestDataTypes(_TestTypesBase):
                 except pytz.UnknownTimeZoneError:
                     # Can't test this timezone as Python doesn't know it :(
                     continue
-                # FIXME: while there is a bug in the bolt protocol that
-                #        makes it incapable of representing datetimes with
-                #        timezone ids when there is ambiguity, we will
-                #        avoid those.
-                # ---------------------------------------------------------
                 naive_dt = datetime.datetime(*time[:-1])
-                dst_local_dt = tz.localize(naive_dt, is_dst=True)
-                no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
-                while dst_local_dt != no_dst_local_dt:
-                    naive_dt += datetime.timedelta(hours=1)
-                    dst_local_dt = tz.localize(naive_dt, is_dst=True)
-                    no_dst_local_dt = tz.localize(naive_dt, is_dst=False)
-                # ---------------------------------------------------------
+                leeway = 25
+                while leeway > 0:
+                    leeway -= 1
+                    try:
+                        local_dt = tz.localize(naive_dt, is_dst=None)
+                    except pytz.NonExistentTimeError:
+                        # The chosen wall time does not exist in this timezone.
+                        # Try an hour later.
+                        naive_dt += datetime.timedelta(hours=1)
+                    except pytz.AmbiguousTimeError:
+                        if not has_min_bolt_version("4.4", self):
+                            # There is a bug in bolt protocol 4.4 and before
+                            # where ambiguous times are not handled correctly.
+                            # 4.4, received a patch though.
+                            # Therefore, if on 4.3 and before, we skip
+                            # ambiguous times.
+                            naive_dt += datetime.timedelta(hours=1)
+                        raise
+                    else:
+                        if not self._server_thinks_wall_time_exists(
+                            naive_dt, tz_id
+                        ):
+                            naive_dt += datetime.timedelta(hours=1)
+                            continue
+                        break
+                if not leeway:
+                    raise AssertionError(
+                        "Couldn't find a wall time that exists:"
+                        f"{time!r} {tz_id}"
+                    )
 
                 dt = types.CypherDateTime(
                     naive_dt.year,
@@ -155,7 +197,7 @@ class TestDataTypes(_TestTypesBase):
                     naive_dt.minute,
                     naive_dt.second,
                     time[-1],
-                    utc_offset_s=dst_local_dt.utcoffset().total_seconds(),
+                    utc_offset_s=local_dt.utcoffset().total_seconds(),
                     timezone_id=tz_id
                 )
                 with self.subTest(dt=dt):
