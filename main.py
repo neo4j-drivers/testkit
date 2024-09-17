@@ -114,6 +114,9 @@ def initialise_configurations(settings):
             ("5.9",    True,        True,     "neo4j",  0),
             # Bolt 5.4
             ("5.13",   True,        True,     "neo4j",  0),
+            # Bolt 5.5 (skipped - no server released with support)
+            # Bolt 5.6
+            ("5.23",   True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
