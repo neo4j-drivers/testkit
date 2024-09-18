@@ -59,7 +59,7 @@ class Standalone:
             # Config options renamed in 5.0
             env_map.update({
                 "NEO4J_server_bolt_advertised__address":
-                    f"{self.name}:7687",
+                    f"{self._hostname}:{self._port}",
             })
         if self._version >= (5, 3) and len(password) < 8:
             env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
@@ -101,7 +101,7 @@ class Cluster:
             core = Core(i, self._artifacts_path, self._version)
             self._cores.append(core)
 
-        initial_members = ",".join([c.discover for c in self._cores])
+        initial_members = [c.discover for c in self._cores]
 
         for core in self._cores:
             core.start(self._image, initial_members, network)
@@ -152,7 +152,7 @@ class Core:
                 "NEO4J_causal__clustering_discovery__type":
                     "LIST",
                 "NEO4J_causal__clustering_initial__discovery__members":
-                    initial_members,
+                    ",".join(initial_members),
                 "NEO4J_causal__clustering_discovery__advertised__address":
                     self.discover,
                 "NEO4J_causal__clustering_raft__advertised__address":
@@ -174,7 +174,7 @@ class Core:
                 "NEO4J_dbms_cluster_discovery_type":
                     "LIST",
                 "NEO4J_dbms_cluster_discovery_initial__members":
-                    initial_members,
+                    ",".join(initial_members),
                 "NEO4J_server_discovery_advertised__address":
                     self.discover,
                 "NEO4J_server_cluster_raft_advertised__address":
@@ -187,6 +187,8 @@ class Core:
                     "0.0.0.0:%d" % (Core.RAFT_PORT + self._index),
                 "NEO4J_server_cluster_listen__address":
                     "0.0.0.0:%d" % (Core.TRANSACTION_PORT + self._index),
+                "NEO4J_initial_dbms_default__primaries__count":
+                    str(len(initial_members)),
             })
 
         logs_path = join(self._artifacts_path, "logs")
