@@ -73,9 +73,10 @@ def initialise_configurations(settings):
         version_without_drop = ".".join(version.split(".")[:2])
         if docker_tag is None:
             docker_tag = version_without_drop
+        image = f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-debian-nightly"
         return neo4j.Config(
             name=name,
-            image=f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-nightly",
+            image=image,
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
@@ -124,11 +125,11 @@ def initialise_configurations(settings):
             # nightly build of official backwards-compatible version
             ("4.4",    "4.4",      True,        True,     "neo4j", 60),
             # latest version
-            ("5.dev",  "dev",      False,       False,    "bolt",   0),
-            ("5.dev",  "dev",      False,       False,    "neo4j",  0),
-            ("5.dev",  "dev",      True,        False,    "bolt",  90),
-            ("5.dev",  "dev",      True,        False,    "neo4j",  0),
-            ("5.dev",  "dev",      True,        True,     "neo4j", 90),
+            ("5.dev",  "5",        False,       False,    "bolt",   0),
+            ("5.dev",  "5",        False,       False,    "neo4j",  0),
+            ("5.dev",  "5",        True,        False,    "bolt",  90),
+            ("5.dev",  "5",        True,        False,    "neo4j",  0),
+            ("5.dev",  "5",        True,        True,     "neo4j", 90),
         )
     ]
 
