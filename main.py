@@ -84,6 +84,8 @@ def initialise_configurations(settings):
             stress_test_duration=stress_test
         )
 
+    # [bolt-version-bump] search tag when updating IT matrix
+
     # ATTENTION: make sure to have all configs that use the same neo4j docker
     # image (e.g., all configs with neo4j:4.4-community, then all with
     # neo4j:4.4-enterprise, ...) grouped together. Else, TestKit will download
