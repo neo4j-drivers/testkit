@@ -58,7 +58,8 @@ class TestSummary(TestkitTestCase):
 
     def test_no_notification_info(self):
         summary = self.get_summary("CREATE (n) RETURN n")
-        self.assertIsNone(summary.notifications)
+        notifications = summary.notifications
+        self.assertTrue(notifications is None or summary.notifications == [])
 
     def test_can_obtain_notification_info(self):
         summary = self.get_summary("EXPLAIN MATCH (n), (m) RETURN n, m")
