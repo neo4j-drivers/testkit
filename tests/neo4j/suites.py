@@ -8,6 +8,8 @@ import unittest
 from tests.neo4j.shared import env_neo4j_version
 from tests.testenv import get_test_result_class
 
+# [bolt-version-bump] search tag when updating IT matrix
+
 #######################
 # Suite for Neo4j 4.2 #
 #######################
@@ -22,40 +24,45 @@ suite_4x2.addTest(loader.discover(
     ))
 ))
 
-#######################
-# Suite for Neo4j 4.3 #
-#######################
+########################
+# Suite for Neo4j 4.3  #
+########################
 suite_4x3 = suite_4x2
 
-#######################
-# Suite for Neo4j 4.4 #
-#######################
+########################
+# Suite for Neo4j 4.4  #
+########################
 suite_4x4 = suite_4x3
 
-#######################
-# Suite for Neo4j 5.0 #
-#######################
+########################
+# Suite for Neo4j 5.0  #
+########################
 suite_5x0 = suite_4x3
 
-#######################
-# Suite for Neo4j 5.5 #
-#######################
+########################
+# Suite for Neo4j 5.5  #
+########################
 suite_5x5 = suite_5x0
 
-#######################
-# Suite for Neo4j 5.7 #
-#######################
+########################
+# Suite for Neo4j 5.7  #
+########################
 suite_5x7 = suite_5x5
 
-#######################
-# Suite for Neo4j 5.9 #
-#######################
+########################
+# Suite for Neo4j 5.9  #
+########################
 suite_5x9 = suite_5x7
 
-#######################
+########################
 # Suite for Neo4j 5.13 #
-#######################
+########################
 suite_5x13 = suite_5x9
+
+########################
+# Suite for Neo4j 5.23 #
+########################
+suite_5x23 = suite_5x13
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -75,7 +82,10 @@ if __name__ == "__main__":
                   "Should be X.Y for X and Y integer.")
             sys.exit(-2)
 
-    if version >= (5, 13):
+    # [bolt-version-bump] search tag when updating IT matrix
+    if version >= (5, 23):
+        suite = suite_5x23
+    elif version >= (5, 13):
         suite = suite_5x13
     elif version >= (5, 9):
         suite = suite_5x9

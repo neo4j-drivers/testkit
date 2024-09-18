@@ -85,6 +85,8 @@ def initialise_configurations(settings):
             stress_test_duration=stress_test
         )
 
+    # [bolt-version-bump] search tag when updating IT matrix
+
     # ATTENTION: make sure to have all configs that use the same neo4j docker
     # image (e.g., all configs with neo4j:4.4-community, then all with
     # neo4j:4.4-enterprise, ...) grouped together. Else, TestKit will download
@@ -115,6 +117,9 @@ def initialise_configurations(settings):
             ("5.9",    True,        True,     "neo4j",  0),
             # Bolt 5.4
             ("5.13",   True,        True,     "neo4j",  0),
+            # Bolt 5.5 (skipped - no server released with support)
+            # Bolt 5.6
+            ("5.23",   True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
