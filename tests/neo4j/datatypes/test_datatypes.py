@@ -70,8 +70,8 @@ class TestDataTypes(_TestTypesBase):
                 # driver backend  does not implement byte values
                 if isinstance(val, types.CypherBytes):
                     continue
-
-            self._verify_can_echo(val)
+            with self.subTest(x=val):
+                self._verify_can_echo(val)
 
     def test_should_echo_very_long_list(self):
         vals = [
