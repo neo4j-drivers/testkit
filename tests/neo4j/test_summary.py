@@ -10,7 +10,10 @@ from tests.neo4j.shared import (
     QueryBuilder,
     requires_multi_db_support,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 
 
 class TestSummary(TestkitTestCase):
@@ -24,6 +27,17 @@ class TestSummary(TestkitTestCase):
             self._session.close()
         self._driver.close()
         super().tearDown()
+
+    def clear_db(self):
+        def work(tx):
+            result = tx.run("MATCH (n) DETACH DELETE n")
+            result.consume()
+
+        self._session = self._driver.session("w")
+        try:
+            return self._session.execute_write(work)
+        finally:
+            self._session.close()
 
     def get_summary(self, query, params=None, **kwargs):
         def work(tx):
@@ -60,6 +74,27 @@ class TestSummary(TestkitTestCase):
         summary = self.get_summary("CREATE (n) RETURN n")
         notifications = summary.notifications
         self.assertTrue(notifications is None or summary.notifications == [])
+
+    def _test_status(self, query, expected_code):
+        summary = self.get_summary(query)
+        statuses = summary.gql_status_objects
+        self.assertEqual(len(statuses), 1)
+        status = statuses[0]
+        self.assertFalse(status.is_notification)
+        self.assertEqual(status.gql_status, expected_code)
+
+    @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
+    def test_success_status(self):
+        self._test_status("CREATE (n) RETURN n", "00000")
+
+    @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
+    def test_omitted_status(self):
+        self._test_status("CREATE (n)", "00001")
+
+    @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
+    def test_no_data_status(self):
+        self.clear_db()
+        self._test_status("MATCH (n) RETURN n", "02000")
 
     def test_can_obtain_notification_info(self):
         summary = self.get_summary("EXPLAIN MATCH (n), (m) RETURN n, m")
