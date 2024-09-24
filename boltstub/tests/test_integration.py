@@ -117,7 +117,7 @@ class ThreadedServer(threading.Thread):
     def run(self):
         try:
             self.service.start()
-        except BaseException as e:
+        except Exception as e:
             traceback.print_exc()
             self.exc = e
 

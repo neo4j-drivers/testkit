@@ -366,7 +366,7 @@ class ClientLine(MessageLine):
             return type(is_) in should.types
         if isinstance(is_, Structure):
             return is_ == should
-        if type(should) != type(is_):
+        if type(should) is not type(is_):
             return False
         if isinstance(should, (list, tuple)):
             if len(should) != len(is_):
