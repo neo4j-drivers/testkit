@@ -146,7 +146,7 @@ class Channel:
         if not no_input:
             try:
                 msg = self.peek()
-            except BaseException:
+            except Exception:
                 msg = (
                     "some data (encountered error while trying to peek):\n"
                     f"{traceback.format_exc()}"
