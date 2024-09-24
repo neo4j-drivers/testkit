@@ -1,0 +1,19 @@
+!: BOLT #BOLT_VERSION#
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: FAILURE #ERROR#
+# Allow driver to pipeline a PULL or DISCARD after RUN
+{?
+    {{
+        C: PULL {"[n]": {"Z": "*"}}
+        S: IGNORED
+    ----
+        C: DISCARD {"[n]": {"Z": "*"}}
+        S: IGNORED
+    }}
+?}
++: RESET
+A: GOODBYE

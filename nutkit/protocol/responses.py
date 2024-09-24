@@ -761,15 +761,27 @@ class DriverError(BaseError):
     """
 
     def __init__(self, id=None, errorType=None, msg="", code="",
-                 retryable=None):
+                 retryable=None, gqlStatus=None, statusDescription=None,
+                 cause=None, diagnosticRecord=None, classification=None):
         self.id = id
         self.errorType = errorType
         self.msg = msg
         self.code = code
         self.retryable = retryable
+        assert isinstance(gqlStatus, (str, type(None)))
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, (str, type(None)))
+        self.status_description = statusDescription
+        if cause is not None:
+            assert isinstance(cause, DriverError)
+        self.cause = cause
+        assert isinstance(diagnosticRecord, (dict, type(None)))
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(classification, (str, type(None)))
+        self.classification = classification
 
     def __str__(self):
-        return f"DriverError(type={self.errorType}, msg={self.msg!r})"
+        return f"DriverError(type={self.errorType}, msg={self.msg!r}, code={self.code!r}, gql_status={self.gql_status!r})"
 
     def __repr__(self):
         return self.__str__()
