@@ -569,4 +569,3 @@ class Bolt5x7Protocol(Bolt5x6Protocol):
     equivalent_versions = set()
 
     server_agent = "Neo4j/5.24.0"
-
