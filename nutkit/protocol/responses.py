@@ -774,7 +774,7 @@ class DriverError(BaseError):
         assert isinstance(statusDescription, (str, type(None)))
         self.status_description = statusDescription
         if cause is not None:
-            assert isinstance(cause, DriverErrorCause)
+            assert isinstance(cause, GqlError)
         self.cause = cause
         assert isinstance(diagnosticRecord, (dict, type(None)))
         self.diagnostic_record = diagnosticRecord
@@ -802,10 +802,9 @@ class DriverError(BaseError):
         return self.__str__()
 
 
-class DriverErrorCause:
-    """
-    TODO
-    """
+class GqlError:
+    """TODO."""
+
     def __init__(self, msg="", gqlStatus=None, statusDescription=None,
                  cause=None, diagnosticRecord=None, classification=None,
                  rawClassification=None):
@@ -815,7 +814,7 @@ class DriverErrorCause:
         assert isinstance(statusDescription, (str, type(None)))
         self.status_description = statusDescription
         if cause is not None:
-            assert isinstance(cause, DriverErrorCause)
+            assert isinstance(cause, GqlError)
         self.cause = cause
         assert isinstance(diagnosticRecord, (dict, type(None)))
         self.diagnostic_record = diagnosticRecord
@@ -835,7 +834,6 @@ class DriverErrorCause:
             f"rawClassification={self.raw_classification!r}, "
             f"cause={self.cause!r})"
         )
-
 
 
 class FrontendError(BaseError):
