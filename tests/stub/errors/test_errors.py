@@ -66,7 +66,7 @@ class _ErrorTestCase(TestkitTestCase, ABC):
 
 class TestError5x5(_ErrorTestCase):
     required_features = (
-        types.Feature.BOLT_5_6,
+        types.Feature.BOLT_5_7,
     )
 
     bolt_version = "5.6"
