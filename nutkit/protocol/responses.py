@@ -781,7 +781,8 @@ class DriverError(BaseError):
         self.classification = classification
 
     def __str__(self):
-        return f"DriverError(type={self.errorType}, msg={self.msg!r}, code={self.code!r}, gql_status={self.gql_status!r})"
+        return f"""DriverError(type={self.errorType}, msg={self.msg!r},
+                code={self.code!r}, gql_status={self.gql_status!r})"""
 
     def __repr__(self):
         return self.__str__()

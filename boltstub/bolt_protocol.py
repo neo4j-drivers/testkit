@@ -562,6 +562,7 @@ class Bolt5x6Protocol(Bolt5x5Protocol):
 
     server_agent = "Neo4j/5.23.0"
 
+
 class Bolt5x7Protocol(Bolt5x6Protocol):
     protocol_version = (5, 7)
     version_aliases = set()
