@@ -78,7 +78,10 @@ class TestError5x5(_ErrorTestCase):
         ):
             with self.subTest(code=error_code):
                 error_message = "Sever ain't cool with this!"
-                error_data = {"code": error_code, "message": error_message}
+                error_data = {
+                    "neo4j_code": error_code,
+                    "message": error_message
+                }
 
                 error = self.get_error(error_data)
 
@@ -130,7 +133,7 @@ class TestError5x7(_ErrorTestCase):
             "gql_status": error_status,
             "message": error_message,
             "description": error_description,
-            "code": error_code,
+            "neo4j_code": error_code,
             "diagnostic_record": diagnostic_record,
         }
 
@@ -169,13 +172,13 @@ class TestError5x7(_ErrorTestCase):
             "gql_status": error_status,
             "message": "msg",
             "description": "description",
-            "code": error_code,
+            "neo4j_code": error_code,
             "diagnostic_record": DEFAULT_DIAG_REC,
             "cause": {
                 "gql_status": cause_status,
                 "message": cause_message,
                 "description": cause_description,
-                "code": cause_code,
+                "neo4j_code": cause_code,
                 "diagnostic_record": diagnostic_record,
             },
         }
@@ -207,7 +210,7 @@ class TestError5x7(_ErrorTestCase):
             "gql_status": make_status(0),
             "message": "msg",
             "description": "explanation",
-            "code": "Neo.ClientError.Bar.Baz0",
+            "neo4j_code": "Neo.ClientError.Bar.Baz0",
             "diagnostic_record": DEFAULT_DIAG_REC,
         }
         parent_data = error_data
@@ -216,7 +219,7 @@ class TestError5x7(_ErrorTestCase):
                 "gql_status": make_status(i),
                 "message": f"msg{i}",
                 "description": f"explanation{i}",
-                "code": f"Neo.ClientError.Bar.Baz{i}",
+                "neo4j_code": f"Neo.ClientError.Bar.Baz{i}",
                 "diagnostic_record": DEFAULT_DIAG_REC,
             }
             parent_data = parent_data["cause"]
