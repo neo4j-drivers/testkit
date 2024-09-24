@@ -121,7 +121,7 @@ class TestError5x7(_ErrorTestCase):
     #  * [x] test diagnostic record filling with default values
     #  * [x] test diagnostic record with "future" values
     #  * [x] all of the above in a cause as well
-    #  * [ ] test cause nesting
+    #  * [x] test cause nesting
     #  * [ ] test GQL values with older servers
 
     def _make_test_error_data(
@@ -205,6 +205,34 @@ class TestError5x7(_ErrorTestCase):
         if "cause" in data:
             self._assert_is_test_error(exc.cause, data["cause"])
 
+    def test_simple_gql_error(self):
+        error_data = self._make_test_error_data()
+        error = self.get_error(error_data)
+        self._assert_is_test_error(error, error_data)
+
+    def test_nested_gql_error(self):
+        for depth in (1, 10):
+            with self.subTest(depth=depth):
+                cause = None
+                for i in range(depth, 0, -1):
+                    cause = self._make_test_error_data(
+                        status=f"01N{i:02d}",
+                        description=f"description ({i})",
+                        message=f"message ({i})",
+                        code=None,
+                        diagnostic_record={
+                            "CURRENT_SCHEMA": f"/{i}",
+                            "OPERATION": f"OP{i}",
+                            "OPERATION_CODE": f"{i}",
+                            "_classification": f"CLIENT_ERROR{i}",
+                            "_status_parameters": {"nestedCause": i},
+                        },
+                        cause=cause,
+                    )
+                error_data = self._make_test_error_data(cause=cause)
+                error = self.get_error(error_data)
+                self._assert_is_test_error(error, error_data)
+
     def test_error_classification(self):
         for as_cause in (False, True):
             for classification in (
@@ -281,120 +309,3 @@ class TestError5x7(_ErrorTestCase):
                 error = self.get_error(error_data)
                 diagnostic_record["_status_parameters"] = b"\x00\xff"
                 self._assert_is_test_error(error, error_data)
-
-    def test_error(self):
-        error_status = "01N00"
-        error_message = "Sever ain't cool with this, John Doe!"
-        error_description = "cool class - mediocre subclass"
-        error_code = "Neo.ClientError.User.Uncool"
-        diagnostic_record = {
-            "CURRENT_SCHEMA": "/",
-            "OPERATION": "",
-            "OPERATION_CODE": "0",
-            "_classification": "CLIENT_ERROR",
-            "_status_parameters": {
-                "userName": "John Doe",
-            },
-        }
-        error_data = {
-            "gql_status": error_status,
-            "message": error_message,
-            "description": error_description,
-            "neo4j_code": error_code,
-            "diagnostic_record": diagnostic_record,
-        }
-
-        error = self.get_error(error_data)
-        self.assertEqual(error.code, error_code)
-        self.assertEqual(error.msg, error_message)
-        # TODO: what part of the error is used to determine retryability?
-        # self.assertEqual(error.retryable, retryable)
-        self.assertEqual(error.gql_status, error_status)
-        self.assertEqual(
-            error.status_description,
-            error_description
-        )
-        self.assertIsNone(error.cause)
-        self.assertEqual(error.diagnostic_record,
-                         diagnostic_record)
-        self.assertEqual(error.classification, "CLIENT_ERROR")
-
-    def test_nested_error(self):
-        error_status = "01ABC"
-        error_code = "Neo.ClientError.Bar.Baz"
-        cause_status = "01N00"
-        cause_message = "Sever ain't cool with this, John Doe!"
-        cause_description = "cool class - mediocre subclass"
-        cause_code = "Neo.ClientError.User.Uncool"
-        diagnostic_record = {
-            "CURRENT_SCHEMA": "/",
-            "OPERATION": "",
-            "OPERATION_CODE": "0",
-            "_classification": "CLIENT_ERROR",
-            "_status_parameters": {
-                "userName": "John Doe",
-            },
-        }
-        error_data = {
-            "gql_status": error_status,
-            "message": "msg",
-            "description": "description",
-            "neo4j_code": error_code,
-            "diagnostic_record": DEFAULT_DIAG_REC,
-            "cause": {
-                "gql_status": cause_status,
-                "message": cause_message,
-                "description": cause_description,
-                "neo4j_code": cause_code,
-                "diagnostic_record": diagnostic_record,
-            },
-        }
-
-        error = self.get_error(error_data)
-
-        self.assertIsInstance(error, types.DriverError)
-        self.assertEqual(error.code, error_code)
-
-        cause = error.cause
-        self.assertIsNotNone(cause)
-        self.assertEqual(cause.code, cause_code)
-        self.assertEqual(cause.msg, cause_message)
-        # TODO: self.assertEqual(cause.retryable, ?)
-        self.assertEqual(cause.gql_status, cause_status)
-        self.assertEqual(cause.status_description,
-                         cause_description)
-        self.assertIsNone(cause.cause)
-        self.assertEqual(cause.diagnostic_record,
-                         diagnostic_record)
-        # TODO: TBD
-        # self.assertEqual(cause.classification, "UNKNOWN")
-
-    def test_deeply_nested_error(self):
-        def make_status(i_):
-            return f"01N{i_:02d}"
-
-        error_data = {
-            "gql_status": make_status(0),
-            "message": "msg",
-            "description": "explanation",
-            "neo4j_code": "Neo.ClientError.Bar.Baz0",
-            "diagnostic_record": DEFAULT_DIAG_REC,
-        }
-        parent_data = error_data
-        for i in range(1, 10):
-            parent_data["cause"] = {
-                "gql_status": make_status(i),
-                "message": f"msg{i}",
-                "description": f"explanation{i}",
-                "neo4j_code": f"Neo.ClientError.Bar.Baz{i}",
-                "diagnostic_record": DEFAULT_DIAG_REC,
-            }
-            parent_data = parent_data["cause"]
-
-        error = self.get_error(error_data)
-
-        for i in range(10):
-            self.assertIsInstance(error, types.DriverError)
-            self.assertEqual(error.code, f"Neo.ClientError.Bar.Baz{i}")
-            self.assertEqual(error.gql_status, make_status(i))
-            error = error.cause
