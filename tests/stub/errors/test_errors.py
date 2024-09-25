@@ -304,3 +304,18 @@ class TestError5x7(_ErrorTestCase):
                 error = self.get_error(error_data)
                 diagnostic_record["_status_parameters"] = b"\x00\xff"
                 self._assert_is_test_error(error, error_data)
+
+    def test_error_retryable(self):
+        for (neo4j_code, retryable) in (
+            ("Neo.ClientError.User.Uncool", False),
+            ("Neo.TransientError.Oopsie.OhSnap", True),
+        ):
+            with self.subTest(error_code=neo4j_code):
+                error_data = self._make_test_error_data(
+                    code=neo4j_code,
+                )
+
+                exc = self.get_error(error_data)
+
+                self._assert_is_test_error(exc, error_data)
+                self.assertEqual(exc.retryable, retryable)
