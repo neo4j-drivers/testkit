@@ -65,12 +65,19 @@ class _ErrorTestCase(TestkitTestCase, ABC):
                     return exc.exception
 
 
-class TestError5x5(_ErrorTestCase):
+DEFAULT_DIAG_REC = {
+    "CURRENT_SCHEMA": "/",
+    "OPERATION": "",
+    "OPERATION_CODE": "0",
+}
+
+
+class TestError5x6(_ErrorTestCase):
     required_features = (
-        types.Feature.BOLT_5_7,
+        types.Feature.BOLT_5_6,
     )
 
-    bolt_version = "5.7"
+    bolt_version = "5.6"
 
     def test_error(self):
         for (error_code, retryable) in (
@@ -80,33 +87,31 @@ class TestError5x5(_ErrorTestCase):
             with self.subTest(code=error_code):
                 error_message = "Sever ain't cool with this!"
                 error_data = {
-                    "neo4j_code": error_code,
+                    "code": error_code,
                     "message": error_message
                 }
 
-                error = self.get_error(error_data)
+                exc = self.get_error(error_data)
 
-                self.assertEqual(error.code, error_code)
-                self.assertEqual(error.msg, error_message)
-                self.assertEqual(error.retryable, retryable)
+                self.assertEqual(exc.code, error_code)
+                self.assertEqual(exc.msg, error_message)
+                self.assertEqual(exc.retryable, retryable)
                 if self.driver_supports_features(types.Feature.BOLT_5_7):
-                    self.assertEqual(error.gql_status, "50N42")
-                    expected_desc = (
+                    self.assertEqual(exc.gql_status, "50N42")
+                    self.assertEqual(
+                        exc.status_description,
                         "error: "
                         "general processing exception - unknown error. "
-                        f"{error_message}"
+                        f"{error_message}",
                     )
-                    self.assertEqual(error.status_description, expected_desc)
-                    self.assertIsNone(error.cause)
-                    self.assertEqual(error.classification, "UNKNOWN")
-                    self.assertEqual(error.raw_classification, None)
-
-
-DEFAULT_DIAG_REC = {
-    "CURRENT_SCHEMA": "/",
-    "OPERATION": "",
-    "OPERATION_CODE": "0",
-}
+                    self.assertEqual(
+                        exc.diagnostic_record,
+                        types.as_cypher_type(DEFAULT_DIAG_REC).value,
+                    )
+                    self.assertEqual(exc.raw_classification, None)
+                    self.assertEqual(exc.classification, "UNKNOWN")
+                    self.assertIsNone(exc.cause)
+                    self.assertEqual(exc.retryable, retryable)
 
 
 class TestError5x7(_ErrorTestCase):
@@ -115,14 +120,6 @@ class TestError5x7(_ErrorTestCase):
     )
 
     bolt_version = "5.7"
-
-    # TODO: tests:
-    #  * [x] test classification parsing
-    #  * [x] test diagnostic record filling with default values
-    #  * [x] test diagnostic record with "future" values
-    #  * [x] all of the above in a cause as well
-    #  * [x] test cause nesting
-    #  * [ ] test GQL values with older servers
 
     def _make_test_error_data(
         self,
@@ -156,9 +153,7 @@ class TestError5x7(_ErrorTestCase):
             )
         if diagnostic_record is ...:
             data["diagnostic_record"] = {
-                "OPERATION": "",
-                "OPERATION_CODE": "0",
-                "CURRENT_SCHEMA": "/",
+                **DEFAULT_DIAG_REC,
                 "_classification": "CLIENT_ERROR",
                 "_status_parameters": {"userName": "John Doe"},
             }
