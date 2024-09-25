@@ -198,6 +198,9 @@ class Feature(Enum):
     # configuration as long as values match.
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
+    # The driver cannot differentiate between integer and float numbers.
+    # I.e., JavaScript :P
+    DETAIL_NUMBER_IS_NUMBER = "Detail:NumberIsNumber"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint
