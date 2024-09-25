@@ -283,6 +283,9 @@ class TestError5x7(_ErrorTestCase):
                     self._assert_is_test_error(error, error_data)
 
     def test_keeps_rubbish_in_diagnostic_record(self):
+        use_spacial = self.driver_supports_features(
+            types.Feature.API_TYPE_SPATIAL
+        )
         for as_cause in (False, True):
             with self.subTest(as_cause=as_cause):
                 diagnostic_record = {
@@ -292,8 +295,12 @@ class TestError5x7(_ErrorTestCase):
                     "CURRENT_SCHEMA": {"uh": "oh!"},
                     "OPERATION_CODE": False,
                     "_classification": 42,
-                    # stub script will interpret this as JOLT bytes
-                    "_status_parameters": {"Hello": "Goodbye"},
+                    "_status_parameters": [
+                        # stub script will interpret this as JOLT spatial point
+                        {"@": "SRID=4326;POINT(56.21 13.43)"}
+                        if use_spacial
+                        else "whatever",
+                    ],
                 }
                 error_data = self._make_test_error_data(
                     diagnostic_record=diagnostic_record,
@@ -301,7 +308,13 @@ class TestError5x7(_ErrorTestCase):
                 )
                 if as_cause:
                     error_data = self._make_test_error_data(cause=error_data)
+
                 error = self.get_error(error_data)
+
+                if use_spacial:
+                    diagnostic_record["_status_parameters"] = [
+                        types.CypherPoint("wgs84", 56.21, 13.43)
+                    ]
                 self._assert_is_test_error(error, error_data)
 
     def test_error_retryable(self):
