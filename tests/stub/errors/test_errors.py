@@ -88,7 +88,7 @@ class TestError5x6(_ErrorTestCase):
                 error_message = "Sever ain't cool with this!"
                 error_data = {
                     "code": error_code,
-                    "message": error_message
+                    "message": error_message,
                 }
 
                 exc = self.get_error(error_data)
@@ -311,9 +311,7 @@ class TestError5x7(_ErrorTestCase):
             ("Neo.TransientError.Oopsie.OhSnap", True),
         ):
             with self.subTest(error_code=neo4j_code):
-                error_data = self._make_test_error_data(
-                    code=neo4j_code,
-                )
+                error_data = self._make_test_error_data(code=neo4j_code)
 
                 exc = self.get_error(error_data)
 
