@@ -293,7 +293,7 @@ class TestError5x7(_ErrorTestCase):
                     "OPERATION_CODE": False,
                     "_classification": 42,
                     # stub script will interpret this as JOLT bytes
-                    "_status_parameters": {"#": "00 FF"},
+                    "_status_parameters": {"Hello": "Goodbye"},
                 }
                 error_data = self._make_test_error_data(
                     diagnostic_record=diagnostic_record,
@@ -302,7 +302,6 @@ class TestError5x7(_ErrorTestCase):
                 if as_cause:
                     error_data = self._make_test_error_data(cause=error_data)
                 error = self.get_error(error_data)
-                diagnostic_record["_status_parameters"] = b"\x00\xff"
                 self._assert_is_test_error(error, error_data)
 
     def test_error_retryable(self):
