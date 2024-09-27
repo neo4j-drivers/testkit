@@ -101,7 +101,7 @@ class TestError5x6(_ErrorTestCase):
                     self.assertEqual(
                         exc.status_description,
                         "error: "
-                        "general processing exception - unknown error. "
+                        "general processing exception - unexpected error. "
                         f"{error_message}",
                     )
                     self.assertEqual(
