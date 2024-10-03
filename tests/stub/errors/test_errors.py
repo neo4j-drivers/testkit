@@ -111,7 +111,10 @@ class TestError5x6(_ErrorTestCase):
                     self.assertEqual(exc.raw_classification, None)
                     self.assertEqual(exc.classification, "UNKNOWN")
                     self.assertIsNone(exc.cause)
-                    self.assertEqual(exc.retryable, retryable)
+                    if self.driver_supports_features(
+                        types.Feature.API_RETRYABLE_EXCEPTION
+                    ):
+                        self.assertEqual(exc.retryable, retryable)
 
 
 class TestError5x7(_ErrorTestCase):
