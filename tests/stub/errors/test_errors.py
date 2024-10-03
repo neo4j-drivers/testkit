@@ -8,7 +8,10 @@ from copy import deepcopy
 
 import nutkit.protocol as types
 from nutkit.frontend import Driver
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
 
 
@@ -80,6 +83,13 @@ class TestError5x6(_ErrorTestCase):
     bolt_version = "5.6"
 
     def test_error(self):
+        supports_retryable_check = self.driver_supports_features(
+            types.Feature.API_RETRYABLE_EXCEPTION
+        )
+        supports_bolt_5_7 = self.driver_supports_features(
+            types.Feature.BOLT_5_7
+        )
+
         for (error_code, retryable) in (
             ("Neo.ClientError.User.Uncool", False),
             ("Neo.TransientError.Oopsie.OhSnap", True),
@@ -95,8 +105,9 @@ class TestError5x6(_ErrorTestCase):
 
                 self.assertEqual(exc.code, error_code)
                 self.assertEqual(exc.msg, error_message)
-                self.assertEqual(exc.retryable, retryable)
-                if self.driver_supports_features(types.Feature.BOLT_5_7):
+                if supports_retryable_check:
+                    self.assertEqual(exc.retryable, retryable)
+                if supports_bolt_5_7:
                     self.assertEqual(exc.gql_status, "50N42")
                     self.assertEqual(
                         exc.status_description,
@@ -111,9 +122,7 @@ class TestError5x6(_ErrorTestCase):
                     self.assertEqual(exc.raw_classification, None)
                     self.assertEqual(exc.classification, "UNKNOWN")
                     self.assertIsNone(exc.cause)
-                    if self.driver_supports_features(
-                        types.Feature.API_RETRYABLE_EXCEPTION
-                    ):
+                    if supports_retryable_check:
                         self.assertEqual(exc.retryable, retryable)
 
 
@@ -320,6 +329,7 @@ class TestError5x7(_ErrorTestCase):
                     ]
                 self._assert_is_test_error(error, error_data)
 
+    @driver_feature(types.Feature.API_RETRYABLE_EXCEPTION)
     def test_error_retryable(self):
         for (neo4j_code, retryable) in (
             ("Neo.ClientError.User.Uncool", False),
