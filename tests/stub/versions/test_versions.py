@@ -157,9 +157,13 @@ class TestProtocolVersions(TestkitTestCase):
     def test_supports_bolt5x6(self):
         self._run("5x6")
 
+    @driver_feature(types.Feature.BOLT_5_7)
+    def test_supports_bolt5x7(self):
+        self._run("5x7")
+
     def test_server_version(self):
         for version in (
-            "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             if not self.driver_supports_bolt(version):
@@ -169,7 +173,7 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_agent(self):
         for version in (
-            "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             for agent, reject in (
@@ -204,7 +208,7 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in (
-            "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "4x1", "3"
         ):
             if not self.driver_supports_bolt(version):
