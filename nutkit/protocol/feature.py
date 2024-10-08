@@ -123,6 +123,8 @@ class Feature(Enum):
     BOLT_5_5 = "Feature:Bolt:5.5"
     # The driver supports Bolt protocol version 5.6
     BOLT_5_6 = "Feature:Bolt:5.6"
+    # The driver supports Bolt protocol version 5.7
+    BOLT_5_7 = "Feature:Bolt:5.7"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation

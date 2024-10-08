@@ -761,18 +761,79 @@ class DriverError(BaseError):
     """
 
     def __init__(self, id=None, errorType=None, msg="", code="",
-                 retryable=None):
+                 retryable=None, gqlStatus=None, statusDescription=None,
+                 cause=None, diagnosticRecord=None, classification=None,
+                 rawClassification=None):
         self.id = id
         self.errorType = errorType
         self.msg = msg
         self.code = code
         self.retryable = retryable
+        assert isinstance(gqlStatus, (str, type(None)))
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, (str, type(None)))
+        self.status_description = statusDescription
+        if cause is not None:
+            assert isinstance(cause, GqlError)
+        self.cause = cause
+        assert isinstance(diagnosticRecord, (dict, type(None)))
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(classification, (str, type(None)))
+        self.classification = classification
+        assert isinstance(rawClassification, (str, type(None)))
+        self.raw_classification = rawClassification
 
     def __str__(self):
-        return f"DriverError(type={self.errorType}, msg={self.msg!r})"
+        return (
+            f"DriverError("
+            f"errorType={self.errorType!r}, "
+            f"msg={self.msg!r}, "
+            f"code={self.code!r}, "
+            f"retryable={self.retryable!r}, "
+            f"gqlStatus={self.gql_status!r}, "
+            f"statusDescription={self.status_description!r}, "
+            f"diagnosticRecord={self.diagnostic_record!r}, "
+            f"classification={self.classification!r}, "
+            f"rawClassification={self.raw_classification!r}, "
+            f"cause={self.cause!r})"
+        )
 
     def __repr__(self):
         return self.__str__()
+
+
+class GqlError:
+    """TODO."""
+
+    def __init__(self, msg="", gqlStatus=None, statusDescription=None,
+                 cause=None, diagnosticRecord=None, classification=None,
+                 rawClassification=None):
+        self.msg = msg
+        assert isinstance(gqlStatus, (str, type(None)))
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, (str, type(None)))
+        self.status_description = statusDescription
+        if cause is not None:
+            assert isinstance(cause, GqlError)
+        self.cause = cause
+        assert isinstance(diagnosticRecord, (dict, type(None)))
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(classification, (str, type(None)))
+        self.classification = classification
+        assert isinstance(rawClassification, (str, type(None)))
+        self.raw_classification = rawClassification
+
+    def __str__(self):
+        return (
+            f"DriverErrorCause("
+            f"msg={self.msg!r}, "
+            f"gqlStatus={self.gql_status!r}, "
+            f"statusDescription={self.status_description!r}, "
+            f"diagnosticRecord={self.diagnostic_record!r}, "
+            f"classification={self.classification!r}, "
+            f"rawClassification={self.raw_classification!r}, "
+            f"cause={self.cause!r})"
+        )
 
 
 class FrontendError(BaseError):

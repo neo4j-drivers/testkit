@@ -496,4 +496,18 @@ def as_cypher_type(value):
         return CypherString(value)
     if isinstance(value, (bytes, bytearray)):
         return CypherBytes(value)
+    if isinstance(
+        value,
+        (
+            CypherNode,
+            CypherRelationship,
+            CypherPath,
+            CypherPoint,
+            CypherDate,
+            CypherTime,
+            CypherDateTime,
+            CypherDuration,
+        )
+    ):
+        return value
     raise TypeError("Unsupported type: {}".format(type(value)))

@@ -190,6 +190,14 @@ class Core:
                 "NEO4J_initial_dbms_default__primaries__count":
                     str(len(initial_members)),
             })
+            if self._version < (5, 16):
+                # Bug in server which can lead to the server SSRing a query
+                # to itself in an infinite loop.
+                # https://trello.com/c/NvCIKscB/1216-erroneous-auto-ssring
+                env_map.update({
+                    "NEO4J_dbms_cluster_raft_leader__transfer_balancing__strategy":  # noqa: E501
+                        "NO_BALANCING",  # noqa: E131
+                })
 
         logs_path = join(self._artifacts_path, "logs")
         os.makedirs(logs_path, exist_ok=True)
