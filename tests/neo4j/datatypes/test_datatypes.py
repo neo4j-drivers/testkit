@@ -53,17 +53,29 @@ class TestDataTypes(_TestTypesBase):
 
         self._create_driver_and_session()
         for val in vals:
+            if self.driver_supports_features(
+                types.Feature.DETAIL_NUMBER_IS_NUMBER
+            ):
+                if (
+                    isinstance(val, types.CypherFloat)
+                    and float(val.value) % 1 == 0
+                ):
+                    continue
             # TODO: remove this block once all languages work
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["dotnet"]:
                 # Driver treats float as int
-                if (isinstance(val, types.CypherFloat)
-                        and float(val.value) % 1 == 0):
+                if (
+                    isinstance(val, types.CypherFloat)
+                    and float(val.value) % 1 == 0
+                ):
                     continue
             # TODO: remove this block once all languages work
             if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
                 # driver backend does not implement special float values
-                if (isinstance(val, types.CypherFloat)
-                        and isinstance(val.value, str)):
+                if (
+                    isinstance(val, types.CypherFloat)
+                    and isinstance(val.value, str)
+                ):
                     continue
             # TODO: remove this block once all languages work
             if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
