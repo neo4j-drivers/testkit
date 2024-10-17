@@ -33,22 +33,4 @@ C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
 S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
 
 *: RESET
-C: LOGOFF
-C: LOGON {"scheme": "basic", "principal": "neo4j", "credentials": "pass"}
-
-{{
-    C: RESET
-    S: SUCCESS {}
-    S: SUCCESS {}
-    S: SUCCESS {}
-
-    C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
-----
-    C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
-    S: SUCCESS {}
-    S: SUCCESS {}
-}}
-S: SUCCESS {"rt": {"ttl": 1000, "db": "adb", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9020"], "role":"WRITE"}]}}
-
-*: RESET
 ?: GOODBYE
