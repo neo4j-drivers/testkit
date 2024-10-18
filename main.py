@@ -23,11 +23,8 @@ import driver
 import neo4j
 import runner
 import settings
-from tests.testenv import (
-    begin_test_suite,
-    end_test_suite,
-    in_teamcity,
-)
+import waiter
+from tests.testenv import in_teamcity
 
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]
@@ -51,11 +48,10 @@ def initialise_configurations(settings):
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
+        image = f"neo4j:{version}{'-enterprise' if enterprise else ''}"
         return neo4j.Config(
             name=name,
-            image=(
-                "neo4j:%s%s" % (version, "-enterprise" if enterprise else "")
-            ),
+            image=image,
             version=version,
             edition=edition,
             cluster=cluster,
@@ -77,9 +73,10 @@ def initialise_configurations(settings):
         version_without_drop = ".".join(version.split(".")[:2])
         if docker_tag is None:
             docker_tag = version_without_drop
+        image = f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-debian-nightly"
         return neo4j.Config(
             name=name,
-            image=f"{settings.aws_ecr_uri}:{docker_tag}-{edition}-nightly",
+            image=image,
             version=version_without_drop,
             edition=edition,
             cluster=cluster,
@@ -87,6 +84,8 @@ def initialise_configurations(settings):
             scheme=scheme,
             stress_test_duration=stress_test
         )
+
+    # [bolt-version-bump] search tag when updating IT matrix
 
     # ATTENTION: make sure to have all configs that use the same neo4j docker
     # image (e.g., all configs with neo4j:4.4-community, then all with
@@ -100,15 +99,15 @@ def initialise_configurations(settings):
             ("3.5",    False,       False,    "bolt",   0),
             ("3.5",    True,        False,    "bolt",   0),
             ("3.5",    True,        True,     "neo4j", 60),
-            # not officially supported versions
             ("4.1",    True,        False,    "neo4j",  0),
             ("4.2",    True,        False,    "neo4j",  0),
-            # official backwards-compatibility
-            ("4.3",    False,       False,    "bolt",   0),
-            ("4.3",    False,       False,    "neo4j",  0),
-            ("4.3",    True,        False,    "bolt",   0),
             ("4.3",    True,        False,    "neo4j",  0),
-            ("4.3",    True,        True,     "neo4j", 90),
+            ("4.4",    False,       False,    "bolt",   0),
+            ("4.4",    False,       False,    "neo4j",  0),
+            ("4.4",    True,        False,    "bolt",   0),
+            ("4.4",    True,        False,    "neo4j",  0),
+            ("4.4",    True,        True,     "neo4j", 90),
+            ("5",      True,        True,     "neo4j", 90),
         )
     ]
     configurations += [
@@ -116,14 +115,14 @@ def initialise_configurations(settings):
                            docker_tag=docker_tag)
         for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
-            # nightly build of official backwards-compatible version
-            ("4.3",    "4.3",      True,        True,     "neo4j", 60),
-            # latest version
+            # latest versions of supported versions
             ("4.4",    "4.4",      False,       False,    "bolt",   0),
             ("4.4",    "4.4",      False,       False,    "neo4j",  0),
             ("4.4",    "4.4",      True,        False,    "bolt",  90),
             ("4.4",    "4.4",      True,        False,    "neo4j",  0),
             ("4.4",    "4.4",      True,        True,     "neo4j", 90),
+            # next version
+            ("5.dev",  "5",        True,        True,     "neo4j", 90),
         )
     ]
 
@@ -293,6 +292,8 @@ def main(settings, configurations):
     driver_build_artifacts_path = os.path.join(artifacts_path, "driver_build")
     runner_build_artifacts_path = os.path.join(artifacts_path, "runner_build")
     backend_artifacts_path = os.path.join(artifacts_path, "driver_backend")
+    waiter_artifacts_path = os.path.join(artifacts_path, "waiter")
+    waiter_build_artifacts_path = os.path.join(artifacts_path, "waiter_build")
     docker_artifacts_path = os.path.join(artifacts_path, "docker")
     # wipe artifacts path
     try:
@@ -304,6 +305,8 @@ def main(settings, configurations):
     os.makedirs(driver_build_artifacts_path)
     os.makedirs(runner_build_artifacts_path)
     os.makedirs(backend_artifacts_path)
+    os.makedirs(waiter_artifacts_path)
+    os.makedirs(waiter_build_artifacts_path)
     os.makedirs(docker_artifacts_path)
     print("Putting artifacts in %s" % artifacts_path)
 
@@ -332,9 +335,9 @@ def main(settings, configurations):
     print("Finished building driver and test backend")
 
     if test_flags["UNIT_TESTS"]:
-        begin_test_suite("Unit tests")
+        print(">>> Start test suite: driver's unit tests")
         run_fail_wrapper(driver_container.run_unit_tests)
-        end_test_suite("Unit tests")
+        print(">>> End test suite: driver's unit tests")
 
     print("Start test backend in driver container")
     driver_container.start_backend(backend_artifacts_path)
@@ -384,6 +387,12 @@ def main(settings, configurations):
         # no need to download any snapshots or start any servers
         return _exit()
 
+    waiter_container = waiter.start_container(
+        this_path, testkit_branch, networks[0], networks[1],
+        docker_artifacts_path, waiter_build_artifacts_path,
+        waiter_artifacts_path,
+    )
+
     """
     Neo4j server test matrix
     """
@@ -412,13 +421,14 @@ def main(settings, configurations):
             print("\n    Starting neo4j cluster (%s)\n" % server_name)
             server = neo4j.Cluster(neo4j_config.image,
                                    server_name,
-                                   neo4j_artifacts_path)
+                                   neo4j_artifacts_path,
+                                   neo4j_config.version)
         else:
             print("\n    Starting neo4j standalone server (%s)\n"
                   % server_name)
             server = neo4j.Standalone(
                 neo4j_config.image, server_name, neo4j_artifacts_path,
-                "neo4jserver", 7687, neo4j_config.edition
+                "neo4jserver", 7687, neo4j_config.version, neo4j_config.edition
             )
         server.start(networks[0])
         addresses = server.addresses()
@@ -431,6 +441,16 @@ def main(settings, configurations):
             print("Waiting for neo4j service at %s to be available"
                   % (address,))
             driver_container.poll_host_and_port_until_available(*address)
+            # Wait some more for server to be ready.
+            # Especially starting with 5.0, the server starts the bolt server
+            # before it starts the databases. This will mean the port will be
+            # available before queries can be executed for clusters and for
+            # the enterprise edition in stand-alone mode.
+            if int(neo4j_config.version.split(".", 1)[0]) >= 5:
+                core_address, core_port = address
+                waiter_container.wait_for_all_dbs(
+                    core_address, core_port, neo4j.username, neo4j.password
+                )
         print("Neo4j is reachable from driver")
 
         if test_flags["TESTKIT_TESTS"]:

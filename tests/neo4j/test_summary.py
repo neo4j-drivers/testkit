@@ -1,3 +1,5 @@
+import re
+
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
@@ -84,7 +86,7 @@ class TestSummary(TestkitTestCase):
         max_server_protocol_version = get_server_info().max_protocol_version
         common_protocol_versions = [
             f.value.split(":")[-1] for f in self._driver_features
-            if (f.name.startswith("BOLT_")
+            if (re.match(r"BOLT_\d+_\d+", f.name)
                 and f.value.split(":")[-1] <= max_server_protocol_version)
         ]
         if not common_protocol_versions:
@@ -99,22 +101,26 @@ class TestSummary(TestkitTestCase):
                           ("4.2", "4.1"))
         else:
             self.assertEqual(summary.server_info.protocol_version,
-                             get_server_info().max_protocol_version)
+                             common_max_version)
 
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
         if isinstance(summary, dict) and get_driver_name() in ["java"]:
             self.skipTest("Java 4.2 backend does not support summary")
 
-        version = summary.server_info.agent
-        self.assertIsInstance(version, str)
+        agent = summary.server_info.agent
+        self.assertIsInstance(agent, str)
         server_info = get_server_info()
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
-            self.assertTrue(version.startswith("Neo4j/"))
+            self.assertTrue(agent.startswith("Neo4j/"))
+        elif re.match(r"^(\d+)(\.dev)?$", server_info.version):
+            self.assertTrue(agent.startswith(
+                "Neo4j/" + server_info.version.split(".")[0]
+            ))
         else:
-            version = ".".join(summary.server_info.agent.split(".")[:2])
-            self.assertEqual(version, get_server_info().server_agent)
+            agent = ".".join(summary.server_info.agent.split(".")[:2])
+            self.assertEqual(agent, get_server_info().server_agent)
 
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
