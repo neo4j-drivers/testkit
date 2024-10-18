@@ -1,14 +1,5 @@
-import os
-
-from teamcity.testresult import (
-    escape,
-    TeamCityTestResult,
+from .env import in_teamcity
+from .testresult import (
+    team_city_test_result,
+    test_kit_basic_test_result,
 )
-
-
-def evaluate_env_variable():
-    env = os.environ.get("TEST_IN_TEAMCITY", "False").upper()
-    return env == "TRUE" or env == "1"
-
-
-in_teamcity = evaluate_env_variable()

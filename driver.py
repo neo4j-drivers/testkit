@@ -171,7 +171,7 @@ class Container:
         # When failing due to not being able to connect from client or seeing
         # issues like 'detected possible backend crash', make sure that this
         # works simply by commenting detach and see that the backend starts.
-        self._container.exec_detached(
+        self._container.exec_background(
             ["python3", self._glue_path + "backend.py"],
             env_map=env, log_path=artifacts_path
         )

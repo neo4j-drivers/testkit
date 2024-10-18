@@ -1,25 +1,11 @@
 from teamcity import (
-    escape,
     in_teamcity,
-    TeamCityTestResult,
+    team_city_test_result,
+    test_kit_basic_test_result,
 )
 
 
-def begin_test_suite(name):
-    if in_teamcity:
-        print("##teamcity[testSuiteStarted name='%s']" % escape(name))
-    else:
-        print(">>> Start test suite: %s" % name)
-
-
-def end_test_suite(name):
-    if in_teamcity:
-        print("##teamcity[testSuiteFinished name='%s']" % escape(name))
-    else:
-        print(">>> End test suite: %s" % name)
-
-
-def get_test_result_class():
+def get_test_result_class(name):
     if not in_teamcity:
-        return None
-    return TeamCityTestResult
+        return test_kit_basic_test_result(name)
+    return team_city_test_result(name)
