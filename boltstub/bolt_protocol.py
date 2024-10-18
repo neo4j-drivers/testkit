@@ -19,6 +19,7 @@
 from threading import Lock
 
 from .errors import (
+    BoltFeatureError,
     BoltMissingVersionError,
     BoltUnknownMessageError,
     BoltUnknownVersionError,
@@ -48,20 +49,25 @@ def next_auto_bolt_id():
         return f"bolt-{auto_bolt_id}"
 
 
-def get_bolt_protocol(version):
+def get_bolt_protocol(version, features=None):
     if version is None:
         raise BoltMissingVersionError()
     for sub in recursive_subclasses(BoltProtocol):
-        if (version == sub.protocol_version
-                or version in sub.version_aliases):
-            return sub
+        if (
+            version == sub.protocol_version
+            or version in sub.version_aliases
+        ):
+            return sub(features)
     raise BoltUnknownVersionError(
         "unsupported bolt version {}".format(version)
     )
 
 
 def verify_script_messages(script):
-    protocol = get_bolt_protocol(script.context.bolt_version)
+    protocol = get_bolt_protocol(
+        script.context.bolt_version,
+        script.context.bolt_features,
+    )
     for line in script.client_lines:
         # will raise an exception if the message is unknown or the body
         # cannot be decoded
@@ -106,14 +112,22 @@ class BoltProtocol:
     equivalent_versions = set()
 
     packstream_version = None
+    handshake_version = None
+    features = b"\x00"
 
     messages = {
         "C": {},
         "S": {},
     }
 
-    @classmethod
-    def decode_versions(cls, b):
+    def __init__(self, features=None):
+        if features is not None:
+            raise BoltFeatureError(
+                f"{self.__class__.__name__} does not support bolt feature "
+                f"flags"
+            )
+
+    def decode_versions(self, b):
         assert isinstance(b, (bytes, bytearray))
         assert len(b) == 16
         for spec in (b[i:(i + 4)] for i in range(0, 16, 4)):
@@ -121,66 +135,62 @@ class BoltProtocol:
             for minor in range(spec_minor, spec_minor - range_ - 1, -1):
                 yield major, minor
 
-    @classmethod
-    def translate_client_line(cls, client_line):
+    def translate_client_line(self, client_line):
         if not client_line.jolt_parsed:
-            client_line.parse_jolt(cls.get_jolt_package())
+            client_line.parse_jolt(self.get_jolt_package())
         name, fields = client_line.jolt_parsed
         try:
-            tag = next(tag_ for tag_, name_ in cls.messages["C"].items()
+            tag = next(tag_ for tag_, name_ in self.messages["C"].items()
                        if name == name_)
         except StopIteration:
             raise BoltUnknownMessageError(
                 "Unsupported client message {} for BOLT version {}. "
                 "Must be one of {}".format(
-                    name, cls.protocol_version,
-                    list(cls.messages["C"].values())
+                    name, self.protocol_version,
+                    list(self.messages["C"].values())
                 ),
                 client_line
             )
         return TranslatedStructure(
-            name, tag, *fields, packstream_version=cls.packstream_version
+            name, tag, *fields, packstream_version=self.packstream_version
         )
 
-    @classmethod
-    def translate_server_line(cls, server_line):
+    def translate_server_line(self, server_line):
         if not server_line.jolt_parsed:
-            server_line.parse_jolt(cls.get_jolt_package())
+            server_line.parse_jolt(self.get_jolt_package())
         name, fields = server_line.jolt_parsed
         try:
-            tag = next(tag_ for tag_, name_ in cls.messages["S"].items()
+            tag = next(tag_ for tag_, name_ in self.messages["S"].items()
                        if name == name_)
         except StopIteration:
             raise BoltUnknownMessageError(
                 "Unsupported server message {} for BOLT version {}. "
                 "Must be one of {}".format(
-                    name, cls.protocol_version,
-                    list(cls.messages["S"].values())
+                    name, self.protocol_version,
+                    list(self.messages["S"].values())
                 ),
                 server_line
             )
         return TranslatedStructure(
-            name, tag, *fields, packstream_version=cls.packstream_version
+            name, tag, *fields, packstream_version=self.packstream_version
         )
 
-    @classmethod
-    def translate_structure(cls, structure: Structure):
+    def translate_structure(self, structure: Structure):
         try:
             return TranslatedStructure(
-                cls.messages["C"][structure.tag], structure.tag,
-                *structure.fields, packstream_version=cls.packstream_version
+                self.messages["C"][structure.tag], structure.tag,
+                *structure.fields, packstream_version=self.packstream_version
             )
         except KeyError:
             raise ServerExit(
                 "Unknown response message type {} in Bolt version {}".format(
                     hex_repr(structure.tag),
-                    ".".join(map(str, cls.protocol_version))
+                    ".".join(map(str, self.protocol_version))
                 )
             )
 
-    @classmethod
-    def get_jolt_package(cls):
-        return jolt_package[cls.packstream_version]
+    def get_jolt_package(self):
+        return jolt_package[self.packstream_version]
 
 
 class Bolt1Protocol(BoltProtocol):
@@ -191,6 +201,7 @@ class Bolt1Protocol(BoltProtocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -211,25 +222,23 @@ class Bolt1Protocol(BoltProtocol):
 
     server_agent = "Neo4j/3.3.0"
 
-    @classmethod
-    def decode_versions(cls, b):
+    def decode_versions(self, b):
         # only major version is supported
         # ignore all but last byte
         masked = bytes(0 if i % 4 != 3 else b[i]
                        for i in range(len(b)))
-        return BoltProtocol.decode_versions(masked)
+        return BoltProtocol.decode_versions(self, masked)
 
-    @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
+    def get_auto_response(self, request: TranslatedStructure):
         if request.tag == b"\x01":
             return TranslatedStructure(
-                "SUCCESS", b"\x70", {"server": cls.server_agent},
-                packstream_version=cls.packstream_version
+                "SUCCESS", b"\x70", {"server": self.server_agent},
+                packstream_version=self.packstream_version
             )
         else:
             return TranslatedStructure(
                 "SUCCESS", b"\x70", {},
-                packstream_version=cls.packstream_version
+                packstream_version=self.packstream_version
             )
 
 
@@ -241,21 +250,9 @@ class Bolt2Protocol(Bolt1Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     server_agent = "Neo4j/3.4.0"
-
-    @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
-        if request.tag == b"\x01":
-            return TranslatedStructure(
-                "SUCCESS", b"\x70", {"server": cls.server_agent},
-                packstream_version=cls.packstream_version
-            )
-        else:
-            return TranslatedStructure(
-                "SUCCESS", b"\x70", {},
-                packstream_version=cls.packstream_version
-            )
 
 
 class Bolt3Protocol(Bolt2Protocol):
@@ -266,6 +263,7 @@ class Bolt3Protocol(Bolt2Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -289,22 +287,17 @@ class Bolt3Protocol(Bolt2Protocol):
 
     server_agent = "Neo4j/3.5.0"
 
-    @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
+    def get_auto_response(self, request: TranslatedStructure):
         if request.tag == b"\x01":
             return TranslatedStructure(
                 "SUCCESS", b"\x70",
                 {
                     "connection_id": next_auto_bolt_id(),
-                    "server": cls.server_agent
+                    "server": self.server_agent
                 },
-                packstream_version=cls.packstream_version
+                packstream_version=self.packstream_version
             )
-        else:
-            return TranslatedStructure(
-                "SUCCESS", b"\x70", {},
-                packstream_version=cls.packstream_version
-            )
+        return super().get_auto_response(request)
 
 
 class Bolt4x0Protocol(Bolt3Protocol):
@@ -315,6 +308,7 @@ class Bolt4x0Protocol(Bolt3Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -338,30 +332,24 @@ class Bolt4x0Protocol(Bolt3Protocol):
 
     server_agent = "Neo4j/4.0.0"
 
-    @classmethod
-    def decode_versions(cls, b):
+    def decode_versions(self, b):
         # minor version was introduced
         # ignore first two bytes
         masked = bytes(0 if i % 4 <= 1 else b[i]
                        for i in range(len(b)))
-        return BoltProtocol.decode_versions(masked)
+        return BoltProtocol.decode_versions(self, masked)
 
-    @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
+    def get_auto_response(self, request: TranslatedStructure):
         if request.tag == b"\x01":
             return TranslatedStructure(
                 "SUCCESS", b"\x70",
                 {
                     "connection_id": next_auto_bolt_id(),
-                    "server": cls.server_agent
+                    "server": self.server_agent
                 },
-                packstream_version=cls.packstream_version
+                packstream_version=self.packstream_version
             )
-        else:
-            return TranslatedStructure(
-                "SUCCESS", b"\x70", {},
-                packstream_version=cls.packstream_version
-            )
+        return super().get_auto_response(request)
 
 
 class Bolt4x1Protocol(Bolt4x0Protocol):
@@ -372,6 +360,7 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -395,23 +384,18 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
 
     server_agent = "Neo4j/4.1.0"
 
-    @classmethod
-    def get_auto_response(cls, request: TranslatedStructure):
+    def get_auto_response(self, request: TranslatedStructure):
         if request.tag == b"\x01":
             return TranslatedStructure(
                 "SUCCESS", b"\x70",
                 {
                     "connection_id": next_auto_bolt_id(),
-                    "server": cls.server_agent,
+                    "server": self.server_agent,
                     "routing": None,
                 },
-                packstream_version=cls.packstream_version
+                packstream_version=self.packstream_version
             )
-        else:
-            return TranslatedStructure(
-                "SUCCESS", b"\x70", {},
-                packstream_version=cls.packstream_version
-            )
+        return super().get_auto_response(request)
 
 
 class Bolt4x2Protocol(Bolt4x1Protocol):
@@ -422,8 +406,18 @@ class Bolt4x2Protocol(Bolt4x1Protocol):
     equivalent_versions = {(4, 1)}
 
     packstream_version = 1
+    handshake_version = 1
 
     server_agent = "Neo4j/4.2.0"
+
+    def decode_versions(self, b):
+        # Minor version ranges were introduced.
+        # Officially from bolt 4.3 onwards, but they were ported back to some
+        # new 4.2.x server versions.
+        # ignore first byte
+        masked = bytes(0 if i % 4 == 0 else b[i]
+                       for i in range(len(b)))
+        return BoltProtocol.decode_versions(self, masked)
 
 
 class Bolt4x3Protocol(Bolt4x2Protocol):
@@ -434,6 +428,7 @@ class Bolt4x3Protocol(Bolt4x2Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -458,14 +453,6 @@ class Bolt4x3Protocol(Bolt4x2Protocol):
 
     server_agent = "Neo4j/4.3.0"
 
-    @classmethod
-    def decode_versions(cls, b):
-        # minor version ranges were introduced
-        # ignore first byte
-        masked = bytes(0 if i % 4 == 0 else b[i]
-                       for i in range(len(b)))
-        return BoltProtocol.decode_versions(masked)
-
 
 class Bolt4x4Protocol(Bolt4x3Protocol):
 
@@ -475,6 +462,7 @@ class Bolt4x4Protocol(Bolt4x3Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
+    handshake_version = 1
 
     server_agent = "Neo4j/4.4.0"
 
@@ -487,6 +475,7 @@ class Bolt5x0Protocol(Bolt4x4Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
+    handshake_version = 1
 
     server_agent = "Neo4j/5.0.0"
 
@@ -497,6 +486,9 @@ class Bolt5x1Protocol(Bolt5x0Protocol):
     version_aliases = set()
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
+
+    packstream_version = 2
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -516,6 +508,9 @@ class Bolt5x2Protocol(Bolt5x1Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
+    packstream_version = 2
+    handshake_version = 1
+
     server_agent = "Neo4j/5.7.0"
 
 
@@ -524,6 +519,9 @@ class Bolt5x3Protocol(Bolt5x2Protocol):
     version_aliases = set()
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
+
+    packstream_version = 2
+    handshake_version = 1
 
     server_agent = "Neo4j/5.9.0"
 
@@ -534,7 +532,8 @@ class Bolt5x4Protocol(Bolt5x3Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
-    server_agent = "Neo4j/5.13.0"
+    packstream_version = 2
+    handshake_version = 1
 
     messages = {
         "C": {
@@ -544,12 +543,17 @@ class Bolt5x4Protocol(Bolt5x3Protocol):
         "S": Bolt5x3Protocol.messages["S"],
     }
 
+    server_agent = "Neo4j/5.13.0"
+
 
 class Bolt5x5Protocol(Bolt5x4Protocol):
     protocol_version = (5, 5)
     version_aliases = set()
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
+
+    packstream_version = 2
+    handshake_version = 1
 
     server_agent = "Neo4j/5.21.0"
 
@@ -560,6 +564,9 @@ class Bolt5x6Protocol(Bolt5x5Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
+    packstream_version = 2
+    handshake_version = 1
+
     server_agent = "Neo4j/5.23.0"
 
 
@@ -569,4 +576,35 @@ class Bolt5x7Protocol(Bolt5x6Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
+    packstream_version = 2
+    handshake_version = 2
+
     server_agent = "Neo4j/5.24.0"
+
+    def __init__(self, features=None):
+        super().__init__(features=None)
+        if features is None:
+            features = b"\x00"
+        if not self._is_varint(features):
+            raise BoltFeatureError("Feature flags must be a varint encoded")
+        self.features = features
+
+    @staticmethod
+    def _is_varint(b):
+        return all(b & 0x80 for b in b[:-1]) and not b[-1] & 0x80
+
+    def get_auto_response(self, request: TranslatedStructure):
+        if request.tag == b"\x01":
+            return TranslatedStructure(
+                "SUCCESS", b"\x70",
+                {
+                    "connection_id": next_auto_bolt_id(),
+                    "server": self.server_agent,
+                    "routing": None,
+                    "protocol_version": ".".join(
+                        map(str, self.protocol_version)
+                    ),
+                },
+                packstream_version=self.packstream_version
+            )
+        return super().get_auto_response(request)

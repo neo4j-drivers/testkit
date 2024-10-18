@@ -41,8 +41,8 @@ from .bolt_protocol import (
 )
 from .errors import (
     BoltMissingVersionError,
+    BoltProtocolError,
     BoltUnknownMessageError,
-    BoltUnknownVersionError,
     ServerExit,
 )
 from .packstream import Structure
@@ -129,6 +129,7 @@ class BangLine(Line):
     TYPE_RESTART = "restart"
     TYPE_CONCURRENT = "concurrent"
     TYPE_HANDSHAKE = "handshake"
+    TYPE_HANDSHAKE_RESPONSE = "handshake_response"
     TYPE_HANDSHAKE_DELAY = "handshake_delay"
     TYPE_PYTHON = "python"
 
@@ -140,14 +141,30 @@ class BangLine(Line):
         elif re.match(r"^BOLT\s", obj.content):
             obj._type = BangLine.TYPE_BOLT
             raw_arg = obj.content[5:].strip()
+            raw_args = raw_arg.split(maxsplit=1)
+            while len(raw_args) < 2:
+                raw_args.append("")
             try:
-                obj._arg = tuple(map(int, raw_arg.split(".")))
+                version = tuple(map(int, raw_args[0].split(".")))
             except ValueError:
                 raise LineError(
                     obj,
                     "invalid argument for bolt version, must be semantic "
                     "version (e.g. 'BOLT 4.2')"
                 )
+            if raw_args[1]:
+                raw_flags = re.sub(r"\s", "", raw_args[1])
+                if not re.match(r"^([0-9a-fA-F]{2})+$", raw_flags):
+                    raise LineError(
+                        obj,
+                        "invalid argument for features, must be list of "
+                        "2-digit hex encoded bytes, whitespace is ignored "
+                        "(e.g. 'BOLT 5.7 00 F1')"
+                    )
+                features = bytearray(int(b, 16) for b in wrap(raw_flags, 2))
+            else:
+                features = None
+            obj._arg = version, features
         elif re.match(r"^ALLOW\s+RESTART$", obj.content):
             obj._type = BangLine.TYPE_RESTART
             obj._arg = None
@@ -160,9 +177,20 @@ class BangLine(Line):
             if not re.match(r"^([0-9a-fA-F]{2})+$", arg):
                 raise LineError(
                     obj,
-                    "invalid argument for handshake, must be list of 2-digit "
-                    "hex encoded bytes, whitespace is ignored (e.g. "
-                    "'HANDSHAKE 00 FF 02 04 F0'"
+                    "invalid argument for handshake, must be list of "
+                    "2-digit hex encoded bytes, whitespace is ignored "
+                    "(e.g. 'HANDSHAKE 00 FF 02 04 F0')"
+                )
+            obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
+        elif re.match(r"^HANDSHAKE_RESPONSE\s", obj.content):
+            obj._type = BangLine.TYPE_HANDSHAKE_RESPONSE
+            arg = re.sub(r"\s", "", obj.content[18:])
+            if not re.match(r"^([0-9a-fA-F]{2})+$", arg):
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake response, must be list of "
+                    "2-digit hex encoded bytes, whitespace is ignored "
+                    "(e.g. 'HANDSHAKE_RESPONSE 00 FF 02 04 F0')"
                 )
             obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
         elif re.match(r"^HANDSHAKE_DELAY\s", obj.content):
@@ -203,7 +231,7 @@ class BangLine(Line):
         elif self._type == BangLine.TYPE_BOLT:
             if ctx.bolt_version is not None:
                 raise LineError(self, "repeated definition of bolt version")
-            ctx.bolt_version = self._arg
+            ctx.bolt_version, ctx.bolt_features = self._arg
             ctx.bang_lines["bolt_version"] = self
         elif self._type == BangLine.TYPE_RESTART:
             if ctx.restarting:
@@ -226,6 +254,13 @@ class BangLine(Line):
                 )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
+        elif self._type == BangLine.TYPE_HANDSHAKE_RESPONSE:
+            if ctx.handshake_response:
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE_RESPONSE" multiple times'
+                )
+            ctx.handshake_response = self._arg
+            ctx.bang_lines["handshake_response"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE_DELAY:
             if ctx.handshake_delay is not None:
                 warnings.warn(  # noqa: B028
@@ -1314,10 +1349,12 @@ class ScriptDeviation(ScriptFailure):
 class ScriptContext:
     def __init__(self):
         self.bolt_version = None
+        self.bolt_features = None
         self.auto = set()
         self.restarting = False
         self.concurrent = False
         self.handshake = None
+        self.handshake_response = None
         self.handshake_delay = None
         self.python = []
         self.bang_lines = {
@@ -1326,6 +1363,7 @@ class ScriptContext:
             "restarting": None,
             "concurrent": None,
             "handshake": None,
+            "handshake_response": None,
             "handshake_delay": None,
             "python": [],
         }
@@ -1352,12 +1390,15 @@ class Script:
 
     def _set_bolt_protocol(self):
         try:
-            self._bolt_protocol = get_bolt_protocol(self.context.bolt_version)
+            self._bolt_protocol = get_bolt_protocol(
+                self.context.bolt_version,
+                self.context.bolt_features,
+            )
         except BoltMissingVersionError as e:
             raise lark.GrammarError(
                 'Missing bolt version bang line (e.g. "!: BOLT 4.3")'
             ) from e
-        except BoltUnknownVersionError as e:
+        except BoltProtocolError as e:
             raise LineError(
                 self.context.bang_lines["bolt_version"], *e.args[:1]
             ) from e
@@ -1366,6 +1407,15 @@ class Script:
         self.block_list.parse_jolt(self._bolt_protocol.get_jolt_package())
 
     def _verify_script(self):
+        if (
+            self.context.handshake_response is not None
+            and self.context.handshake is None
+        ):
+            raise LineError(
+                self.context.bang_lines["handshake_response"],
+                "HANDSHAKE_RESPONSE bang line requires without HANDSHAKE bang "
+                "line to be present"
+            )
         try:
             verify_script_messages(self)
         except BoltUnknownMessageError as e:

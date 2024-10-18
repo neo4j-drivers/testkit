@@ -1,0 +1,6 @@
+!: BOLT 5.7
+!: HANDSHAKE 00 00 07 05
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+S: <EXIT>

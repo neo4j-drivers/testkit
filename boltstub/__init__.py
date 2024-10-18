@@ -214,8 +214,10 @@ class BoltActor:
     def __init__(self, script: Script, wire, eval_context: EvalContext):
         self.script = script
         self.channel = Channel(
-            wire, script.context.bolt_version, log_cb=self.log,
+            wire, script.context.bolt_version, script.context.bolt_features,
+            log_cb=self.log,
             handshake_data=self.script.context.handshake,
+            handshake_response_data=self.script.context.handshake_response,
             handshake_delay=self.script.context.handshake_delay,
             eval_context=eval_context,
         )

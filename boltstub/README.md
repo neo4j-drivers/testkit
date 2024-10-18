@@ -24,7 +24,11 @@ The following options are available:
    Furthermore, with `!: AUTO GOODBYE`, the driver can reach the end of the script at any point which greatly decreases the usefulness of asserting a full script playthrough (i.e. successful Stubserver shutdown). Instead, use auto lines (see further down).
  * `!: BOLT ${BOLT VERSION}` **(required)**  
    Configure the Bolt version the server is speaking.  
-   E.g., `!: BOLT 4.0` or `!: BOLT 4`
+   E.g., `!: BOLT 4.0` or `!: BOLT 4`  
+   For Bolt handshake version 2 (requires Bolt version 5.7+), feature flags can be specified following the protocol version.
+   They're to be specified in raw hex bytes and must be a valid varint encoded integer.
+   The server expects the client to opt into all feature flags offered.  
+   E.g., `!: BOLT 5.7 FF 01` (sending feature flags 1 through 7 and 14)
  * `!: ALLOW RESTART`  
    By default, the server shuts itself down as soon as the end of the script is reached or the client sends an unexpected message.
    If this bang line is part of the head, the server will allow a new connection every time the script has successfully been played through until the end with the previous connection.
@@ -39,6 +43,11 @@ The following options are available:
    By default the server automatically performs a handshake (incl. protocol version negotiation) with the client upon connection (https://7687.org/bolt/bolt-protocol-handshake-specification.html).
    This bang line allows for overwriting the response of the server that normally contains the protocol version which the server wants to speak with the client.  
    E.g. `!: HANDSHAKE FF 00 00 01`
+ * `!: HANDSHAKE_RESPONSE ${HEX BYTES}`
+   This field requires `!: HANDSKE ${HEX BYTES}` to be present.
+   It's main purpose is to facilitate Bolt handshake v2 overwrites.
+   The data (`${HEX BYTES}`) will be expected to be received from the client after the server has sent the handshake data specified in `!: HANDSHAKE ${HEX BYTES}`.  
+   E.g. `!: HANDSHAKE 00 00 01 FF 00 00 00 07 05 00` and `!: HANDSHAKE_RESPONSE 00 00 07 05`
  * `!: HANDSHAKE_DELAY ${DELAY_IN_S}`
     Wait for `${DELAY_IN_S}` (can be int or float) seconds before sending the handshake response.
  * `!: PY ${ARBITRATY PYTHON CODE}`  

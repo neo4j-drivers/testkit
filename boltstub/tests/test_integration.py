@@ -273,19 +273,30 @@ def test_handshake_auto(client_version, server_version, negotiated_version,
 
 
 @pytest.mark.parametrize("custom_handshake", [b"\x00\x00\xFF\x00", b"foobar"])
+@pytest.mark.parametrize("custom_handshake_response", (True, False))
 @pytest.mark.parametrize("client_version", [b"\x00\x00\x00\x01", b"crap"])
 @pytest.mark.parametrize("server_version", ALL_BOLT_VERSIONS)
-def test_custom_handshake_auto(custom_handshake, client_version,
-                               server_version, server_factory,
+def test_custom_handshake_auto(custom_handshake, custom_handshake_response,
+                               client_version, server_version, server_factory,
                                connection_factory):
     client_version = client_version + b"\x00" * (16 - len(client_version))
+    handshake_response_bang = ""
+    if custom_handshake_response:
+        handshake_response_bang = (
+            f"!: HANDSHAKE_RESPONSE {hex_repr(client_version)}"
+        )
 
     script = parse("""
     !: BOLT {}
     !: HANDSHAKE {}
+    {}
 
     C: RUN
-    """.format(".".join(map(str, server_version)), hex_repr(custom_handshake)))
+    """.format(
+        ".".join(map(str, server_version)),
+        hex_repr(custom_handshake),
+        handshake_response_bang,
+    ))
 
     server = server_factory(script)
     con = connection_factory("localhost", 7687)
