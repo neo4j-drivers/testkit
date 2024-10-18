@@ -4,11 +4,7 @@ import os
 import sys
 import unittest
 
-from tests.testenv import (
-    begin_test_suite,
-    end_test_suite,
-    get_test_result_class,
-)
+from tests.testenv import get_test_result_class
 
 loader = unittest.TestLoader()
 
@@ -23,10 +19,10 @@ stub_suite.addTest(loader.discover(
 
 if __name__ == "__main__":
     suite_name = "Stub tests"
-    begin_test_suite(suite_name)
-    runner = unittest.TextTestRunner(resultclass=get_test_result_class(),
-                                     verbosity=100)
+    runner = unittest.TextTestRunner(
+        resultclass=get_test_result_class(suite_name),
+        verbosity=100, stream=sys.stdout,
+    )
     result = runner.run(stub_suite)
-    end_test_suite(suite_name)
     if result.errors or result.failures:
         sys.exit(-1)

@@ -1,3 +1,5 @@
+import re
+
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
@@ -82,14 +84,21 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w")
         summary = self._session.read_transaction(work)
         result = self._driver.supports_multi_db()
-        server_version = tuple(map(int, get_server_info().version.split(".")))
+        server_version = get_server_info().version
+        match = re.match(r"(\d+)\.dev", server_version)
+        if match:
+            server_version = (int(match.group(1)), float("inf"))
+        else:
+            server_version = tuple(
+                int(i) for i in server_version.split(".")[:2]
+            )
 
-        if server_version in ((4, 0), (4, 1), (4, 2), (4, 3), (4, 4), (5, 0)):
+        if server_version >= (4, 0):
             self.assertTrue(result)
             # This is the default database name if not set explicitly on the
             # Neo4j Server
             self.assertEqual(summary.database, "neo4j")
-        elif server_version == (3, 5):
+        elif server_version >= (3, 5):
             self.assertFalse(result)
             self.assertIsNone(summary.database)
         else:
