@@ -139,19 +139,19 @@ class TestSummary(TestkitTestCase):
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        version = summary.server_info.agent
-        self.assertIsInstance(version, str)
+        agent = summary.server_info.agent
+        self.assertIsInstance(agent, str)
         server_info = get_server_info()
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
-            self.assertTrue(version.startswith("Neo4j/"))
+            self.assertTrue(agent.startswith("Neo4j/"))
         elif re.match(r"(\d+)\.dev", server_info.version):
-            self.assertTrue(version.startswith(
+            self.assertTrue(agent.startswith(
                 "Neo4j/" + server_info.version.split(".")[0]
             ))
         else:
-            version = ".".join(summary.server_info.agent.split(".")[:2])
-            self.assertEqual(version, get_server_info().server_agent)
+            agent = ".".join(summary.server_info.agent.split(".")[:2])
+            self.assertEqual(agent, get_server_info().server_agent)
 
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
