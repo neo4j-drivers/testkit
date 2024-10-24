@@ -3,7 +3,7 @@
 
 A: HELLO {"{}": "*"}
 *: RESET
-C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": "the-imposter", "db": "homedb"}
+C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": "the-imposter"}
 S: SUCCESS {}
 C: RUN "RETURN 1" {} {}
 S: SUCCESS {"fields": ["1"]}
@@ -16,6 +16,6 @@ S: SUCCESS {"fields": ["1"]}
     S: SUCCESS {"type": "r"}
 }}
 C: COMMIT
-S: SUCCESS {}
+S: SUCCESS {"db": "homedb"}
 *: RESET
 ?: GOODBYE

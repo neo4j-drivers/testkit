@@ -5,7 +5,7 @@ A: HELLO {"{}": "*"}
 *: RESET
 {+
     {{
-        C: RUN "RETURN 1" {} {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter", "db": "homedb1"}
+        C: RUN "RETURN 1" {} {"[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter", "db": "homedb1"}
         S: SUCCESS {"fields": ["1"]}
         {{
             C: PULL {"n": {"Z": "*"}, "[qid]": -1}
@@ -14,7 +14,7 @@ A: HELLO {"{}": "*"}
             C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
         }}
     ----
-        C: RUN "RETURN 2" {} {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter", "db": "homedb2"}
+        C: RUN "RETURN 2" {} {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter"}
         S: SUCCESS {"fields": ["2"]}
         {{
             C: PULL {"n": {"Z": "*"}, "[qid]": -1}
