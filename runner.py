@@ -80,7 +80,7 @@ class Container:
             "TEST_NEO4J_CLUSTER": neo4j_config.cluster
         })
         self._container.exec([
-            "python3", "-m", "tests.neo4j.suites", suite],
+            "python3", "-m", "tests.neo4j.suites", suite, neo4j_config.name],
             env_map=self._env)
 
     def run_neo4j_tests_env_config(self):
@@ -96,7 +96,7 @@ class Container:
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
         suite = os.environ.get("TEST_NEO4J_VERSION", "4.4")
         self._container.exec([
-            "python3", "-m", "tests.neo4j.suites", suite],
+            "python3", "-m", "tests.neo4j.suites", suite, f"external-{suite}"],
             env_map=self._env)
 
     def run_selected_stub_tests(self, testpattern):
