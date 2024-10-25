@@ -120,6 +120,8 @@ def initialise_configurations(settings):
             # Bolt 5.5 (skipped - no server released with support)
             # Bolt 5.6
             ("5.23",   True,        True,     "neo4j",  0),
+            # Bolt 5.7
+            # ("5.25",   True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
