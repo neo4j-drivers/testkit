@@ -64,6 +64,11 @@ suite_5x13 = suite_5x9
 ########################
 suite_5x23 = suite_5x13
 
+########################
+# Suite for Neo4j 5.25 #
+########################
+suite_5x25 = suite_5x13
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Missing suite name parameter")
@@ -83,6 +88,8 @@ if __name__ == "__main__":
             sys.exit(-2)
 
     # [bolt-version-bump] search tag when updating IT matrix
+    if version >= (5, 25):
+        suite = suite_5x25
     if version >= (5, 23):
         suite = suite_5x23
     elif version >= (5, 13):
