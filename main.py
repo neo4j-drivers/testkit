@@ -395,14 +395,6 @@ def main(settings, configurations):
         else:
             run_fail_wrapper(runner_container.run_neo4j_tests_env_config)
 
-    if not (test_flags["TESTKIT_TESTS"]
-            or test_flags["STRESS_TESTS"]
-            or test_flags["INTEGRATION_TESTS"]
-            or (is_neo4j_test_selected_to_run()
-                and not test_flags["EXTERNAL_TESTKIT_TESTS"])):
-        # no need to download any snapshots or start any servers
-        return _exit()
-
     waiter_container = waiter.start_container(
         this_path, testkit_branch, networks[0], networks[1],
         docker_artifacts_path, waiter_build_artifacts_path,
@@ -418,6 +410,20 @@ def main(settings, configurations):
     os.makedirs(neo4j_artifacts_path)
     last_image = None
     for neo4j_config in configurations:
+        cluster = neo4j_config.cluster
+        server_name = neo4j_config.name
+        stress_duration = neo4j_config.stress_test_duration
+
+        if not (
+            test_flags["TESTKIT_TESTS"]
+            or (test_flags["STRESS_TESTS"] and stress_duration > 0)
+            or test_flags["INTEGRATION_TESTS"]
+            or (
+                is_neo4j_test_selected_to_run()
+                and not test_flags["EXTERNAL_TESTKIT_TESTS"]
+            )
+        ):
+            continue
         with test_suite(neo4j_config.name):
             if (
                 last_image
@@ -428,10 +434,6 @@ def main(settings, configurations):
                 print(cmd)
                 subprocess.run(cmd)
             last_image = neo4j_config.image
-
-            cluster = neo4j_config.cluster
-            server_name = neo4j_config.name
-            stress_duration = neo4j_config.stress_test_duration
 
             # Start a Neo4j server
             if cluster:
