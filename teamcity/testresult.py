@@ -1,16 +1,14 @@
 import unittest
 
 from .env import in_teamcity
-
-
-def escape(s):
-    s = s.replace("|", "||")
-    s = s.replace("\n", "|n")
-    s = s.replace("\r", "|r")
-    s = s.replace("'", "|'")
-    s = s.replace("[", "|[")
-    s = s.replace("]", "|]")
-    return s
+from .messages import (
+    test_failed_message,
+    test_finished_message,
+    test_ignored_message,
+    test_started_message,
+    test_suite_finished_message,
+    test_suite_started_message,
+)
 
 
 def test_kit_basic_test_result(name):
@@ -20,18 +18,16 @@ def test_kit_basic_test_result(name):
 
         def startTestRun(self):  # noqa: N802
             if in_teamcity:
-                self.stream.writeln("##teamcity[testSuiteStarted name='%s']"
-                                    % escape(name))
+                self.stream.writeln(test_suite_started_message(name))
             else:
-                self.stream.writeln(">>> Start test suite: %s" % name)
+                self.stream.writeln(f">>> Start test suite: {name}")
             self.stream.flush()
 
         def stopTestRun(self):  # noqa: N802
             if in_teamcity:
-                self.stream.writeln("##teamcity[testSuiteFinished name='%s']"
-                                    % escape(name))
+                self.stream.writeln(test_suite_finished_message(name))
             else:
-                self.stream.writeln(">>> End test suite: %s" % name)
+                self.stream.writeln(f">>> End test suite: {name}")
             self.stream.flush()
 
     return TestKitBasicTestResult
@@ -59,8 +55,7 @@ def team_city_test_result(name):
             self._last_skipped_count = 0
 
         def startTest(self, test):  # noqa: N802  # noqa: N802
-            self.stream.writeln("##teamcity[testStarted name='%s']"
-                                % escape(str(test)))
+            self.stream.writeln(test_started_message(test))
             self.stream.flush()
             self._last_error_count = len(self.errors)
             self._last_failure_count = len(self.failures)
@@ -110,14 +105,11 @@ def team_city_test_result(name):
             self.stream.writeln(
                 self.format_report(test_reports.pop(str(test)))
             )
-            self.stream.writeln("##teamcity[testFinished name='%s']\n"
-                                % escape(str(test)))
+            self.stream.writeln(test_finished_message(test))
             for report in test_reports.values():
-                self.stream.writeln("##teamcity[testStarted name='%s']"
-                                    % escape(str(report.test)))
+                self.stream.writeln(test_started_message(report.test))
                 self.stream.writeln(self.format_report(report))
-                self.stream.writeln("##teamcity[testFinished name='%s']\n"
-                                    % escape(str(report.test)))
+                self.stream.writeln(test_finished_message(report.test))
             self.stream.flush()
 
         def printErrors(self):  # noqa: N802
@@ -151,17 +143,14 @@ def team_city_test_result(name):
                     )
                 problems = (report.errors + report.failures
                             + report.unexpected_successes)
-                res += (
-                    "##teamcity[testFailed name='%s' "
-                    "message='Failed (%s problem(s))' details='%s']"
-                    % (escape(str(test)), escape(str(len(problems))),
-                       escape(details))
+                res += test_failed_message(
+                    f"{test} ({len(problems)} problem(s))",
+                    message=details,
                 )
             elif report.skipped:
-                res += (
-                    "##teamcity[testIgnored name='%s' message='%s']"
-                    % (escape(str(test)),
-                       escape("\n".join(map(str, report.skipped))))
+                res += test_ignored_message(
+                    test,
+                    message="\n".join(map(str, report.skipped)),
                 )
             return res
 

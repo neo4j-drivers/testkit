@@ -24,6 +24,7 @@ import neo4j
 import runner
 import settings
 import waiter
+from teamcity.messages import test_suite
 from tests.testenv import in_teamcity
 
 # TODO: Move to docker.py
@@ -409,118 +410,121 @@ def main(settings, configurations):
     """
     Neo4j server test matrix
     """
-    # Make an artifacts folder where the database can place it's logs, each
+    # Make an artifacts folder where the database can place its logs, each
     # time we start a database server we should use a different folder.
     neo4j_artifacts_path = os.path.join(artifacts_path, "neo4j")
     os.makedirs(neo4j_artifacts_path)
     last_image = None
     for neo4j_config in configurations:
-        if (
-            last_image
-            and settings.docker_rmi
-            and neo4j_config.image != last_image
-        ):
-            cmd = ["docker", "rmi", last_image]
-            print(cmd)
-            subprocess.run(cmd)
-        last_image = neo4j_config.image
+        with test_suite(neo4j_config.name):
+            if (
+                last_image
+                and settings.docker_rmi
+                and neo4j_config.image != last_image
+            ):
+                cmd = ["docker", "rmi", last_image]
+                print(cmd)
+                subprocess.run(cmd)
+            last_image = neo4j_config.image
 
-        cluster = neo4j_config.cluster
-        server_name = neo4j_config.name
-        stress_duration = neo4j_config.stress_test_duration
+            cluster = neo4j_config.cluster
+            server_name = neo4j_config.name
+            stress_duration = neo4j_config.stress_test_duration
 
-        # Start a Neo4j server
-        if cluster:
-            print("\n    Starting neo4j cluster (%s)\n" % server_name)
-            server = neo4j.Cluster(neo4j_config.image,
-                                   server_name,
-                                   neo4j_artifacts_path,
-                                   neo4j_config.version)
-        else:
-            print("\n    Starting neo4j standalone server (%s)\n"
-                  % server_name)
-            server = neo4j.Standalone(
-                neo4j_config.image, server_name, neo4j_artifacts_path,
-                "neo4jserver", 7687, neo4j_config.version, neo4j_config.edition
-            )
-        server.start(networks[0])
-        addresses = server.addresses()
-        hostname, port = addresses[0]
-
-        # Wait until server is listening before running tests
-        # Use driver container to check for Neo4j availability since connect
-        # will be done from there
-        for address in addresses:
-            print("Waiting for neo4j service at %s to be available"
-                  % (address,))
-            driver_container.poll_host_and_port_until_available(*address)
-            # Wait some more for server to be ready.
-            # Especially starting with 5.0, the server starts the bolt server
-            # before it starts the databases. This will mean the port will be
-            # available before queries can be executed for clusters and for
-            # the enterprise edition in stand-alone mode.
-            if int(neo4j_config.version.split(".", 1)[0]) >= 5:
-                core_address, core_port = address
-                waiter_container.wait_for_all_dbs(
-                    core_address, core_port, neo4j.username, neo4j.password
-                )
-        print("Neo4j is reachable from driver")
-
-        if test_flags["TESTKIT_TESTS"]:
-            # Generic integration tests, requires a backend
-            suite = neo4j_config.suite
-            if suite:
-                print("Running test suite %s" % suite)
-                run_fail_wrapper(
-                    runner_container.run_neo4j_tests,
-                    suite, hostname, neo4j.username, neo4j.password,
-                    neo4j_config
-                )
+            # Start a Neo4j server
+            if cluster:
+                print("\n    Starting neo4j cluster (%s)\n" % server_name)
+                server = neo4j.Cluster(neo4j_config.image,
+                                       server_name,
+                                       neo4j_artifacts_path,
+                                       neo4j_config.version)
             else:
-                print("No test suite specified for %s" % server_name)
+                print("\n    Starting neo4j standalone server (%s)\n"
+                      % server_name)
+                server = neo4j.Standalone(
+                    neo4j_config.image, server_name, neo4j_artifacts_path,
+                    "neo4jserver", 7687, neo4j_config.version,
+                    neo4j_config.edition
+                )
+            server.start(networks[0])
+            addresses = server.addresses()
+            hostname, port = addresses[0]
 
-        # Run the stress test suite within the driver container.
-        # The stress test suite uses threading and put a bigger load on the
-        # driver than the integration tests do and are therefore written in
-        # the driver language.
-        if test_flags["STRESS_TESTS"] and stress_duration > 0:
-            print("Building and running stress tests...")
-            run_fail_wrapper(
-                driver_container.run_stress_tests,
-                hostname, port, neo4j.username, neo4j.password, neo4j_config
-            )
+            # Wait until server is listening before running tests
+            # Use driver container to check for Neo4j availability since
+            # connect will be done from there
+            for address in addresses:
+                print("Waiting for neo4j service at %s to be available"
+                      % (address,))
+                driver_container.poll_host_and_port_until_available(*address)
+                # Wait some more for server to be ready.
+                # Especially starting with 5.0, the server starts the bolt
+                # server before it starts the databases. This will mean the
+                # port will be available before queries can be executed for
+                # clusters and for the enterprise edition in stand-alone mode.
+                if int(neo4j_config.version.split(".", 1)[0]) >= 5:
+                    core_address, core_port = address
+                    waiter_container.wait_for_all_dbs(
+                        core_address, core_port, neo4j.username, neo4j.password
+                    )
+            print("Neo4j is reachable from driver")
 
-        # Run driver native integration tests within the driver container.
-        # Driver integration tests should check env variable to skip tests
-        # depending on if running in cluster or not, this is not properly done
-        # in any (?) driver right now so skip the suite...
-        if test_flags["INTEGRATION_TESTS"]:
-            if not cluster:
-                print("Building and running integration tests...")
+            if test_flags["TESTKIT_TESTS"]:
+                # Generic integration tests, requires a backend
+                suite = neo4j_config.suite
+                if suite:
+                    print("Running test suite %s" % suite)
+                    run_fail_wrapper(
+                        runner_container.run_neo4j_tests,
+                        suite, hostname, neo4j.username, neo4j.password,
+                        neo4j_config
+                    )
+                else:
+                    print("No test suite specified for %s" % server_name)
+
+            # Run the stress test suite within the driver container.
+            # The stress test suite uses threading and put a bigger load on the
+            # driver than the integration tests do and are therefore written in
+            # the driver language.
+            if test_flags["STRESS_TESTS"] and stress_duration > 0:
+                print("Building and running stress tests...")
                 run_fail_wrapper(
-                    driver_container.run_integration_tests,
+                    driver_container.run_stress_tests,
                     hostname, port, neo4j.username, neo4j.password,
                     neo4j_config
                 )
-            else:
-                print("Skipping integration tests for %s" % server_name)
 
-        # Running selected NEO4J tests
-        if is_neo4j_test_selected_to_run():
-            run_fail_wrapper(
-                runner_container.run_selected_neo4j_tests,
-                get_selected_tests(), hostname, neo4j.username, neo4j.password,
-                neo4j_config
-            )
+            # Run driver native integration tests within the driver container.
+            # Driver integration tests should check env variable to skip tests
+            # depending on if running in cluster or not, this is not properly
+            # done in any (?) driver right now so skip the suite...
+            if test_flags["INTEGRATION_TESTS"]:
+                if not cluster:
+                    print("Building and running integration tests...")
+                    run_fail_wrapper(
+                        driver_container.run_integration_tests,
+                        hostname, port, neo4j.username, neo4j.password,
+                        neo4j_config
+                    )
+                else:
+                    print("Skipping integration tests for %s" % server_name)
 
-        # Check that all connections to Neo4j has been closed.
-        # Each test suite should close drivers, sessions properly so any
-        # pending connections detected here should indicate connection leakage
-        # in the driver.
-        print("Checking that connections are closed to the database")
-        driver_container.assert_connections_closed(hostname, port)
+            # Running selected NEO4J tests
+            if is_neo4j_test_selected_to_run():
+                run_fail_wrapper(
+                    runner_container.run_selected_neo4j_tests,
+                    get_selected_tests(), hostname, neo4j.username,
+                    neo4j.password, neo4j_config
+                )
 
-        server.stop()
+            # Check that all connections to Neo4j has been closed.
+            # Each test suite should close drivers, sessions properly so any
+            # pending connections detected here should indicate connection
+            # leakage in the driver.
+            print("Checking that connections are closed to the database")
+            driver_container.assert_connections_closed(hostname, port)
+
+            server.stop()
 
     if last_image and settings.docker_rmi:
         cmd = ["docker", "rmi", last_image]
