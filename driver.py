@@ -124,7 +124,6 @@ class Container:
             "TEST_NEO4J_SCHEME":  config.scheme,
             "TEST_NEO4J_EDITION": config.edition,
             "TEST_NEO4J_VERSION": config.version,
-            "TEST_NEO4J_SUITE_NAME": config.name,
         })
         if config.cluster:
             env["TEST_NEO4J_IS_CLUSTER"] = "1"
