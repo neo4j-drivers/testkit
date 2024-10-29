@@ -198,3 +198,59 @@ class TestHomeDb(TestkitTestCase):
         self._router.done()
         self._reader2.done()
         self.assertEqual(i, 2)
+
+    @driver_feature(types.Feature.IMPERSONATION)
+    def test_homedb_cache(self):
+        def _test():
+            def work(tx):
+                result = tx.run(query)
+                result.consume()
+
+            self._router.start(
+                path=self.script_path("router_homedb_cache.script"),
+                vars_={"#HOST#": self._router.host}
+            )
+
+            self._reader1.start(
+                path=self.script_path("reader_tx_homedb_cache.script")
+            )
+
+            driver = Driver(self._backend, self._uri, self._auth_token)
+
+            session1 = driver.session("r", impersonated_user="the-imposter")
+            query = "RETURN 1"
+            session1.execute_read(work)
+            if not parallel_sessions:
+                session1.close()
+            session2 = driver.session("r", impersonated_user="the-imposter")
+            query = "RETURN 2"
+            session2.execute_read(work)
+            if not parallel_sessions:
+                session2.close()
+            session3 = driver.session("r", impersonated_user="the-imposter")
+            query = "RETURN 3"
+            session3.execute_read(work)
+            if not parallel_sessions:
+                session3.close()
+
+            session4 = driver.session(
+                "r", bookmarks=["bookmark"], impersonated_user="the-imposter"
+            )
+            query = "RETURN 4"
+            session4.execute_read(work)
+            session4.close()
+            if parallel_sessions:
+                session1.close()
+                session2.close()
+                session3.close()
+
+            driver.close()
+
+            self._router.done()
+            self._reader1.done()
+
+        for parallel_sessions in (True, False):
+            with self.subTest(parallel_sessions=parallel_sessions):
+                _test()
+            self._router.reset()
+            self._reader1.reset()
