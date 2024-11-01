@@ -1,7 +1,8 @@
 !: BOLT 4.4
 !: ALLOW CONCURRENT
 
-A: HELLO {"{}": "*"}
+C: HELLO {"{}": "*"}
+S: SUCCESS {"server": "Neo4j/4.4.1", "hints": {"ssr.enabled": 1}, "connection_id": "bolt-1"}
 *: RESET
 
 C: BEGIN {"[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter"}
