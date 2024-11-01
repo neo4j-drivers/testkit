@@ -1,7 +1,9 @@
-!: BOLT 4.4
+!: BOLT 5.7
 !: ALLOW CONCURRENT
 
 A: HELLO {"{}": "*"}
+C: LOGON {"{}": {"scheme": "basic", "principal": "p", "credentials": "c"}}
+S: SUCCESS {}
 *: RESET
 C: ROUTE "*" [] {"[imp_user]": "the-imposter"}
 S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
