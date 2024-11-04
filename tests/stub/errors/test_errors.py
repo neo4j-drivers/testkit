@@ -303,6 +303,7 @@ class TestError5x7(_ErrorTestCase):
                 diagnostic_record = {
                     "foo": "bar",
                     "_baz": 1.2,
+                    "_🤡": "🎈",
                     "OPERATION": None,
                     "CURRENT_SCHEMA": {"uh": "oh!"},
                     "OPERATION_CODE": False,

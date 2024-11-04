@@ -106,7 +106,10 @@ class Container:
         env = {}
         # Copy TEST_ variables that might have been set explicit
         for var_name in os.environ:
-            if var_name.startswith("TEST_"):
+            if (
+                var_name.startswith("TEST_")
+                or var_name.startswith("TEAMCITY_")
+            ):
                 env[var_name] = os.environ[var_name]
         return env
 
