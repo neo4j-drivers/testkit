@@ -1,9 +1,8 @@
 !: BOLT 5.8
 !: ALLOW CONCURRENT
 
-C: HELLO {"{}": "*"}
-S: SUCCESS {"server": "Neo4j/5.26.0", "hints": {"ssr.enabled": true}, "connection_id": "bolt-1"}
-A: LOGON {"scheme": "basic", "principal": "p", "credentials": "c"}
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
 *: RESET
 
 C: BEGIN {"[tx_metadata]": "*", "db": "homedb1", "mode": "r", "imp_user": "the-imposter"}
@@ -40,7 +39,7 @@ S: SUCCESS {}
 *: RESET
 
 C: BEGIN  {"[bookmarks]": "*", "[tx_metadata]": "*", "db": "homedb3", "mode": "r", "imp_user": "the-imposter"}
-S: SUCCESS {"db": "homedb3"}
+S: SUCCESS {}
 C: RUN "RETURN 4" {} {}
 S: SUCCESS {"fields": ["4"]}
 C: PULL {"n": {"Z": "*"}, "[qid]": -1}
