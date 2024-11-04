@@ -1,9 +1,9 @@
-!: BOLT 5.7
+!: BOLT 5.8
 !: ALLOW CONCURRENT
 
-A: HELLO {"{}": "*"}
-C: LOGON {"{}": {"scheme": "basic", "principal": "p", "credentials": "c"}}
-S: SUCCESS {}
+C: HELLO {"{}": "*"}
+S: SUCCESS {"server": "Neo4j/5.26.0", "hints": {"ssr.enabled": true}, "connection_id": "bolt-1"}
+A: LOGON {"scheme": "basic", "principal": "p", "credentials": "c"}
 *: RESET
 C: ROUTE "*" [] {"[imp_user]": "the-imposter"}
 S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
