@@ -18,7 +18,7 @@ class _TestHomeDbWithoutCache(abc.ABC, TestkitTestCase):
         self._reader2 = StubServer(9011)
         self._auth_token = types.AuthorizationToken("basic", principal="p",
                                                     credentials="c")
-        self._uri = "neo4j://%s" % self._router.address
+        self._uri = f"neo4j://{self._router.address}"
 
     def tearDown(self):
         self._reader1.reset()
@@ -236,7 +236,44 @@ A: LOGON {"{}": "*"}
         super().test_session_should_cache_home_db_despite_new_rt()
 
 
+class Test5x8HomeDbDirectDriver(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_5_8,
+
+    def setUp(self):
+        super().setUp()
+        self._server = StubServer(9000)
+        self._auth_token = types.AuthorizationToken("basic", principal="p",
+                                                    credentials="c")
+        self._uri = f"bolt://{self._server.address}"
+
+    def tearDown(self):
+        self._server.reset()
+        super().tearDown()
+
+    def start_server(self, *path):
+        self._server.start(path=self.script_path("no_cache", *path))
+
+    def test_homedb_is_not_pinned_for_direct_drivers_session_run(self):
+        self.start_server("single_server.script")
+
+        driver = Driver(self._backend, self._uri, self._auth_token)
+
+        session = driver.session("w")
+
+        for i in range(2):
+            res = session.run(f"RETURN {i + 1}")
+            res.consume()
+
+        session.close()
+        driver.close()
+        self._server.done()
+
+
 class TestHomeDbWithCache(TestkitTestCase):
+
+    required_features = types.Feature.BOLT_5_8,
+
     def setUp(self):
         super().setUp()
         self._router = StubServer(9000)
@@ -244,7 +281,7 @@ class TestHomeDbWithCache(TestkitTestCase):
         self._reader2 = StubServer(9011)
         self._auth_token = types.AuthorizationToken("basic", principal="p",
                                                     credentials="c")
-        self._uri = "neo4j://%s" % self._router.address
+        self._uri = f"neo4j://{self._router.address}"
 
     def tearDown(self):
         self._reader1.reset()
@@ -325,4 +362,4 @@ class TestHomeDbWithCache(TestkitTestCase):
 #        resolved home DB
 #  * [x] never sends the cached key to the server when RT is missing
 #  * [x] pinns resolved home db from fetched RT if RT was missing
-#  * [ ] does never pin for direct connection (bolt scheme)
+#  * [x] does never pin for direct connection (bolt scheme)
