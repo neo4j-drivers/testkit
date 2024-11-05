@@ -77,9 +77,6 @@ class MockChannel:
     def send_raw(self, b):
         self.raw_buffer.extend(b)
 
-    def send_struct(self, struct):
-        self.msg_buffer.append(struct)
-
     def send_server_line(self, server_line):
         server_line.parse_jolt(self.jolt_package)
         name, fields = server_line.jolt_parsed

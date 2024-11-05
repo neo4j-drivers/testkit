@@ -106,7 +106,7 @@ class Line(str, abc.ABC):
         return obj
 
     def __str__(self):
-        return "({:3}) {}".format(self.line_number,
+        return "({:4}) {}".format(self.line_number,
                                   super(Line, self).__str__())
 
     def __repr__(self):
