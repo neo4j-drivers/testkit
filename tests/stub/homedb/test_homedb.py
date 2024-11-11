@@ -617,6 +617,42 @@ class TestHomeDbWithCache(TestkitTestCase):
                     self._reader1.reset()
                     self._reader2.reset()
 
+    def test_home_db_is_pinned_even_if_server_re_resolves(self):
+        def _query(session, i):
+            result = list(session.run(f"RETURN {i} AS n"))
+            self.assertEqual(len(result), 1)
+            self.assertEqual(len(result[0].values), 1)
+            self.assertIsInstance(result[0].values[0], types.CypherInt)
+            self.assertEqual(result[0].values[0].value, i)
+
+        def _test(resolved_from_cache_):
+            self.start_server(self._router, "router_single_server.script")
+            self.start_server(self._reader1, "reader_misbehaving.script")
+
+            driver = Driver(self._backend, self._uri, self._auth1)
+
+            if resolved_from_cache_:
+                # populate cache
+                session = driver.session("r")
+                _query(session, 0)
+                session.close()
+
+            session = driver.session("r")
+
+            for i in range(4):
+                _query(session, i)
+
+            session.close()
+            driver.close()
+
+        for resolved_from_cache in (True, False)[1:]:
+            with self.subTest(resolved_from_cache=resolved_from_cache):
+                try:
+                    _test(resolved_from_cache)
+                finally:
+                    self._router.reset()
+                    self._reader1.reset()
+
 
 # Test home db cache
 #  * [x] with ssr.enabled
@@ -629,7 +665,7 @@ class TestHomeDbWithCache(TestkitTestCase):
 #      * [x] custom auth
 #    * [x] imp-user
 #  * [ ] caches home db despite RT changing
-#  * [ ] pinns home db despite server mis-behaving and sending different
+#  * [x] pinns home db despite server mis-behaving and sending different
 #        resolved home DB
 #  * [x] never sends the cached key to the server when RT is missing
 #  * [x] pinns resolved home db from fetched RT if RT was missing
