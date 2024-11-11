@@ -1,0 +1,19 @@
+!: BOLT 5.8
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+
+*: RESET
+
+C: ROUTE "*" "*" "*"
+S: SUCCESS { "rt": { "ttl": 1000000, "db": "db1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+
+*: RESET
+
+# DB moved to server 2
+C: ROUTE "*" "*" "*"
+S: SUCCESS { "rt": { "ttl": 1000000, "db": "db1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9011"], "role":"WRITE"}]}}
+
+*: RESET
+?: GOODBYE

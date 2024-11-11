@@ -410,6 +410,33 @@ class TestHomeDbWithCache(TestkitTestCase):
             self._router.reset()
             self._reader1.reset()
 
+    def _whoami_query(
+        self,
+        driver_,
+        database=None,
+        impersonated_user=None,
+        auth=None,
+        new_home_db=None,
+    ):
+        if database is not None and new_home_db is not None:
+            raise ValueError(
+                "Cannot inform the driver about a new home db when "
+                "running a query a against a fixed database"
+            )
+        session = driver_.session(
+            "r",
+            database=database,
+            impersonated_user=impersonated_user,
+            auth_token=auth,
+            bookmarks=[new_home_db] if new_home_db else None,
+        )
+        try:
+            records = list(session.run("WHOAMI"))
+            self.assertEqual(len(records), 1)
+            return records[0].values[0].value
+        finally:
+            session.close()
+
     def _test_homedb_cache_used_for_routing(
         self, driver_auth, session_args, session_user, home_db
     ):
@@ -423,32 +450,6 @@ class TestHomeDbWithCache(TestkitTestCase):
             other_db = "db1"
         else:
             raise ValueError(f"Unhandled home db: {home_db!r}")
-
-        def whoami(
-            driver_,
-            database=None,
-            impersonated_user=None,
-            auth=None,
-            new_home_db=None,
-        ):
-            if database is not None and new_home_db is not None:
-                raise ValueError(
-                    "Cannot inform the driver about a new home db when "
-                    "running a query a against a fixed database"
-                )
-            session = driver_.session(
-                "r",
-                database=database,
-                impersonated_user=impersonated_user,
-                auth_token=auth,
-                bookmarks=[new_home_db] if new_home_db else None,
-            )
-            try:
-                records = list(session.run("WHOAMI"))
-                self.assertEqual(len(records), 1)
-                return records[0].values[0].value
-            finally:
-                session.close()
 
         self.start_server(self._router, "router_whoami.script")
         route_tracker = _RouteTracker(self._router, self)
@@ -467,7 +468,7 @@ class TestHomeDbWithCache(TestkitTestCase):
         #        for that home db
         driver = Driver(self._backend, self._uri, driver_auth)
         self.assertEqual(
-            whoami(driver, **session_args),
+            self._whoami_query(driver, **session_args),
             # expecting db1 (not homedb1) as the driver does not yet know
             # any routing information and will use the route request to pin
             # the db to the session
@@ -476,7 +477,7 @@ class TestHomeDbWithCache(TestkitTestCase):
         route_tracker.assert_new_route_request(**session_args)
         # Given: driver knows RT for db1
         self.assertRegex(
-            whoami(driver, database="db1"),
+            self._whoami_query(driver, database="db1"),
             "admin[12]@db1@reader1"
         )
         if home_db == "db1":
@@ -486,7 +487,7 @@ class TestHomeDbWithCache(TestkitTestCase):
             route_tracker.assert_new_route_request(database="db1")
         # Given: driver knows RT for db2
         self.assertRegex(
-            whoami(driver, database="db2"),
+            self._whoami_query(driver, database="db2"),
             "admin[12]@db2@reader2"
         )
         if home_db == "db2":
@@ -496,7 +497,7 @@ class TestHomeDbWithCache(TestkitTestCase):
             route_tracker.assert_new_route_request(database="db2")
 
         # When: cache key exists
-        me = whoami(driver, **session_args)
+        me = self._whoami_query(driver, **session_args)
 
         # Then: does not send routing request, uses RT pointed to by cache key
         route_tracker.asset_no_new_route_request()
@@ -505,10 +506,10 @@ class TestHomeDbWithCache(TestkitTestCase):
 
         # When: home db changes
         self.assertEqual(
-            whoami(driver, **session_args, new_home_db=other_db),
+            self._whoami_query(driver, **session_args, new_home_db=other_db),
             f"{session_user}@home{other_db}@{home_server}"
         )
-        me = whoami(driver, **session_args, new_home_db=other_db)
+        me = self._whoami_query(driver, **session_args, new_home_db=other_db)
 
         # Then: does not send routing request, and uses new RT pointed to by
         #       the cache key
@@ -669,20 +670,32 @@ class TestHomeDbWithCache(TestkitTestCase):
                     self._router.reset()
                     self._reader1.reset()
 
+    def test_rt_changes_underneath_cache(self):
+        self.start_server(self._router, "router_db_moves.script")
+        self.start_server(
+            self._reader1,
+            "reader_whoami.script",
+            vars_={"#SERVER_NAME#": "reader1"},
+        )
+        self.start_server(
+            self._reader2,
+            "reader_whoami.script",
+            vars_={"#SERVER_NAME#": "reader2"},
+        )
+        driver = Driver(self._backend, self._uri, self._auth1)
 
-# Test home db cache
-#  * [x] with ssr.enabled
-#  * [x] without ssr.enabled
-#  * [x] test uses cache to determine routing
-#  * [x] test cache key precedence
-#    * [x] None (driver auth, even when changing)
-#    * [x] session-auth
-#      * [x] basic auth
-#      * [x] custom auth
-#    * [x] imp-user
-#  * [ ] caches home db despite RT changing
-#  * [x] pinns home db despite server mis-behaving and sending different
-#        resolved home DB
-#  * [x] never sends the cached key to the server when RT is missing
-#  * [x] pinns resolved home db from fetched RT if RT was missing
-#  * [x] does never pin for direct connection (bolt scheme)
+        # Given: driver has cached home db
+        self.assertEqual(self._whoami_query(driver), "admin1@db1@reader1")
+        self.assertEqual(self._whoami_query(driver), "admin1@homedb1@reader1")
+
+        # When: routing table for the home db changes
+        self.assertEqual(
+            self._whoami_query(driver, impersonated_user="user1"),
+            "user1@db1@reader2"
+        )
+
+        # Then: driver should find the new routing table through the cache
+        self.assertEqual(self._whoami_query(driver), "admin1@homedb1@reader2")
+
+        driver.close()
+        self._router.done()
