@@ -9,7 +9,7 @@ from tests.shared import (
 from tests.stub.shared import StubServer
 
 
-class _TestHomeDbWithoutCache(abc.ABC, TestkitTestCase):
+class _HomeDbWithoutCacheTestCase(abc.ABC, TestkitTestCase):
 
     def setUp(self):
         super().setUp()
@@ -183,7 +183,7 @@ class _TestHomeDbWithoutCache(abc.ABC, TestkitTestCase):
         self.assertEqual(i, 2)
 
 
-class Test4x4HomeDbWithoutCache(_TestHomeDbWithoutCache):
+class Test4x4HomeDbWithoutCache(_HomeDbWithoutCacheTestCase):
 
     required_features = types.Feature.BOLT_4_4,
 
@@ -207,7 +207,7 @@ class Test4x4HomeDbWithoutCache(_TestHomeDbWithoutCache):
         super().test_session_should_cache_home_db_despite_new_rt()
 
 
-class Test5x8HomeDbWithoutCache(_TestHomeDbWithoutCache):
+class Test5x8HomeDbWithoutCache(_HomeDbWithoutCacheTestCase):
 
     required_features = types.Feature.BOLT_5_8,
 
