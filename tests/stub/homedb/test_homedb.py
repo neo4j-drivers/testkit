@@ -270,6 +270,44 @@ class Test5x8HomeDbDirectDriver(TestkitTestCase):
         self._server.done()
 
 
+class _RouteTracker:
+    def __init__(self, server: StubServer, test: TestkitTestCase):
+        self._server = server
+        self._expected_route_count = 0
+        self._test = test
+
+    def assert_new_route_request(
+        self,
+        database=None,
+        impersonated_user=None,
+        auth=None,
+    ):
+        self._expected_route_count += 1
+
+        requests = self._server.get_requests("ROUTE")
+        self._test.assertEqual(len(requests), self._expected_route_count)
+        route = requests[-1]
+
+        if database:
+            self._test.assertIn(f'"db": "{database}"', route)
+        else:
+            self._test.assertNotIn('"db":', route)
+
+        if impersonated_user:
+            self._test.assertIn(f'"imp_user": "{impersonated_user}"', route)
+        else:
+            self._test.assertNotIn('"imp_user":', route)
+
+        if auth:
+            logon_requests = self._server.get_requests("LOGON")
+            last_logon = logon_requests[-1]
+            self._test.assertIn(f'"scheme": "{auth.scheme}"', last_logon)
+
+    def asset_no_new_route_request(self):
+        requests = self._server.get_requests("ROUTE")
+        self._test.assertEqual(len(requests), self._expected_route_count)
+
+
 class TestHomeDbWithCache(TestkitTestCase):
 
     required_features = types.Feature.BOLT_5_8,
@@ -396,40 +434,8 @@ class TestHomeDbWithCache(TestkitTestCase):
             finally:
                 session.close()
 
-        route_count = 0
-
-        def assert_new_route_request(
-            database=None,
-            impersonated_user=None,
-            auth=None,
-        ):
-            nonlocal route_count
-            route_count += 1
-
-            requests = self._router.get_requests("ROUTE")
-            self.assertEqual(len(requests), route_count)
-            route = requests[-1]
-
-            if database:
-                self.assertIn(f'"db": "{database}"', route)
-            else:
-                self.assertNotIn('"db":', route)
-
-            if impersonated_user:
-                self.assertIn(f'"imp_user": "{impersonated_user}"', route)
-            else:
-                self.assertNotIn('"imp_user":', route)
-
-            if auth:
-                logon_requests = self._router.get_requests("LOGON")
-                last_logon = logon_requests[-1]
-                self.assertIn(f'"scheme": "{auth.scheme}"', last_logon)
-
-        def asset_no_new_route_request():
-            requests = self._router.get_requests("ROUTE")
-            self.assertEqual(len(requests), route_count)
-
         self.start_server(self._router, "router_whoami.script")
+        route_tracker = _RouteTracker(self._router, self)
         self.start_server(
             self._reader1,
             "reader_whoami.script",
@@ -451,7 +457,7 @@ class TestHomeDbWithCache(TestkitTestCase):
             # the db to the session
             f"{session_user}@{home_db}@{home_server}"
         )
-        assert_new_route_request(**session_args)
+        route_tracker.assert_new_route_request(**session_args)
         # Given: driver knows RT for db1
         self.assertRegex(
             whoami(driver, database="db1"),
@@ -459,9 +465,9 @@ class TestHomeDbWithCache(TestkitTestCase):
         )
         if home_db == "db1":
             # already knowing RT for db1
-            asset_no_new_route_request()
+            route_tracker.asset_no_new_route_request()
         else:
-            assert_new_route_request(database="db1")
+            route_tracker.assert_new_route_request(database="db1")
         # Given: driver knows RT for db2
         self.assertRegex(
             whoami(driver, database="db2"),
@@ -469,15 +475,15 @@ class TestHomeDbWithCache(TestkitTestCase):
         )
         if home_db == "db2":
             # already knowing RT for db2
-            asset_no_new_route_request()
+            route_tracker.asset_no_new_route_request()
         else:
-            assert_new_route_request(database="db2")
+            route_tracker.assert_new_route_request(database="db2")
 
         # When: cache key exists
         me = whoami(driver, **session_args)
 
         # Then: does not send routing request, uses RT pointed to by cache key
-        asset_no_new_route_request()
+        route_tracker.asset_no_new_route_request()
         # Then: does not send the db name explicitly to the server
         self.assertEqual(me, f"{session_user}@home{home_db}@{home_server}")
 
@@ -490,15 +496,19 @@ class TestHomeDbWithCache(TestkitTestCase):
 
         # Then: does not send routing request, and uses new RT pointed to by
         #       the cache key
-        asset_no_new_route_request()
+        route_tracker.asset_no_new_route_request()
         self.assertEqual(me, f"{session_user}@home{other_db}@{other_server}")
-        asset_no_new_route_request()
+        route_tracker.asset_no_new_route_request()
 
         self._router.done()
         self._reader1.done()
         self._reader2.done()
 
-    @driver_feature(types.Feature.IMPERSONATION)
+    @driver_feature(
+        types.Feature.IMPERSONATION,
+        types.Feature.API_SESSION_AUTH_CONFIG,
+        types.Feature.AUTH_CUSTOM,
+    )
     def test_homedb_cache_used_for_routing(self):
         for (
             name,
@@ -506,6 +516,7 @@ class TestHomeDbWithCache(TestkitTestCase):
             session_args,
             session_user,
             home_db,
+            features,
         ) in (
             (
                 "driver-level auth",
@@ -513,6 +524,7 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {},
                 "admin1",
                 "db1",
+                (),
             ),
             (
                 "impersonation user1",
@@ -520,6 +532,7 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {"impersonated_user": "user1"},
                 "user1",
                 "db1",
+                (types.Feature.IMPERSONATION,),
             ),
             (
                 "impersonation user2",
@@ -527,6 +540,29 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {"impersonated_user": "user2"},
                 "user2",
                 "db2",
+                (types.Feature.IMPERSONATION,),
+            ),
+            (
+                "impersonation user1 (with session auth)",
+                self._auth1,
+                {"impersonated_user": "user1", "auth": self._auth2},
+                "user1",
+                "db1",
+                (
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+            (
+                "impersonation user2 (with session auth)",
+                self._auth2,
+                {"impersonated_user": "user2", "auth": self._auth1},
+                "user2",
+                "db2",
+                (
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
             ),
             (
                 "session-auth admin1",
@@ -534,6 +570,7 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {"auth": self._auth1},
                 "admin1",
                 "db1",
+                (types.Feature.API_SESSION_AUTH_CONFIG,),
             ),
             (
                 "session-auth admin2",
@@ -541,6 +578,10 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {"auth": self._auth2},
                 "admin2",
                 "db2",
+                (
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                    types.Feature.AUTH_CUSTOM,
+                ),
             ),
             (
                 "session-auth admin1 (driver-auth admin2)",
@@ -548,6 +589,10 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {"auth": self._auth1},
                 "admin1",
                 "db1",
+                (
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                    types.Feature.AUTH_CUSTOM,
+                ),
             ),
             (
                 "session-auth admin2 (driver-auth admin2)",
@@ -555,9 +600,14 @@ class TestHomeDbWithCache(TestkitTestCase):
                 {"auth": self._auth2},
                 "admin2",
                 "db2",
+                (
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                    types.Feature.AUTH_CUSTOM,
+                ),
             ),
         ):
             with self.subTest(name=name):
+                self.skip_if_missing_driver_features(*features)
                 try:
                     self._test_homedb_cache_used_for_routing(
                         driver_auth, session_args, session_user, home_db
@@ -572,14 +622,14 @@ class TestHomeDbWithCache(TestkitTestCase):
 #  * [x] with ssr.enabled
 #  * [x] without ssr.enabled
 #  * [x] test uses cache to determine routing
-#  * [ ] test cache key precedence
-#    * [ ] None (driver auth, even when changing)
-#    * [ ] session-auth
-#      * [ ] basic auth
-#      * [ ] custom auth
-#    * [ ] imp-user
+#  * [x] test cache key precedence
+#    * [x] None (driver auth, even when changing)
+#    * [x] session-auth
+#      * [x] basic auth
+#      * [x] custom auth
+#    * [x] imp-user
 #  * [ ] caches home db despite RT changing
-#  * [ ] caches home db despite server mis-behaving and sending different
+#  * [ ] pinns home db despite server mis-behaving and sending different
 #        resolved home DB
 #  * [x] never sends the cached key to the server when RT is missing
 #  * [x] pinns resolved home db from fetched RT if RT was missing
