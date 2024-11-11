@@ -1,80 +1,212 @@
 !: BOLT 5.8
+!: PY first_auth = True
 
 A: HELLO {"{}": "*"}
-A: LOGON {"{}": "*"}
-*: RESET
 
-{*
+
+{+
+    IF: not first_auth
     {{
-        C: RUN "WHOAMI" {} {"[bookmarks]": ["db1"], "mode": "r"}
-        S: SUCCESS {"fields": ["YOU"], "db": "db1"}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["owner@homedb1@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"bookmarks": ["db2"], "mode": "r"}
-        S: SUCCESS {"fields": ["YOU"], "db": "db2"}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["owner@homedb2@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"[bookmarks]": "*", "db": "db1", "mode": "r"}
-        S: SUCCESS {"fields": ["YOU"]}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["owner@db1@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"[bookmarks]": "*", "db": "db2", "mode": "r"}
-        S: SUCCESS {"fields": ["YOU"]}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["owner@db2@#SERVER_NAME#"]
-
-    ----
-
-        C: RUN "WHOAMI" {} {"[bookmarks]": ["db1"], "mode": "r", "imp_user": "imposter1"}
-        S: SUCCESS {"fields": ["YOU"], "db": "db1"}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter1@homedb1@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"bookmarks": ["db2"], "mode": "r", "imp_user": "imposter1"}
-        S: SUCCESS {"fields": ["YOU"], "db": "db2"}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter1@homedb2@#SERVER_NAME#"]
-
-    ----
-
-        C: RUN "WHOAMI" {} {"bookmarks": ["db1"], "mode": "r", "imp_user": "imposter2"}
-        S: SUCCESS {"fields": ["YOU"], "db": "db1"}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter2@homedb1@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"[bookmarks]": ["db2"], "mode": "r", "imp_user": "imposter2"}
-        S: SUCCESS {"fields": ["YOU"], "db": "db2"}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter2@homedb2@#SERVER_NAME#"]
-
-    ----
-
-        C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db1", "imp_user": "imposter1"}
-        S: SUCCESS {"fields": ["YOU"]}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter1@db1@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db2", "imp_user": "imposter1"}
-        S: SUCCESS {"fields": ["YOU"]}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter1@db2@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db1", "imp_user": "imposter2"}
-        S: SUCCESS {"fields": ["YOU"]}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter2@db1@#SERVER_NAME#"]
-    ----
-        C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db2", "imp_user": "imposter2"}
-        S: SUCCESS {"fields": ["YOU"]}
-        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-        S: RECORD ["imposter2@db2@#SERVER_NAME#"]
+        A: LOGOFF
     }}
-    S: SUCCESS {"type": "r"}
 
-    *: RESET
-*}
+    {{
+        A: LOGON {"scheme": "basic", "principal": "*", "credentials": "*", "[realm]": "*"}
+        PY: first_auth = False
+        *: RESET
+
+        {*
+            {{
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "[bookmarks]": ["db1"], "mode": "r"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "[bookmarks]": ["db1"], "mode": "r"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db1"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin1@homedb1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"bookmarks": ["db2"], "mode": "r"}
+                S: SUCCESS {"fields": ["YOU"], "db": "db2"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin1@homedb2@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "db": "db1", "mode": "r"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin1@db1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "db": "db2", "mode": "r"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin1@db2@#SERVER_NAME#"]
+
+            ----
+
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "[bookmarks]": ["db1"], "mode": "r", "imp_user": "user1"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "[bookmarks]": ["db1"], "mode": "r", "imp_user": "user1"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db1"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@homedb1@#SERVER_NAME#"]
+            ----
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "bookmarks": ["db2"], "mode": "r", "imp_user": "user1"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "bookmarks": ["db2"], "mode": "r", "imp_user": "user1"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db2"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@homedb2@#SERVER_NAME#"]
+
+            ----
+
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "bookmarks": ["db1"], "mode": "r", "imp_user": "user2"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "bookmarks": ["db1"], "mode": "r", "imp_user": "user2"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db1"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@homedb1@#SERVER_NAME#"]
+            ----
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "[bookmarks]": ["db2"], "mode": "r", "imp_user": "user2"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "[bookmarks]": ["db2"], "mode": "r", "imp_user": "user2"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db2"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@homedb2@#SERVER_NAME#"]
+
+            ----
+
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db1", "imp_user": "user1"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@db1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db2", "imp_user": "user1"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@db2@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db1", "imp_user": "user2"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@db1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db2", "imp_user": "user2"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@db2@#SERVER_NAME#"]
+            }}
+            S: SUCCESS {"type": "r"}
+
+            *: RESET
+        *}
+
+    ----
+
+        A: LOGON {"scheme": "special", "[principal]": "*", "[credentials]": "*", "[realm]": "*", "[parameters]": "*"}
+        PY: first_auth = False
+        *: RESET
+
+        {*
+            {{
+                C: RUN "WHOAMI" {} {"bookmarks": ["db1"], "mode": "r"}
+                S: SUCCESS {"fields": ["YOU"], "db": "db1"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin2@homedb1@#SERVER_NAME#"]
+            ----
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "[bookmarks]": ["db2"], "mode": "r"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "[bookmarks]": ["db2"], "mode": "r"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db2"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin2@homedb2@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "db": "db1", "mode": "r"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin2@db1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "db": "db2", "mode": "r"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["admin2@db2@#SERVER_NAME#"]
+
+            ----
+
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "[bookmarks]": ["db1"], "mode": "r", "imp_user": "user1"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "[bookmarks]": ["db1"], "mode": "r", "imp_user": "user1"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db1"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@homedb1@#SERVER_NAME#"]
+            ----
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "bookmarks": ["db2"], "mode": "r", "imp_user": "user1"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "bookmarks": ["db2"], "mode": "r", "imp_user": "user1"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db2"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@homedb2@#SERVER_NAME#"]
+
+            ----
+
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "bookmarks": ["db1"], "mode": "r", "imp_user": "user2"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "bookmarks": ["db1"], "mode": "r", "imp_user": "user2"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db1"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@homedb1@#SERVER_NAME#"]
+            ----
+                {{
+                    C: RUN "WHOAMI" {} {"[db]": null, "[bookmarks]": ["db2"], "mode": "r", "imp_user": "user2"}
+                ----
+                    C: RUN "WHOAMI" {} {"db": "", "[bookmarks]": ["db2"], "mode": "r", "imp_user": "user2"}
+                }}
+                S: SUCCESS {"fields": ["YOU"], "db": "db2"}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@homedb2@#SERVER_NAME#"]
+
+            ----
+
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db1", "imp_user": "user1"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@db1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db2", "imp_user": "user1"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user1@db2@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db1", "imp_user": "user2"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@db1@#SERVER_NAME#"]
+            ----
+                C: RUN "WHOAMI" {} {"[bookmarks]": "*", "mode": "r", "db": "db2", "imp_user": "user2"}
+                S: SUCCESS {"fields": ["YOU"]}
+                C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+                S: RECORD ["user2@db2@#SERVER_NAME#"]
+            }}
+            S: SUCCESS {"type": "r"}
+
+            *: RESET
+        *}
+    }}
++}
 
 ?: GOODBYE
