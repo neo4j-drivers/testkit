@@ -1,7 +1,11 @@
 import abc
+import concurrent.futures
 
 import nutkit.protocol as types
-from nutkit.frontend import Driver
+from nutkit.frontend import (
+    AuthTokenManager,
+    Driver,
+)
 from tests.shared import (
     driver_feature,
     TestkitTestCase,
@@ -318,6 +322,9 @@ class _RouteTracker:
             logon_requests = self._server.get_requests("LOGON")
             last_logon = logon_requests[-1]
             self._test.assertIn(f'"scheme": "{auth.scheme}"', last_logon)
+            for key, attr in vars(auth).items():
+                if isinstance(attr, str):
+                    self._test.assertIn(f'"{key}": "{attr}"', last_logon)
 
     def asset_no_new_route_request(self):
         requests = self._server.get_requests("ROUTE")
@@ -338,8 +345,8 @@ class TestHomeDbWithCache(TestkitTestCase):
             "basic", principal="p", credentials="c"
         )
         self._auth2 = types.AuthorizationToken(
-            "special",
-            principal="p", credentials="c", realm=None, parameters=None,
+            "special", principal="p", credentials="c",
+            realm=None, parameters=None,
         )
         self._uri = f"neo4j://{self._router.address}"
 
@@ -451,22 +458,32 @@ class TestHomeDbWithCache(TestkitTestCase):
         else:
             raise ValueError(f"Unhandled home db: {home_db!r}")
 
-        self.start_server(self._router, "router_whoami.script")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(
+                    self.start_server, self._router, "router_whoami.script"
+                ),
+                executor.submit(
+                    self.start_server,
+                    self._reader1,
+                    "reader_whoami.script",
+                    vars_={"#SERVER_NAME#": "reader1"},
+                ),
+                executor.submit(
+                    self.start_server,
+                    self._reader2,
+                    "reader_whoami.script",
+                    vars_={"#SERVER_NAME#": "reader2"},
+                ),
+            ]
+        for future in futures:
+            future.result()
         route_tracker = _RouteTracker(self._router, self)
-        self.start_server(
-            self._reader1,
-            "reader_whoami.script",
-            vars_={"#SERVER_NAME#": "reader1"},
-        )
-        self.start_server(
-            self._reader2,
-            "reader_whoami.script",
-            vars_={"#SERVER_NAME#": "reader2"},
-        )
+
+        driver = Driver(self._backend, self._uri, driver_auth)
 
         # Given: driver has cached the home db for the key and knows the RT
         #        for that home db
-        driver = Driver(self._backend, self._uri, driver_auth)
         self.assertEqual(
             self._whoami_query(driver, **session_args),
             # expecting db1 (not homedb1) as the driver does not yet know
@@ -699,3 +716,344 @@ class TestHomeDbWithCache(TestkitTestCase):
 
         driver.close()
         self._router.done()
+
+    @driver_feature(types.Feature.AUTH_MANAGED, types.Feature.AUTH_CUSTOM)
+    def test_cache_considers_all_driver_auth_equal(self):
+        auth1 = types.AuthorizationToken(
+            "basic", principal="user1", credentials="password1"
+        )
+        auth2 = types.AuthorizationToken(
+            "basic", principal="user2", credentials="password2",
+        )
+        auth3 = types.AuthorizationToken(
+            "basic", principal="user3", credentials="password3"
+        )
+        current_auth = auth1
+
+        def get_auth(*_, **__):
+            return current_auth
+
+        def handle_exc(*_, **__):
+            raise NotImplementedError
+
+        def make_auth_switch(new_auth):
+            def step(driver, tracker):
+                nonlocal current_auth
+                current_auth = new_auth
+            return step
+
+        auth_manager = AuthTokenManager(self._backend, get_auth, handle_exc)
+
+        self._run_whoami_test(
+            auth_manager,
+            (
+                # When: driver-level auth manager has been used to cache the
+                #       home db
+                self._make_assert_whoami("admin1@db1@reader1"),
+                self._make_assert_route_request(auth=auth1),
+                # Then: regardless of the token returned by the auth manager
+                #       the driver should use the cached home db
+                make_auth_switch(auth2),
+                self._make_assert_whoami("admin1@homedb1@reader1"),
+                self._make_assert_no_route_request(),
+
+                make_auth_switch(auth3),
+                self._make_assert_whoami("admin1@homedb1@reader1"),
+                self._make_assert_no_route_request(),
+            ),
+        )
+
+    def test_cached_home_db_changing(self):
+        self._run_whoami_test(
+            self._auth1,
+            (
+                # Given: driver has cached home db 1
+                self._make_assert_whoami("admin1@db1@reader1"),
+                self._make_assert_route_request(auth=self._auth1),
+
+                # When: home db changes to 2
+                self._make_assert_whoami(
+                    "admin1@homedb2@reader1",
+                    new_home_db="db2",
+                ),
+                self._make_assert_no_route_request(),
+
+                # Then: driver should use the new home db
+                #       However, the driven doesn't know a route for db2 yet
+                #       therefore, it will send a ROUTE request and pinn the
+                #       returned db to the session
+                self._make_assert_whoami(
+                    "admin1@db2@reader2",
+                    new_home_db="db2",
+                ),
+                self._make_assert_route_request(),
+
+                # When: the home db remains 2
+                # Then: driver should not send another ROUTE request
+                self._make_assert_whoami(
+                    "admin1@homedb2@reader2",
+                    new_home_db="db2",
+                ),
+                self._make_assert_no_route_request(),
+
+                # When: home db changes back to 1
+                self._make_assert_whoami("admin1@homedb1@reader2"),
+                self._make_assert_no_route_request(),
+
+                # Then: driver should use the new home db
+                self._make_assert_whoami("admin1@homedb1@reader1"),
+                self._make_assert_no_route_request(),
+            ),
+        )
+
+    def test_cached_home_db_changing_before_route(self):
+        self._run_whoami_test(
+            self._auth1,
+            (
+                # Given: driver has cached home db 2
+                self._make_assert_whoami(
+                    "admin1@db2@reader2",
+                    new_home_db="db2",
+                ),
+                self._make_assert_route_request(auth=self._auth1),
+
+                # When: home db changes to 1
+                self._make_assert_whoami("admin1@homedb1@reader2"),
+                self._make_assert_no_route_request(),
+                # And: before the next route request, the home db changes back
+                # Then: driver should pin the reverted home db to the session
+                self._make_assert_whoami(
+                    "admin1@db2@reader2",
+                    new_home_db="db2",
+                ),
+                self._make_assert_route_request(auth=self._auth1),
+            ),
+        )
+
+    @driver_feature(
+        types.Feature.OPT_HOME_DB_CACHE_BASIC_PRINCIPAL_IS_IMP_USER,
+    )
+    def test_optimization_basic_principal_equals_impersonated_user(self):
+        auth_basic_user2 = types.AuthorizationToken(
+            "basic", principal="user2", credentials="password",
+        )
+        auth_special_user2 = types.AuthorizationToken(
+            "special", principal="user2", credentials="password",
+            realm=None, parameters=None,
+        )
+
+        for (
+            name,
+            assertions,
+            features,
+        ) in (
+            (
+                "basic principal is impersonated user",
+                (
+                    # When: driver has resolved home db for basic principal
+                    self._make_assert_whoami(
+                        "admin1@db1@reader1",
+                        auth=auth_basic_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_basic_user2),
+                    # Then: uses the cached home db for the impersonated user
+                    self._make_assert_whoami(
+                        "user2@homedb2@reader1",
+                        impersonated_user=auth_basic_user2.principal,
+                    ),
+                    self._make_assert_no_route_request(),
+                ),
+                (
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+            (
+                "impersonated user is basic principal",
+                (
+                    # When: driver has resolved home db for impersonated user
+                    self._make_assert_whoami(
+                        "user2@db2@reader2",
+                        impersonated_user=auth_basic_user2.principal,
+                    ),
+                    self._make_assert_route_request(
+                        impersonated_user=auth_basic_user2.principal,
+                    ),
+                    # Then: uses the cached home db for the basic principal
+                    self._make_assert_whoami(
+                        "admin1@homedb1@reader2",
+                        auth=auth_basic_user2,
+                    ),
+                    self._make_assert_no_route_request(),
+                ),
+                (
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+            (
+                "basic principal is not special principal",
+                (
+                    # When: driver has cached home db for basic principal
+                    self._make_assert_whoami(
+                        "admin1@db1@reader1",
+                        auth=auth_basic_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_basic_user2),
+                    # Then: custom auth with same principal is a cache miss
+                    self._make_assert_whoami(
+                        "admin2@db2@reader2",
+                        auth=auth_special_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_special_user2),
+                ),
+                (
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+            (
+                "special principal is not basic principal",
+                (
+                    # When: driver has cached home db for custom principal
+                    self._make_assert_whoami(
+                        "admin2@db2@reader2",
+                        auth=auth_special_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_special_user2),
+                    # Then: basic auth with same principal is a cache miss
+                    self._make_assert_whoami(
+                        "admin1@db1@reader1",
+                        auth=auth_basic_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_basic_user2),
+                ),
+                (
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+            (
+                "special principal is not impersonated user",
+                (
+                    # When: driver has cached home db for custom principal
+                    self._make_assert_whoami(
+                        "admin2@db2@reader2",
+                        auth=auth_special_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_special_user2),
+                    # Then: impersonation of custom principal is a cache miss
+                    self._make_assert_whoami(
+                        "user2@db2@reader2",
+                        impersonated_user=auth_special_user2.principal,
+                    ),
+                    self._make_assert_route_request(
+                        impersonated_user=auth_special_user2.principal,
+                    ),
+                ),
+                (
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+            (
+                "impersonated user is not special principal",
+                (
+                    # When: driver has cached home db for impersonated user
+                    self._make_assert_whoami(
+                        "user2@db2@reader2",
+                        impersonated_user=auth_special_user2.principal,
+                    ),
+                    self._make_assert_route_request(
+                        impersonated_user=auth_special_user2.principal,
+                    ),
+                    # Then: custom auth with same principal is a cache miss
+                    self._make_assert_whoami(
+                        "admin2@db2@reader2",
+                        auth=auth_special_user2,
+                    ),
+                    self._make_assert_route_request(auth=auth_special_user2),
+                ),
+                (
+                    types.Feature.IMPERSONATION,
+                    types.Feature.API_SESSION_AUTH_CONFIG,
+                ),
+            ),
+        ):
+            with self.subTest(name=name):
+                self.skip_if_missing_driver_features(*features)
+                try:
+                    self._run_whoami_test(self._auth1, assertions)
+                finally:
+                    self._router.reset()
+                    self._reader1.reset()
+                    self._reader2.reset()
+
+    def _make_assert_whoami(
+        self,
+        who,
+        database=None,
+        impersonated_user=None,
+        auth=None,
+        new_home_db=None,
+    ):
+        def assertion(driver, tracker):
+            self.assertEqual(
+                self._whoami_query(
+                    driver,
+                    database=database,
+                    impersonated_user=impersonated_user,
+                    auth=auth,
+                    new_home_db=new_home_db,
+                ),
+                who
+            )
+        return assertion
+
+    def _make_assert_no_route_request(self):
+        def assertion(driver, tracker):
+            tracker.asset_no_new_route_request()
+        return assertion
+
+    def _make_assert_route_request(
+        self,
+        database=None,
+        impersonated_user=None,
+        auth=None,
+    ):
+        def assertion(driver, tracker):
+            tracker.assert_new_route_request(
+                database=database,
+                impersonated_user=impersonated_user,
+                auth=auth,
+            )
+        return assertion
+
+    def _run_whoami_test(self, driver_auth, steps):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(
+                    self.start_server, self._router, "router_whoami.script"
+                ),
+                executor.submit(
+                    self.start_server,
+                    self._reader1,
+                    "reader_whoami.script",
+                    vars_={"#SERVER_NAME#": "reader1"},
+                ),
+                executor.submit(
+                    self.start_server,
+                    self._reader2,
+                    "reader_whoami.script",
+                    vars_={"#SERVER_NAME#": "reader2"},
+                ),
+            ]
+        for future in futures:
+            future.result()
+        route_tracker = _RouteTracker(self._router, self)
+
+        driver = Driver(self._backend, self._uri, driver_auth)
+        for step in steps:
+            step(driver, route_tracker)
+        driver.close()
+        self._router.done()
+        self._reader1.done(ignore_never_started=True)
+        self._reader2.done(ignore_never_started=True)
