@@ -1,17 +1,12 @@
 !: BOLT 5.8
-!: PY first_auth = True
+!: ALLOW CONCURRENT
 
 A: HELLO {"{}": "*"}
 
 {+
-    IF: not first_auth
-    {{
-        A: LOGOFF
-    }}
 
     {{
         A: LOGON {"scheme": "basic", "principal": "*", "credentials": "*", "[realm]": "*"}
-        PY: first_auth = False
         *: RESET
 
         {*
@@ -150,7 +145,6 @@ A: HELLO {"{}": "*"}
     ----
 
         A: LOGON {"scheme": "special", "[principal]": "*", "[credentials]": "*", "[realm]": "*", "[parameters]": "*"}
-        PY: first_auth = False
         *: RESET
 
         {*
@@ -270,6 +264,7 @@ A: HELLO {"{}": "*"}
             *: RESET
         *}
     }}
+    ?: LOGOFF
 +}
 
 ?: GOODBYE
