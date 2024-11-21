@@ -375,6 +375,7 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
                     "_severity": "ANYSEV",
                     "_classification": "ANYCAT",
                     "_position": {"column": 9, "offset": 8, "line": 1},
+                    "_🤡": "🎈",
                 },
             },
             SUCCESS_GQL_STATUS_OBJECT
@@ -899,8 +900,10 @@ class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
     def make_test_status(
         cls, status, condition, subcondition=None,
         classification="HINT", severity="WARNING",
-        i=None,
+        i=None, diag_record_extra=None,
     ):
+        if diag_record_extra is None:
+            diag_record_extra = {}
         if condition in ("successful completion", "no data"):
             prefix = "note: "
         elif condition == "informational":
@@ -931,6 +934,7 @@ class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
                     "_severity": severity,
                     "_classification": classification,
                     "_position": {"column": 9, "offset": 8, "line": 1},
+                    **diag_record_extra,
                 }
             }
         else:
@@ -949,6 +953,7 @@ class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
                     "_severity": severity,
                     "_classification": classification,
                     "_position": {"column": 9, "offset": 8, "line": 1 + i},
+                    **diag_record_extra,
                 }
             }
 
@@ -956,10 +961,12 @@ class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
         self, received_status, status, condition, subcondition=None,
         raw_classification="HINT", classification="HINT",
         severity="WARNING", raw_severity="WARNING", i=None,
+        diag_record_extra=None,
     ):
         expected_status = self.make_test_status(
             status, condition, subcondition,
-            classification=raw_classification, severity=raw_severity, i=i
+            classification=raw_classification, severity=raw_severity, i=i,
+            diag_record_extra=diag_record_extra,
         )
         self.assertEqual(received_status.status_description,
                          expected_status["status_description"])
@@ -1074,6 +1081,22 @@ class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
         self.assert_is_test_gql_status_object(
             summary.gql_status_objects[7], "03N03", "informational",
             subcondition="test subcondition. Here we go again.™.", i=5,
+        )
+
+    def test_keeps_garbage_in_diagnostic_record(self):
+        in_statuses = [
+            self.make_test_status(
+                "01N01", "warning", i=1, diag_record_extra={"_🤡": "🎈"},
+            ),
+        ]
+        summary = self._get_summary(
+            "summary_with_statuses.script",
+            vars_={"#STATUSES#": json.dumps(in_statuses)}
+        )
+        self.assertEqual(len(summary.gql_status_objects), 1)
+        self.assert_is_test_gql_status_object(
+            summary.gql_status_objects[0], "01N01", "warning", i=1,
+            diag_record_extra={"_🤡": "🎈"},
         )
 
     @staticmethod
