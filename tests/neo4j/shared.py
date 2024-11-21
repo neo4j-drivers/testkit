@@ -135,10 +135,11 @@ class ServerInfo:
             version = (int(match.group(1)), float("inf"))
         else:
             version = tuple(int(i) for i in self.version.split(".")[:2])
-        if version >= (5, 25):
+        if version >= (5, 26):
             return "5.7"
         if version >= (5, 23):
             return "5.6"
+        # bolt 5.5 was never released
         if version >= (5, 13):
             return "5.4"
         if version >= (5, 9):
