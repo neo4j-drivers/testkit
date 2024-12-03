@@ -112,7 +112,9 @@ class BoltProtocol:
     equivalent_versions = set()
 
     packstream_version = None
-    handshake_version = None
+    handshake_minor_support = False
+    handshake_range_support = False
+    max_handshake_manifest_version = None
     features = b"\x00"
 
     messages = {
@@ -127,13 +129,13 @@ class BoltProtocol:
                 f"flags"
             )
 
-    def decode_versions(self, b):
+    @staticmethod
+    def decode_versions(b):
         assert isinstance(b, (bytes, bytearray))
         assert len(b) == 16
         for spec in (b[i:(i + 4)] for i in range(0, 16, 4)):
-            _, range_, spec_minor, major = spec
-            for minor in range(spec_minor, spec_minor - range_ - 1, -1):
-                yield major, minor
+            _, range_, minor, major = spec
+            yield major, minor, range_
 
     def translate_client_line(self, client_line):
         if not client_line.jolt_parsed:
@@ -201,7 +203,9 @@ class Bolt1Protocol(BoltProtocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = False
+    handshake_range_support = False
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -221,13 +225,6 @@ class Bolt1Protocol(BoltProtocol):
     }
 
     server_agent = "Neo4j/3.3.0"
-
-    def decode_versions(self, b):
-        # only major version is supported
-        # ignore all but last byte
-        masked = bytes(0 if i % 4 != 3 else b[i]
-                       for i in range(len(b)))
-        return BoltProtocol.decode_versions(self, masked)
 
     def get_auto_response(self, request: TranslatedStructure):
         if request.tag == b"\x01":
@@ -250,7 +247,9 @@ class Bolt2Protocol(Bolt1Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = False
+    handshake_range_support = False
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/3.4.0"
 
@@ -263,7 +262,9 @@ class Bolt3Protocol(Bolt2Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = False
+    handshake_range_support = False
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -308,7 +309,9 @@ class Bolt4x0Protocol(Bolt3Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = False
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -332,13 +335,6 @@ class Bolt4x0Protocol(Bolt3Protocol):
 
     server_agent = "Neo4j/4.0.0"
 
-    def decode_versions(self, b):
-        # minor version was introduced
-        # ignore first two bytes
-        masked = bytes(0 if i % 4 <= 1 else b[i]
-                       for i in range(len(b)))
-        return BoltProtocol.decode_versions(self, masked)
-
     def get_auto_response(self, request: TranslatedStructure):
         if request.tag == b"\x01":
             return TranslatedStructure(
@@ -360,7 +356,9 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = False
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -406,18 +404,14 @@ class Bolt4x2Protocol(Bolt4x1Protocol):
     equivalent_versions = {(4, 1)}
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = True
+    # Minor version ranges were introduced.
+    # Officially from bolt 4.3 onwards, but they were ported back to some new
+    # 4.2.x server versions.
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/4.2.0"
-
-    def decode_versions(self, b):
-        # Minor version ranges were introduced.
-        # Officially from bolt 4.3 onwards, but they were ported back to some
-        # new 4.2.x server versions.
-        # ignore first byte
-        masked = bytes(0 if i % 4 == 0 else b[i]
-                       for i in range(len(b)))
-        return BoltProtocol.decode_versions(self, masked)
 
 
 class Bolt4x3Protocol(Bolt4x2Protocol):
@@ -428,7 +422,9 @@ class Bolt4x3Protocol(Bolt4x2Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -462,7 +458,9 @@ class Bolt4x4Protocol(Bolt4x3Protocol):
     equivalent_versions = set()
 
     packstream_version = 1
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/4.4.0"
 
@@ -475,7 +473,9 @@ class Bolt5x0Protocol(Bolt4x4Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/5.0.0"
 
@@ -488,7 +488,9 @@ class Bolt5x1Protocol(Bolt5x0Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -509,7 +511,9 @@ class Bolt5x2Protocol(Bolt5x1Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/5.7.0"
 
@@ -521,7 +525,9 @@ class Bolt5x3Protocol(Bolt5x2Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/5.9.0"
 
@@ -533,7 +539,9 @@ class Bolt5x4Protocol(Bolt5x3Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     messages = {
         "C": {
@@ -553,7 +561,9 @@ class Bolt5x5Protocol(Bolt5x4Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/5.21.0"
 
@@ -565,7 +575,9 @@ class Bolt5x6Protocol(Bolt5x5Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 1
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 0
 
     server_agent = "Neo4j/5.23.0"
 
@@ -577,9 +589,11 @@ class Bolt5x7Protocol(Bolt5x6Protocol):
     equivalent_versions = set()
 
     packstream_version = 2
-    handshake_version = 2
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 1
 
-    server_agent = "Neo4j/5.24.0"
+    server_agent = "Neo4j/5.26.0"
 
     def __init__(self, features=None):
         super().__init__(features=None)
@@ -608,3 +622,6 @@ class Bolt5x7Protocol(Bolt5x6Protocol):
                 packstream_version=self.packstream_version
             )
         return super().get_auto_response(request)
+
+
+# [stub-bolt-change] search tag when adding/removing bolt version support

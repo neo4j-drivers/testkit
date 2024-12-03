@@ -125,6 +125,9 @@ class Feature(Enum):
     BOLT_5_6 = "Feature:Bolt:5.6"
     # The driver supports Bolt protocol version 5.7
     BOLT_5_7 = "Feature:Bolt:5.7"
+    # The driver supports negotiating the Bolt protocol version with the server
+    # using handshake manifest v1.
+    BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation

@@ -1,4 +1,5 @@
 !: BOLT 5.7
+#MANIFEST_BANG#
 
 C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}

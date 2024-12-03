@@ -30,6 +30,8 @@ def cycle_zip(*args):
                for i, arg in enumerate(args)))
 
 
+# [stub-bolt-change] search tag when adding/removing bolt version support
+#                    !also check all other constants blow!
 ALL_BOLT_VERSIONS = (
     (1,),
     (2,),
@@ -91,11 +93,30 @@ ALL_REQUESTS_PER_VERSION = tuple((
     ((5, 0), b"\x13", "ROLLBACK"),
     *(
         ((5, minor), tag, name)
-        for minor in range(1, 3)
+        for minor in range(1, 4)
         for (tag, name) in (
             (b"\x01", "HELLO"),
             (b"\x6A", "LOGON"),
             (b"\x6B", "LOGOFF"),
+            (b"\x02", "GOODBYE"),
+            (b"\x0F", "RESET"),
+            (b"\x10", "RUN"),
+            (b"\x2F", "DISCARD"),
+            (b"\x3F", "PULL"),
+            (b"\x11", "BEGIN"),
+            (b"\x12", "COMMIT"),
+            (b"\x13", "ROLLBACK"),
+        )
+    ),
+
+    *(
+        ((5, minor), tag, name)
+        for minor in range(4, 8)
+        for (tag, name) in (
+            (b"\x01", "HELLO"),
+            (b"\x6A", "LOGON"),
+            (b"\x6B", "LOGOFF"),
+            (b"\x54", "TELEMETRY"),
             (b"\x02", "GOODBYE"),
             (b"\x0F", "RESET"),
             (b"\x10", "RUN"),

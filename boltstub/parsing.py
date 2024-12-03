@@ -129,6 +129,7 @@ class BangLine(Line):
     TYPE_RESTART = "restart"
     TYPE_CONCURRENT = "concurrent"
     TYPE_HANDSHAKE = "handshake"
+    TYPE_HANDSHAKE_MANIFEST = "handshake_manifest"
     TYPE_HANDSHAKE_RESPONSE = "handshake_response"
     TYPE_HANDSHAKE_DELAY = "handshake_delay"
     TYPE_PYTHON = "python"
@@ -182,6 +183,17 @@ class BangLine(Line):
                     "(e.g. 'HANDSHAKE 00 FF 02 04 F0')"
                 )
             obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
+        elif re.match(r"^HANDSHAKE_MANIFEST\s", obj.content):
+            obj._type = BangLine.TYPE_HANDSHAKE_MANIFEST
+            try:
+                version = int(obj.content[19:].strip())
+            except ValueError:
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake manifest, must be a"
+                    "positive number (e.g. 'HANDSHAKE_MANIFEST 0')"
+                )
+            obj._arg = version
         elif re.match(r"^HANDSHAKE_RESPONSE\s", obj.content):
             obj._type = BangLine.TYPE_HANDSHAKE_RESPONSE
             arg = re.sub(r"\s", "", obj.content[18:])
@@ -254,6 +266,13 @@ class BangLine(Line):
                 )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
+        elif self._type == BangLine.TYPE_HANDSHAKE_MANIFEST:
+            if ctx.handshake_manifest is not None:
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE_MANIFEST" multiple times'
+                )
+            ctx.handshake_manifest = self._arg
+            ctx.bang_lines["handshake_manifest"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE_RESPONSE:
             if ctx.handshake_response:
                 warnings.warn(  # noqa: B028
@@ -1354,6 +1373,7 @@ class ScriptContext:
         self.restarting = False
         self.concurrent = False
         self.handshake = None
+        self.handshake_manifest = None
         self.handshake_response = None
         self.handshake_delay = None
         self.python = []
@@ -1363,6 +1383,7 @@ class ScriptContext:
             "restarting": None,
             "concurrent": None,
             "handshake": None,
+            "handshake_manifest": None,
             "handshake_response": None,
             "handshake_delay": None,
             "python": [],
@@ -1415,6 +1436,18 @@ class Script:
                 self.context.bang_lines["handshake_response"],
                 "HANDSHAKE_RESPONSE bang line requires without HANDSHAKE bang "
                 "line to be present"
+            )
+        if (
+            self.context.handshake_manifest is not None
+            and (
+                self.context.handshake is not None
+                or self.context.handshake_response is not None
+            )
+        ):
+            raise LineError(
+                self.context.bang_lines["handshake_manifest"],
+                "Cannot combine HANDSHAKE_MANIFEST bang line with "
+                "HANDSHAKE or HANDSHAKE_RESPONSE bang lines"
             )
         try:
             verify_script_messages(self)

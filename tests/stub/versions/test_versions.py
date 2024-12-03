@@ -43,7 +43,7 @@ class TestProtocolVersions(TestkitTestCase):
             self._server.reset()
 
     def _run(self, version, server_agent=None, check_version=False,
-             rejected_agent=False, check_server_address=False):
+             rejected_agent=False, check_server_address=False, manifest=None):
         """Run the common part of the tests.
 
         :param version: e.g. "4x3" or "3"
@@ -61,6 +61,8 @@ class TestProtocolVersions(TestkitTestCase):
         :param check_server_address: Check if the summary contains the right
                                      server-address
         :type check_server_address: bool
+        :type manifest: str, optional
+        :param manifest: Handshake manifest version to enforce
         """
         expected_server_version = version.replace("x", ".")
         if "." not in expected_server_version:
@@ -71,6 +73,11 @@ class TestProtocolVersions(TestkitTestCase):
             vars_["#SERVER_AGENT#"] = "Neo4j/" + expected_server_version
         else:
             vars_["#SERVER_AGENT#"] = server_agent
+        if manifest:
+            vars_["#MANIFEST_BANG#"] = f"!: HANDSHAKE_MANIFEST {manifest}"
+        else:
+            vars_["#MANIFEST_BANG#"] = ""
+
         script_path = self.script_path("v{}_return_1.script".format(version))
         with self._get_session(script_path, vars_=vars_) as session:
             try:
@@ -160,6 +167,13 @@ class TestProtocolVersions(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_5_7)
     def test_supports_bolt5x7(self):
         self._run("5x7")
+
+    @driver_feature(
+        types.Feature.BOLT_5_7,
+        types.Feature.BOLT_HANDSHAKE_MANIFEST_V1,
+    )
+    def test_supports_bolt5x7_manifest_v1(self):
+        self._run("5x7", manifest="1")
 
     def test_server_version(self):
         for version in (
@@ -333,6 +347,15 @@ class TestProtocolVersions(TestkitTestCase):
             self.skipTest("Driver does not check server agent string")
         self._test_should_reject_server_using_verify_connectivity(
             version="5.6", script="v5x1_and_up_optional_hello.script"
+        )
+
+    @driver_feature(types.Feature.BOLT_5_7)
+    def test_should_reject_server_using_verify_connectivity_bolt_5x7(self):
+        # TODO remove this block once fixed
+        if get_driver_name() in ["dotnet", "go", "javascript"]:
+            self.skipTest("Driver does not check server agent string")
+        self._test_should_reject_server_using_verify_connectivity(
+            version="5.7", script="v5x1_and_up_optional_hello.script"
         )
 
     def _test_should_reject_server_using_verify_connectivity(

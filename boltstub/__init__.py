@@ -216,6 +216,7 @@ class BoltActor:
         self.channel = Channel(
             wire, script.context.bolt_version, script.context.bolt_features,
             log_cb=self.log,
+            handshake_manifest=script.context.handshake_manifest,
             handshake_data=self.script.context.handshake,
             handshake_response_data=self.script.context.handshake_response,
             handshake_delay=self.script.context.handshake_delay,

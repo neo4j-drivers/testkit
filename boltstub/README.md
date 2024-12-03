@@ -25,10 +25,16 @@ The following options are available:
  * `!: BOLT ${BOLT VERSION}` **(required)**  
    Configure the Bolt version the server is speaking.  
    E.g., `!: BOLT 4.0` or `!: BOLT 4`  
+   The bolt maximum handshake version (non-manifest, manifest vX) is chosen automatically based on the specified Bolt version.
+   Previous versions might also be accepted mirroring the behavior of the Neo4j server.
    For Bolt handshake version 2 (requires Bolt version 5.7+), feature flags can be specified following the protocol version.
    They're to be specified in raw hex bytes and must be a valid varint encoded integer.
    The server expects the client to opt into all feature flags offered.  
    E.g., `!: BOLT 5.7 FF 01` (sending feature flags 1 through 7 and 14)
+ * `!: HANDSHAKE_MANIFEST ${MANIFEST VERSION}`  
+   E.g., `!: HANDSHAKE_MANIFEST 1`  
+   Force the bolt version to be negotiated using the specified manifest version.
+   `0` indicates non-manifest negotiation.
  * `!: ALLOW RESTART`  
    By default, the server shuts itself down as soon as the end of the script is reached or the client sends an unexpected message.
    If this bang line is part of the head, the server will allow a new connection every time the script has successfully been played through until the end with the previous connection.
