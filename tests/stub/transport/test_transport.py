@@ -45,10 +45,13 @@ class TestTransport(TestkitTestCase):
         self.assertEqual(record.values[0].value, 1)
         self.assertIsInstance(null_record, types.NullRecord)
 
-    @driver_feature(types.Feature.BOLT_5_7)
+    @driver_feature(
+        types.Feature.BOLT_5_7,
+        types.Feature.BOLT_HANDSHAKE_MANIFEST_V1,
+    )
     def test_driver_ignores_feature_flags_handshake_v2(self):
         self._server.start(
-            path=self.script_path("handshake_v2_features.script")
+            path=self.script_path("handshake_manifest_v1_features.script")
         )
         with self.assertRaises(types.DriverError):
             self._session.run("RETURN 1 AN n").consume()
@@ -57,7 +60,7 @@ class TestTransport(TestkitTestCase):
     @driver_feature(types.Feature.BOLT_5_7)
     def test_driver_can_negotiate_5_7_with_handshake_v1(self):
         self._server.start(
-            path=self.script_path("handshake_v1_bolt_5_7.script")
+            path=self.script_path("handshake_non_manifest_bolt_5_7.script")
         )
         with self.assertRaises(types.DriverError):
             self._session.run("RETURN 1 AN n").consume()

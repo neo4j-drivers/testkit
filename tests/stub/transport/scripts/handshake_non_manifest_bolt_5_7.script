@@ -1,5 +1,5 @@
 !: BOLT 5.7
-!: HANDSHAKE 00 00 07 05
+!: HANDSHAKE_MANIFEST 0
 
 A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
