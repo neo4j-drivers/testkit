@@ -164,6 +164,8 @@ class Channel:
 
         if not self.bolt_protocol.handshake_range_support:
             range_ = 0
+        if not self.bolt_protocol.handshake_minor_support:
+            minor = 0
 
         if (
             supported_version[0] == major
