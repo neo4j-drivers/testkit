@@ -29,7 +29,7 @@ S: SUCCESS {"type": "r"}
 *: RESET
 
 C: RUN "RETURN 2 AS n" {} {"mode": "r", "db": "db1"}
-# server misbehaves even more, by a different database name than the one explicitly set in RUN
+# server misbehaves even more, by returning a different database name than the one explicitly set in RUN
 # (e.g., a bug where the user's home database is re-resolved and returned)
 S: SUCCESS {"fields": ["n"], "db": "db2"}
 C: PULL {"n": {"Z": "*"}, "[qid]": -1}

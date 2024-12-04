@@ -1147,7 +1147,7 @@ class ConditionalBlock(Block):
                 # no else block => cannot guarantee deterministic end at static
                 # check time
                 return False
-            return all(b.has_deterministic_end(channel) for b in self.blocks)
+            return all(b.has_deterministic_end() for b in self.blocks)
         block = self._probe_selection(channel, self.selection)
         if not block:
             return True
