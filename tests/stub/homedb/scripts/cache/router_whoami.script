@@ -3,8 +3,6 @@
 A: HELLO {"{}": "*"}
 
 {+
-
-
     {{
         A: LOGON {"scheme": "basic", "principal": "*", "credentials": "*", "[realm]": "*"}
         *: RESET

@@ -235,10 +235,9 @@ class Test5x8HomeDbWithoutCache(_Base.HomeDbWithoutCache):
         return {
             **super().vars_(),
             "#BOLT_PROTOCOL#": "5.8",
-            # TODO: server agent might be 2025.01.00 or such
             "#CONVERSTAION_START#": """\
 C: HELLO {"{}": "*"}
-S: SUCCESS {"server": "Neo4j/5.27.0", "connection_id": "conn-1"}
+S: SUCCESS {"server": "Neo4j/5.26.0", "connection_id": "conn-1"}
 A: LOGON {"{}": "*"}
 """,
         }

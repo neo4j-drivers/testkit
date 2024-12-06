@@ -551,7 +551,7 @@ class Bolt5x7Protocol(Bolt5x6Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
-    server_agent = "Neo4j/5.24.0"
+    server_agent = "Neo4j/5.26.0"
 
 
 class Bolt5x8Protocol(Bolt5x7Protocol):
@@ -560,8 +560,7 @@ class Bolt5x8Protocol(Bolt5x7Protocol):
     # allow the server to negotiate other bolt versions
     equivalent_versions = set()
 
-    # TODO: might be 2025.01.00 or such
-    server_agent = "Neo4j/5.27.0"
+    server_agent = "Neo4j/5.26.0"
 
     @classmethod
     def get_auto_response(cls, request: TranslatedStructure):
