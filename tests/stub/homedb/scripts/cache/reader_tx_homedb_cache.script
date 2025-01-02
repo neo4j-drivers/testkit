@@ -9,9 +9,14 @@ C: BEGIN {"[tx_metadata]": "*", "db": "homedb1", "mode": "r", "imp_user": "the-i
 S: SUCCESS {"db": "homedb1"}
 C: RUN "RETURN 1" {} {}
 S: SUCCESS {"fields": ["1"]}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [1]
-S: SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
+----
+    C: DISCARD {"n": -1}
+    S: SUCCESS {}
+}}
 C: COMMIT
 S: SUCCESS {}
 *: RESET
@@ -20,9 +25,14 @@ C: BEGIN {"[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter"}
 S: SUCCESS {"db": "homedb1"}
 C: RUN "RETURN 2" {} {}
 S: SUCCESS {"fields": ["2"]}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [2]
-S: SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [2]
+    S: SUCCESS {"type": "r"}
+----
+    C: DISCARD {"n": -1}
+    S: SUCCESS {}
+}}
 C: COMMIT
 S: SUCCESS {}
 *: RESET
@@ -31,9 +41,14 @@ C: BEGIN {"[tx_metadata]": "*", "mode": "r", "imp_user": "the-imposter"}
 S: SUCCESS {"db": "homedb3"}
 C: RUN "RETURN 3" {} {}
 S: SUCCESS {"fields": ["3"]}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [3]
-S: SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [3]
+    S: SUCCESS {"type": "r"}
+----
+    C: DISCARD {"n": -1}
+    S: SUCCESS {}
+}}
 C: COMMIT
 S: SUCCESS {}
 *: RESET
@@ -42,9 +57,14 @@ C: BEGIN  {"[bookmarks]": "*", "[tx_metadata]": "*", "db": "homedb3", "mode": "r
 S: SUCCESS {}
 C: RUN "RETURN 4" {} {}
 S: SUCCESS {"fields": ["4"]}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [4]
-S: SUCCESS {"type": "r"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [4]
+    S: SUCCESS {"type": "r"}
+----
+    C: DISCARD {"n": -1}
+    S: SUCCESS {}
+}}
 C: COMMIT
 S: SUCCESS {}
 
