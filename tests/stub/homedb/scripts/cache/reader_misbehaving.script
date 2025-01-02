@@ -1,4 +1,5 @@
 !: BOLT 5.8
+!: ALLOW CONCURRENT
 
 A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
@@ -19,31 +20,37 @@ A: LOGON {"{}": "*"}
     *: RESET
 *}
 
-C: RUN "RETURN 1 AS n" {} {"mode": "r", "db": "db1"}
-# server misbehaves by returning the database name, even though it has been explicitly set in RUN
-S: SUCCESS {"fields": ["n"], "db": "db1"}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [1]
-S: SUCCESS {"type": "r"}
+{?
+    C: RUN "RETURN 1 AS n" {} {"mode": "r", "db": "db1"}
+    # server misbehaves by returning the database name, even though it has been explicitly set in RUN
+    S: SUCCESS {"fields": ["n"], "db": "db1"}
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+    S: SUCCESS {"type": "r"}
 
-*: RESET
+    *: RESET
+?}
 
-C: RUN "RETURN 2 AS n" {} {"mode": "r", "db": "db1"}
-# server misbehaves even more, by returning a different database name than the one explicitly set in RUN
-# (e.g., a bug where the user's home database is re-resolved and returned)
-S: SUCCESS {"fields": ["n"], "db": "db2"}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [2]
-S: SUCCESS {"type": "r"}
+{?
+    C: RUN "RETURN 2 AS n" {} {"mode": "r", "db": "db1"}
+    # server misbehaves even more, by returning a different database name than the one explicitly set in RUN
+    # (e.g., a bug where the user's home database is re-resolved and returned)
+    S: SUCCESS {"fields": ["n"], "db": "db2"}
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [2]
+    S: SUCCESS {"type": "r"}
 
-*: RESET
+    *: RESET
+?}
 
-# despite the misbehaviour, the client must keep db1 pinned to the session
-C: RUN "RETURN 3 AS n" {} {"mode": "r", "db": "db1"}
-S: SUCCESS {"fields": ["n"]}
-C: PULL {"n": {"Z": "*"}, "[qid]": -1}
-S: RECORD [3]
-S: SUCCESS {"type": "r"}
+{?
+    # despite the misbehaviour, the client must keep db1 pinned to the session
+    C: RUN "RETURN 3 AS n" {} {"mode": "r", "db": "db1"}
+    S: SUCCESS {"fields": ["n"]}
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [3]
+    S: SUCCESS {"type": "r"}
+?}
 
 *: RESET
 ?: GOODBYE
