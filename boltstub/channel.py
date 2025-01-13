@@ -109,11 +109,6 @@ class Channel:
         self.wire.write(b)
         self.wire.send()
 
-    def send_struct(self, struct):
-        self.log("S: %s", struct)
-        self.stream.write_message(struct)
-        self.stream.drain()
-
     def send_server_line(self, server_line):
         self.log("%s", server_line)
         server_line = self.bolt_protocol.translate_server_line(server_line)
@@ -128,9 +123,9 @@ class Channel:
     def consume(self, line_no=None):
         if self._buffered_msg is not None:
             if line_no is not None:
-                self.log("(%3i) C: %s", line_no, self._buffered_msg)
+                self.log("(%4i) C: %s", line_no, self._buffered_msg)
             else:
-                self.log("(%3i) C: %s", self._buffered_msg)
+                self.log("(%4i) C: %s", self._buffered_msg)
             msg = self._buffered_msg
             self._buffered_msg = None
             return msg
@@ -158,8 +153,10 @@ class Channel:
             )
 
     def auto_respond(self, msg):
-        self.log("AUTO response:")
-        self.send_struct(self.bolt_protocol.get_auto_response(msg))
+        struct = self.bolt_protocol.get_auto_response(msg)
+        self.log("(AUTO) S: %s", struct)
+        self.stream.write_message(struct)
+        self.stream.drain()
 
     def try_auto_consume(self, whitelist: Iterable[str]):
         next_msg = self.peek()

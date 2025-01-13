@@ -169,6 +169,10 @@ class Feature(Enum):
     # sending BEGIN but pipelines the RUN and PULL right afterwards and
     # consumes three messages after that. This saves 2 full round-trips.
     OPT_EXECUTE_QUERY_PIPELINING = "Optimization:ExecuteQueryPipelining"
+    # The home db cache for optimistic home db resolution treats the principal
+    # in basic auth the exact same way it treats impersonated users.
+    OPT_HOME_DB_CACHE_BASIC_PRINCIPAL_IS_IMP_USER = \
+        "Optimization:HomeDbCacheBasicPrincipalIsImpersonatedUser"
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"

@@ -1,0 +1,33 @@
+!: BOLT 5.8
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+C: RUN "RETURN 1" {} {"[mode]": "w"}
+S: SUCCESS {"fields": ["1"], "t_first": 1, "db": "homedb"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+----
+    C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+}}
+S: SUCCESS {"type": "r"}
+
+*: RESET
+
+# client must not pin the resolved db from the previous query
+C: RUN "RETURN 2" {} {"[mode]": "w"}
+S: SUCCESS {"fields": ["2"], "t_first": 3, "db": "homedb"}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [2]
+----
+    C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+}}
+S: SUCCESS {"type": "r"}
+
+*: RESET
+
+
+?: GOODBYE

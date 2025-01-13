@@ -1,7 +1,7 @@
-!: BOLT 4.4
+!: BOLT #BOLT_PROTOCOL#
 !: ALLOW CONCURRENT
 
-A: HELLO {"{}": "*"}
+#CONVERSTAION_START#
 *: RESET
 C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": "the-imposter", "db": "homedb"}
 S: SUCCESS {}

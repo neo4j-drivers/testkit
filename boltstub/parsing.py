@@ -106,7 +106,7 @@ class Line(str, abc.ABC):
         return obj
 
     def __str__(self):
-        return "({:3}) {}".format(self.line_number,
+        return "({:4}) {}".format(self.line_number,
                                   super(Line, self).__str__())
 
     def __repr__(self):
@@ -514,7 +514,7 @@ class Block(abc.ABC):
         assert self.try_consume(channel)
 
     @abc.abstractmethod
-    def has_deterministic_end(self):
+    def has_deterministic_end(self, channel=None) -> bool:
         pass
 
     @abc.abstractmethod
@@ -581,7 +581,7 @@ class ClientBlock(Block):
     def done(self, channel):
         return self.index >= len(self.lines)
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         return True
 
     def init(self, channel):
@@ -659,7 +659,7 @@ class ServerBlock(Block):
     def done(self, channel):
         return self.index >= len(self.lines)
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         return True
 
     def init(self, channel):
@@ -762,8 +762,8 @@ class AlternativeBlock(Block):
         return (self.selection is not None
                 and self.block_lists[self.selection].done(channel))
 
-    def has_deterministic_end(self) -> bool:
-        return all(b.has_deterministic_end() for b in self.block_lists)
+    def has_deterministic_end(self, channel=None) -> bool:
+        return all(b.has_deterministic_end(channel) for b in self.block_lists)
 
     def init(self, channel):
         # self.assert_no_init()
@@ -834,8 +834,8 @@ class ParallelBlock(Block):
         return any(b.can_consume_after_reset(channel)
                    for b in self.block_lists)
 
-    def has_deterministic_end(self) -> bool:
-        return all(b.has_deterministic_end() for b in self.block_lists)
+    def has_deterministic_end(self, channel=None) -> bool:
+        return all(b.has_deterministic_end(channel) for b in self.block_lists)
 
     def init(self, channel):
         # self.assert_no_init()
@@ -889,7 +889,7 @@ class OptionalBlock(Block):
 
     def can_be_skipped(self, channel):
         if self.started:
-            if self.block_list.has_deterministic_end():
+            if self.block_list.has_deterministic_end(channel):
                 return self.block_list.done(channel)
             return self.block_list.can_be_skipped(channel)
         return True
@@ -901,14 +901,14 @@ class OptionalBlock(Block):
         return self.block_list.can_consume_after_reset(channel)
 
     def done(self, channel) -> bool:
-        if self.started and self.block_list.has_deterministic_end():
+        if self.started and self.block_list.has_deterministic_end(channel):
             return self.block_list.done(channel)
         raise RuntimeError("it's nondeterministic!")
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         if not self.started:
             return False
-        return self.block_list.has_deterministic_end()
+        return self.block_list.has_deterministic_end(channel)
 
     def init(self, channel):
         # self.assert_no_init()
@@ -951,8 +951,10 @@ class _RepeatBlock(Block, abc.ABC):
     def accepted_messages(self, channel) -> List[ClientLine]:
         res = OrderedDict((m, True)
                           for m in self.block_list.accepted_messages(channel))
-        if ((self.has_deterministic_end() and self.done(channel))
-                or self.block_list.can_be_skipped(channel)):
+        if (
+            (self.has_deterministic_end(channel) and self.done(channel))
+            or self.block_list.can_be_skipped(channel)
+        ):
             res.update(
                 (m, True)
                 for m in self.block_list.accepted_messages_after_reset(channel)
@@ -984,7 +986,7 @@ class _RepeatBlock(Block, abc.ABC):
         return False
 
     def can_consume(self, channel) -> bool:
-        if self.block_list.has_deterministic_end():
+        if self.block_list.has_deterministic_end(channel):
             return self._can_consume_deterministic(channel)
         return self._can_consume_nondeterministic(channel)
 
@@ -994,7 +996,7 @@ class _RepeatBlock(Block, abc.ABC):
     def done(self, channel) -> bool:
         raise RuntimeError("it's nondeterministic!")
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         return False
 
     def init(self, channel):
@@ -1030,7 +1032,7 @@ class _RepeatBlock(Block, abc.ABC):
         return False
 
     def try_consume(self, channel) -> bool:
-        if self.block_list.has_deterministic_end():
+        if self.block_list.has_deterministic_end(channel):
             return self._try_consume_deterministic(channel)
         return self._try_consume_nondeterministic(channel)
 
@@ -1111,7 +1113,8 @@ class ConditionalBlock(Block):
         return block.accepted_messages_after_reset(channel)
 
     def assert_no_init(self):
-        return
+        for block in self.blocks:
+            block.assert_no_init()
 
     def done(self, channel) -> bool:
         block = self._probe_selection(channel, self.selection)
@@ -1138,8 +1141,17 @@ class ConditionalBlock(Block):
         return block.can_consume_after_reset(channel)
         pass
 
-    def has_deterministic_end(self):
-        return all(b.has_deterministic_end() for b in self.blocks)
+    def has_deterministic_end(self, channel=None) -> bool:
+        if channel is None:
+            if len(self.blocks) <= len(self.conditions):
+                # no else block => cannot guarantee deterministic end at static
+                # check time
+                return False
+            return all(b.has_deterministic_end() for b in self.blocks)
+        block = self._probe_selection(channel, self.selection)
+        if not block:
+            return True
+        return block.has_deterministic_end(channel)
 
     def init(self, channel):
         block = self._get_selection(channel, self.selection)
@@ -1233,18 +1245,24 @@ class BlockList(Block):
         return False
 
     def done(self, channel) -> bool:
-        if not self.has_deterministic_end():
+        if not self.has_deterministic_end(channel):
             raise RuntimeError("it's nondeterministic!")
         return self.index >= len(self.blocks)
 
-    def has_deterministic_end(self) -> bool:
-        return not self.blocks or self.blocks[-1].has_deterministic_end()
+    def has_deterministic_end(self, channel=None) -> bool:
+        return (
+            not self.blocks
+            or self.blocks[-1].has_deterministic_end(channel)
+        )
 
     def init(self, channel):
         while self.index < len(self.blocks):
             block = self.blocks[self.index]
             block.init(channel)
-            if not block.has_deterministic_end() or not block.done(channel):
+            if (
+                not block.has_deterministic_end(channel)
+                or not block.done(channel)
+            ):
                 break
             self.index += 1
 
@@ -1258,7 +1276,10 @@ class BlockList(Block):
             block = self.blocks[i]
             if block.try_consume(channel):
                 self.index = i
-                while block.has_deterministic_end() and block.done(channel):
+                while (
+                    block.has_deterministic_end(channel)
+                    and block.done(channel)
+                ):
                     self.index += 1
                     if self.index < len(self.blocks):
                         block = self.blocks[self.index]
@@ -1392,7 +1413,7 @@ class Script:
         with self._lock:
             if self._skipped:
                 return True
-            if self.block_list.has_deterministic_end():
+            if self.block_list.has_deterministic_end(channel):
                 return self.block_list.done(channel)
             return False
 
