@@ -136,7 +136,7 @@ class ServerInfo:
         else:
             version = tuple(int(i) for i in self.version.split(".")[:2])
         if version >= (5, 26):
-            return "5.7"
+            return "5.8"
         if version >= (5, 23):
             return "5.6"
         # bolt 5.5 was never released

@@ -86,7 +86,9 @@ class StubServer:
                 script = script.replace(v, str(vars_[v]))
         if script:
             tempdir = tempfile.gettempdir()
-            path = os.path.join(tempdir, script_fn)
+            path = os.path.join(
+                tempdir, f"{self.host}_{self.port}_{script_fn}"
+            )
             with open(path, "w", encoding="utf-8") as f:
                 f.write(script)
                 f.flush()
@@ -214,7 +216,7 @@ class StubServer:
                 raise
         return self._poll(timeout)
 
-    def done(self):
+    def done(self, ignore_never_started=False):
         """Shut down the server, if running.
 
         If the server was never started, this method does nothing.
@@ -250,6 +252,8 @@ class StubServer:
                 raise StubServerUncleanExitError("Stub server hanged.")
             if self._process.returncode not in (0, INTERRUPT_EXIT_CODE):
                 if self._process.returncode == 3:
+                    if ignore_never_started:
+                        return
                     raise StubScriptNotFinishedError("Script never started.")
                 raise StubServerUncleanExitError(
                     "Stub server exited unclean ({})".format(
