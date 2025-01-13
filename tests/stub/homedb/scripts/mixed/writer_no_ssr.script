@@ -13,5 +13,6 @@ S: SUCCESS {"fields": ["n"]}
     C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
 }}
 S: SUCCESS {}
+*: RESET
 
 ?: GOODBYE
