@@ -1119,7 +1119,14 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     def test_home_db_fallback_mixed_bolt_versions(self):
         self.start_server(self._router, "router_5x8.script")
         self.start_server(self._reader, "reader_5x8_ssr.script")
-        self.start_server(self._writer, "writer_5x7.script")
+        self.start_server(
+            self._writer,
+            "writer_no_ssr.script",
+            vars_={
+                "#BOLT_VERSION#": "5.7",
+                "#HELLO_MESSAGE#": """A: HELLO {"{}": "*"}""",
+            },
+        )
 
         with self.driver() as driver:
             with self.session(driver, "r") as session:
@@ -1133,3 +1140,38 @@ class TestHomeDbMixedCluster(TestkitTestCase):
             with self.session(driver, "r", database="homedb1") as session:
                 result = session.run("RETURN 3 AS n")
                 result.consume()
+        self._router.done()
+        self._reader.done()
+        self._writer.done()
+
+    def test_home_db_fallback_no_ssr_hint(self):
+        self.start_server(self._router, "router_5x8.script")
+        self.start_server(self._reader, "reader_5x8_ssr.script")
+        self.start_server(
+            self._writer,
+            "writer_no_ssr.script",
+            vars_={
+                "#BOLT_VERSION#": "5.8",
+                "#HELLO_MESSAGE#": (  # noqa: PAR001
+                    'C: HELLO { "{}": "*"}\n'
+                    "S: SUCCESS "
+                    '{"connection_id": "bolt-1", "server": "Neo4j/5.26.0"}'
+                ),
+            },
+        )
+
+        with self.driver() as driver:
+            with self.session(driver, "r") as session:
+                result = session.run("RETURN 1 AS n")
+                result.consume()
+
+            with self.session(driver, "w") as session:
+                result = session.run("RETURN 2 AS n")
+                result.consume()
+
+            with self.session(driver, "r", database="homedb1") as session:
+                result = session.run("RETURN 3 AS n")
+                result.consume()
+        self._router.done()
+        self._reader.done()
+        self._writer.done()

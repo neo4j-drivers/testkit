@@ -1,6 +1,6 @@
-!: BOLT 5.7
+!: BOLT #BOLT_VERSION#
 
-A: HELLO {"{}": "*"}
+#HELLO_MESSAGE#
 A: LOGON {"{}": "*"}
 *: RESET
 
