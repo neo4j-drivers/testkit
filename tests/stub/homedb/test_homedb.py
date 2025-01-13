@@ -1,5 +1,6 @@
 import abc
 import concurrent.futures
+from contextlib import contextmanager
 
 import nutkit.protocol as types
 from nutkit.frontend import (
@@ -1056,3 +1057,79 @@ class TestHomeDbWithCache(TestkitTestCase):
         self._router.done()
         self._reader1.done(ignore_never_started=True)
         self._reader2.done(ignore_never_started=True)
+
+
+class TestHomeDbMixedCluster(TestkitTestCase):
+    # TODO:
+    #  - [ ] test driver returns connection to pool and falls back to explicit
+    #        home db resolution when
+    #    - [ ] newly picked up connection does not support home db
+    #      - [x] support lacking by too old bolt version
+    #      - [ ] support lacking by missing connection hint
+    #    - [ ] newly connection created by a concurrent session
+    #          CANNOT BE TESTED: communicate with team!
+    #  - [ ] same acquisition timeout counts for all acquisition attempts
+    #        together (see above case)
+    #  - [ ] driver keeps cache up-to-date even when SSR is unavailable
+    #        & uses the warm cache as soon as SSR becomes available
+
+    required_features = (
+        types.Feature.BOLT_5_7,
+        types.Feature.BOLT_5_8,
+    )
+
+    def setUp(self):
+        super().setUp()
+        self._router = StubServer(9000)
+        self._reader = StubServer(9010)
+        self._writer = StubServer(9020)
+        self._auth1 = types.AuthorizationToken(
+            "basic", principal="p", credentials="c"
+        )
+        self._uri = f"neo4j://{self._router.address}"
+
+    def tearDown(self):
+        self._reader.reset()
+        self._writer.reset()
+        self._router.reset()
+        super().tearDown()
+
+    def start_server(self, server, *path, vars_=None):
+        server.start(
+            path=self.script_path("mixed", *path),
+            vars_={"#HOST#": self._router.host, **(vars_ or {})},
+        )
+
+    @contextmanager
+    def driver(self):
+        driver = Driver(self._backend, self._uri, self._auth1)
+        try:
+            yield driver
+        finally:
+            driver.close()
+
+    @contextmanager
+    def session(self, driver, access_mode, **kwargs):
+        session = driver.session(access_mode, **kwargs)
+        try:
+            yield session
+        finally:
+            session.close()
+
+    def test_home_db_fallback_mixed_bolt_versions(self):
+        self.start_server(self._router, "router_5x8.script")
+        self.start_server(self._reader, "reader_5x8_ssr.script")
+        self.start_server(self._writer, "writer_5x7.script")
+
+        with self.driver() as driver:
+            with self.session(driver, "r") as session:
+                result = session.run("RETURN 1 AS n")
+                result.consume()
+
+            with self.session(driver, "w") as session:
+                result = session.run("RETURN 2 AS n")
+                result.consume()
+
+            with self.session(driver, "r", database="homedb1") as session:
+                result = session.run("RETURN 3 AS n")
+                result.consume()
