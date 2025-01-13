@@ -1061,18 +1061,6 @@ class TestHomeDbWithCache(TestkitTestCase):
 
 
 class TestHomeDbMixedCluster(TestkitTestCase):
-    # TODO:
-    #  - [ ] test driver returns connection to pool and falls back to explicit
-    #        home db resolution when
-    #    - [x] newly picked up connection does not support home db
-    #      - [x] support lacking by too old bolt version
-    #      - [x] support lacking by missing connection hint
-    #    - [ ] newly connection created by a concurrent session
-    #          CANNOT BE TESTED: communicate with team!
-    #  - [x] same acquisition timeout counts for all acquisition attempts
-    #        together (see above case)
-    #  - [ ] driver keeps cache up-to-date even when SSR is unavailable
-    #        & uses the warm cache as soon as SSR becomes available
 
     required_features = types.Feature.BOLT_5_8,
 
@@ -1161,7 +1149,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     VARS_WRITER_NO_SSR = {
         "#BOLT_VERSION#": "5.8",
         "#HELLO_MESSAGE#": (  # noqa: PAR001
-            'C: HELLO { "{}": "*"}\n'
+            'C: HELLO {"{}": "*"}\n'
             "S: SUCCESS "
             '{"connection_id": "bolt-1", "server": "Neo4j/5.26.0"}'
         ),
