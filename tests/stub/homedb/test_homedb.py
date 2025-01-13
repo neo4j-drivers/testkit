@@ -1068,7 +1068,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     #      - [x] support lacking by missing connection hint
     #    - [ ] newly connection created by a concurrent session
     #          CANNOT BE TESTED: communicate with team!
-    #  - [ ] same acquisition timeout counts for all acquisition attempts
+    #  - [x] same acquisition timeout counts for all acquisition attempts
     #        together (see above case)
     #  - [ ] driver keeps cache up-to-date even when SSR is unavailable
     #        & uses the warm cache as soon as SSR becomes available
@@ -1079,7 +1079,8 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         super().setUp()
         self._router = StubServer(9000)
         self._reader = StubServer(9010)
-        self._writer = StubServer(9020)
+        self._writer1 = StubServer(9020)
+        self._writer2 = StubServer(9021)
         self._auth1 = types.AuthorizationToken(
             "basic", principal="p", credentials="c"
         )
@@ -1087,19 +1088,24 @@ class TestHomeDbMixedCluster(TestkitTestCase):
 
     def tearDown(self):
         self._reader.reset()
-        self._writer.reset()
+        self._writer1.reset()
         self._router.reset()
         super().tearDown()
 
     def start_server(self, server, *path, vars_=None):
         server.start(
             path=self.script_path("mixed", *path),
-            vars_={"#HOST#": self._router.host, **(vars_ or {})},
+            vars_={
+                "#HOST#": self._router.host,
+                "#WRITER_2#": self._writer1.port,
+                "#EXTRA_BANG_LINES#": "",
+                **(vars_ or {})
+            },
         )
 
     @contextmanager
-    def driver(self):
-        driver = Driver(self._backend, self._uri, self._auth1)
+    def driver(self, **kwargs):
+        driver = Driver(self._backend, self._uri, self._auth1, **kwargs)
         try:
             yield driver
         finally:
@@ -1134,14 +1140,14 @@ class TestHomeDbMixedCluster(TestkitTestCase):
 
         self._router.done()
         self._reader.done()
-        self._writer.done()
+        self._writer1.done()
 
     @driver_feature(types.Feature.BOLT_5_7)
     def test_home_db_fallback_mixed_bolt_versions(self):
         self.start_server(self._router, "router_5x8.script")
         self.start_server(self._reader, "reader_5x8_ssr.script")
         self.start_server(
-            self._writer,
+            self._writer1,
             "writer_no_ssr.script",
             vars_={
                 "#BOLT_VERSION#": "5.7",
@@ -1151,20 +1157,70 @@ class TestHomeDbMixedCluster(TestkitTestCase):
 
         self._test_mixed_cluster()
 
+    VARS_WRITER_NO_SSR = {
+        "#BOLT_VERSION#": "5.8",
+        "#HELLO_MESSAGE#": (  # noqa: PAR001
+            'C: HELLO { "{}": "*"}\n'
+            "S: SUCCESS "
+            '{"connection_id": "bolt-1", "server": "Neo4j/5.26.0"}'
+        ),
+    }
+
     def test_home_db_fallback_no_ssr_hint(self):
         self.start_server(self._router, "router_5x8.script")
         self.start_server(self._reader, "reader_5x8_ssr.script")
         self.start_server(
-            self._writer,
+            self._writer1,
             "writer_no_ssr.script",
-            vars_={
-                "#BOLT_VERSION#": "5.8",
-                "#HELLO_MESSAGE#": (  # noqa: PAR001
-                    'C: HELLO { "{}": "*"}\n'
-                    "S: SUCCESS "
-                    '{"connection_id": "bolt-1", "server": "Neo4j/5.26.0"}'
-                ),
-            },
+            vars_=self.VARS_WRITER_NO_SSR,
         )
 
         self._test_mixed_cluster()
+
+    @driver_feature(types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT)
+    def test_connection_acquisition_timeout_during_fallback(self):
+        self.start_server(
+            self._router,
+            "router_5x8.script",
+            vars_={
+                "#WRITER_2#": self._writer2.port,
+            },
+        )
+        self.start_server(self._reader, "reader_5x8_ssr.script")
+        self.start_server(
+            self._writer1,
+            "writer_no_ssr_only_connect.script",
+            vars_={
+                **self.VARS_WRITER_NO_SSR,
+                "#EXTRA_BANG_LINES#": "!: HANDSHAKE_DELAY 1.1",
+            },
+        )
+        self.start_server(
+            self._writer2,
+            "writer_no_ssr.script",
+            vars_={
+                **self.VARS_WRITER_NO_SSR,
+                "#EXTRA_BANG_LINES#": "!: HANDSHAKE_DELAY 1.1",
+            },
+        )
+
+        with self.driver(
+            connection_acquisition_timeout_ms=2000,
+        ) as driver:
+            # set-up driver to have home db cache enabled
+            with self.session(driver, "r") as session:
+                result = session.run("RETURN 1 AS n")
+                result.consume()
+
+            # detecting server without SSR => fallback to explicit home db
+            # together, connection acquisition trigger the timeout
+            with self.assertRaises(types.DriverError):
+                with self.session(driver, "w") as session:
+                    result = session.run("RETURN 2 AS n")
+                    result.consume()
+
+        self._router.done()
+        self._reader.done()
+        self._writer1.done()
+        # acquisition timeout kicks in => not finishing the script
+        self._writer2.reset()
