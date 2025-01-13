@@ -27,6 +27,9 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports setting a custom max connection lifetime
+    API_DRIVER_MAX_CONNECTION_LIFETIME = \
+        "Feature:API:Driver:MaxConnectionLifetime"
     # The driver supports notification filters configuration.
     API_DRIVER_NOTIFICATIONS_CONFIG = "Feature:API:Driver:NotificationsConfig"
     # The driver offers a method for checking if the provided authentication

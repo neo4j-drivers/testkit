@@ -10,6 +10,7 @@ from nutkit.frontend import (
 from tests.shared import (
     driver_feature,
     TestkitTestCase,
+    TimeoutManager,
 )
 from tests.stub.shared import StubServer
 
@@ -1224,3 +1225,49 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         self._writer1.done()
         # acquisition timeout kicks in => not finishing the script
         self._writer2.reset()
+
+    @driver_feature(
+        types.Feature.BOLT_5_7,
+        types.Feature.API_DRIVER_MAX_CONNECTION_LIFETIME,
+    )
+    def test_warm_cache_during_cluster_upgrade(self):
+        self.start_server(
+            self._router,
+            "router_keep_warm.script",
+            vars_={
+                "#BOLT_VERSION#": "5.7",
+                "#IMPERSONATED_USER#": "",
+            },
+        )
+        self.start_server(self._reader, "reader_5x7_keep_warm.script")
+        with TimeoutManager(self, 2000) as timeout:
+            with self.driver(max_connection_lifetime_ms=2000) as driver:
+                with self.session(driver, "r") as session:
+                    result = session.run("RETURN 1 AS n")
+                    result.consume()
+
+                self._router.done()
+                self._reader.done()
+                # Mock time or wait until open connections lifetimes expire
+                timeout.tick_to_after_timeout()
+                self.start_server(
+                    self._router,
+                    "router_keep_warm.script",
+                    vars_={
+                        "#BOLT_VERSION#": "5.8",
+                        "#IMPERSONATED_USER#": ', "imp_user": "user2"',
+                    },
+                )
+                self.start_server(self._reader, "reader_5x8_keep_warm.script")
+
+                with self.session(
+                    driver, "r", impersonated_user="user2"
+                ) as session:
+                    result = session.run("RETURN 2 as n")
+                    result.consume()
+                self._router.done()
+
+                with self.session(driver, "r") as session:
+                    result = session.run("RETURN 3 as n")
+                    result.consume()
+                self._reader.done()

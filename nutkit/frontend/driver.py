@@ -15,6 +15,7 @@ class Driver:
                  connection_timeout_ms=None, fetch_size=None,
                  max_tx_retry_time_ms=None, encrypted=None,
                  trusted_certificates=None, liveness_check_timeout_ms=None,
+                 max_connection_lifetime_ms=None,
                  max_connection_pool_size=None,
                  connection_acquisition_timeout_ms=None,
                  notifications_min_severity=None,
@@ -58,6 +59,7 @@ class Driver:
             fetchSize=fetch_size, maxTxRetryTimeMs=max_tx_retry_time_ms,
             encrypted=encrypted, trustedCertificates=trusted_certificates,
             liveness_check_timeout_ms=liveness_check_timeout_ms,
+            max_connection_lifetime_ms=max_connection_lifetime_ms,
             max_connection_pool_size=max_connection_pool_size,
             connection_acquisition_timeout_ms=connection_acquisition_timeout_ms,  # noqa: E501
             notifications_min_severity=notifications_min_severity,

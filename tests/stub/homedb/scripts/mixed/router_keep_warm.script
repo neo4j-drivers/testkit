@@ -1,0 +1,10 @@
+!: BOLT #BOLT_VERSION#
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+C: ROUTE {"{}": "*"} [] {"[db]": null#IMPERSONATED_USER#}
+S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb1", "servers": [{"addresses": ["#HOST#:9000"], "role": "ROUTE"}, {"addresses": ["#HOST#:9010"], "role": "READ"}, {"addresses": [], "role": "WRITE"}]}}
+*: RESET
