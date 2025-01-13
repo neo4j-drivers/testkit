@@ -1063,9 +1063,9 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     # TODO:
     #  - [ ] test driver returns connection to pool and falls back to explicit
     #        home db resolution when
-    #    - [ ] newly picked up connection does not support home db
+    #    - [x] newly picked up connection does not support home db
     #      - [x] support lacking by too old bolt version
-    #      - [ ] support lacking by missing connection hint
+    #      - [x] support lacking by missing connection hint
     #    - [ ] newly connection created by a concurrent session
     #          CANNOT BE TESTED: communicate with team!
     #  - [ ] same acquisition timeout counts for all acquisition attempts
@@ -1073,10 +1073,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     #  - [ ] driver keeps cache up-to-date even when SSR is unavailable
     #        & uses the warm cache as soon as SSR becomes available
 
-    required_features = (
-        types.Feature.BOLT_5_7,
-        types.Feature.BOLT_5_8,
-    )
+    required_features = types.Feature.BOLT_5_8,
 
     def setUp(self):
         super().setUp()
@@ -1116,6 +1113,30 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         finally:
             session.close()
 
+    def _test_mixed_cluster(self):
+        with self.driver() as driver:
+            # 1st connection => explicit home db resolution (homedb1)
+            with self.session(driver, "r") as session:
+                result = session.run("RETURN 1 AS n")
+                result.consume()
+
+            # 2nd connection has no ssr support
+            # => falling back to explicit home db resolution (homedb2)
+            with self.session(driver, "w") as session:
+                result = session.run("RETURN 2 AS n")
+                result.consume()
+
+            # making sure the connection to the reader is still allive after
+            # the fallback
+            with self.session(driver, "r", database="homedb1") as session:
+                result = session.run("RETURN 3 AS n")
+                result.consume()
+
+        self._router.done()
+        self._reader.done()
+        self._writer.done()
+
+    @driver_feature(types.Feature.BOLT_5_7)
     def test_home_db_fallback_mixed_bolt_versions(self):
         self.start_server(self._router, "router_5x8.script")
         self.start_server(self._reader, "reader_5x8_ssr.script")
@@ -1128,21 +1149,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
             },
         )
 
-        with self.driver() as driver:
-            with self.session(driver, "r") as session:
-                result = session.run("RETURN 1 AS n")
-                result.consume()
-
-            with self.session(driver, "w") as session:
-                result = session.run("RETURN 2 AS n")
-                result.consume()
-
-            with self.session(driver, "r", database="homedb1") as session:
-                result = session.run("RETURN 3 AS n")
-                result.consume()
-        self._router.done()
-        self._reader.done()
-        self._writer.done()
+        self._test_mixed_cluster()
 
     def test_home_db_fallback_no_ssr_hint(self):
         self.start_server(self._router, "router_5x8.script")
@@ -1160,18 +1167,4 @@ class TestHomeDbMixedCluster(TestkitTestCase):
             },
         )
 
-        with self.driver() as driver:
-            with self.session(driver, "r") as session:
-                result = session.run("RETURN 1 AS n")
-                result.consume()
-
-            with self.session(driver, "w") as session:
-                result = session.run("RETURN 2 AS n")
-                result.consume()
-
-            with self.session(driver, "r", database="homedb1") as session:
-                result = session.run("RETURN 3 AS n")
-                result.consume()
-        self._router.done()
-        self._reader.done()
-        self._writer.done()
+        self._test_mixed_cluster()
