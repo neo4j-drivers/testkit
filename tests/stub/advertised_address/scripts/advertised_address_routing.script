@@ -4,6 +4,8 @@ A: HELLO {"{}": "*"}
 C: LOGON {"{}": "*"}
 S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/5.26.0", "advertised_address": "#ADVERTISED_HOST#:#ADVERTISED_PORT#"}
 
+*: RESET
+
 C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
 S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["doesnt_exist:9001"], "role":"ROUTE"}, {"addresses": ["doesnt_exist2:#ADVERTISED_PORT#"], "role":"READ"}, {"addresses": ["#ADVERTISED_HOST#:#ADVERTISED_PORT#"], "role":"WRITE"}]}}
 

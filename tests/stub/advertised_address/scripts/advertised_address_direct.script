@@ -1,0 +1,24 @@
+!: BOLT 5.8
+
+A: HELLO {"{}": "*"}
+C: LOGON {"{}": "*"}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/5.26.0", "advertised_address": "#ADVERTISED_HOST#:#ADVERTISED_PORT#"}
+
+*: RESET
+
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"{}": "*"}
+S: RECORD [1]
+S: SUCCESS {}
+
+*: RESET
+
+C: RUN "RETURN 2 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"{}": "*"}
+S: RECORD [2]
+S: SUCCESS {}
+
+*: RESET
+A: GOODBYE

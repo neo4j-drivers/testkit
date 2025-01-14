@@ -34,12 +34,13 @@ class _AdvertisedAddressTestCase(TestkitTestCase, ABC):
         server.done()
 
     @contextmanager
-    def driver(self, server, routing=True, dns_resolver=None):
+    def driver(self, server, routing=True, dns_resolver=None, **kwargs):
         auth = types.AuthorizationToken("bearer", credentials="foo")
         scheme = "neo4j" if routing else "bolt"
         uri = f"{scheme}://{_FAKE_ADDRESS}:{server.port}"
         driver = Driver(
             self._backend, uri, auth, domain_name_resolver_fn=dns_resolver,
+            **kwargs,
         )
         try:
             yield driver
@@ -60,29 +61,56 @@ class TestAdvertisedAddress(_AdvertisedAddressTestCase):
         types.Feature.BOLT_5_8,
     )
 
-    @driver_feature(types.Feature.BACKEND_DNS_RESOLVER)
-    def test_advertised_address(self):
-        with self.server("advertised_address.script") as server:
+    def _test_reuses_connection(
+        self,
+        server,
+        *,
+        driver_kwargs=None,
+        repetitions=1,
+    ):
+        if driver_kwargs is None:
+            driver_kwargs = {}
 
-            dns_expectations = deque(
+        dns_expectations = deque(
+            (
                 (
-                    (
-                        _FAKE_ADDRESS,
-                        [server.host],
-                    ),
-                )
+                    _FAKE_ADDRESS,
+                    [server.host],
+                ),
+            )
+        )
+
+        def dns_resolver(name):
+            nonlocal dns_expectations
+            expectation, result = dns_expectations.popleft()
+            name, sep, port = name.rpartition(":")
+            assert name == expectation
+            return [sep.join((host, port)) for host in result]
+
+        with self.driver(
+            server,
+            dns_resolver=dns_resolver,
+            **driver_kwargs
+        ) as driver:
+            for i in range(repetitions):
+                with self.session(driver) as session:
+                    list(session.run(f"RETURN {i + 1} AS n"))
+
+    @driver_feature(types.Feature.BACKEND_DNS_RESOLVER)
+    def test_reuses_connection_according_to_advertised_address_routing(self):
+        with self.server("advertised_address_routing.script") as server:
+            self._test_reuses_connection(
+                server,
+                driver_kwargs={"routing": True},
             )
 
-            def dns_resolver(name):
-                nonlocal dns_expectations
-                expectation, result = dns_expectations.popleft()
-                name, sep, port = name.rpartition(":")
-                assert name == expectation
-                return [sep.join((host, port)) for host in result]
-
-            with self.driver(server, dns_resolver=dns_resolver) as driver:
-                with self.session(driver) as session:
-                    list(session.run("RETURN 1 AS n"))
-
-    # TODO: test direct connection should be re-used regardless
-    #  of advertised address
+    def test_reuses_connection_regardless_of_advertised_address_direct(self):
+        with self.server("advertised_address_direct.script") as server:
+            self._test_reuses_connection(
+                server,
+                driver_kwargs={
+                    "routing": False,
+                    "max_connection_pool_size": 1,
+                },
+                repetitions=2,
+            )
