@@ -334,7 +334,8 @@ class _RouteTracker:
 
 class TestHomeDbWithCache(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_5_8,
+    required_features = (types.Feature.BOLT_5_8,
+                         types.Feature.OPT_HOME_DB_CACHE)
 
     def setUp(self):
         super().setUp()
@@ -1062,7 +1063,8 @@ class TestHomeDbWithCache(TestkitTestCase):
 
 class TestHomeDbMixedCluster(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_5_8,
+    required_features = (types.Feature.BOLT_5_8,
+                         types.Feature.OPT_HOME_DB_CACHE)
 
     def setUp(self):
         super().setUp()
@@ -1214,6 +1216,10 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         # acquisition timeout kicks in => not finishing the script
         self._writer2.reset()
 
+    # This test ensures that the connection acquisition timeout covers the full
+    # acqusition under the same timer without resetting. This must include both
+    # optimistic routing and falling back. If this is not the case, this test
+    # can be skipped on the driver side until the behavior is unified.
     @driver_feature(
         types.Feature.BOLT_5_7,
         types.Feature.API_DRIVER_MAX_CONNECTION_LIFETIME,
