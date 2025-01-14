@@ -14,9 +14,12 @@ _FAKE_ADVERTISED_ADDRESS = "cucumber.example.com"
 class _AdvertisedAddressTestCase(TestkitTestCase, ABC):
     @contextmanager
     def server(self, script, vars_=None):
-        if vars_ is None:
-            vars_ = {}
         server = StubServer(9001)
+        vars_ = {
+            "#ADVERTISED_HOST#": f"{_FAKE_ADVERTISED_ADDRESS}",
+            "#ADVERTISED_PORT#": server.port,
+            **(vars_ or {}),
+        }
         server.start(path=self.script_path(script),
                      vars_=vars_)
         try:
@@ -55,23 +58,23 @@ class TestAdvertisedAddress(_AdvertisedAddressTestCase):
     )
 
     def test_advertised_address(self):
-        vars_ = {
-            "#ADVERTISED_ADDRESS#": _FAKE_ADVERTISED_ADDRESS,
-        }
-        with self.server("advertised_address.script", vars_=vars_) as server:
+        with self.server("advertised_address.script") as server:
 
             dns_expectations = deque(
                 (
-                    _FAKE_ADDRESS,
-                    [server.host],
-                ),
+                    (
+                        _FAKE_ADDRESS,
+                        [server.host],
+                    ),
+                )
             )
 
             def dns_resolver(name):
                 nonlocal dns_expectations
                 expectation, result = dns_expectations.popleft()
-                assert name == expectation[0]
-                return result
+                name, sep, port = name.rpartition(":")
+                assert name == expectation
+                return [sep.join((host, port)) for host in result]
 
             with self.driver(server, dns_resolver=dns_resolver) as driver:
                 with self.session(driver) as session:

@@ -2,10 +2,10 @@
 
 A: HELLO {"{}": "*"}
 C: LOGON {"{}": "*"}
-S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/5.26.0", "advertised_address": "#ADVERTISED_ADDRESS#"}
+S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/5.26.0", "advertised_address": "#ADVERTISED_HOST#:#ADVERTISED_PORT#"}
 
 C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
-S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["doesnt_exist:9001"], "role":"ROUTE"}, {"addresses": ["doesnt_exist2:9001"], "role":"READ"}, {"addresses": ["#ADVERTISED_ADDRESS#:9001"], "role":"WRITE"}]}}
+S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["doesnt_exist:9001"], "role":"ROUTE"}, {"addresses": ["doesnt_exist2:#ADVERTISED_PORT#"], "role":"READ"}, {"addresses": ["#ADVERTISED_HOST#:#ADVERTISED_PORT#"], "role":"WRITE"}]}}
 
 *: RESET
 
