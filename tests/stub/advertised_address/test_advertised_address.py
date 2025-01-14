@@ -4,7 +4,10 @@ from contextlib import contextmanager
 
 import nutkit.protocol as types
 from nutkit.frontend import Driver
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
 
 _FAKE_ADDRESS = "banana.example.com"
@@ -57,6 +60,7 @@ class TestAdvertisedAddress(_AdvertisedAddressTestCase):
         types.Feature.BOLT_5_8,
     )
 
+    @driver_feature(types.Feature.BACKEND_DNS_RESOLVER)
     def test_advertised_address(self):
         with self.server("advertised_address.script") as server:
 
