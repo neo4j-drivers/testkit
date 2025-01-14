@@ -1,0 +1,44 @@
+!: BOLT 5.8
+
+A: HELLO {"{}": "*"}
+C: LOGON {"{}": "*"}
+S: SUCCESS {"advertised_address": "something_wild:1234"}
+
+*: RESET
+
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"[mode]": "w", "[db]": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"{}": "*"}
+S: RECORD [1]
+S: SUCCESS {}
+
+*: RESET
+
+A: LOGOFF
+C: LOGON {"{}": "*"}
+S: SUCCESS {"advertised_address": "#HOST#:#PORT#"}
+
+*: RESET
+
+C: RUN "RETURN 2 AS n" {"{}": "*"} {"[mode]": "w", "[db]": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"{}": "*"}
+S: RECORD [2]
+S: SUCCESS {}
+
+*: RESET
+
+A: LOGOFF
+C: LOGON {"{}": "*"}
+S: SUCCESS {"advertised_address": "certainly-unusable:7688"}
+
+*: RESET
+
+C: RUN "RETURN 3 AS n" {"{}": "*"} {"mode": "r", "[db]": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"{}": "*"}
+S: RECORD [3]
+S: SUCCESS {}
+
+*: RESET
+A: GOODBYE

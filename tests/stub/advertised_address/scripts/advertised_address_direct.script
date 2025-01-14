@@ -2,7 +2,7 @@
 
 A: HELLO {"{}": "*"}
 C: LOGON {"{}": "*"}
-S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/5.26.0", "advertised_address": "#ADVERTISED_HOST#:#ADVERTISED_PORT#"}
+S: SUCCESS {"advertised_address": "#ADVERTISED_HOST#:#PORT#"}
 
 *: RESET
 
