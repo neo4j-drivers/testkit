@@ -1123,7 +1123,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
                 result = session.run("RETURN 2 AS n")
                 result.consume()
 
-            # making sure the connection to the reader is still allive after
+            # making sure the connection to the reader is still alive after
             # the fallback
             with self.session(driver, "r", database="homedb1") as session:
                 result = session.run("RETURN 3 AS n")
