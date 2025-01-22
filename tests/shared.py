@@ -16,6 +16,7 @@ import inspect
 import os
 import re
 import socket
+import time
 import unittest
 import warnings
 from contextlib import contextmanager
@@ -24,6 +25,7 @@ import ifaddr
 
 from nutkit import protocol
 from nutkit.backend import Backend
+from nutkit.frontend import FakeTime
 
 
 def get_backend_host_and_port():
@@ -255,3 +257,35 @@ class Potential(enum.Enum):
     NO = 0.0
     MAYBE = 0.5
     # CAN_YOU_REPEAT_THE_QUESTION = "?"
+
+
+class TimeoutManager:
+    def __init__(
+        self, test_case: TestkitTestCase, timeout_ms: int,
+        use_real_timers: bool = False
+    ):
+        self._timeout_ms = timeout_ms
+        self._fake_time = None
+        if test_case.driver_supports_features(
+            protocol.Feature.BACKEND_MOCK_TIME
+        ) and not use_real_timers:
+            self._fake_time = FakeTime(test_case._backend)
+
+    def __enter__(self):
+        if self._fake_time:
+            self._fake_time.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._fake_time:
+            self._fake_time.__exit__(exc_type, exc_val, exc_tb)
+
+    def tick_to_before_timeout(self):
+        if self._fake_time:
+            self._fake_time.tick(self._timeout_ms - 1)
+
+    def tick_to_after_timeout(self):
+        if self._fake_time:
+            self._fake_time.tick(self._timeout_ms + 1)
+        else:
+            time.sleep(self._timeout_ms / 1000)

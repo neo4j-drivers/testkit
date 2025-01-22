@@ -27,6 +27,9 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports setting a custom max connection lifetime
+    API_DRIVER_MAX_CONNECTION_LIFETIME = \
+        "Feature:API:Driver:MaxConnectionLifetime"
     # The driver supports notification filters configuration.
     API_DRIVER_NOTIFICATIONS_CONFIG = "Feature:API:Driver:NotificationsConfig"
     # The driver offers a method for checking if the provided authentication
@@ -172,6 +175,10 @@ class Feature(Enum):
     # sending BEGIN but pipelines the RUN and PULL right afterwards and
     # consumes three messages after that. This saves 2 full round-trips.
     OPT_EXECUTE_QUERY_PIPELINING = "Optimization:ExecuteQueryPipelining"
+    # The driver implements a cache to match users to their most recently
+    # resolved home database, routing requests with no set database to this
+    # cached database if all open connections have an SSR connection hint.
+    OPT_HOME_DB_CACHE = "Optimization:HomeDatabaseCache"
     # The home db cache for optimistic home db resolution treats the principal
     # in basic auth the exact same way it treats impersonated users.
     OPT_HOME_DB_CACHE_BASIC_PRINCIPAL_IS_IMP_USER = \

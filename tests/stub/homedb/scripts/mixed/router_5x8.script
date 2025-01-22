@@ -1,0 +1,19 @@
+!: BOLT 5.8
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+
+# explicit resolution (1st connection)
+C: ROUTE "*" "*" "*"
+S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb1", "servers": [{"addresses": ["#HOST#:9000"], "role": "ROUTE"}, {"addresses": ["#HOST#:9010"], "role": "READ"}, {"addresses": ["#HOST#:9020"], "role": "WRITE"}]}}
+*: RESET
+
+# explicit resolution (fallback connection)
+C: ROUTE "*" "*" "*"
+S: SUCCESS { "rt": { "ttl": 1000000, "db": "homedb2", "servers": [{"addresses": ["#HOST#:9000"], "role": "ROUTE"}, {"addresses": ["#HOST#:9010"], "role": "READ"}, {"addresses": ["#HOST#:#WRITER_2#"], "role": "WRITE"}]}}
+*: RESET
+
+?: GOODBYE

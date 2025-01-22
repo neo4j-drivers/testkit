@@ -71,7 +71,8 @@ class NewDriver:
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
         fetchSize=None, maxTxRetryTimeMs=None,
         encrypted=None, trustedCertificates=None,
-        liveness_check_timeout_ms=None, max_connection_pool_size=None,
+        liveness_check_timeout_ms=None, max_connection_lifetime_ms=None,
+        max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None,
         notifications_min_severity=None,
         notifications_disabled_categories=None,
@@ -92,6 +93,8 @@ class NewDriver:
         self.fetchSize = fetchSize
         self.maxTxRetryTimeMs = maxTxRetryTimeMs
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
+        if max_connection_lifetime_ms is not None:
+            self.maxConnectionLifetimeMs = max_connection_lifetime_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
         assert (client_certificate is None

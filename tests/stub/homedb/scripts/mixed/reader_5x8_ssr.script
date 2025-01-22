@@ -1,0 +1,20 @@
+!: BOLT 5.8
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+{+
+    C: RUN {"U": "*"} {} {"db": "homedb1", "[bookmarks]": {"[]": "*"}, "mode": "r"}
+    S: SUCCESS {"fields": ["n"]}
+    {{
+        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+        S: RECORD [1]
+    ----
+        C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+    }}
+    S: SUCCESS {}
+    *: RESET
++}
+
+?: GOODBYE
