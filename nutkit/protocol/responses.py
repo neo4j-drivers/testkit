@@ -503,17 +503,7 @@ class Summary:
         # TODO: remove block when all drivers support the fields
         # ---------------------------------------------------------------------
         from tests.shared import get_driver_name
-        if get_driver_name() in ["javascript"]:
-            # already sends counters but the wrong format and not all fields
-            if "_stats" in data["counters"]:
-                del data["counters"]
-            else:
-                import warnings
-                warnings.warn(  # noqa: B028
-                    "Backend supports well-formatted counter. "
-                    "Remove the backwards compatibility check!"
-                )
-        if get_driver_name() in ["javascript", "go"]:
+        if get_driver_name() in ["go"]:
             if "counters" in data:
                 import warnings
                 warnings.warn(  # noqa: B028
@@ -549,9 +539,18 @@ class Summary:
                     "parameters": None
                 }
             for field in (
-                "database", "notifications", "plan", "profile",
-                "queryType", "resultAvailableAfter", "resultConsumedAfter"
+                "profile", "queryType", "database", "notifications", "plan",
             ):
+                if field in data:
+                    import warnings
+                    warnings.warn(  # noqa: B028
+                        "Backend supports %s field in Summary. "
+                        "Remove the backwards compatibility check!" % field
+                    )
+                else:
+                    data[field] = None
+        if get_driver_name() in ["go", "javascript"]:
+            for field in ("resultAvailableAfter", "resultConsumedAfter"):
                 if field in data:
                     import warnings
                     warnings.warn(  # noqa: B028
