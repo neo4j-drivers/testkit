@@ -10,7 +10,7 @@ from tests.stub.shared import StubServer
 class TestServerSideRouting(TestkitTestCase):
     """Test driver-behavior in Server Side Routing scenarios."""
 
-    required_features = types.Feature.BOLT_4_1,
+    required_features = types.Feature.BOLT_4_2,
 
     def setUp(self):
         super().setUp()
@@ -25,7 +25,7 @@ class TestServerSideRouting(TestkitTestCase):
 
     def _start_server(self):
         path = self.script_path("direct_connection_without_routing_ssr.script")
-        self._server.start(path=path, vars_={"#VERSION#": "4.1"})
+        self._server.start(path=path, vars_={"#VERSION#": "4.2"})
 
     # When a direct driver is created without params, it should not send
     # any information about the routing context in the HELLO message
