@@ -539,7 +539,7 @@ class Summary:
                     "parameters": None
                 }
             for field in (
-                "profile", "queryType", "database", "notifications", "plan",
+                "profile", "database", "notifications", "plan",
             ):
                 if field in data:
                     import warnings
@@ -550,7 +550,9 @@ class Summary:
                 else:
                     data[field] = None
         if get_driver_name() in ["go", "javascript"]:
-            for field in ("resultAvailableAfter", "resultConsumedAfter"):
+            for field in (
+                "queryType", "resultAvailableAfter", "resultConsumedAfter"
+            ):
                 if field in data:
                     import warnings
                     warnings.warn(  # noqa: B028
