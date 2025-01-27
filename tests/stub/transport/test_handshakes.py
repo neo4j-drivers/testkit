@@ -44,7 +44,9 @@ class TestHandshakeManifest(TestkitTestCase):
         script_path = self.script_path(
             "test_parameterized_handshake_manifest.script"
         )
-        vars_ = {}
+        vars_ = {
+            "#SERVER_AGENT#": "Neo4j/5.26.0"
+        }
         if handshake is not None:
             vars_["#HANDSHAKE#"] = handshake
         if handshake_response is not None:
