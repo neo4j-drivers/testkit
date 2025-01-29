@@ -17,28 +17,28 @@ class TestHandshakeManifest(TestkitTestCase):
     bolt protocol version.
     """
 
-    def setUp(self):
-        super().setUp()
-        self._server = StubServer(9001)
-
-    def tearDown(self):
-        self._server.done()
-        super().tearDown()
+    @contextmanager
+    def _server(self, script_path, vars_=None, port=9001):
+        server = StubServer(port)
+        server.start(path=script_path, vars_=vars_)
+        try:
+            yield server
+        finally:
+            server.reset()
 
     @contextmanager
-    def _get_session(self, script_path, vars_=None):
-        uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri,
-                        types.AuthorizationToken("basic", principal="",
-                                                 credentials=""))
-        self._server.start(path=script_path, vars_=vars_)
-        session = driver.session("w", fetch_size=1000)
+    def _get_session(self, server):
+        uri = "bolt://%s" % server.address
+        auth = types.AuthorizationToken("basic", principal="", credentials="")
+        driver = Driver(self._backend, uri, auth)
         try:
-            yield session
+            session = driver.session("w", fetch_size=1000)
+            try:
+                yield session
+            finally:
+                session.close()
         finally:
-            session.close()
             driver.close()
-            self._server.reset()
 
     def _run(self, handshake, handshake_response):
         script_path = self.script_path(
@@ -51,14 +51,15 @@ class TestHandshakeManifest(TestkitTestCase):
             vars_["#HANDSHAKE#"] = handshake
         if handshake_response is not None:
             vars_["#HANDSHAKE_RESPONSE#"] = handshake_response
-        with self._get_session(script_path, vars_=vars_) as session:
-            session.run("RETURN 1 AS n").consume()
-        self._server.done()
-        self.assertEqual(
-            self._server.count_requests("RUN"),
-            1,
-            "Closed after handshake, driver choose an unexpected version",
-        )
+        with self._server(script_path, vars_) as server:
+            with self._get_session(server) as session:
+                session.run("RETURN 1 AS n").consume()
+            server.done()
+            self.assertEqual(
+                server.count_requests("RUN"),
+                1,
+                "Closed after handshake, driver choose an unexpected version",
+            )
 
     @driver_feature(
         types.Feature.BOLT_5_7,
