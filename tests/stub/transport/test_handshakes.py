@@ -52,7 +52,7 @@ class TestHandshakeManifest(TestkitTestCase):
         if handshake_response is not None:
             vars_["#HANDSHAKE_RESPONSE#"] = handshake_response
         with self._get_session(script_path, vars_=vars_) as session:
-            session.run("RETURN 1 AS n")
+            session.run("RETURN 1 AS n").consume()
         self._server.done()
         self.assertEqual(
             self._server.count_requests("RUN"),
