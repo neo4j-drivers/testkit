@@ -53,12 +53,12 @@ class TestHandshakeManifest(TestkitTestCase):
             vars_["#HANDSHAKE_RESPONSE#"] = handshake_response
         with self._get_session(script_path, vars_=vars_) as session:
             session.run("RETURN 1 AS n")
-            self._server.done()
-            self.assertEqual(
-                self._server.count_requests("RUN"),
-                1,
-                "Closed after handshake, driver choose an unexpected version",
-            )
+        self._server.done()
+        self.assertEqual(
+            self._server.count_requests("RUN"),
+            1,
+            "Closed after handshake, driver choose an unexpected version",
+        )
 
     @driver_feature(
         types.Feature.BOLT_5_7,
