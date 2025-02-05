@@ -135,7 +135,7 @@ class AuthorizationToken:
         - credentials (str)
     scheme == "bearer"
         - credentials (str)
-    further schemes should be handled with a multi-purpose auth API
+    further schemes should be handled with a multipurpose auth API
     (custom auth)
         - principal (str, optional)
         - credentials (str, optional)
