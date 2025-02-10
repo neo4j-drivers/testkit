@@ -314,7 +314,7 @@ class _Base:
             )
             if home_db == "db1":
                 # already knowing RT for db1
-                route_tracker.asset_no_new_route_request()
+                route_tracker.assert_no_new_route_request()
             else:
                 route_tracker.assert_new_route_request(database="db1")
             # Given: driver knows RT for db2
@@ -324,7 +324,7 @@ class _Base:
             )
             if home_db == "db2":
                 # already knowing RT for db2
-                route_tracker.asset_no_new_route_request()
+                route_tracker.assert_no_new_route_request()
             else:
                 route_tracker.assert_new_route_request(database="db2")
 
@@ -333,7 +333,7 @@ class _Base:
 
             # Then: does not send routing request, uses RT pointed to by cache
             # key
-            route_tracker.asset_no_new_route_request()
+            route_tracker.assert_no_new_route_request()
             # Then: does not send the db name explicitly to the server
             self.assertEqual(me, f"{session_user}@home{home_db}@{home_server}")
 
@@ -350,11 +350,11 @@ class _Base:
 
             # Then: does not send routing request, and uses new RT pointed to
             #       by the cache key
-            route_tracker.asset_no_new_route_request()
+            route_tracker.assert_no_new_route_request()
             self.assertEqual(
                 me, f"{session_user}@home{other_db}@{other_server}"
             )
-            route_tracker.asset_no_new_route_request()
+            route_tracker.assert_no_new_route_request()
 
             self._router.done()
             self._reader1.done()
@@ -851,7 +851,7 @@ class _Base:
 
         def _make_assert_no_route_request(self):
             def assertion(driver, tracker):
-                tracker.asset_no_new_route_request()
+                tracker.assert_no_new_route_request()
             return assertion
 
         def _make_assert_route_request(
@@ -1024,7 +1024,7 @@ class _RouteTracker:
                 if isinstance(attr, str):
                     self._test.assertIn(f'"{key}": "{attr}"', last_logon)
 
-    def asset_no_new_route_request(self):
+    def assert_no_new_route_request(self):
         requests = self._server.get_requests("ROUTE")
         self._test.assertEqual(len(requests), self._expected_route_count)
 
