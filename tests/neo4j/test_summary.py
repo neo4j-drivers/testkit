@@ -119,7 +119,7 @@ class TestSummary(TestkitTestCase):
         max_server_protocol_version = get_server_info().max_protocol_version
         common_protocol_versions = [
             f.value.split(":")[-1] for f in self._driver_features
-            if (re.match(r"BOLT_\d+_\d+", f.name)
+            if (re.match(r"^BOLT_\d+_\d+$", f.name)
                 and f.value.split(":")[-1] <= max_server_protocol_version)
         ]
         if not common_protocol_versions:

@@ -221,6 +221,32 @@ class TestkitTestCase(unittest.TestCase):
         base_path = os.path.dirname(inspect.getfile(self.__class__))
         return os.path.join(base_path, "scripts", *path)
 
+    def get_newest_bolt_supported_by_driver(
+        self,
+        skip=0,
+        min_version=(0, 0),
+        max_version=(0xFF, 0xFF),
+    ):
+        # skip: number of newest versions to skip (return n-th newest)
+        # min_version: minimum bolt version to consider
+        # max_version: maximum bolt version to consider
+        all_bolt_versions = [
+            (f, tuple(map(int, f.value.split(":")[-1].split("."))))
+            for f in protocol.Feature
+            if re.match(r"^BOLT_\d+_\d+$", f.name)
+        ]
+        filtered_bolt_versions = [
+            (f, v) for f, v in all_bolt_versions
+            if max_version >= v >= min_version
+        ]
+        filtered_bolt_versions.sort(key=lambda x: x[1], reverse=True)
+        for feature, version in filtered_bolt_versions:
+            if self.driver_supports_features(feature):
+                if skip <= 0:
+                    return version
+                skip -= 1
+        self.skipTest("No appropriate bolt version supported by driver")
+
     @contextmanager
     def subTest(self, **params):  # noqa: N802
         assert "msg" not in params
