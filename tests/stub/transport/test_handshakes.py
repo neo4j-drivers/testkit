@@ -92,7 +92,12 @@ class TestHandshakeManifest(TestkitTestCase):
             ):
                 self._run(server_response, expected_response)
 
-    def _get_newest_bolt_supported_by_driver(self, skip=0, min_version=(5, 0)):
+    def _get_newest_bolt_supported_by_driver(
+        self,
+        skip=0,
+        min_version=(5, 0),
+        max_version=(5, 255),
+    ):
         # skip: number of newest versions to skip (return n-th newest)
         # min_version: minimum bolt version to consider
         all_bolt_versions = [
@@ -101,7 +106,8 @@ class TestHandshakeManifest(TestkitTestCase):
             if re.match(r"^BOLT_\d+_\d+$", f.name)
         ]
         filtered_bolt_versions = [
-            (f, v) for f, v in all_bolt_versions if v >= min_version
+            (f, v) for f, v in all_bolt_versions
+            if max_version >= v >= min_version
         ]
         filtered_bolt_versions.sort(key=lambda x: x[1], reverse=True)
         for feature, version in filtered_bolt_versions:
