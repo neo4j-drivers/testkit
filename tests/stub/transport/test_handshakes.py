@@ -98,7 +98,7 @@ class TestHandshakeManifest(TestkitTestCase):
         all_bolt_versions = [
             (f, tuple(map(int, f.value.split(":")[-1].split("."))))
             for f in types.Feature
-            if re.match(r"^BOLT_(\d+)_(\d+)$", f.name)
+            if re.match(r"^BOLT_\d+_\d+$", f.name)
         ]
         all_bolt_versions_ge_5_7 = sorted(
             [
