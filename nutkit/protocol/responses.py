@@ -503,52 +503,6 @@ class Summary:
         # TODO: remove block when all drivers support the fields
         # ---------------------------------------------------------------------
         from tests.shared import get_driver_name
-        if get_driver_name() in ["go"]:
-            if "counters" in data:
-                import warnings
-                warnings.warn(  # noqa: B028
-                    "Backend supports counters field in Summary. "
-                    "Remove the backwards compatibility check!"
-                )
-            else:
-                data["counters"] = {
-                    "constraintsAdded": None,
-                    "constraintsRemoved": None,
-                    "containsSystemUpdates": None,
-                    "containsUpdates": None,
-                    "indexesAdded": None,
-                    "indexesRemoved": None,
-                    "labelsAdded": None,
-                    "labelsRemoved": None,
-                    "nodesCreated": None,
-                    "nodesDeleted": None,
-                    "propertiesSet": None,
-                    "relationshipsCreated": None,
-                    "relationshipsDeleted": None,
-                    "systemUpdates": None
-                }
-            if "query" in data:
-                import warnings
-                warnings.warn(  # noqa: B028
-                    "Backend supports query field in Summary. "
-                    "Remove the backwards compatibility check!"
-                )
-            else:
-                data["query"] = {
-                    "text": None,
-                    "parameters": None
-                }
-            for field in (
-                "profile", "database", "notifications", "plan",
-            ):
-                if field in data:
-                    import warnings
-                    warnings.warn(  # noqa: B028
-                        "Backend supports %s field in Summary. "
-                        "Remove the backwards compatibility check!" % field
-                    )
-                else:
-                    data[field] = None
         if get_driver_name() in ["go", "javascript"]:
             for field in (
                 "queryType", "resultAvailableAfter", "resultConsumedAfter"
