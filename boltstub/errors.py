@@ -32,6 +32,10 @@ class BoltMissingVersionError(BoltProtocolError):
     pass
 
 
+class BoltFeatureError(BoltProtocolError):
+    pass
+
+
 class BoltUnknownMessageError(BoltProtocolError):
     def __init__(self, msg, line):
         super().__init__(msg, line)

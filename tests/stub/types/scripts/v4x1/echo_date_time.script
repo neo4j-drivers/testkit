@@ -1,4 +1,4 @@
-!: BOLT 4.1
+!: BOLT 4.2
 
 C: HELLO {"[scheme]": "*", "[credentials]": "*", "[principal]": "*", "[user_agent]": "*", "[routing]": "*"}
 S: SUCCESS {"connection_id": "bolt-0", "server": "Neo4j/4.4.0", "routing": null}

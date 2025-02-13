@@ -194,65 +194,112 @@ def test_magic_bytes(server_version, magic_bytes, server_factory, fail,
     assert not server.service.exceptions
 
 
-@pytest.mark.parametrize(("client_version", "server_version",
-                          "negotiated_version"), [
-    [b"\x00\x00\x00\x01", (1,), (1,)],
-    [b"\x00\x00\x00\x01", (1, 0), (1, 0)],
-    [b"\x00\x00\x00\x01\x00\x00\x00\x02", (1, 0), (1, 0)],
-    [b"\x00\x00\x00\x01\x00\x00\x00\x02", (2, 0), (2, 0)],
-    [b"\x00\x00\x00\x01\x00\x00\x00\x03", (2,), None],
-    [b"\x00\x00\x00\x03", (3,), (3,)],
-    [b"\x00\x00\x00\x04", (4,), (4,)],
-    [b"\x00\x00\x01\x04", (4, 1), (4, 1)],
-    [b"\x00\x00\x02\x04", (4, 2), (4, 2)],
-    [b"\x00\x00\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04", (4, 2), (4, 2)],
-    [b"\x00\x00\x03\x04", (4, 3), (4, 3)],
-    [b"\x00\x02\x03\x04", (4, 3), (4, 3)],
-    [b"\x00\x03\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04\x00\x00\x00\x03",
-     (4, 0), None],
-    [b"\x00\x01\x03\x04\x00\x00\x01\x04\x00\x00\x00\x04\x00\x00\x00\x03",
-     (4, 0), (4, 0)],
-    # ignore minor versions until 4.0
-    [b"\x00\x00\x10\x01", (1,), (1,)],
-    [b"\x00\x00\x10\x02", (2,), (2,)],
-    [b"\x00\x00\x10\x03", (3,), (3,)],
-    [b"\x00\x00\x10\x04", (4, 0), None],
-    [b"\x00\x00\x10\x04", (4, 1), None],
-    [b"\x00\x00\x10\x04", (4, 2), None],
-    [b"\x00\x00\x10\x04", (4, 3), None],
-    # ignore version ranges until 4.3
-    [b"\x00\x09\x0A\x01", (1,), (1,)],
-    [b"\x00\x0A\x0A\x01", (1,), (1,)],
-    [b"\x00\x09\x0A\x02", (2,), (2,)],
-    [b"\x00\x0A\x0A\x02", (2,), (2,)],
-    [b"\x00\x09\x0A\x03", (3,), (3,)],
-    [b"\x00\x0A\x0A\x03", (3,), (3,)],
-    [b"\x00\x0A\x0A\x04", (4, 0), None],
-    [b"\x00\x09\x0A\x04", (4, 0), None],
-    [b"\x00\x0A\x0A\x04", (4, 1), None],
-    [b"\x00\x09\x0A\x04", (4, 1), None],
-    [b"\x00\x08\x0A\x04", (4, 1), None],
-    [b"\x00\x09\x0A\x04", (4, 2), None],
-    [b"\x00\x08\x0A\x04", (4, 2), None],
-    [b"\x00\x07\x0A\x04", (4, 2), None],
-    [b"\x00\x08\x0A\x04", (4, 3), (4, 3)],
-    [b"\x00\x07\x0A\x04", (4, 3), (4, 3)],
-    [b"\x00\x06\x0A\x04", (4, 3), None],
-    # special backwards compatibility
-    # (4.2 server allows to fall back to equivalent 4.1 protocol)
-    [b"\x00\x00\x01\x04", (4, 2), (4, 1)],
-    [b"\x00\x00\x02\x04", (4, 1), None],
-    [b"\x00\x00\x02\x04", (4, 3), None],
-])  # noqa: PAR102
-def test_handshake_auto(client_version, server_version, negotiated_version,
-                        server_factory, connection_factory):
+@pytest.mark.parametrize(
+    (
+        "client_version",
+        "server_version",
+        "negotiated_version",
+        "force_handshake_manifest",
+    ),
+    [
+        *(
+            (*args, force_handshake_manifest)
+            for args in (
+                [b"\x00\x00\x00\x01", (1,), (1,)],
+                [b"\x00\x00\x00\x01", (1, 0), (1, 0)],
+                [b"\x00\x00\x00\x01\x00\x00\x00\x02", (1, 0), (1, 0)],
+                [b"\x00\x00\x00\x01\x00\x00\x00\x02", (2, 0), (2, 0)],
+                [b"\x00\x00\x00\x01\x00\x00\x00\x03", (2,), None],
+                [b"\x00\x00\x00\x03", (3,), (3,)],
+                [b"\x00\x00\x00\x04", (4,), (4,)],
+                [b"\x00\x00\x01\x04", (4, 1), (4, 1)],
+                [b"\x00\x00\x02\x04", (4, 2), (4, 2)],
+                [
+                    b"\x00\x00\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04",
+                    (4, 2),
+                    (4, 2),
+                ],
+                [b"\x00\x00\x03\x04", (4, 3), (4, 3)],
+                [b"\x00\x02\x03\x04", (4, 3), (4, 3)],
+                [b"\x00\x07\x07\x05", (5, 1), (5, 1)],
+                [b"\x00\x00\x07\x05", (5, 7), (5, 7)],
+                [
+                    (  # noqa: PAR001
+                        b"\x00\x03\x03\x04\x00\x00\x02\x04\x00\x00\x01\x04"
+                        b"\x00\x00\x00\x03"
+                    ),
+                    (4, 0),
+                    None,
+                ],
+                [
+                    (  # noqa: PAR001
+                        b"\x00\x01\x03\x04\x00\x00\x01\x04\x00\x00\x00\x04"
+                        b"\x00\x00\x00\x03"
+                    ),
+                    (4, 0),
+                    (4, 0),
+                ],
+                # ignore minor versions until 4.0
+                [b"\x00\x00\x10\x01", (1,), (1,)],
+                [b"\x00\x00\x10\x02", (2,), (2,)],
+                [b"\x00\x00\x10\x03", (3,), (3,)],
+                [b"\x00\x00\x10\x04", (4, 0), None],
+                [b"\x00\x00\x10\x04", (4, 1), None],
+                [b"\x00\x00\x10\x04", (4, 2), None],
+                [b"\x00\x00\x10\x04", (4, 3), None],
+                # ignore version ranges until 4.2
+                [b"\x00\x09\x0A\x01", (1,), (1,)],
+                [b"\x00\x0A\x0A\x01", (1,), (1,)],
+                [b"\x00\x09\x0A\x02", (2,), (2,)],
+                [b"\x00\x0A\x0A\x02", (2,), (2,)],
+                [b"\x00\x09\x0A\x03", (3,), (3,)],
+                [b"\x00\x0A\x0A\x03", (3,), (3,)],
+                [b"\x00\x0A\x0A\x04", (4, 0), None],
+                [b"\x00\x09\x0A\x04", (4, 0), None],
+                [b"\x00\x0A\x0A\x04", (4, 1), None],
+                [b"\x00\x08\x0A\x04", (4, 1), None],
+                [b"\x00\x09\x0A\x04", (4, 1), None],
+                [b"\x00\x09\x0A\x04", (4, 2), (4, 2)],
+                [b"\x00\x08\x0A\x04", (4, 2), (4, 2)],
+                [b"\x00\x07\x0A\x04", (4, 2), None],
+                [b"\x00\x08\x0A\x04", (4, 3), (4, 3)],
+                [b"\x00\x07\x0A\x04", (4, 3), (4, 3)],
+                [b"\x00\x06\x0A\x04", (4, 3), None],
+                # special backwards compatibility
+                # (4.2 server allows to fall back to equivalent 4.1 protocol)
+                [b"\x00\x00\x01\x04", (4, 2), (4, 1)],
+                [b"\x00\x00\x02\x04", (4, 1), None],
+                [b"\x00\x00\x02\x04", (4, 3), None],
+            )
+            for force_handshake_manifest in (False, True)
+        ),
+        # Forced non-manifest handshake denies manifest v1
+        [b"\x00\x00\x01\xFF", (5, 7), None, True],
+        # auto rejects manifest v1 for versions pre 5.7
+        [b"\x00\x00\x01\xFF", (5, 6), None, False],
+    ],
+)
+def test_handshake_v1(
+    client_version,
+    server_version,
+    negotiated_version,
+    force_handshake_manifest,
+    server_factory,
+    connection_factory,
+):
     client_version = client_version + b"\x00" * (16 - len(client_version))
 
-    script = parse("""
-    !: BOLT {}
+    script = parse(
+        """
+        !: BOLT {}{}
 
-    C: RUN
-    """.format(".".join(map(str, server_version))))
+        S: SUCCESS
+        C: RUN
+        """.format(
+            ".".join(map(str, server_version)),
+            "\n!: HANDSHAKE_MANIFEST 0" if force_handshake_manifest else "",
+        )
+    )
 
     server = server_factory(script)
     con = connection_factory("localhost", 7687)
@@ -269,23 +316,172 @@ def test_handshake_auto(client_version, server_version, negotiated_version,
         assert len(server.service.exceptions) == 1
         assert isinstance(server.service.exceptions[0], ScriptFailure)
     else:
+        res = con.read_message()
+        assert res[:2] == b"\xb0\x70"  # SUCCESS
         assert not server.service.exceptions
 
 
+@pytest.mark.parametrize(
+    (
+        "client_offer",
+        "server_version",
+        "server_response",
+        "client_pick",
+        "negotiated_version",
+        "force_handshake_manifest",
+    ),
+    (
+        *(
+            (*args, force_handshake_manifest)
+            for args in (
+                (
+                    b"\x00\x00\x01\xFF",
+                    "5.7",
+                    b"\x00\x00\x01\xFF\x01\x00\x00\x07\x05\x00",
+                    b"\x00\x00\x07\x05\x00",
+                    (5, 7),
+                ),
+                (
+                    b"\x00\x00\x01\xFF",
+                    "5.7 FF 01",
+                    b"\x00\x00\x01\xFF\x01\x00\x00\x07\x05\xFF\x01",
+                    b"\x00\x00\x07\x05\xFF\x01",
+                    (5, 7),
+                ),
+                # client not enabling all features
+                (
+                    b"\x00\x00\x01\xFF",
+                    "5.7",
+                    b"\x00\x00\x01\xFF\x01\x00\x00\x07\x05\x00",
+                    b"\x00\x00\x07\x05\xFE\x01",
+                    None,
+                ),
+                # client enabling features not offered
+                (
+                    b"\x00\x00\x01\xFF",
+                    "5.7",
+                    b"\x00\x00\x01\xFF\x01\x00\x00\x07\x05\x00",
+                    b"\x00\x00\x07\x05\x01",
+                    None,
+                ),
+                # Handshake v2 is not supported
+                (
+                    b"\x00\x00\x02\xFF",
+                    "5.7",
+                    b"\x00\x00\x00\x00",
+                    None,
+                    None,
+                ),
+            )
+            for force_handshake_manifest in (False, True)
+        ),
+        # Manifest v1 is not selected automatically for versions pre 5.7
+        (
+            b"\x00\x00\x01\xFF",
+            "5.6",
+            b"\x00\x00\x00\x00",
+            None,
+            None,
+            False,
+        ),
+        # Manifest v1 can be forced for versions pre 5.7
+        (
+            b"\x00\x00\x01\xFF",
+            "4.4",
+            b"\x00\x00\x01\xFF\x01\x00\x00\x04\x04\x00",
+            b"\x00\x00\x04\x04\x00",
+            (4, 4),
+            True,
+        ),
+        # Forced manifest v1 does not accept non-manifest handshake
+        (
+            b"\x00\x00\x07\x05",
+            "5.7",
+            b"\x00\x00\x00\x00",
+            None,
+            None,
+            True,
+        ),
+    ),
+)
+def test_handshake_v2(
+    client_offer,
+    server_version,
+    server_response,
+    client_pick,
+    negotiated_version,
+    force_handshake_manifest,
+    server_factory,
+    connection_factory,
+):
+    client_offer = client_offer + b"\x00" * (16 - len(client_offer))
+
+    script = parse(
+        """
+        !: BOLT {}{}
+
+        S: SUCCESS
+        C: RUN
+        """.format(
+            server_version,
+            "\n!: HANDSHAKE_MANIFEST 1" if force_handshake_manifest else "",
+        )
+    )
+
+    server = server_factory(script)
+    con = connection_factory("localhost", 7687)
+    con.write(b"\x60\x60\xb0\x17")
+    con.write(client_offer)
+
+    assert con.read(len(server_response)) == server_response
+
+    if client_pick is None:
+        with pytest.raises(BrokenSocket):
+            print(con.read(1))
+        assert len(server.service.exceptions) == 1
+        assert isinstance(server.service.exceptions[0], ScriptFailure)
+        return
+
+    con.write(client_pick)
+
+    if negotiated_version is not None:
+        res = con.read_message()
+        assert res[:2] == b"\xb0\x70"  # SUCCESS
+        with pytest.raises(socket.timeout):
+            con.read(1)
+        assert not server.service.exceptions
+    else:
+        with pytest.raises(BrokenSocket):
+            print(con.read(1))
+        assert len(server.service.exceptions) == 1
+        assert isinstance(server.service.exceptions[0], ScriptFailure)
+
+
 @pytest.mark.parametrize("custom_handshake", [b"\x00\x00\xFF\x00", b"foobar"])
+@pytest.mark.parametrize("custom_handshake_response", (True, False))
 @pytest.mark.parametrize("client_version", [b"\x00\x00\x00\x01", b"crap"])
 @pytest.mark.parametrize("server_version", ALL_BOLT_VERSIONS)
-def test_custom_handshake_auto(custom_handshake, client_version,
-                               server_version, server_factory,
+def test_custom_handshake_auto(custom_handshake, custom_handshake_response,
+                               client_version, server_version, server_factory,
                                connection_factory):
     client_version = client_version + b"\x00" * (16 - len(client_version))
+    handshake_response_bang = ""
+    if custom_handshake_response:
+        handshake_response_bang = (
+            f"!: HANDSHAKE_RESPONSE {hex_repr(client_version)}"
+        )
 
     script = parse("""
     !: BOLT {}
     !: HANDSHAKE {}
+    {}
 
     C: RUN
-    """.format(".".join(map(str, server_version)), hex_repr(custom_handshake)))
+    """.format(
+        ".".join(map(str, server_version)),
+        hex_repr(custom_handshake),
+        handshake_response_bang,
+    ))
 
     server = server_factory(script)
     con = connection_factory("localhost", 7687)
@@ -297,27 +493,53 @@ def test_custom_handshake_auto(custom_handshake, client_version,
     assert not server.service.exceptions
 
 
+@pytest.mark.parametrize(
+    (
+        "version",
+        "handshake",
+    ),
+    (
+        (
+            "5.2",
+            (
+                b"\x00\x00\x02\x05" + b"\x00" * 12,
+                b"\x00\x00\x02\x05",
+            ),
+        ),
+        (
+            "5.7",
+            (
+                b"\x00\x00\x01\xFF" + b"\x00" * 12,
+                b"\x00\x00\x01\xFF\x01\x00\x00\x07\x05\x00",
+            ),
+        ),
+    ),
+)
 @pytest.mark.parametrize("delay", [0.5, 1.0])
 @pytest.mark.parametrize("bound", ["upper", "lower"])
-def test_handshake_delay(delay, bound, server_factory, connection_factory):
+def test_handshake_delay(
+    version, handshake, delay, bound, server_factory, connection_factory
+):
     script = parse("""
-    !: BOLT 5.2
+    !: BOLT {}
     !: HANDSHAKE_DELAY {}
 
     C: RUN
-    """.format(delay))
+    """.format(version, delay))
+
+    assert len(handshake) >= 2
 
     server = server_factory(script)
     con = connection_factory("localhost", 7687)
     con.write(b"\x60\x60\xb0\x17")
-    con.write(b"\x00\x00\x02\x05" + b"\x00" * 12)
+    con.write(handshake[0])
     if bound == "upper":
         with con.timeout(delay + 0.2):
-            assert con.read(4) == b"\x00\x00\x02\x05"
+            assert con.read(len(handshake[1])) == handshake[1]
     elif bound == "lower":
         with con.timeout(delay - 0.2):
             with pytest.raises(socket.timeout):
-                con.read(4)
+                con.read(1)
     assert not server.service.exceptions
 
 

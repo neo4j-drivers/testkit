@@ -1,0 +1,6 @@
+!: BOLT 5.7
+!: HANDSHAKE_MANIFEST 0
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+S: <EXIT>

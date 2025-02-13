@@ -139,6 +139,7 @@ class ServerInfo:
             return "5.8"
         if version >= (5, 23):
             return "5.6"
+        # bolt 5.5 was never released
         if version >= (5, 13):
             return "5.4"
         if version >= (5, 9):

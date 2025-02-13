@@ -9,12 +9,12 @@ from tests.shared import (
 from tests.stub.shared import StubServer
 
 
-class NoRoutingV4x1(TestkitTestCase):
+class NoRoutingV4x2(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_1,
-    bolt_version = "4.1"
-    version_dir = "v4x1_no_routing"
-    server_agent = "Neo4j/4.1.0"
+    required_features = types.Feature.BOLT_4_2,
+    bolt_version = "4.2"
+    version_dir = "v4x2_no_routing"
+    server_agent = "Neo4j/4.2.0"
     adb = "adb"
 
     def setUp(self):

@@ -1,9 +1,13 @@
-!: BOLT 4.1
+!: BOLT 5.7
+!: HANDSHAKE #HANDSHAKE#
+!: HANDSHAKE_RESPONSE #HANDSHAKE_RESPONSE#
 
 C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+A: LOGON {"{}": "*"}
 *: RESET
 {?
+    ?: TELEMETRY {"{}": "*"}
     C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
     S: SUCCESS {"fields": ["n.name"]}
     {{
