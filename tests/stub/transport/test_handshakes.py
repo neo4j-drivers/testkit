@@ -100,17 +100,13 @@ class TestHandshakeManifest(TestkitTestCase):
             for f in types.Feature
             if re.match(r"^BOLT_\d+_\d+$", f.name)
         ]
-        all_bolt_versions_ge_5_7 = sorted(
-            [
-                (f, v) for f, v in all_bolt_versions
-                if v[0] == 5 and v >= min_version
-            ],
-            reverse=True,
-            key=lambda x: x[1]
-        )
-        for feature, version in all_bolt_versions_ge_5_7:
+        filtered_bolt_versions = [
+            (f, v) for f, v in all_bolt_versions if v >= min_version
+        ]
+        filtered_bolt_versions.sort(key=lambda x: x[1], reverse=True)
+        for feature, version in filtered_bolt_versions:
             if self.driver_supports_features(feature):
-                if not skip:
+                if skip <= 0:
                     return version
                 skip -= 1
         self.skipTest("No appropriate bolt version supported by driver")
