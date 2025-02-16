@@ -26,14 +26,16 @@ class _TestSummaryBase(TestkitTestCase):
         super().tearDown()
 
     @contextmanager
-    def _get_session(self, script, vars_=None):
+    def _get_session(self, script, vars_=None, fetch_size=1000):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri,
-                        types.AuthorizationToken("basic", principal="",
-                                                 credentials=""))
+        driver = Driver(
+            self._backend,
+            uri,
+            types.AuthorizationToken("basic", principal="", credentials=""),
+        )
         script_path = self.script_path(*self.version_folder, script)
         self._server.start(path=script_path, vars_=vars_)
-        session = driver.session("w", fetch_size=1000)
+        session = driver.session("w", fetch_size=fetch_size)
         try:
             yield session
         finally:
@@ -44,6 +46,15 @@ class _TestSummaryBase(TestkitTestCase):
     def _get_summary(self, script, vars_=None):
         with self._get_session(script, vars_=vars_) as session:
             result = session.run("RETURN 1 AS n")
+            list(result)
+            return result.consume()
+
+
+class _TestSummaryDiscardMixin(_TestSummaryBase):
+    def _get_summary(self, script, vars_=None):
+        with self._get_session(script, vars_=vars_, fetch_size=1) as session:
+            result = session.run("RETURN 1 AS n")
+            result.next()
             return result.consume()
 
 
@@ -123,6 +134,29 @@ class TestSummaryBasicInfo(_TestSummaryBase):
         summary = self._get_summary("no_summary.script")
         self.assertEqual(summary.result_available_after, None)
         self.assertEqual(summary.result_consumed_after, None)
+
+
+class TestSummaryBasicInfoDiscard(
+    _TestSummaryDiscardMixin,
+    TestSummaryBasicInfo,
+):
+    def test_server_info(self):
+        super().test_server_info()
+
+    def test_database(self):
+        super().test_database()
+
+    def test_query(self):
+        super().test_query()
+
+    def test_invalid_query_type(self):
+        super().test_invalid_query_type()
+
+    def test_times(self):
+        super().test_times()
+
+    def test_no_times(self):
+        super().test_no_times()
 
 
 class TestSummaryNotifications4x4(_TestSummaryBase):
@@ -234,6 +268,26 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
             self.assertEqual(summary.notifications, notifications)
         else:
             self.assertEqual(summary.notifications, notifications)
+
+
+class TestSummaryNotifications4x4Discard(
+    _TestSummaryDiscardMixin,
+    TestSummaryNotifications4x4,
+):
+    def test_no_notifications(self):
+        super().test_no_notifications()
+
+    def test_empty_notifications(self):
+        super().test_empty_notifications()
+
+    def test_full_notification(self):
+        super().test_full_notification()
+
+    def test_notifications_without_position(self):
+        super().test_notifications_without_position()
+
+    def test_multiple_notifications(self):
+        super().test_multiple_notifications()
 
 
 SUCCESS_GQL_STATUS_OBJECT = {
@@ -446,6 +500,29 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
             for i in range(1, 4)
         ]
         self.assertEqual(summary.notifications, out_notifications)
+
+
+class TestSummaryNotifications5x6Discard(
+    _TestSummaryDiscardMixin,
+    TestSummaryNotifications5x6,
+):
+    def test_no_notifications(self):
+        super().test_no_notifications()
+
+    def test_empty_notifications(self):
+        super().test_empty_notifications()
+
+    def test_full_notification(self):
+        super().test_full_notification()
+
+    def test_notification_without_position(self):
+        super().test_notification_without_position()
+
+    def test_full_notifications_unknown_fields(self):
+        super().test_full_notifications_unknown_fields()
+
+    def test_multiple_notifications(self):
+        super().test_multiple_notifications()
 
 
 class _TestSummaryGqlStatusObjectsBase(_TestSummaryBase):
@@ -892,6 +969,59 @@ class TestSummaryGqlStatusObjects4x4(_TestSummaryGqlStatusObjectsBase):
             )
 
 
+class TestSummaryGqlStatusObjects4x4Discard(
+    _TestSummaryDiscardMixin,
+    TestSummaryGqlStatusObjects4x4,
+):
+    def test_no_notifications(self):
+        super().test_no_notifications()
+
+    def test_no_notifications_no_data(self):
+        super().test_no_notifications_no_data()
+
+    def test_empty_notifications(self):
+        super().test_empty_notifications()
+
+    def test_warning(self):
+        super().test_warning()
+
+    def test_warning_no_data(self):
+        super().test_warning_no_data()
+
+    def test_information(self):
+        super().test_information()
+
+    def test_information_omitted_result(self):
+        super().test_information_omitted_result()
+
+    def test_information_no_data(self):
+        super().test_information_no_data()
+
+    def test_unknown_severity(self):
+        super().test_unknown_severity()
+
+    def test_notification_with_missing_severity(self):
+        super().test_notification_with_missing_severity()
+
+    def test_notification_with_missing_category(self):
+        super().test_notification_with_missing_category()
+
+    def test_notification_with_missing_position(self):
+        super().test_notification_with_missing_position()
+
+    def test_warn_with_missing_description(self):
+        super().test_warn_with_missing_description()
+
+    def test_info_with_missing_description(self):
+        super().test_info_with_missing_description()
+
+    def test_info_fallback_with_missing_description(self):
+        super().test_info_fallback_with_missing_description()
+
+    def test_multiple_notifications(self):
+        super().test_multiple_notifications()
+
+
 class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
     required_features = types.Feature.BOLT_5_6,
     version_folder = "v5x6",
@@ -1207,6 +1337,29 @@ class TestSummaryGqlStatusObjects5x6(_TestSummaryGqlStatusObjectsBase):
             self.assert_is_test_gql_status_object_raw(received, expected)
 
 
+class TestSummaryGqlStatusObjects5x6Discard(
+    _TestSummaryDiscardMixin,
+    TestSummaryGqlStatusObjects5x6,
+):
+    def test_success(self):
+        super().test_success()
+
+    def test_omitted_result(self):
+        super().test_omitted_result()
+
+    def test_no_data(self):
+        super().test_no_data()
+
+    def test_multiple_statuses(self):
+        super().test_multiple_statuses()
+
+    def test_keeps_garbage_in_diagnostic_record(self):
+        super().test_keeps_garbage_in_diagnostic_record()
+
+    def test_fill_diagnostic_record_values(self):
+        super().test_fill_diagnostic_record_values()
+
+
 class TestSummaryPlan(_TestSummaryBase):
     required_features = types.Feature.BOLT_4_4,
     version_folder = "v4x4",
@@ -1295,6 +1448,14 @@ class TestSummaryPlan(_TestSummaryBase):
             vars_={"#PROFILE#": json.dumps(profile)}
         )
         self.assertEqual(summary.profile, profile)
+
+
+class TestSummaryPlanDiscard(_TestSummaryDiscardMixin,  TestSummaryPlan):
+    def test_plan(self):
+        super().test_plan()
+
+    def test_profile(self):
+        super().test_profile()
 
 
 class TestSummaryCounters(_TestSummaryBase):
@@ -1447,3 +1608,65 @@ class TestSummaryCounters(_TestSummaryBase):
         self._assert_counters(
             summary, system_updates=1234, contains_system_updates=True
         )
+
+
+class TestSummaryCountersDiscard(
+    _TestSummaryDiscardMixin,
+    TestSummaryCounters
+):
+    def test_empty_summary(self):
+        super().test_empty_summary()
+
+    def test_full_summary_no_flags(self):
+        super().test_full_summary_no_flags()
+
+    def test_no_summary(self):
+        super().test_no_summary()
+
+    def test_partial_summary_constraints_added(self):
+        super().test_partial_summary_constraints_added()
+
+    def test_partial_summary_constraints_removed(self):
+        super().test_partial_summary_constraints_removed()
+
+    def test_partial_summary_contains_system_updates(self):
+        super().test_partial_summary_contains_system_updates()
+
+    def test_partial_summary_contains_updates(self):
+        super().test_partial_summary_contains_updates()
+
+    def test_partial_summary_not_contains_system_updates(self):
+        super().test_partial_summary_not_contains_system_updates()
+
+    def test_partial_summary_not_contains_updates(self):
+        super().test_partial_summary_not_contains_updates()
+
+    def test_partial_summary_indexes_added(self):
+        super().test_partial_summary_indexes_added()
+
+    def test_partial_summary_indexes_removed(self):
+        super().test_partial_summary_indexes_removed()
+
+    def test_partial_summary_labels_added(self):
+        super().test_partial_summary_labels_added()
+
+    def test_partial_summary_labels_removed(self):
+        super().test_partial_summary_labels_removed()
+
+    def test_partial_summary_nodes_created(self):
+        super().test_partial_summary_nodes_created()
+
+    def test_partial_summary_nodes_deleted(self):
+        super().test_partial_summary_nodes_deleted()
+
+    def test_partial_summary_properties_set(self):
+        super().test_partial_summary_properties_set()
+
+    def test_partial_summary_relationships_created(self):
+        super().test_partial_summary_relationships_created()
+
+    def test_partial_summary_relationships_deleted(self):
+        super().test_partial_summary_relationships_deleted()
+
+    def test_partial_summary_system_updates(self):
+        super().test_partial_summary_system_updates()

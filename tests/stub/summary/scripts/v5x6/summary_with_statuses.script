@@ -6,6 +6,13 @@ A: LOGON {"{}": "*"}
 C: RUN "*" "*" "*"
 S: SUCCESS {"t_first": 2001, "fields": ["n"]}
 {{
+    {+
+        C: PULL {"n": 1}
+        S: RECORD [1]
+        S: SUCCESS {"has_more": true}
+    +}
+    C: DISCARD {"n": -1}
+----
     C: PULL {"n": "*"}
     S: RECORD [1]
 ----

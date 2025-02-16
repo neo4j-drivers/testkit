@@ -5,6 +5,13 @@ A: HELLO {"{}": "*"}
 C: RUN "*" "*" "*"
 S: SUCCESS {"fields": ["n"]}
 {{
+    {+
+        C: PULL {"n": 1}
+        S: RECORD [1]
+        S: SUCCESS {"has_more": true}
+    +}
+    C: DISCARD {"n": -1}
+----
     C: PULL {"n": "*"}
     S: RECORD [1]
 ----
