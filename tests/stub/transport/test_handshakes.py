@@ -40,12 +40,13 @@ class TestHandshakeManifest(TestkitTestCase):
         finally:
             driver.close()
 
-    def _run(self, handshake, handshake_response):
+    def _run(self, handshake, handshake_response, bolt_version="5.7"):
         script_path = self.script_path(
             "test_parameterized_handshake_manifest.script"
         )
         vars_ = {
-            "#SERVER_AGENT#": "Neo4j/5.26.0"
+            "#SERVER_AGENT#": "Neo4j/5.26.0",
+            "#BOLT_VERSION#": bolt_version,
         }
         if handshake is not None:
             vars_["#HANDSHAKE#"] = handshake
@@ -83,10 +84,46 @@ class TestHandshakeManifest(TestkitTestCase):
                 "00 00 01 FF 02 00 07 07 F2 00 07 07 05 00",
                 "00 00 07 05 00",
             ),
-
         ]:
             with self.subTest(
                 server_response=server_response,
                 expected_response=expected_response
             ):
                 self._run(server_response, expected_response)
+
+    @driver_feature(types.Feature.BOLT_HANDSHAKE_MANIFEST_V1)
+    def test_handshake_manifest_range_response_newer_server(self):
+        used_version = self.get_newest_bolt_supported_by_driver(
+            min_version=(5, 0), max_version=(5, 0xFF)
+        )
+        if used_version == (5, 0xFF):
+            raise ValueError(
+                "Test is moot if driver supports exact max version"
+            )
+        server_response, expected_response = (
+            "00 00 01 FF 02 00 00 04 04 00 FF FF 05 00",
+            f"00 00 {used_version[1]:02X} {used_version[0]:02X} 00",
+        )
+        self._run(
+            server_response,
+            expected_response,
+            bolt_version=".".join(map(str, used_version)),
+        )
+
+    @driver_feature(types.Feature.BOLT_HANDSHAKE_MANIFEST_V1)
+    def test_handshake_manifest_range_response_older_server(self):
+        used_version = self.get_newest_bolt_supported_by_driver(
+            skip=1, min_version=(5, 0), max_version=(5, 0xFF)
+        )
+        minor_major_hex = f"{used_version[1]:02X} {used_version[0]:02X}"
+        used_version_range_hex = f"00 {used_version[1]:02X} {minor_major_hex}"
+        used_version_hex = f"00 00 {minor_major_hex}"
+        server_response, expected_response = (
+            f"00 00 01 FF 02 00 00 04 04 {used_version_range_hex} 00",
+            f"{used_version_hex} 00",
+        )
+        self._run(
+            server_response,
+            expected_response,
+            bolt_version=".".join(map(str, used_version)),
+        )
