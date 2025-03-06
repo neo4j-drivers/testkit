@@ -1375,9 +1375,9 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         self._test_mixed_cluster()
 
     # This test ensures that the connection acquisition timeout covers the full
-    # acquisition under the same timer without resetting. This must include both
-    # optimistic routing and falling back. If this is not the case, this test
-    # can be skipped on the driver side until the behavior is unified.
+    # acquisition under the same timer without resetting. This must include
+    # both optimistic routing and falling back. If this is not the case, this
+    # test can be skipped on the driver side until the behavior is unified.
     @driver_feature(types.Feature.API_CONNECTION_ACQUISITION_TIMEOUT)
     def test_connection_acquisition_timeout_during_fallback(self):
         self.start_server(
@@ -1425,7 +1425,6 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         self._writer1.done()
         # acquisition timeout kicks in => not finishing the script
         self._writer2.reset()
-
 
     @driver_feature(
         types.Feature.BOLT_5_7,
