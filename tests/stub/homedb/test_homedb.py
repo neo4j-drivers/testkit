@@ -1397,7 +1397,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
             "writer_no_ssr.script",
             vars_={
                 **self.VARS_WRITER_NO_SSR,
-                "#EXTRA_BANG_LINES#": "!: HANDSHAKE_DELAY 1.1",
+                "#EXTRA_BANG_LINES#": "!: HANDSHAKE_DELAY 2.1",
             },
         )
 
