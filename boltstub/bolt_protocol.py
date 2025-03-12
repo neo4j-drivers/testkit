@@ -227,7 +227,7 @@ class Bolt1Protocol(BoltProtocol):
     server_agent = "Neo4j/3.3.0"
 
     def get_auto_response(self, request: TranslatedStructure):
-        if request.name in "INIT":
+        if request.name == "INIT":
             return TranslatedStructure(
                 "SUCCESS", b"\x70", {"server": self.server_agent},
                 packstream_version=self.packstream_version
