@@ -227,7 +227,7 @@ class Bolt1Protocol(BoltProtocol):
     server_agent = "Neo4j/3.3.0"
 
     def get_auto_response(self, request: TranslatedStructure):
-        if request.name == "HELLO":
+        if request.name == "INIT":
             return TranslatedStructure(
                 "SUCCESS", b"\x70", {"server": self.server_agent},
                 packstream_version=self.packstream_version
@@ -294,7 +294,7 @@ class Bolt3Protocol(Bolt2Protocol):
                 "SUCCESS", b"\x70",
                 {
                     "connection_id": next_auto_bolt_id(),
-                    "server": self.server_agent
+                    "server": self.server_agent,
                 },
                 packstream_version=self.packstream_version
             )
@@ -335,18 +335,6 @@ class Bolt4x0Protocol(Bolt3Protocol):
 
     server_agent = "Neo4j/4.0.0"
 
-    def get_auto_response(self, request: TranslatedStructure):
-        if request.name == "HELLO":
-            return TranslatedStructure(
-                "SUCCESS", b"\x70",
-                {
-                    "connection_id": next_auto_bolt_id(),
-                    "server": self.server_agent,
-                },
-                packstream_version=self.packstream_version
-            )
-        return super().get_auto_response(request)
-
 
 class Bolt4x1Protocol(Bolt4x0Protocol):
 
@@ -381,19 +369,6 @@ class Bolt4x1Protocol(Bolt4x0Protocol):
     }
 
     server_agent = "Neo4j/4.1.0"
-
-    def get_auto_response(self, request: TranslatedStructure):
-        if request.name == "HELLO":
-            return TranslatedStructure(
-                "SUCCESS", b"\x70",
-                {
-                    "connection_id": next_auto_bolt_id(),
-                    "server": self.server_agent,
-                    "routing": None,
-                },
-                packstream_version=self.packstream_version
-            )
-        return super().get_auto_response(request)
 
 
 class Bolt4x2Protocol(Bolt4x1Protocol):
