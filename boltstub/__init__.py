@@ -20,6 +20,10 @@ import time
 import traceback
 from copy import deepcopy
 from logging import getLogger
+from socket import (
+    IPPROTO_TCP,
+    TCP_NODELAY,
+)
 from socketserver import (
     BaseRequestHandler,
     TCPServer,
@@ -108,6 +112,7 @@ class BoltStubService:
             server_address = None
 
             def setup(self):
+                self.request.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
                 self.wire = create_wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address

@@ -1455,7 +1455,7 @@ class Script:
         ):
             raise LineError(
                 self.context.bang_lines["handshake_response"],
-                "HANDSHAKE_RESPONSE bang line requires without HANDSHAKE bang "
+                "HANDSHAKE_RESPONSE bang line requires a HANDSHAKE bang "
                 "line to be present"
             )
         if (
