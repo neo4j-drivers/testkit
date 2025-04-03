@@ -70,6 +70,8 @@ Environment variables used to control how tests are executed:
     default "enterprise"
   * `TEST_NEO4J_CLUSTER`  
     Whether the Neo4j server is a cluster, default "False"
+  * `TEST_NEO4J_DEFAULT_DB`
+    Default database name, default "neo4j"
   * `TEST_NEO4J_PORT`  
     Defaults to Bolt port 7687, normally not needed.
   * `TEST_BACKEND_HOST`  
