@@ -1,4 +1,5 @@
 import datetime
+from time import sleep
 
 import pytz
 
@@ -12,11 +13,14 @@ from tests.neo4j.datatypes._util import TZ_IDS
 from tests.neo4j.shared import (
     get_server_info,
     has_min_bolt_version,
+    QueryBuilder,
 )
 from tests.shared import (
     get_driver_name,
     Potential,
 )
+
+_SERVER_SUPPORTED_TZ_IDS = []
 
 
 class TestDataTypes(_TestTypesBase):
@@ -114,23 +118,117 @@ class TestDataTypes(_TestTypesBase):
             assert tz_id in e.msg
             return False
 
-    def _server_thinks_wall_time_exists(self, naive_dt, tz_id):
-        dt_str = (
-            f"{naive_dt.year:04d}-{naive_dt.month:02d}-{naive_dt.day:02d}T"
-            f"{naive_dt.hour:02d}:{naive_dt.minute:02d}:{naive_dt.second:02d}"
+    def _timezone_server_support_batched(self, tz_ids):
+        assert self._driver and self._session
+
+        retries = 0
+        sub_query = (
+            "RETURN datetime('1970-01-01T00:00:00.000"
+            "[' + tz_id + ']').timezone AS tzOut"
         )
-        dt_str_tz = f"{dt_str}[{tz_id}]"
+        call_clause = QueryBuilder.call_subquery(sub_query, ["tz_id"])
+        query = (
+            "UNWIND $tz_ids AS tz_id\n"
+            f"{call_clause} "
+            "IN TRANSACTIONS\n"
+            "OF 1 ROW\n"
+            "ON ERROR CONTINUE\n"
+            "RETURN tzOut"
+        )
+        while True:
+            try:
+                res = self._session.run(
+                    query,
+                    params={"tz_ids": types.as_cypher_type(tz_ids)}
+                )
+                records = list(res)
+                assert len(tz_ids) == len(records)
+                return [
+                    tz_id
+                    for (tz_id, rec) in zip(tz_ids, records)
+                    if (
+                        isinstance(rec, types.Record)
+                        and len(rec.values) == 1
+                        and isinstance(rec.values[0], types.CypherString)
+                        and rec.values[0].value == tz_id
+                    )
+                ]
+            except types.DriverError:
+                if retries >= 10:
+                    raise
+                retries += 1
+                sleep(0.25)
+
+    def _server_supported_tz_ids(self):
+        # The server always stays the same for the entire test run.
+        # Therefore, we can cache this costly operation.
+        global _SERVER_SUPPORTED_TZ_IDS
+        if not _SERVER_SUPPORTED_TZ_IDS:
+            if get_server_info().parsed_version() >= (5, 7):
+                _SERVER_SUPPORTED_TZ_IDS = (
+                    self._timezone_server_support_batched(TZ_IDS)
+                )
+            else:
+                for tz_id in TZ_IDS:
+                    if self._timezone_server_support(tz_id):
+                        _SERVER_SUPPORTED_TZ_IDS.append(tz_id)
+        return _SERVER_SUPPORTED_TZ_IDS
+
+    def _server_accepted_wall_times(self, possible_naive_dts):
+        """
+        Find a wall time the server accepts for each given timezone.
+
+        :param possible_naive_dts:
+            dict from tz_id -> list of possible wall times
+        """
+        def native_dt_to_str(dt):
+            return (
+                f"{dt[0]:04d}-{dt[1]:02d}-{dt[2]:02d}T"
+                f"{dt[3]:02d}:{dt[4]:02d}:{dt[5]:02d}"
+            )
+
+        rows = [
+            {
+                "tz_id": tz_id,
+                "dts": [
+                    {
+                        "dt_idx": idx,
+                        "naive": native_dt_to_str(naive_dt),
+                        "with_tz": f"{native_dt_to_str(naive_dt)}[{tz_id}]",
+                    }
+                    for idx, naive_dt in enumerate(naive_dts)
+                ],
+            }
+            for tz_id, naive_dts in possible_naive_dts.items()
+        ]
 
         def work(tx):
-            res = tx.run("RETURN toString(localdatetime(datetime($s1))) = $s2",
-                         params={
-                             "s1": types.CypherString(dt_str_tz),
-                             "s2": types.CypherString(dt_str),
-                         })
-            rec = res.next()
-            assert isinstance(rec, types.Record)
-            assert isinstance(rec.values[0], types.CypherBool)
-            return rec.values[0].value
+            res = tx.run(
+                "UNWIND $rows AS row\n"
+                "RETURN head([dt IN row.dts\n"
+                "WHERE toString(localdatetime(datetime(dt.with_tz))) "
+                "= dt.naive | dt.dt_idx]) AS dt_idx",
+                params={"rows": types.as_cypher_type(rows)}
+            )
+            records = list(res)
+            assert len(rows) == len(records)
+            accepted_wall_times = {}
+            for row, rec in zip(rows, records):
+                assert isinstance(rec, types.Record)
+                assert len(rec.values) == 1
+                val = rec.values[0]
+                if isinstance(val, types.CypherNull):
+                    tz_id = row["tz_id"]
+                    time = possible_naive_dts[tz_id][0]
+                    raise AssertionError(
+                        "Couldn't find a wall time that exists:"
+                        f"{time!r} {tz_id}"
+                    )
+                assert isinstance(val, types.CypherInt)
+                dt_idx = val.value
+                tz_id = row["tz_id"]
+                accepted_wall_times[tz_id] = possible_naive_dts[tz_id][dt_idx]
+            return accepted_wall_times
 
         assert self._driver and self._session
         return self._session.execute_read(work)
@@ -148,21 +246,25 @@ class TestDataTypes(_TestTypesBase):
         )
 
         self._create_driver_and_session()
-        for tz_id in TZ_IDS:
-            if not self._timezone_server_support(tz_id):
-                continue
+
+        # dict from tz_id -> list of possible wall times (according to Python)
+        possible_naive_dts = {}
+
+        dts = []
+        for tz_id in self._server_supported_tz_ids():
             for time in times:
                 try:
                     tz = pytz.timezone(tz_id)
                 except pytz.UnknownTimeZoneError:
                     # Can't test this timezone as Python doesn't know it :(
                     continue
+                possible_naive_dts[tz_id] = []
                 naive_dt = datetime.datetime(*time[:-1])
                 leeway = 25
                 while leeway > 0:
                     leeway -= 1
                     try:
-                        local_dt = tz.localize(naive_dt, is_dst=None)
+                        tz.localize(naive_dt, is_dst=None)
                     except pytz.NonExistentTimeError:
                         # The chosen wall time does not exist in this timezone.
                         # Try an hour later.
@@ -177,31 +279,47 @@ class TestDataTypes(_TestTypesBase):
                             naive_dt += datetime.timedelta(hours=1)
                         raise
                     else:
-                        if not self._server_thinks_wall_time_exists(
-                            naive_dt, tz_id
-                        ):
-                            naive_dt += datetime.timedelta(hours=1)
-                            continue
-                        break
-                if not leeway:
+                        possible_naive_dts[tz_id].append([
+                            naive_dt.year,
+                            naive_dt.month,
+                            naive_dt.day,
+                            naive_dt.hour,
+                            naive_dt.minute,
+                            naive_dt.second,
+                            time[-1],
+                        ])
+                        naive_dt += datetime.timedelta(hours=1)
+                if not possible_naive_dts[tz_id]:
                     raise AssertionError(
                         "Couldn't find a wall time that exists:"
                         f"{time!r} {tz_id}"
                     )
 
-                dt = types.CypherDateTime(
-                    naive_dt.year,
-                    naive_dt.month,
-                    naive_dt.day,
-                    naive_dt.hour,
-                    naive_dt.minute,
-                    naive_dt.second,
-                    time[-1],
-                    utc_offset_s=local_dt.utcoffset().total_seconds(),
-                    timezone_id=tz_id
-                )
-                with self.subTest(dt=dt):
-                    self._verify_can_echo(dt)
+        existing_naive_dts = self._server_accepted_wall_times(
+            possible_naive_dts
+        )
+        for tz_id, time in existing_naive_dts.items():
+            naive_dt = datetime.datetime(*time[:-1])
+            tz = pytz.timezone(tz_id)
+            local_dt = tz.localize(naive_dt, is_dst=None)
+            dt = types.CypherDateTime(
+                naive_dt.year,
+                naive_dt.month,
+                naive_dt.day,
+                naive_dt.hour,
+                naive_dt.minute,
+                naive_dt.second,
+                time[-1],
+                utc_offset_s=local_dt.utcoffset().total_seconds(),
+                timezone_id=tz_id
+            )
+            if self.should_run_subtest(dt=dt):
+                dts.append(dt)
+
+        if not dts:
+            return
+
+        self._verify_can_echo(types.CypherList(dts))
 
     def test_date_time_cypher_created_tz_id(self):
         def assert_utc_equal(dt_, cypher_dt_):
@@ -226,35 +344,52 @@ class TestDataTypes(_TestTypesBase):
 
         def work(tx):
             res = tx.run(
-                f"WITH datetime('1970-01-01T10:08:09.000000001[{tz_id}]') "
-                f"AS dt "
-                f"RETURN dt, dt.year, dt.month, dt.day, dt.hour, dt.minute, "
-                f"dt.second, dt.nanosecond, dt.offsetSeconds, dt.timezone"
+                "UNWIND $tz_ids AS tz_id\n"
+                "WITH "
+                "datetime('1970-01-01T10:08:09.000000001[' + tz_id + ']') "
+                "AS dt\n"
+                "RETURN dt, dt.year, dt.month, dt.day, dt.hour, dt.minute, "
+                "dt.second, dt.nanosecond, dt.offsetSeconds, dt.timezone",
+                params={"tz_ids": types.as_cypher_type(tz_ids)}
             )
-            rec = res.next()
-            assert isinstance(rec, types.Record)
-            dt_, y_, mo_, d_, h_, m_, s_, ns_, offset_, tz_ = rec.values
-            assert isinstance(dt_, types.CypherDateTime)
-            assert isinstance(y_, types.CypherInt)
-            assert isinstance(mo_, types.CypherInt)
-            assert isinstance(d_, types.CypherInt)
-            assert isinstance(h_, types.CypherInt)
-            assert isinstance(m_, types.CypherInt)
-            assert isinstance(s_, types.CypherInt)
-            assert isinstance(ns_, types.CypherInt)
-            assert isinstance(offset_, types.CypherInt)
-            assert isinstance(tz_, types.CypherString)
+            data = []
+            records = list(res)
+            assert len(records) == len(tz_ids)
+            for rec in records:
+                assert isinstance(rec, types.Record)
+                dt_, y_, mo_, d_, h_, m_, s_, ns_, offset_, tz_ = rec.values
+                assert isinstance(dt_, types.CypherDateTime)
+                assert isinstance(y_, types.CypherInt)
+                assert isinstance(mo_, types.CypherInt)
+                assert isinstance(d_, types.CypherInt)
+                assert isinstance(h_, types.CypherInt)
+                assert isinstance(m_, types.CypherInt)
+                assert isinstance(s_, types.CypherInt)
+                assert isinstance(ns_, types.CypherInt)
+                assert isinstance(offset_, types.CypherInt)
+                assert isinstance(tz_, types.CypherString)
 
-            return map(lambda x: getattr(x, "value", x), rec.values)
+                data.append(
+                    list(map(lambda x: getattr(x, "value", x), rec.values))
+                )
+
+            return data
 
         self._create_driver_and_session()
+
         server_supports_utc = get_server_info().has_utc_patch
-        for tz_id in TZ_IDS:
-            if not self._timezone_server_support(tz_id):
-                continue
-            with self.subTest(tz_id=tz_id):
-                dt, y, mo, d, h, m, s, ns, offset, tz = \
-                    self._session.execute_read(work)
+        tz_ids = []
+        for tz_id in self._server_supported_tz_ids():
+            if self.should_run_subtest(tz_id=tz_id):
+                tz_ids.append(tz_id)
+
+        if not tz_ids:
+            return
+
+        data = self._session.execute_read(work)
+        for tz_id, datum in zip(tz_ids, data):
+            with self.uncheckedSubTest(tz_id=tz_id):
+                dt, y, mo, d, h, m, s, ns, offset, tz = datum
                 cypher_dt = types.CypherDateTime(
                     y, mo, d, h, m, s, ns, offset, tz_id
                 )
