@@ -116,6 +116,7 @@ class ServerInfo:
         self.version = version
         self.edition = edition
         self.cluster = cluster
+        self._parsed_version = None
 
     @property
     def server_agent(self):
@@ -136,11 +137,7 @@ class ServerInfo:
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
-        match = re.match(r"(\d+)\.dev", self.version)
-        if match:
-            version = (int(match.group(1)), float("inf"))
-        else:
-            version = tuple(int(i) for i in self.version.split(".")[:2])
+        version = self.parsed_version()
         if version >= (5, 26):
             return "5.8"
         if version >= (5, 23):
@@ -166,11 +163,22 @@ class ServerInfo:
 
     @property
     def has_utc_patch(self):
-        if self.version >= "5":
+        version = self.parsed_version()
+        if version >= (5, 0):
             return Potential.YES
-        if self.version >= "4.3":
+        if version >= (4, 3):
             return Potential.MAYBE
         return Potential.NO
+
+    def parsed_version(self):
+        if self._parsed_version is None:
+            match = re.match(r"(\d+)\.dev", self.version)
+            if match:
+                version = (int(match.group(1)), float("inf"))
+            else:
+                version = tuple(int(i) for i in self.version.split(".")[:2])
+            self._parsed_version = version
+        return self._parsed_version
 
 
 def get_server_info():
