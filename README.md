@@ -39,6 +39,10 @@ Environment variables:
     you also need to set:
   * `TEST_AWS_ECR_URI`  
     The URL to the docker container registry where nightly builds are stored.
+  * `TEST_BACKEND_TIMEOUT`  
+    The default socket timeout to use when waiting for the TestKit backend to
+    respond. This can be any finite float value (in seconds).
+    The default is `60.0` seconds.
 
 ```console
 export TEST_DRIVER_NAME=go
@@ -120,7 +124,8 @@ TestKit or for debugging local backends:
     Set to `1` to disable TestKit timing out if the backend takes longer than
     the usually enforced timeout. This is very handy if you want to step through
     the backend or driver with a debugger without TestKit canceling the tests
-    due to a timed out connection.
+    due to a timed out connection.  
+    You may not set this variable if `TEST_BACKEND_TIMEOUT` is already set.
 
 
 ### Running tests against a specific backend
