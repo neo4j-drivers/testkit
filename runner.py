@@ -81,7 +81,8 @@ class Container:
             "TEST_NEO4J_SCHEME": neo4j_config.scheme,
             "TEST_NEO4J_VERSION": neo4j_config.version,
             "TEST_NEO4J_EDITION": neo4j_config.edition,
-            "TEST_NEO4J_CLUSTER": neo4j_config.cluster
+            "TEST_NEO4J_CLUSTER": neo4j_config.cluster,
+            "TEST_NEO4J_DEFAULT_DB": "neo4j",
         })
         self._container.exec(
             ["python3", "-m", "tests.neo4j.suites", suite, neo4j_config.name],
@@ -95,7 +96,8 @@ class Container:
                     "TEST_NEO4J_SCHEME",
                     "TEST_NEO4J_VERSION",
                     "TEST_NEO4J_EDITION",
-                    "TEST_NEO4J_CLUSTER"):
+                    "TEST_NEO4J_CLUSTER",
+                    "TEST_NEO4J_DEFAULT_DB"):
             self._env.update({key: os.environ.get(key)})
         if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
@@ -128,7 +130,8 @@ class Container:
             "TEST_NEO4J_SCHEME": neo4j_config.scheme,
             "TEST_NEO4J_VERSION": neo4j_config.version,
             "TEST_NEO4J_EDITION": neo4j_config.edition,
-            "TEST_NEO4J_CLUSTER": neo4j_config.cluster
+            "TEST_NEO4J_CLUSTER": neo4j_config.cluster,
+            "TEST_NEO4J_DEFAULT_DB": "neo4j",
         })
         self._container.exec(
             ["python3", "-m", "unittest", "-v", test_pattern],
@@ -142,7 +145,8 @@ class Container:
                     "TEST_NEO4J_SCHEME",
                     "TEST_NEO4J_VERSION",
                     "TEST_NEO4J_EDITION",
-                    "TEST_NEO4J_CLUSTER"):
+                    "TEST_NEO4J_CLUSTER",
+                    "TEST_NEO4J_DEFAULT_DB"):
             self._env.update({key: os.environ.get(key)})
         if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})

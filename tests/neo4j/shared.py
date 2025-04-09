@@ -3,16 +3,17 @@ Shared utilities for writing tests against Neo4j server.
 
 Uses environment variables for configuration:
 
-TEST_NEO4J_SCHEME    Scheme to build the URI when contacting the Neo4j server,
-                     default "bolt"
-TEST_NEO4J_HOST      Neo4j server host, no default, required
-TEST_NEO4J_PORT      Neo4j server port, default is 7687
-TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
-TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
-TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
-TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
-                     Neo4j server, default "enterprise"
-TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
+TEST_NEO4J_SCHEME      Scheme to build the URI when contacting the Neo4j
+                       server, default "bolt"
+TEST_NEO4J_HOST        Neo4j server host, no default, required
+TEST_NEO4J_PORT        Neo4j server port, default is 7687
+TEST_NEO4J_USER        User to access the Neo4j server, default "neo4j"
+TEST_NEO4J_PASS        Password to access the Neo4j server, default "pass"
+TEST_NEO4J_VERSION     Version of the Neo4j server, default "4.4"
+TEST_NEO4J_EDITION     Edition ("enterprise", "community", or "aura") of the
+                       Neo4j server, default "enterprise"
+TEST_NEO4J_CLUSTER     Whether the Neo4j server is a cluster, default "False"
+TEST_NEO4J_DEFAULT_DB  Default database name, default "neo4j"
 """
 
 
@@ -42,6 +43,7 @@ env_neo4j_http_port = "TEST_NEO4J_HTTP_PORT"
 env_neo4j_version = "TEST_NEO4J_VERSION"
 env_neo4j_edition = "TEST_NEO4J_EDITION"
 env_neo4j_cluster = "TEST_NEO4J_CLUSTER"
+env_neo4j_default_db = "TEST_NEO4J_DEFAULT_DB"
 env_neo4j_client_cert = "TEST_NEO4J_SSL_CLIENT_CERT"
 env_neo4j_client_key = "TEST_NEO4J_SSL_CLIENT_KEY"
 
@@ -77,6 +79,10 @@ def get_neo4j_host_and_http_port():
 def get_neo4j_scheme():
     scheme = os.environ.get(env_neo4j_scheme, "bolt")
     return scheme
+
+
+def get_default_db():
+    return os.environ.get(env_neo4j_default_db, "neo4j")
 
 
 def get_client_certificate():
