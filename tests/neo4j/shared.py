@@ -277,11 +277,11 @@ class QueryBuilder:
 
     @staticmethod
     def _wait_clause(version):
-        return " WAIT" if version >= "4.2" else ""
+        return " WAIT" if version >= (4, 2) else ""
 
     @staticmethod
     def create_db(database, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version()
         return "CREATE DATABASE {}{}".format(
             QueryBuilder.escape_identifier(database),
             QueryBuilder._wait_clause(version) if wait else ""
@@ -289,9 +289,33 @@ class QueryBuilder:
 
     @staticmethod
     def drop_db(database, if_exists=True, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version()
         return "DROP  DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
             " IF EXISTS" if if_exists else "",
             QueryBuilder._wait_clause(version) if wait else ""
         )
+
+    @staticmethod
+    def call_subquery(subquery, imports=()):
+        version = get_server_info().parsed_version()
+        imports = ", ".join(list(map(QueryBuilder.escape_identifier, imports)))
+        if not imports:
+            return (
+                f"CALL {{\n"
+                f"    {subquery}\n"
+                "}"
+            )
+        if version >= (5, 23):
+            return (
+                f"CALL ({imports}) {{\n"
+                f"    {subquery}\n"
+                "}"
+            )
+        else:
+            return (
+                f"CALL {{\n"
+                f"    WITH {imports}\n"
+                f"    {subquery}\n"
+                "}"
+            )

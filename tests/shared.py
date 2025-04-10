@@ -247,6 +247,20 @@ class TestkitTestCase(unittest.TestCase):
                 skip -= 1
         self.skipTest("No appropriate bolt version supported by driver")
 
+    def should_run_subtest(self, **params):
+        response = self._backend.send_and_receive(
+            protocol.StartSubTest(self._testkit_test_name, params)
+        )
+        if isinstance(response, protocol.SkipTest):
+            return False
+        elif isinstance(response, protocol.RunTest):
+            return True
+        else:
+            raise Exception(
+                "Should be SkipTest, or RunTest, "
+                "received {}: {}".format(type(response), response)
+            )
+
     @contextmanager
     def subTest(self, **params):  # noqa: N802
         assert "msg" not in params
@@ -276,6 +290,10 @@ class TestkitTestCase(unittest.TestCase):
                     raise Exception("Should be SkipTest, or RunTest, "
                                     "received {}: {}".format(type(response),
                                                              response))
+
+    def uncheckedSubTest(self, **params):  # noqa: N802
+        assert "msg" not in params
+        return super().subTest(**params)
 
 
 class Potential(enum.Enum):
