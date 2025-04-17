@@ -317,7 +317,9 @@ class TestDataTypes(_TestTypesBase):
                 dts.append(dt)
 
         if not dts:
-            return
+            self.skipTest(
+                "No zoned date times supported by both server and driver"
+            )
 
         self._verify_can_echo(types.CypherList(dts))
 
@@ -384,7 +386,7 @@ class TestDataTypes(_TestTypesBase):
                 tz_ids.append(tz_id)
 
         if not tz_ids:
-            return
+            self.skipTest("No timezones supported by both server and driver")
 
         data = self._session.execute_read(work)
         for tz_id, datum in zip(tz_ids, data):
