@@ -473,7 +473,7 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
                     "_severity": "WARNING",
                     "_classification": "GENERIC",
                     "_position": {"column": 9, "offset": 8, "line": 1 + i},
-                },
+                },  # noqa: E122 - looks better
             }
             for i in range(1, 4)
         ]
