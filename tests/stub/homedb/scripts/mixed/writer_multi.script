@@ -4,12 +4,12 @@ A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
 *: RESET
 
-{+
+{*
     {{
-        C: RUN "RESOLVED" {} {"db": "homedb1", "[bookmarks]": {"[]": "*"}, "mode": "r"}
+        C: RUN "RESOLVED" {} {"db": "homedb1", "[bookmarks]": {"[]": "*"}, "[mode]": "w"}
         S: SUCCESS {"fields": ["n"]}
     ----
-        C: RUN "UNRESOLVED" {} {"[db]": null, "[bookmarks]": {"[]": "*"}, "mode": "r"}
+        C: RUN "UNRESOLVED" {} {"[bookmarks]": {"[]": "*"}, "[mode]": "w"}
         S: SUCCESS {"fields": ["n"], "db": "homedb1"}
     }}
     {{
@@ -20,6 +20,6 @@ A: LOGON {"{}": "*"}
     }}
     S: SUCCESS {}
     *: RESET
-+}
+*}
 
 ?: GOODBYE

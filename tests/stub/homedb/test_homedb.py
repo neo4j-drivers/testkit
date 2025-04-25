@@ -1320,7 +1320,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         with self.driver() as driver:
             # 1st connection => explicit home db resolution (homedb1)
             with self.session(driver, "r") as session:
-                result = session.run("RETURN 1 AS n")
+                result = session.run("RESOLVED")
                 result.consume()
 
             # 2nd connection has no ssr support
@@ -1332,7 +1332,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
             # making sure the connection to the reader is still alive after
             # the fallback
             with self.session(driver, "r", database="homedb1") as session:
-                result = session.run("RETURN 3 AS n")
+                result = session.run("RESOLVED")
                 result.consume()
 
         self._router.done()
@@ -1341,7 +1341,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
 
     @driver_feature(types.Feature.BOLT_5_7)
     def test_home_db_fallback_mixed_bolt_versions(self):
-        self.start_server(self._router, "router_5x8.script")
+        self.start_server(self._router, "router_fallback.script")
         self.start_server(self._reader, "reader_5x8_ssr.script")
         self.start_server(
             self._writer1,
@@ -1364,7 +1364,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     }
 
     def test_home_db_fallback_no_ssr_hint(self):
-        self.start_server(self._router, "router_5x8.script")
+        self.start_server(self._router, "router_fallback.script")
         self.start_server(self._reader, "reader_5x8_ssr.script")
         self.start_server(
             self._writer1,
@@ -1382,7 +1382,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
     def test_connection_acquisition_timeout_during_fallback(self):
         self.start_server(
             self._router,
-            "router_5x8.script",
+            "router_fallback.script",
             vars_={
                 "#WRITER_2#": self._writer2.port,
             },
@@ -1410,7 +1410,7 @@ class TestHomeDbMixedCluster(TestkitTestCase):
         ) as driver:
             # set-up driver to have home db cache enabled
             with self.session(driver, "r") as session:
-                result = session.run("RETURN 1 AS n")
+                result = session.run("RESOLVED")
                 result.consume()
 
             # detecting server without SSR => fallback to explicit home db
@@ -1471,3 +1471,120 @@ class TestHomeDbMixedCluster(TestkitTestCase):
                     result = session.run("RETURN 3 as n")
                     result.consume()
                 self._reader.done()
+
+    def test_re_enabling_cache(self):
+        self.start_server(self._router, "router.script")
+        self.start_server(self._reader, "reader_5x8_no_ssr.script")
+        self.start_server(self._writer1, "writer_multi.script")
+
+        with self.driver() as driver:
+
+            # GIVEN: 1 router connection with SSR, 1 reader connection without
+            with self.session(driver, "r") as session:
+                result = session.run("RETURN 1 AS n")
+                result.consume()
+
+            # WHEN: reader connection is killed
+            self._reader.done()
+            with self.session(driver, "r", database="homedb1") as session:
+                with self.assertRaises(types.DriverError):
+                    result = session.run("NEVER REACHES THE SERVER")
+                    result.consume()
+
+            # AND: new reader appears with SSR support
+            self.start_server(self._reader, "reader_5x8_ssr.script")
+            with self.session(driver, "r", database="homedb1") as session:
+                result = session.run("RESOLVED")
+                result.consume()
+
+            # THEN: cache is re-enabled and has an entry from the first session
+            with self.session(driver, "w") as session:
+                result = session.run("UNRESOLVED")
+                result.consume()
+
+        self._router.done()
+        self._reader.done()
+        self._writer1.done()
+
+    def test_re_enabling_cache_after_disabling(self):
+        self.start_server(self._router, "router_multi.script")
+        self.start_server(self._reader, "reader_5x8_ssr.script")
+        self.start_server(self._writer1, "writer_multi.script")
+
+        route_count = 0
+
+        with self.driver() as driver:
+
+            # GIVEN: The driver has already used the cache at least once
+            #  - session 1 SSR is enabled, but cache miss
+            with self.session(driver, "r") as session:
+                result = session.run("RESOLVED")
+                result.consume()
+
+            new_route_count = self._router.count_requests("ROUTE")
+            self.assertEqual(route_count + 1, new_route_count)
+            route_count = new_route_count
+
+            #  - session 2 SSR is enabled, cache hit
+            with self.session(driver, "r") as session:
+                result = session.run("UNRESOLVED")
+                result.consume()
+
+            # AND: The cache gets disabled
+            #  - a new connection is made with SSR disabled
+            #    - old reader dies
+            self._reader.done()
+            with self.session(driver, "r", database="homedb1") as session:
+                with self.assertRaises(types.DriverError):
+                    result = session.run("NEVER REACHES THE SERVER")
+                    result.consume()
+
+            #   - new reader (without SSR) appears
+            self.start_server(self._reader, "reader_5x8_no_ssr.script")
+            with self.session(driver, "r", database="homedb1") as session:
+                result = session.run("NEW READER NO SSR")
+                result.consume()
+
+            # - routing table is depleted of readers => fetching new one
+            new_route_count = self._router.count_requests("ROUTE")
+            self.assertEqual(route_count + 1, new_route_count)
+            route_count = new_route_count
+
+            # - double check that the cache is disabled:
+            with self.session(driver, "r") as session:
+                result = session.run("EXPLICITLY RESOLVED")
+                result.consume()
+
+            # - new ROUTE request for explicit home db resolution
+            new_route_count = self._router.count_requests("ROUTE")
+            self.assertEqual(route_count + 1, new_route_count)
+            route_count = new_route_count
+
+            # AND: The cache gets enabled again
+            #  - a new connection is made with SSR enabled
+            #    - old reader dies
+            self._reader.done()
+            with self.session(driver, "r", database="homedb1") as session:
+                with self.assertRaises(types.DriverError):
+                    result = session.run("NEVER REACHES THE SERVER")
+                    result.consume()
+
+            #   - new reader (with SSR) appears
+            self.start_server(self._reader, "reader_5x8_ssr.script")
+            with self.session(driver, "r", database="homedb1") as session:
+                result = session.run("RESOLVED")
+                result.consume()
+
+            # - routing table is depleted of readers => fetching new one
+            new_route_count = self._router.count_requests("ROUTE")
+            self.assertEqual(route_count + 1, new_route_count)
+            route_count = new_route_count
+
+            # THEN: cache is enabled and has an entry from the first session
+            with self.session(driver, "w") as session:
+                result = session.run("UNRESOLVED")
+                result.consume()
+
+        self._router.done()
+        self._reader.done()
+        self._writer1.done()
