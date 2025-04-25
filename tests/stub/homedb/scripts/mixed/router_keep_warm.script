@@ -1,5 +1,4 @@
 !: BOLT #BOLT_VERSION#
-!: ALLOW CONCURRENT
 
 A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
