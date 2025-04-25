@@ -3,16 +3,17 @@ Shared utilities for writing tests against Neo4j server.
 
 Uses environment variables for configuration:
 
-TEST_NEO4J_SCHEME    Scheme to build the URI when contacting the Neo4j server,
-                     default "bolt"
-TEST_NEO4J_HOST      Neo4j server host, no default, required
-TEST_NEO4J_PORT      Neo4j server port, default is 7687
-TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
-TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
-TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
-TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
-                     Neo4j server, default "enterprise"
-TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
+TEST_NEO4J_SCHEME      Scheme to build the URI when contacting the Neo4j
+                       server, default "bolt"
+TEST_NEO4J_HOST        Neo4j server host, no default, required
+TEST_NEO4J_PORT        Neo4j server port, default is 7687
+TEST_NEO4J_USER        User to access the Neo4j server, default "neo4j"
+TEST_NEO4J_PASS        Password to access the Neo4j server, default "pass"
+TEST_NEO4J_VERSION     Version of the Neo4j server, default "4.4"
+TEST_NEO4J_EDITION     Edition ("enterprise", "community", or "aura") of the
+                       Neo4j server, default "enterprise"
+TEST_NEO4J_CLUSTER     Whether the Neo4j server is a cluster, default "False"
+TEST_NEO4J_DEFAULT_DB  Default database name, default "neo4j"
 """
 
 
@@ -42,6 +43,7 @@ env_neo4j_http_port = "TEST_NEO4J_HTTP_PORT"
 env_neo4j_version = "TEST_NEO4J_VERSION"
 env_neo4j_edition = "TEST_NEO4J_EDITION"
 env_neo4j_cluster = "TEST_NEO4J_CLUSTER"
+env_neo4j_default_db = "TEST_NEO4J_DEFAULT_DB"
 env_neo4j_client_cert = "TEST_NEO4J_SSL_CLIENT_CERT"
 env_neo4j_client_key = "TEST_NEO4J_SSL_CLIENT_KEY"
 
@@ -79,6 +81,10 @@ def get_neo4j_scheme():
     return scheme
 
 
+def get_default_db():
+    return os.environ.get(env_neo4j_default_db, "neo4j")
+
+
 def get_client_certificate():
     client_certificate_key = os.environ.get(env_neo4j_client_key)
     client_certificate_cert = os.environ.get(env_neo4j_client_cert)
@@ -110,6 +116,7 @@ class ServerInfo:
         self.version = version
         self.edition = edition
         self.cluster = cluster
+        self._parsed_version = None
 
     @property
     def server_agent(self):
@@ -130,11 +137,7 @@ class ServerInfo:
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
-        match = re.match(r"(\d+)\.dev", self.version)
-        if match:
-            version = (int(match.group(1)), float("inf"))
-        else:
-            version = tuple(int(i) for i in self.version.split(".")[:2])
+        version = self.parsed_version()
         if version >= (5, 26):
             return "5.8"
         if version >= (5, 23):
@@ -160,11 +163,22 @@ class ServerInfo:
 
     @property
     def has_utc_patch(self):
-        if self.version >= "5":
+        version = self.parsed_version()
+        if version >= (5, 0):
             return Potential.YES
-        if self.version >= "4.3":
+        if version >= (4, 3):
             return Potential.MAYBE
         return Potential.NO
+
+    def parsed_version(self):
+        if self._parsed_version is None:
+            match = re.match(r"(\d+)\.dev", self.version)
+            if match:
+                version = (int(match.group(1)), float("inf"))
+            else:
+                version = tuple(int(i) for i in self.version.split(".")[:2])
+            self._parsed_version = version
+        return self._parsed_version
 
 
 def get_server_info():
@@ -263,11 +277,11 @@ class QueryBuilder:
 
     @staticmethod
     def _wait_clause(version):
-        return " WAIT" if version >= "4.2" else ""
+        return " WAIT" if version >= (4, 2) else ""
 
     @staticmethod
     def create_db(database, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version()
         return "CREATE DATABASE {}{}".format(
             QueryBuilder.escape_identifier(database),
             QueryBuilder._wait_clause(version) if wait else ""
@@ -275,9 +289,33 @@ class QueryBuilder:
 
     @staticmethod
     def drop_db(database, if_exists=True, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version()
         return "DROP  DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
             " IF EXISTS" if if_exists else "",
             QueryBuilder._wait_clause(version) if wait else ""
         )
+
+    @staticmethod
+    def call_subquery(subquery, imports=()):
+        version = get_server_info().parsed_version()
+        imports = ", ".join(list(map(QueryBuilder.escape_identifier, imports)))
+        if not imports:
+            return (
+                f"CALL {{\n"
+                f"    {subquery}\n"
+                "}"
+            )
+        if version >= (5, 23):
+            return (
+                f"CALL ({imports}) {{\n"
+                f"    {subquery}\n"
+                "}"
+            )
+        else:
+            return (
+                f"CALL {{\n"
+                f"    WITH {imports}\n"
+                f"    {subquery}\n"
+                "}"
+            )

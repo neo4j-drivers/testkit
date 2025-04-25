@@ -201,19 +201,20 @@ def parse_command_line(configurations, argv):
         "Flag to *only* run integration tests with an externally started "
         "database. This flag is not compatible with any other flag.\n\n"
         "Supported environment variables:\n"
-        "TEST_NEO4J_SCHEME    Scheme to build the URI when contacting the "
+        "TEST_NEO4J_SCHEME      Scheme to build the URI when contacting the "
         'Neo4j server, default "bolt"\n'
-        "TEST_NEO4J_HOST      Neo4j server host, no default, required\n"
-        "TEST_NEO4J_PORT      Neo4j server port, default is 7687\n"
-        "TEST_NEO4J_USER      User to access the Neo4j server, default "
+        "TEST_NEO4J_HOST        Neo4j server host, no default, required\n"
+        "TEST_NEO4J_PORT        Neo4j server port, default is 7687\n"
+        "TEST_NEO4J_USER        User to access the Neo4j server, default "
         '"neo4j"\n'
-        "TEST_NEO4J_PASS      Password to access the Neo4j server, default "
+        "TEST_NEO4J_PASS        Password to access the Neo4j server, default "
         '"pass"\n'
-        'TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"\n'
-        'TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") '
-        'of the Neo4j server, default "enterprise"\n'
-        "TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "
-        '"False"\n'
+        'TEST_NEO4J_VERSION     Version of the Neo4j server, default "4.4"\n'
+        'TEST_NEO4J_EDITION     Edition ("enterprise", "community", '
+        'or "aura") of the Neo4j server, default "enterprise"\n'
+        "TEST_NEO4J_CLUSTER     Whether the Neo4j server is a cluster, "
+        'default "False"\n'
+        'TEST_NEO4J_DEFAULT_DB  Default database name, default "neo4j"\n'
     )
     servers_help = "Optional space separated list selected from: "
     for config in configurations:

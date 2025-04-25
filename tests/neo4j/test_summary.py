@@ -3,6 +3,7 @@ import re
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
+    get_default_db,
     get_driver,
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
@@ -211,7 +212,7 @@ class TestSummary(TestkitTestCase):
             for record in result:
                 databases.add(record.values[name_idx].value)
         self.assertIn("system", databases)
-        self.assertIn("neo4j", databases)
+        self.assertIn(get_default_db(), databases)
 
         summary = result.consume()
 

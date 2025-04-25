@@ -1,6 +1,7 @@
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
+    get_default_db,
     get_driver,
     get_neo4j_host_and_http_port,
     get_neo4j_host_and_port,
@@ -88,7 +89,7 @@ class TestDirectDriver(TestkitTestCase):
         self.assertTrue(result)
         # This is the default database name if not set explicitly on the
         # Neo4j Server
-        self.assertEqual(summary.database, "neo4j")
+        self.assertEqual(summary.database, get_default_db())
 
         self.assertEqual(summary.query_type, "r")
 
@@ -138,7 +139,10 @@ class TestDirectDriver(TestkitTestCase):
             self._session = self._driver.session("w", database="system")
             self._session.run(drop_db_query).consume()
         else:
-            self._session = self._driver.session("w", database="neo4j")
+            self._session = self._driver.session(
+                "w",
+                database=get_default_db(),
+            )
             with self.assertRaises(types.DriverError) as e:
                 self._session.run("RETURN 1").consume()
             if get_driver_name() in ["python"]:
@@ -193,7 +197,8 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w", database="system",
                                              bookmarks=bookmarks)
         result = self._session.run("SHOW DATABASES")
-        self.assertEqual(get_names(result, node=False), {"system", "neo4j"})
+        self.assertEqual(get_names(result, node=False),
+                         {"system", get_default_db()})
 
         result = self._session.run(create_db_testa_query)
         result.consume()
