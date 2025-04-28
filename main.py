@@ -130,14 +130,16 @@ def initialise_configurations(settings):
                            docker_tag=docker_tag)
         for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
-            # nightly build of official backwards-compatible version
-            ("4.4",    "4.4",      True,        True,     "neo4j", 60),
-            # latest version
-            ("5.dev",  "5",        False,       False,    "bolt",   0),
-            ("5.dev",  "5",        False,       False,    "neo4j",  0),
-            ("5.dev",  "5",        True,        False,    "bolt",  90),
-            ("5.dev",  "5",        True,        False,    "neo4j",  0),
-            ("5.dev",  "5",        True,        True,     "neo4j", 90),
+            # nightly build of official backwards-compatible version(s)
+            ("4.4",      "4.4",    True,        True,     "neo4j", 60),
+            # nightly build of matching version(s)
+            ("5.dev",    "5",      False,       False,    "bolt",   0),
+            ("5.dev",    "5",      False,       False,    "neo4j",  0),
+            ("5.dev",    "5",      True,        False,    "bolt",  90),
+            ("5.dev",    "5",      True,        False,    "neo4j",  0),
+            ("5.dev",    "5",      True,        True,     "neo4j", 90),
+            # nightly build of official forwards-compatible version(s)
+            ("2025.dev", "2025",   True,        True,     "neo4j", 60),
         )
     ]
 
