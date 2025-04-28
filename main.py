@@ -98,13 +98,7 @@ def initialise_configurations(settings):
             # not officially supported versions
             ("4.2",    True,        False,    "neo4j",  0),
             ("4.3",    True,        False,    "neo4j",  0),
-            # official backwards-compatibility
-            # LTS version
-            ("4.4",    False,       False,    "bolt",   0),
-            ("4.4",    False,       False,    "neo4j",  0),
-            ("4.4",    True,        False,    "bolt",   0),
             ("4.4",    True,        False,    "neo4j",  0),
-            ("4.4",    True,        True,     "neo4j", 90),
             # Selected 5.x versions
             # Oldest 5.x version (BOLT 5.0) would be 5.0.
             # However, that has no tag at dockerhub, so we use 5.1
@@ -122,6 +116,8 @@ def initialise_configurations(settings):
             # Bolt 5.6
             ("5.23",   True,        True,     "neo4j",  0),
             # Bolt 5.7 + 5.8
+            # official backwards-compatibility
+            # LTS version
             ("5.26",   True,        True,     "neo4j",  0),
         )
     ]
@@ -130,14 +126,14 @@ def initialise_configurations(settings):
                            docker_tag=docker_tag)
         for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
-            # nightly build of official backwards-compatible version
-            ("4.4",    "4.4",      True,        True,     "neo4j", 60),
-            # latest version
-            ("5.dev",  "5",        False,       False,    "bolt",   0),
-            ("5.dev",  "5",        False,       False,    "neo4j",  0),
-            ("5.dev",  "5",        True,        False,    "bolt",  90),
-            ("5.dev",  "5",        True,        False,    "neo4j",  0),
-            ("5.dev",  "5",        True,        True,     "neo4j", 90),
+            # nightly build of official backwards-compatible version(s)
+            ("5.26",     "5",      True,        True,     "neo4j", 60),
+            # nightly build of matching version(s)
+            ("2025.dev", "2025",   False,       False,    "bolt",   0),
+            ("2025.dev", "2025",   False,       False,    "neo4j",  0),
+            ("2025.dev", "2025",   True,        False,    "bolt",  90),
+            ("2025.dev", "2025",   True,        False,    "neo4j",  0),
+            ("2025.dev", "2025",   True,        True,     "neo4j", 90),
         )
     ]
 
