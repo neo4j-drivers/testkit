@@ -20,11 +20,11 @@ import datetime
 
 import pytz
 
-from ..common.types import (
+from ..common.jolt_types import (
     JoltType,
     JoltWildcard,
 )
-from ..v1.types import (
+from ..v1.jolt_types import (
     JoltV1DateMixin,
     JoltV1DateTimeMixin,
     JoltV1DurationMixin,
