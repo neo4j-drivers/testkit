@@ -42,7 +42,7 @@ from ..v1.codec import (
     JoltReverseRelationTransformer,
     JoltTypeTransformer,
 )
-from .types import (
+from .jolt_types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,

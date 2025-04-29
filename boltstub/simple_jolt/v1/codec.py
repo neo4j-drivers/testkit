@@ -27,7 +27,7 @@ from ..common.errors import (
     NoFullRepresentation,
     NoSimpleRepresentation,
 )
-from .types import (
+from .jolt_types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,
