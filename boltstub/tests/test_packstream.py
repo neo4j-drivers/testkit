@@ -21,8 +21,8 @@ import inspect
 import pytest
 
 from ..bolt_protocol import Structure
-from ..simple_jolt.v1 import types as jolt_v1_types
-from ..simple_jolt.v2 import types as jolt_v2_types
+from ..simple_jolt.v1 import jolt_types as jolt_v1_types
+from ..simple_jolt.v2 import jolt_types as jolt_v2_types
 
 
 @pytest.mark.parametrize(("packstream_version", "fields", "res"), (
