@@ -203,11 +203,18 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
     def test_tx_timeout(self):
+        class WrappedError(Exception):
+            def __init__(self, inner):
+                super().__init__()
+                self.inner = inner
+
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript", "java"]:
             self.skipTest("Query update2 does not time out.")
         if get_driver_name() in ["dotnet"]:
             self.skipTest("Backend crashes.")
+
+        lock_error_code = "Neo.ClientError.Transaction.LockClientStopped"
 
         def create(tx):
             summary = tx.run("MERGE (:Node)").consume()
@@ -216,20 +223,29 @@ class TestTxFuncRun(TestkitTestCase):
         def update1(tx):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
 
-            with self.assertRaises(types.FrontendError):
+            with self.assertRaises(Exception) as e:
                 self._session2.execute_write(update2, timeout=250)
+            inner = e.exception
+            if isinstance(inner, WrappedError):
+                inner = inner.inner
+            if (
+                not isinstance(inner, types.DriverError)
+                or inner.code != lock_error_code
+            ):
+                # This is not the error we are looking for. Maybe there was a
+                # leader election or so. Give the driver the chance to retry.
+                raise inner
+
+            nonlocal exc
+            exc = inner
 
         def update2(tx):
-            nonlocal exc
-            with self.assertRaises(types.DriverError) as e:
+            inner = None
+            try:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
-            exc = e.exception
-            if exc.code == "Neo.ClientError.Transaction.LockClientStopped":
-                # This is the error we are looking for. Maybe there was  a
-                # leader election or so. Give the driver the chance to retry.
-                raise ApplicationCodeError("Stop, hammer time!")
-            else:
-                raise exc
+            except types.DriverError as e:
+                inner = e
+            raise WrappedError(inner)
 
         exc = None
 
@@ -240,9 +256,7 @@ class TestTxFuncRun(TestkitTestCase):
         )
         self._session1.execute_write(update1)
         self.assertIsInstance(exc, types.DriverError)
-
-        self.assertEqual(exc.code,
-                         "Neo.ClientError.Transaction.LockClientStopped")
+        self.assertEqual(exc.code, lock_error_code)
         if get_driver_name() in ["python"]:
-            self.assertEqual(exc.errorType,
-                             "<class 'neo4j.exceptions.ClientError'>")
+            error_type = "<class 'neo4j.exceptions.ClientError'>"
+            self.assertEqual(exc.errorType, error_type)
