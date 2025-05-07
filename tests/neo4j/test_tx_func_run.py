@@ -199,6 +199,11 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
     def test_tx_timeout(self):
+        class WrappedError(Exception):
+            def __init__(self, inner):
+                super().__init__()
+                self.inner = inner
+
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript", "java"]:
             self.skipTest("Query update2 does not time out.")
@@ -216,22 +221,29 @@ class TestTxFuncRun(TestkitTestCase):
         def update1(tx):
             tx.run("MATCH (a:Node) SET a.property = 1").consume()
 
-            with self.assertRaises(types.FrontendError):
+            with self.assertRaises(Exception) as e:
                 self._session2.write_transaction(update2, timeout=250)
+            inner = e.exception
+            if isinstance(inner, WrappedError):
+                inner = inner.inner
+            if (
+                not isinstance(inner, types.DriverError)
+                or inner.code != lock_error_code
+            ):
+                # This is not the error we are looking for. Maybe there was a
+                # leader election or so. Give the driver the chance to retry.
+                raise inner
+
+            nonlocal exc
+            exc = inner
 
         def update2(tx):
-            nonlocal exc
-            with self.assertRaises(types.DriverError) as e:
+            inner = None
+            try:
                 tx.run("MATCH (a:Node) SET a.property = 2").consume()
-            exc = e.exception
-            if exc.code != lock_error_code:
-                # This is not the error we are looking for. Maybe there was  a
-                # leader election or so. Give the driver the chance to retry.
-                raise exc
-            else:
-                # The error we are looking for. Raise ApplicationError instead
-                # to make the driver stop retrying.
-                raise ApplicationCodeError("Stop, hammer time!")
+            except types.DriverError as e:
+                inner = e
+            raise WrappedError(inner)
 
         exc = None
 
