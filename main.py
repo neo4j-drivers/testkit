@@ -127,6 +127,7 @@ def initialise_configurations(settings):
         for (version_, docker_tag, enterprise_, cluster_, scheme_,  stress)
         in (
             # nightly build of official backwards-compatible version(s)
+            ("5.26",     "5",      True,        False,     "neo4j", 0),
             ("5.26",     "5",      True,        True,     "neo4j", 60),
             # nightly build of matching version(s)
             ("2025.dev", "2025",   False,       False,    "bolt",   0),
