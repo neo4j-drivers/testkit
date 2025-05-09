@@ -139,7 +139,7 @@ def initialise_configurations(settings):
             ("5.dev",    "5",      True,        False,    "neo4j",  0),
             ("5.dev",    "5",      True,        True,     "neo4j", 90),
             # nightly build of official forwards-compatible version(s)
-            ("2025.dev", "2025",   True,        False,     "neo4j", 0),
+            ("2025.dev", "2025",   True,        False,    "neo4j",  0),
             ("2025.dev", "2025",   True,        True,     "neo4j", 60),
         )
     ]
