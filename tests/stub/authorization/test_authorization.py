@@ -263,7 +263,7 @@ class AuthorizationBase(TestkitTestCase):
             )
             self.assertIn(
                 "user switching is not supported for bolt protocol "
-                "version(5, 0)",
+                "5.0",
                 error.msg.lower()
             )
         elif driver in ["javascript"]:
