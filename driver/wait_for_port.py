@@ -13,9 +13,10 @@ def wait_for_port(address, port):
         except OSError:
             time.sleep(0.1)
             if time.perf_counter() - start > timeout:
-                print("ERROR: Timeout while waiting for port %s on %s"
-                      % (port, address))
-                return False
+                break
+    print(f"ERROR: Timeout while waiting for port {port} on {address}",
+          file=sys.stderr, flush=True)
+    return False
 
 
 if __name__ == "__main__":

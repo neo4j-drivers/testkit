@@ -133,20 +133,6 @@ class TestTemporalTypesV3x0(_TestTemporalTypes):
         super()._test_zoned_date_time(patched=False)
 
 
-class TestTemporalTypesV4x1(_TestTemporalTypes):
-    required_features = (
-        *_TestTemporalTypes.required_features,
-        types.Feature.BOLT_4_1,
-    )
-    bolt_version = "4.1"
-
-    def test_date_time(self):
-        super()._test_date_time(patched=False)
-
-    def test_zoned_date_time(self):
-        super()._test_zoned_date_time(patched=False)
-
-
 class TestTemporalTypesV4x2(_TestTemporalTypes):
 
     required_features = (

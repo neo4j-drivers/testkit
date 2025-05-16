@@ -188,6 +188,22 @@ class TestNotificationMapping(NotificationsBase):
             {
                 "notifications": [
                     {
+                        "category": "SCHEMA",
+                        "severity": "INFORMATION"
+                    }
+                ],
+                "expect": [
+                    {
+                        "category": "SCHEMA",
+                        "category_string": "SCHEMA",
+                        "severity": "INFORMATION",
+                        "severity_string": "INFORMATION",
+                    }
+                ]
+            },
+            {
+                "notifications": [
+                    {
                         "category": "MADE_UP",
                         "severity": "WARNING"
                     }

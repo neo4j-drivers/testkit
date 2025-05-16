@@ -23,14 +23,17 @@ class TestTlsVersions(TestkitTlsTestCase):
 
     def _try_connect_smart(self):
         if self.driver_supports_features(types.Feature.API_SSL_SCHEMES):
-            return super()._try_connect(self._server, "neo4j+s", "thehost")
+            driver_ctx = self._make_driver("neo4j+s", "thehost")
         elif self.driver_supports_features(types.Feature.API_SSL_CONFIG):
-            return super()._try_connect(self._server, "neo4j", "thehost",
-                                        encrypted=True)
-        self.skipTest("Needs support for either of %s" % ", ".join(
-            map(lambda f: f.value,
-                (types.Feature.API_SSL_SCHEMES, types.Feature.API_SSL_CONFIG))
-        ))
+            driver_ctx = self._make_driver("neo4j", "thehost", encrypted=True)
+        else:
+            self.skipTest("Needs support for either of %s" % ", ".join(
+                (types.Feature.API_SSL_SCHEMES.value,
+                 types.Feature.API_SSL_CONFIG.value)
+            ))
+            return
+        with driver_ctx as driver:
+            return super()._try_connect(self._server, driver)
 
     def test_1_1(self):
         if self._driver in ["dotnet"]:

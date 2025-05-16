@@ -3,6 +3,7 @@ import re
 from nutkit import protocol as types
 from tests.neo4j.shared import (
     cluster_unsafe_test,
+    get_default_db,
     get_driver,
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
@@ -10,7 +11,10 @@ from tests.neo4j.shared import (
     QueryBuilder,
     requires_multi_db_support,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 
 
 class TestSummary(TestkitTestCase):
@@ -24,6 +28,17 @@ class TestSummary(TestkitTestCase):
             self._session.close()
         self._driver.close()
         super().tearDown()
+
+    def clear_db(self):
+        def work(tx):
+            result = tx.run("MATCH (n) DETACH DELETE n")
+            result.consume()
+
+        self._session = self._driver.session("w")
+        try:
+            return self._session.execute_write(work)
+        finally:
+            self._session.close()
 
     def get_summary(self, query, params=None, **kwargs):
         def work(tx):
@@ -58,7 +73,29 @@ class TestSummary(TestkitTestCase):
 
     def test_no_notification_info(self):
         summary = self.get_summary("CREATE (n) RETURN n")
-        self.assertIsNone(summary.notifications)
+        notifications = summary.notifications
+        self.assertTrue(notifications is None or summary.notifications == [])
+
+    def _test_status(self, query, expected_code):
+        summary = self.get_summary(query)
+        statuses = summary.gql_status_objects
+        self.assertEqual(len(statuses), 1)
+        status = statuses[0]
+        self.assertFalse(status.is_notification)
+        self.assertEqual(status.gql_status, expected_code)
+
+    @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
+    def test_success_status(self):
+        self._test_status("CREATE (n) RETURN n", "00000")
+
+    @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
+    def test_omitted_status(self):
+        self._test_status("CREATE (n)", "00001")
+
+    @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
+    def test_no_data_status(self):
+        self.clear_db()
+        self._test_status("MATCH (n) RETURN n", "02000")
 
     def test_can_obtain_notification_info(self):
         summary = self.get_summary("EXPLAIN MATCH (n), (m) RETURN n, m")
@@ -83,7 +120,7 @@ class TestSummary(TestkitTestCase):
         max_server_protocol_version = get_server_info().max_protocol_version
         common_protocol_versions = [
             f.value.split(":")[-1] for f in self._driver_features
-            if (re.match(r"BOLT_\d+_\d+", f.name)
+            if (re.match(r"^BOLT_\d+_\d+$", f.name)
                 and f.value.split(":")[-1] <= max_server_protocol_version)
         ]
         if not common_protocol_versions:
@@ -103,19 +140,19 @@ class TestSummary(TestkitTestCase):
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        version = summary.server_info.agent
-        self.assertIsInstance(version, str)
+        agent = summary.server_info.agent
+        self.assertIsInstance(agent, str)
         server_info = get_server_info()
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
-            self.assertTrue(version.startswith("Neo4j/"))
+            self.assertTrue(agent.startswith("Neo4j/"))
         elif re.match(r"(\d+)\.dev", server_info.version):
-            self.assertTrue(version.startswith(
+            self.assertTrue(agent.startswith(
                 "Neo4j/" + server_info.version.split(".")[0]
             ))
         else:
-            version = ".".join(summary.server_info.agent.split(".")[:2])
-            self.assertEqual(version, get_server_info().server_agent)
+            agent = ".".join(summary.server_info.agent.split(".")[:2])
+            self.assertEqual(agent, get_server_info().server_agent)
 
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
@@ -175,7 +212,7 @@ class TestSummary(TestkitTestCase):
             for record in result:
                 databases.add(record.values[name_idx].value)
         self.assertIn("system", databases)
-        self.assertIn("neo4j", databases)
+        self.assertIn(get_default_db(), databases)
 
         summary = result.consume()
 

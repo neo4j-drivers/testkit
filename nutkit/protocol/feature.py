@@ -16,6 +16,10 @@ class Feature(Enum):
     # The driver offers a method to run a query in a retryable context at the
     # driver object level.
     API_DRIVER_EXECUTE_QUERY = "Feature:API:Driver.ExecuteQuery"
+    # The driver allows users to specify a session scoped auth token when
+    # invoking driver.executeQuery.
+    API_DRIVER_EXECUTE_QUERY_WITH_AUTH = \
+        "Feature:API:Driver.ExecuteQuery:WithAuth"
     # The driver offers a method for checking if a connection to the remote
     # server of cluster can be established and retrieve the server info of the
     # reached remote.
@@ -23,6 +27,9 @@ class Feature(Enum):
     # The driver offers a method for driver objects to report if they were
     # configured with a or without encryption.
     API_DRIVER_IS_ENCRYPTED = "Feature:API:Driver.IsEncrypted"
+    # The driver supports setting a custom max connection lifetime
+    API_DRIVER_MAX_CONNECTION_LIFETIME = \
+        "Feature:API:Driver:MaxConnectionLifetime"
     # The driver supports notification filters configuration.
     API_DRIVER_NOTIFICATIONS_CONFIG = "Feature:API:Driver:NotificationsConfig"
     # The driver offers a method for checking if the provided authentication
@@ -63,6 +70,8 @@ class Feature(Enum):
     # The session supports notification filters configuration.
     API_SESSION_NOTIFICATIONS_CONFIG = \
         "Feature:API:Session:NotificationsConfig"
+    # The driver implements configuration for client certificates.
+    API_SSL_CLIENT_CERTIFICATE = "Feature:API:SSLClientCertificate"
     # The driver implements explicit configuration options for SSL.
     #  - enable / disable SSL
     #  - verify signature against system store / custom cert / not at all
@@ -72,6 +81,9 @@ class Feature(Enum):
     # ...+s: enforce SSL + verify  server's signature with system's trust store
     # ...+ssc: enforce SSL but do not verify the server's signature at all
     API_SSL_SCHEMES = "Feature:API:SSLSchemes"
+    # The result summary provides a way to access the transaction's
+    # GqlStatusObject.
+    API_SUMMARY_GQL_STATUS_OBJECTS = "Feature:API:Summary:GqlStatusObjects"
     # The driver supports sending and receiving geospatial data types.
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
@@ -109,6 +121,18 @@ class Feature(Enum):
     BOLT_5_3 = "Feature:Bolt:5.3"
     # The driver supports Bolt protocol version 5.4
     BOLT_5_4 = "Feature:Bolt:5.4"
+    # The driver supports Bolt protocol version 5.5, support dropped due
+    # to a bug in the spec
+    BOLT_5_5 = "Feature:Bolt:5.5"
+    # The driver supports Bolt protocol version 5.6
+    BOLT_5_6 = "Feature:Bolt:5.6"
+    # The driver supports Bolt protocol version 5.7
+    BOLT_5_7 = "Feature:Bolt:5.7"
+    # The driver supports Bolt protocol version 5.8
+    BOLT_5_8 = "Feature:Bolt:5.8"
+    # The driver supports negotiating the Bolt protocol version with the server
+    # using handshake manifest v1.
+    BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
     # The driver supports impersonation
@@ -151,6 +175,14 @@ class Feature(Enum):
     # sending BEGIN but pipelines the RUN and PULL right afterwards and
     # consumes three messages after that. This saves 2 full round-trips.
     OPT_EXECUTE_QUERY_PIPELINING = "Optimization:ExecuteQueryPipelining"
+    # The driver implements a cache to match users to their most recently
+    # resolved home database, routing requests with no set database to this
+    # cached database if all open connections have an SSR connection hint.
+    OPT_HOME_DB_CACHE = "Optimization:HomeDatabaseCache"
+    # The home db cache for optimistic home db resolution treats the principal
+    # in basic auth the exact same way it treats impersonated users.
+    OPT_HOME_DB_CACHE_BASIC_PRINCIPAL_IS_IMP_USER = \
+        "Optimization:HomeDbCacheBasicPrincipalIsImpersonatedUser"
     # Driver doesn't explicitly send message data that is the default value.
     # This conserves bandwidth.
     OPT_IMPLICIT_DEFAULT_ARGUMENTS = "Optimization:ImplicitDefaultArguments"
@@ -184,6 +216,9 @@ class Feature(Enum):
     # configuration as long as values match.
     DETAIL_DEFAULT_SECURITY_CONFIG_VALUE_EQUALITY = \
         "Detail:DefaultSecurityConfigValueEquality"
+    # The driver cannot differentiate between integer and float numbers.
+    # I.e., JavaScript :P
+    DETAIL_NUMBER_IS_NUMBER = "Detail:NumberIsNumber"
 
     # === CONFIGURATION HINTS (BOLT 4.3+) ===
     # The driver understands and follow the connection hint

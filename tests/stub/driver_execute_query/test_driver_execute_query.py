@@ -4,7 +4,10 @@ from nutkit.frontend import (
     Driver,
     Neo4jBookmarkManagerConfig,
 )
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 from tests.stub.shared import StubServer
 
 
@@ -136,6 +139,41 @@ class TestDriverExecuteQuery(TestkitTestCase):
             records=[types.Record(values=[types.CypherInt(1)])],
             query_type="r"
         )
+
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY_WITH_AUTH)
+    def test_configure_auth(self):
+        self._start_server(
+            self._writer, "tx_return_1_with_auth.script"
+        )
+        self._driver = self._new_driver(False)
+
+        self._driver.execute_query(
+            "RETURN 1 AS n",
+            database="adb",
+            auth_token=types.AuthorizationToken(
+                "basic", principal="neo5j", credentials="pass++"
+            )
+        )
+        self._writer.done()
+
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY_WITH_AUTH)
+    def test_configure_re_auth(self):
+        self._start_server(
+            self._writer, "tx_return_1_with_re_auth.script"
+        )
+        self._driver = self._new_driver(False)
+
+        for i, (user, password) in enumerate((
+            ("neo4j", "pass"), ("neo5j", "pass++")
+        )):
+            self._driver.execute_query(
+                f"RETURN {i + 1} AS n",
+                database="adb",
+                auth_token=types.AuthorizationToken(
+                    "basic", principal=user, credentials=password
+                )
+            )
+        self._writer.done()
 
     def test_configure_transaction_metadata(self):
         self._start_server(self._router, "router.script")
@@ -332,8 +370,11 @@ class TestDriverExecuteQuery(TestkitTestCase):
             "#DB#": database
         })
 
-    def _new_driver(self):
-        uri = "neo4j://%s" % self._router.address
+    def _new_driver(self, routing=True):
+        if routing:
+            uri = "neo4j://%s" % self._router.address
+        else:
+            uri = "bolt://%s" % self._writer.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         driver = Driver(self._backend, uri, auth)

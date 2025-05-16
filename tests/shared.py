@@ -16,6 +16,7 @@ import inspect
 import os
 import re
 import socket
+import time
 import unittest
 import warnings
 from contextlib import contextmanager
@@ -24,6 +25,7 @@ import ifaddr
 
 from nutkit import protocol
 from nutkit.backend import Backend
+from nutkit.frontend import FakeTime
 
 
 def get_backend_host_and_port():
@@ -219,6 +221,46 @@ class TestkitTestCase(unittest.TestCase):
         base_path = os.path.dirname(inspect.getfile(self.__class__))
         return os.path.join(base_path, "scripts", *path)
 
+    def get_newest_bolt_supported_by_driver(
+        self,
+        skip=0,
+        min_version=(0, 0),
+        max_version=(0xFF, 0xFF),
+    ):
+        # skip: number of newest versions to skip (return n-th newest)
+        # min_version: minimum bolt version to consider
+        # max_version: maximum bolt version to consider
+        all_bolt_versions = [
+            (f, tuple(map(int, f.value.split(":")[-1].split("."))))
+            for f in protocol.Feature
+            if re.match(r"^BOLT_\d+_\d+$", f.name)
+        ]
+        filtered_bolt_versions = [
+            (f, v) for f, v in all_bolt_versions
+            if max_version >= v >= min_version
+        ]
+        filtered_bolt_versions.sort(key=lambda x: x[1], reverse=True)
+        for feature, version in filtered_bolt_versions:
+            if self.driver_supports_features(feature):
+                if skip <= 0:
+                    return version
+                skip -= 1
+        self.skipTest("No appropriate bolt version supported by driver")
+
+    def should_run_subtest(self, **params):
+        response = self._backend.send_and_receive(
+            protocol.StartSubTest(self._testkit_test_name, params)
+        )
+        if isinstance(response, protocol.SkipTest):
+            return False
+        elif isinstance(response, protocol.RunTest):
+            return True
+        else:
+            raise Exception(
+                "Should be SkipTest, or RunTest, "
+                "received {}: {}".format(type(response), response)
+            )
+
     @contextmanager
     def subTest(self, **params):  # noqa: N802
         assert "msg" not in params
@@ -249,9 +291,45 @@ class TestkitTestCase(unittest.TestCase):
                                     "received {}: {}".format(type(response),
                                                              response))
 
+    def uncheckedSubTest(self, **params):  # noqa: N802
+        assert "msg" not in params
+        return super().subTest(**params)
+
 
 class Potential(enum.Enum):
     YES = 1.0
     NO = 0.0
     MAYBE = 0.5
     # CAN_YOU_REPEAT_THE_QUESTION = "?"
+
+
+class TimeoutManager:
+    def __init__(
+        self, test_case: TestkitTestCase, timeout_ms: int,
+        use_real_timers: bool = False
+    ):
+        self._timeout_ms = timeout_ms
+        self._fake_time = None
+        if test_case.driver_supports_features(
+            protocol.Feature.BACKEND_MOCK_TIME
+        ) and not use_real_timers:
+            self._fake_time = FakeTime(test_case._backend)
+
+    def __enter__(self):
+        if self._fake_time:
+            self._fake_time.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._fake_time:
+            self._fake_time.__exit__(exc_type, exc_val, exc_tb)
+
+    def tick_to_before_timeout(self):
+        if self._fake_time:
+            self._fake_time.tick(self._timeout_ms - 1)
+
+    def tick_to_after_timeout(self):
+        if self._fake_time:
+            self._fake_time.tick(self._timeout_ms + 1)
+        else:
+            time.sleep(self._timeout_ms / 1000)

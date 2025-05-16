@@ -86,7 +86,9 @@ class StubServer:
                 script = script.replace(v, str(vars_[v]))
         if script:
             tempdir = tempfile.gettempdir()
-            path = os.path.join(tempdir, script_fn)
+            path = os.path.join(
+                tempdir, f"{self.host}_{self.port}_{script_fn}"
+            )
             with open(path, "w", encoding="utf-8") as f:
                 f.write(script)
                 f.flush()
@@ -214,7 +216,7 @@ class StubServer:
                 raise
         return self._poll(timeout)
 
-    def done(self):
+    def done(self, ignore_never_started=False):
         """Shut down the server, if running.
 
         If the server was never started, this method does nothing.
@@ -250,6 +252,8 @@ class StubServer:
                 raise StubServerUncleanExitError("Stub server hanged.")
             if self._process.returncode not in (0, INTERRUPT_EXIT_CODE):
                 if self._process.returncode == 3:
+                    if ignore_never_started:
+                        return
                     raise StubScriptNotFinishedError("Script never started.")
                 raise StubServerUncleanExitError(
                     "Stub server exited unclean ({})".format(
@@ -306,9 +310,15 @@ class StubServer:
         assert len(handshakes) == 1
         handshake = handshakes[0][len(handshake_prefix):]
         handshake = re.sub(r"\s", "", handshake)
-        version = list(int(b, 16) for b in wrap(handshake, 2))
-        while len(version) > 1 and not version[0]:
-            version.pop(0)
+        if handshake[:8].upper() == "000001FF":
+            # handshake v2
+            handshakes = self.get_requests(handshake_prefix)
+            if not handshakes or len(handshakes) < 2:
+                return 0,
+            assert len(handshakes) == 2
+            handshake = handshakes[1][len(handshake_prefix):]
+            handshake = re.sub(r"\s", "", handshake)
+        version = list(int(b, 16) for b in wrap(handshake, 2))[2:4]
         version.reverse()
         return tuple(version)
 
@@ -389,7 +399,7 @@ class StubServer:
             if not match:
                 continue
             # print(match)
-            header = "S: " if match.group(1) else "C: "
+            header = "C: " if match.group(1) else "S: "
             lines.append(f"{header} {line[match.end():]}")
         return lines
 

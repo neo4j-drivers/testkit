@@ -1,0 +1,19 @@
+!: BOLT #BOLT_VERSION#
+#EXTRA_BANG_LINES#
+
+#HELLO_MESSAGE#
+A: LOGON {"{}": "*"}
+*: RESET
+
+C: RUN {"U": "*"} {} {"db": "homedb2", "[bookmarks]": {"[]": "*"}, "[mode]": "w"}
+S: SUCCESS {"fields": ["n"]}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+----
+    C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+}}
+S: SUCCESS {}
+*: RESET
+
+?: GOODBYE

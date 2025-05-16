@@ -416,7 +416,7 @@ class JoltNodeTransformer(JoltTypeTransformer):
             raise JOLTValueError("Node id must be int")
         if not isinstance(labels, list):
             raise JOLTValueError("Node labels must be list")
-        if not all(map(lambda l: isinstance(l, str), labels)):
+        if not all(map(lambda label: isinstance(label, str), labels)):
             raise JOLTValueError("Node labels must be list of str")
         if not isinstance(properties, dict):
             raise JOLTValueError("Node properties must be dict")

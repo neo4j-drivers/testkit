@@ -110,7 +110,7 @@ class JoltNodeTransformer(JoltNodeTransformer):
             raise JOLTValueError("Node id must be int or none")
         if not isinstance(labels, list):
             raise JOLTValueError("Node labels must be list")
-        if not all(map(lambda l: isinstance(l, str), labels)):
+        if not all(map(lambda label: isinstance(label, str), labels)):
             raise JOLTValueError("Node labels must be list of str")
         if not isinstance(properties, dict):
             raise JOLTValueError("Node properties must be dict")
@@ -140,7 +140,7 @@ class JoltRelationTransformer(JoltRelationTransformer):
         if not isinstance(value, list) or len(value) != 8:
             raise JOLTValueError('Expecting list of length 8 after sigil "%s"'
                                  % cls.sigil)
-        id_, start_node_id, rel_type, end_node_id, properties, element_id,\
+        id_, start_node_id, rel_type, end_node_id, properties, element_id, \
             start_node_element_id, end_node_element_id = value
 
         if not isinstance(id_, int) and id_ is not None:

@@ -2,7 +2,7 @@ Contributing
 ============
 
 Setting up the development environment:
- * Install Python 3.7+
+ * Install Python 3.8+
  * Install the requirements
    ```bash
    $ python3 -m pip install -U pip

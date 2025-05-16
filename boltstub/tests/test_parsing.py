@@ -33,7 +33,15 @@ from .. import (
     parsing,
     Script,
 )
-from ..bolt_protocol import Bolt1Protocol
+from ..bolt_protocol import (
+    Bolt1Protocol,
+    get_bolt_protocol,
+)
+from ..errors import (
+    BoltMissingVersionError,
+    BoltProtocolError,
+)
+from ..parsing import LineError
 from ..simple_jolt import v1 as jolt_v1
 from ..simple_jolt import v2 as jolt_v2
 from ._common import (
@@ -45,8 +53,19 @@ from ._common import (
 
 @pytest.fixture()
 def unverified_script(monkeypatch):
-    def _set_bolt_protocol(self, *_, **__):
-        self._bolt_protocol = Bolt1Protocol
+    def _set_bolt_protocol(self):
+        try:
+            self._bolt_protocol = get_bolt_protocol(
+                self.context.bolt_version,
+                self.context.bolt_features,
+            )
+        except BoltMissingVersionError:
+            self._bolt_protocol = Bolt1Protocol()
+        except BoltProtocolError as e:
+            raise LineError(
+                self.context.bang_lines["bolt_version"], *e.args[:1]
+            ) from e
+        self._bolt_protocol = Bolt1Protocol()
 
     monkeypatch.setattr(Script, "_set_bolt_protocol", _set_bolt_protocol)
     monkeypatch.setattr(Script, "_verify_script", lambda *_, **__: None)
@@ -206,26 +225,31 @@ def whitespace_generator(n: int,
     yield tuple(base)
 
 
-VALID_BANGS = ("!: AUTO HELLO", "!: BOLT 4.0",
+VALID_BANGS = ("!: AUTO HELLO", "!: BOLT 4.0", "!: BOLT 5.7 F1 02",
                "!: ALLOW RESTART", "!: ALLOW CONCURRENT",
                "!: HANDSHAKE 00\tfF 0204", "!: HANDSHAKE_DELAY 1",
                "!: HANDSHAKE_DELAY 1.5",
                "!: PY foo = 'bar'")
 INVALID_BANGS = ("!: NOPE", "!: HANDSHAKE \x00\x00\x02\x04",
-                 "!: BOLT", "!: BOLT a.b", "!: HANDSHAKE_DELAY foo",
-                 "!: HANDSHAKE_DELAY -1")
+                 "!: BOLT", "!: BOLT a.b", "!: BOLT 5.6 F1 02",
+                 "!: BOLT 5.7 71 02", "!: BOLT 5.7 80 80",
+                 "!: HANDSHAKE_DELAY foo", "!: HANDSHAKE_DELAY -1")
 BANG_DEFAULTS = {"auto": set(), "bolt_version": None,
                  "restarting": False, "concurrent": False,
                  "handshake": None, "handshake_delay": None, "python": []}
 BANG_EFFECTS = (
-    ("auto", {"HELLO"}),
-    ("bolt_version", (4, 0)),
-    ("restarting", True),
-    ("concurrent", True),
-    ("handshake", b"\x00\xff\x02\x04"),
-    ("handshake_delay", 1.0),
-    ("handshake_delay", 1.5),
-    ("python", ["foo = 'bar'"]),
+    (("auto", {"HELLO"}),),
+    (("bolt_version", (4, 0)),),
+    (
+        ("bolt_version", (5, 7)),
+        ("bolt_features", bytearray(b"\xF1\x02")),
+    ),
+    (("restarting", True),),
+    (("concurrent", True),),
+    (("handshake", b"\x00\xff\x02\x04"),),
+    (("handshake_delay", 1.0),),
+    (("handshake_delay", 1.5),),
+    (("python", ["foo = 'bar'"]),),
 )
 
 
@@ -488,7 +512,7 @@ def test_conditional(else_, elif_, extra_ws, unverified_script):
 def test_simple_bang_line(bang, extra_ws, unverified_script):
     bang, bang_effect = bang
     expected_context = BANG_DEFAULTS.copy()
-    expected_context.update(dict((bang_effect,)))
+    expected_context.update(dict(bang_effect))
 
     script = ("%s" + bang + "%sC: MSG%s") % extra_ws
     script = parsing.parse(script)

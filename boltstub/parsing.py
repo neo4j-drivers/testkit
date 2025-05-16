@@ -41,8 +41,8 @@ from .bolt_protocol import (
 )
 from .errors import (
     BoltMissingVersionError,
+    BoltProtocolError,
     BoltUnknownMessageError,
-    BoltUnknownVersionError,
     ServerExit,
 )
 from .packstream import Structure
@@ -106,7 +106,7 @@ class Line(str, abc.ABC):
         return obj
 
     def __str__(self):
-        return "({:3}) {}".format(self.line_number,
+        return "({:4}) {}".format(self.line_number,
                                   super(Line, self).__str__())
 
     def __repr__(self):
@@ -129,6 +129,8 @@ class BangLine(Line):
     TYPE_RESTART = "restart"
     TYPE_CONCURRENT = "concurrent"
     TYPE_HANDSHAKE = "handshake"
+    TYPE_HANDSHAKE_MANIFEST = "handshake_manifest"
+    TYPE_HANDSHAKE_RESPONSE = "handshake_response"
     TYPE_HANDSHAKE_DELAY = "handshake_delay"
     TYPE_PYTHON = "python"
 
@@ -140,14 +142,30 @@ class BangLine(Line):
         elif re.match(r"^BOLT\s", obj.content):
             obj._type = BangLine.TYPE_BOLT
             raw_arg = obj.content[5:].strip()
+            raw_args = raw_arg.split(maxsplit=1)
+            while len(raw_args) < 2:
+                raw_args.append("")
             try:
-                obj._arg = tuple(map(int, raw_arg.split(".")))
+                version = tuple(map(int, raw_args[0].split(".")))
             except ValueError:
                 raise LineError(
                     obj,
                     "invalid argument for bolt version, must be semantic "
                     "version (e.g. 'BOLT 4.2')"
                 )
+            if raw_args[1]:
+                raw_flags = re.sub(r"\s", "", raw_args[1])
+                if not re.match(r"^([0-9a-fA-F]{2})+$", raw_flags):
+                    raise LineError(
+                        obj,
+                        "invalid argument for features, must be list of "
+                        "2-digit hex encoded bytes, whitespace is ignored "
+                        "(e.g. 'BOLT 5.7 00 F1')"
+                    )
+                features = bytearray(int(b, 16) for b in wrap(raw_flags, 2))
+            else:
+                features = None
+            obj._arg = version, features
         elif re.match(r"^ALLOW\s+RESTART$", obj.content):
             obj._type = BangLine.TYPE_RESTART
             obj._arg = None
@@ -160,9 +178,31 @@ class BangLine(Line):
             if not re.match(r"^([0-9a-fA-F]{2})+$", arg):
                 raise LineError(
                     obj,
-                    "invalid argument for handshake, must be list of 2-digit "
-                    "hex encoded bytes, whitespace is ignored (e.g. "
-                    "'HANDSHAKE 00 FF 02 04 F0'"
+                    "invalid argument for handshake, must be list of "
+                    "2-digit hex encoded bytes, whitespace is ignored "
+                    "(e.g. 'HANDSHAKE 00 FF 02 04 F0')"
+                )
+            obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
+        elif re.match(r"^HANDSHAKE_MANIFEST\s", obj.content):
+            obj._type = BangLine.TYPE_HANDSHAKE_MANIFEST
+            try:
+                version = int(obj.content[19:].strip())
+            except ValueError:
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake manifest, must be a"
+                    "positive number (e.g. 'HANDSHAKE_MANIFEST 0')"
+                )
+            obj._arg = version
+        elif re.match(r"^HANDSHAKE_RESPONSE\s", obj.content):
+            obj._type = BangLine.TYPE_HANDSHAKE_RESPONSE
+            arg = re.sub(r"\s", "", obj.content[18:])
+            if not re.match(r"^([0-9a-fA-F]{2})+$", arg):
+                raise LineError(
+                    obj,
+                    "invalid argument for handshake response, must be list of "
+                    "2-digit hex encoded bytes, whitespace is ignored "
+                    "(e.g. 'HANDSHAKE_RESPONSE 00 FF 02 04 F0')"
                 )
             obj._arg = bytearray(int(b, 16) for b in wrap(arg, 2))
         elif re.match(r"^HANDSHAKE_DELAY\s", obj.content):
@@ -203,7 +243,7 @@ class BangLine(Line):
         elif self._type == BangLine.TYPE_BOLT:
             if ctx.bolt_version is not None:
                 raise LineError(self, "repeated definition of bolt version")
-            ctx.bolt_version = self._arg
+            ctx.bolt_version, ctx.bolt_features = self._arg
             ctx.bang_lines["bolt_version"] = self
         elif self._type == BangLine.TYPE_RESTART:
             if ctx.restarting:
@@ -226,6 +266,20 @@ class BangLine(Line):
                 )
             ctx.handshake = self._arg
             ctx.bang_lines["handshake"] = self
+        elif self._type == BangLine.TYPE_HANDSHAKE_MANIFEST:
+            if ctx.handshake_manifest is not None:
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE_MANIFEST" multiple times'
+                )
+            ctx.handshake_manifest = self._arg
+            ctx.bang_lines["handshake_manifest"] = self
+        elif self._type == BangLine.TYPE_HANDSHAKE_RESPONSE:
+            if ctx.handshake_response:
+                warnings.warn(  # noqa: B028
+                    'Specified "!: HANDSHAKE_RESPONSE" multiple times'
+                )
+            ctx.handshake_response = self._arg
+            ctx.bang_lines["handshake_response"] = self
         elif self._type == BangLine.TYPE_HANDSHAKE_DELAY:
             if ctx.handshake_delay is not None:
                 warnings.warn(  # noqa: B028
@@ -366,7 +420,7 @@ class ClientLine(MessageLine):
             return type(is_) in should.types
         if isinstance(is_, Structure):
             return is_ == should
-        if type(should) != type(is_):
+        if type(should) is not type(is_):
             return False
         if isinstance(should, (list, tuple)):
             if len(should) != len(is_):
@@ -514,7 +568,7 @@ class Block(abc.ABC):
         assert self.try_consume(channel)
 
     @abc.abstractmethod
-    def has_deterministic_end(self):
+    def has_deterministic_end(self, channel=None) -> bool:
         pass
 
     @abc.abstractmethod
@@ -581,7 +635,7 @@ class ClientBlock(Block):
     def done(self, channel):
         return self.index >= len(self.lines)
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         return True
 
     def init(self, channel):
@@ -659,7 +713,7 @@ class ServerBlock(Block):
     def done(self, channel):
         return self.index >= len(self.lines)
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         return True
 
     def init(self, channel):
@@ -762,8 +816,8 @@ class AlternativeBlock(Block):
         return (self.selection is not None
                 and self.block_lists[self.selection].done(channel))
 
-    def has_deterministic_end(self) -> bool:
-        return all(b.has_deterministic_end() for b in self.block_lists)
+    def has_deterministic_end(self, channel=None) -> bool:
+        return all(b.has_deterministic_end(channel) for b in self.block_lists)
 
     def init(self, channel):
         # self.assert_no_init()
@@ -834,8 +888,8 @@ class ParallelBlock(Block):
         return any(b.can_consume_after_reset(channel)
                    for b in self.block_lists)
 
-    def has_deterministic_end(self) -> bool:
-        return all(b.has_deterministic_end() for b in self.block_lists)
+    def has_deterministic_end(self, channel=None) -> bool:
+        return all(b.has_deterministic_end(channel) for b in self.block_lists)
 
     def init(self, channel):
         # self.assert_no_init()
@@ -889,7 +943,7 @@ class OptionalBlock(Block):
 
     def can_be_skipped(self, channel):
         if self.started:
-            if self.block_list.has_deterministic_end():
+            if self.block_list.has_deterministic_end(channel):
                 return self.block_list.done(channel)
             return self.block_list.can_be_skipped(channel)
         return True
@@ -901,14 +955,14 @@ class OptionalBlock(Block):
         return self.block_list.can_consume_after_reset(channel)
 
     def done(self, channel) -> bool:
-        if self.started and self.block_list.has_deterministic_end():
+        if self.started and self.block_list.has_deterministic_end(channel):
             return self.block_list.done(channel)
         raise RuntimeError("it's nondeterministic!")
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         if not self.started:
             return False
-        return self.block_list.has_deterministic_end()
+        return self.block_list.has_deterministic_end(channel)
 
     def init(self, channel):
         # self.assert_no_init()
@@ -951,8 +1005,10 @@ class _RepeatBlock(Block, abc.ABC):
     def accepted_messages(self, channel) -> List[ClientLine]:
         res = OrderedDict((m, True)
                           for m in self.block_list.accepted_messages(channel))
-        if ((self.has_deterministic_end() and self.done(channel))
-                or self.block_list.can_be_skipped(channel)):
+        if (
+            (self.has_deterministic_end(channel) and self.done(channel))
+            or self.block_list.can_be_skipped(channel)
+        ):
             res.update(
                 (m, True)
                 for m in self.block_list.accepted_messages_after_reset(channel)
@@ -969,8 +1025,24 @@ class _RepeatBlock(Block, abc.ABC):
     def can_be_skipped(self, channel):
         pass
 
+    def _can_consume_deterministic(self, channel):
+        if self.block_list.can_consume(channel):
+            return True
+        if self.block_list.done(channel):
+            return self.block_list.can_consume_after_reset(channel)
+        return False
+
+    def _can_consume_nondeterministic(self, channel):
+        if self.block_list.can_consume(channel):
+            return True
+        if self.block_list.can_be_skipped(channel):
+            return self.block_list.can_consume_after_reset(channel)
+        return False
+
     def can_consume(self, channel) -> bool:
-        return self.block_list.can_consume(channel)
+        if self.block_list.has_deterministic_end(channel):
+            return self._can_consume_deterministic(channel)
+        return self._can_consume_nondeterministic(channel)
 
     def can_consume_after_reset(self, channel) -> bool:
         return self.block_list.can_consume_after_reset(channel)
@@ -978,7 +1050,7 @@ class _RepeatBlock(Block, abc.ABC):
     def done(self, channel) -> bool:
         raise RuntimeError("it's nondeterministic!")
 
-    def has_deterministic_end(self) -> bool:
+    def has_deterministic_end(self, channel=None) -> bool:
         return False
 
     def init(self, channel):
@@ -1014,7 +1086,7 @@ class _RepeatBlock(Block, abc.ABC):
         return False
 
     def try_consume(self, channel) -> bool:
-        if self.block_list.has_deterministic_end():
+        if self.block_list.has_deterministic_end(channel):
             return self._try_consume_deterministic(channel)
         return self._try_consume_nondeterministic(channel)
 
@@ -1095,7 +1167,8 @@ class ConditionalBlock(Block):
         return block.accepted_messages_after_reset(channel)
 
     def assert_no_init(self):
-        return
+        for block in self.blocks:
+            block.assert_no_init()
 
     def done(self, channel) -> bool:
         block = self._probe_selection(channel, self.selection)
@@ -1122,8 +1195,17 @@ class ConditionalBlock(Block):
         return block.can_consume_after_reset(channel)
         pass
 
-    def has_deterministic_end(self):
-        return all(b.has_deterministic_end() for b in self.blocks)
+    def has_deterministic_end(self, channel=None) -> bool:
+        if channel is None:
+            if len(self.blocks) <= len(self.conditions):
+                # no else block => cannot guarantee deterministic end at static
+                # check time
+                return False
+            return all(b.has_deterministic_end() for b in self.blocks)
+        block = self._probe_selection(channel, self.selection)
+        if not block:
+            return True
+        return block.has_deterministic_end(channel)
 
     def init(self, channel):
         block = self._get_selection(channel, self.selection)
@@ -1217,18 +1299,24 @@ class BlockList(Block):
         return False
 
     def done(self, channel) -> bool:
-        if not self.has_deterministic_end():
+        if not self.has_deterministic_end(channel):
             raise RuntimeError("it's nondeterministic!")
         return self.index >= len(self.blocks)
 
-    def has_deterministic_end(self) -> bool:
-        return self.blocks[-1].has_deterministic_end()
+    def has_deterministic_end(self, channel=None) -> bool:
+        return (
+            not self.blocks
+            or self.blocks[-1].has_deterministic_end(channel)
+        )
 
     def init(self, channel):
         while self.index < len(self.blocks):
             block = self.blocks[self.index]
             block.init(channel)
-            if not block.has_deterministic_end() or not block.done(channel):
+            if (
+                not block.has_deterministic_end(channel)
+                or not block.done(channel)
+            ):
                 break
             self.index += 1
 
@@ -1242,7 +1330,10 @@ class BlockList(Block):
             block = self.blocks[i]
             if block.try_consume(channel):
                 self.index = i
-                while block.has_deterministic_end() and block.done(channel):
+                while (
+                    block.has_deterministic_end(channel)
+                    and block.done(channel)
+                ):
                     self.index += 1
                     if self.index < len(self.blocks):
                         block = self.blocks[self.index]
@@ -1250,11 +1341,7 @@ class BlockList(Block):
                     else:
                         break
                 return True
-            if (
-                not block.can_be_skipped(channel)
-                and block.has_deterministic_end()
-                and not block.done(channel)
-            ):
+            if not block.can_be_skipped(channel):
                 break
         return False
 
@@ -1302,10 +1389,13 @@ class ScriptDeviation(ScriptFailure):
 class ScriptContext:
     def __init__(self):
         self.bolt_version = None
+        self.bolt_features = None
         self.auto = set()
         self.restarting = False
         self.concurrent = False
         self.handshake = None
+        self.handshake_manifest = None
+        self.handshake_response = None
         self.handshake_delay = None
         self.python = []
         self.bang_lines = {
@@ -1314,6 +1404,8 @@ class ScriptContext:
             "restarting": None,
             "concurrent": None,
             "handshake": None,
+            "handshake_manifest": None,
+            "handshake_response": None,
             "handshake_delay": None,
             "python": [],
         }
@@ -1340,12 +1432,15 @@ class Script:
 
     def _set_bolt_protocol(self):
         try:
-            self._bolt_protocol = get_bolt_protocol(self.context.bolt_version)
+            self._bolt_protocol = get_bolt_protocol(
+                self.context.bolt_version,
+                self.context.bolt_features,
+            )
         except BoltMissingVersionError as e:
             raise lark.GrammarError(
                 'Missing bolt version bang line (e.g. "!: BOLT 4.3")'
             ) from e
-        except BoltUnknownVersionError as e:
+        except BoltProtocolError as e:
             raise LineError(
                 self.context.bang_lines["bolt_version"], *e.args[:1]
             ) from e
@@ -1354,6 +1449,27 @@ class Script:
         self.block_list.parse_jolt(self._bolt_protocol.get_jolt_package())
 
     def _verify_script(self):
+        if (
+            self.context.handshake_response is not None
+            and self.context.handshake is None
+        ):
+            raise LineError(
+                self.context.bang_lines["handshake_response"],
+                "HANDSHAKE_RESPONSE bang line requires a HANDSHAKE bang "
+                "line to be present"
+            )
+        if (
+            self.context.handshake_manifest is not None
+            and (
+                self.context.handshake is not None
+                or self.context.handshake_response is not None
+            )
+        ):
+            raise LineError(
+                self.context.bang_lines["handshake_manifest"],
+                "Cannot combine HANDSHAKE_MANIFEST bang line with "
+                "HANDSHAKE or HANDSHAKE_RESPONSE bang lines"
+            )
         try:
             verify_script_messages(self)
         except BoltUnknownMessageError as e:
@@ -1380,7 +1496,7 @@ class Script:
         with self._lock:
             if self._skipped:
                 return True
-            if self.block_list.has_deterministic_end():
+            if self.block_list.has_deterministic_end(channel):
                 return self.block_list.done(channel)
             return False
 

@@ -71,11 +71,13 @@ class NewDriver:
         domainNameResolverRegistered=False, connectionTimeoutMs=None,
         fetchSize=None, maxTxRetryTimeMs=None,
         encrypted=None, trustedCertificates=None,
-        liveness_check_timeout_ms=None, max_connection_pool_size=None,
+        liveness_check_timeout_ms=None, max_connection_lifetime_ms=None,
+        max_connection_pool_size=None,
         connection_acquisition_timeout_ms=None,
         notifications_min_severity=None,
         notifications_disabled_categories=None,
-        telemetry_disabled=None
+        telemetry_disabled=None,
+        client_certificate=None, client_certificate_provider_id=None,
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -91,8 +93,14 @@ class NewDriver:
         self.fetchSize = fetchSize
         self.maxTxRetryTimeMs = maxTxRetryTimeMs
         self.livenessCheckTimeoutMs = liveness_check_timeout_ms
+        if max_connection_lifetime_ms is not None:
+            self.maxConnectionLifetimeMs = max_connection_lifetime_ms
         self.maxConnectionPoolSize = max_connection_pool_size
         self.connectionAcquisitionTimeoutMs = connection_acquisition_timeout_ms
+        assert (client_certificate is None
+                or client_certificate_provider_id is None)
+        self.clientCertificate = client_certificate
+        self.clientCertificateProviderId = client_certificate_provider_id
         if notifications_min_severity is not None:
             self.notificationsMinSeverity = notifications_min_severity
         if notifications_disabled_categories is not None:
@@ -127,7 +135,7 @@ class AuthorizationToken:
         - credentials (str)
     scheme == "bearer"
         - credentials (str)
-    further schemes should be handled with a multi-purpose auth API
+    further schemes should be handled with a multipurpose auth API
     (custom auth)
         - principal (str, optional)
         - credentials (str, optional)
@@ -257,6 +265,58 @@ class BearerAuthTokenProviderCompleted:
         self.requestId = request_id
         assert isinstance(auth, AuthTokenAndExpiration)
         self.auth = auth
+
+
+class ClientCertificate:
+    """
+    Not a request but used in `NewDriver`.
+
+    This property is used for configuring client certificates
+    for mutual TLS configuration.
+    """
+
+    def __init__(self, certfile, keyfile, password=None):
+        self.certfile = certfile
+        self.keyfile = keyfile
+        self.password = password
+
+
+class NewClientCertificateProvider:
+    """
+    Create a new client certificate provider on the backend.
+
+    The backend should respond with `ClientCertificateProvider`.
+    """
+
+    def __init__(self):
+        pass
+
+
+class ClientCertificateProviderClose:
+    """
+    Request to remove a client certificate provider from the backend.
+
+    The backend may free any resources associated with the provider and respond
+    with `ClientCertificateProvider` echoing back the given id.
+    """
+
+    def __init__(self, id):
+        # Id of the client certificate provider to close.
+        self.id = id
+
+
+class ClientCertificateProviderCompleted:
+    """
+    Result of a completed client certificate provider call.
+
+    No response is expected.
+    """
+
+    def __init__(self, request_id, has_update, client_certificate):
+        self.requestId = request_id
+        assert isinstance(client_certificate, ClientCertificate)
+        self.clientCertificate = client_certificate
+        self.hasUpdate = bool(has_update)
 
 
 class VerifyConnectivity:
@@ -775,8 +835,9 @@ class ExecuteQuery:
     :param config.bookmarkManagerId: The id of the bookmark manager
         used in the query. None or not define for using the default,
         -1 for disabling the BookmarkManager
-    :param config.txMeta: metadata to attach to the transaction.
-    :param config.timeout: timeout for the transaction in milliseconds.
+    :param config.txMeta: The metadata to attach to the transaction.
+    :param config.timeout: The timeout for the transaction in milliseconds.
+    :param config.authorizationToken: The auth token used by the session.
     """
 
     def __init__(self, driver_id, cypher, params, config):

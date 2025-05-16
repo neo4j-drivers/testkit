@@ -1,0 +1,21 @@
+!: BOLT #BOLT_PROTOCOL#
+!: ALLOW CONCURRENT
+
+#CONVERSTAION_START#
+*: RESET
+C: BEGIN {"[bookmarks]": "*", "[tx_metadata]": "*", "mode": "r", "[imp_user]": "the-imposter", "db": "homedb"}
+S: SUCCESS {}
+C: RUN "RETURN 1" {} {}
+S: SUCCESS {"fields": ["1"]}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+    S: RECORD [1]
+       SUCCESS {"type": "r"}
+----
+    C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+    S: SUCCESS {"type": "r"}
+}}
+C: COMMIT
+S: SUCCESS {}
+*: RESET
+?: GOODBYE

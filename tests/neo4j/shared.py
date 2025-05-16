@@ -3,16 +3,17 @@ Shared utilities for writing tests against Neo4j server.
 
 Uses environment variables for configuration:
 
-TEST_NEO4J_SCHEME    Scheme to build the URI when contacting the Neo4j server,
-                     default "bolt"
-TEST_NEO4J_HOST      Neo4j server host, no default, required
-TEST_NEO4J_PORT      Neo4j server port, default is 7687
-TEST_NEO4J_USER      User to access the Neo4j server, default "neo4j"
-TEST_NEO4J_PASS      Password to access the Neo4j server, default "pass"
-TEST_NEO4J_VERSION   Version of the Neo4j server, default "4.4"
-TEST_NEO4J_EDITION   Edition ("enterprise", "community", or "aura") of the
-                     Neo4j server, default "enterprise"
-TEST_NEO4J_CLUSTER   Whether the Neo4j server is a cluster, default "False"
+TEST_NEO4J_SCHEME      Scheme to build the URI when contacting the Neo4j
+                       server, default "bolt"
+TEST_NEO4J_HOST        Neo4j server host, no default, required
+TEST_NEO4J_PORT        Neo4j server port, default is 7687
+TEST_NEO4J_USER        User to access the Neo4j server, default "neo4j"
+TEST_NEO4J_PASS        Password to access the Neo4j server, default "pass"
+TEST_NEO4J_VERSION     Version of the Neo4j server, default "4.4"
+TEST_NEO4J_EDITION     Edition ("enterprise", "community", or "aura") of the
+                       Neo4j server, default "enterprise"
+TEST_NEO4J_CLUSTER     Whether the Neo4j server is a cluster, default "False"
+TEST_NEO4J_DEFAULT_DB  Default database name, default "neo4j"
 """
 
 
@@ -23,7 +24,10 @@ from warnings import warn
 
 from nutkit import protocol
 from nutkit.frontend import Driver
-from nutkit.protocol import AuthorizationToken
+from nutkit.protocol import (
+    AuthorizationToken,
+    ClientCertificate,
+)
 from tests.shared import (
     dns_resolve_single,
     Potential,
@@ -39,6 +43,9 @@ env_neo4j_http_port = "TEST_NEO4J_HTTP_PORT"
 env_neo4j_version = "TEST_NEO4J_VERSION"
 env_neo4j_edition = "TEST_NEO4J_EDITION"
 env_neo4j_cluster = "TEST_NEO4J_CLUSTER"
+env_neo4j_default_db = "TEST_NEO4J_DEFAULT_DB"
+env_neo4j_client_cert = "TEST_NEO4J_SSL_CLIENT_CERT"
+env_neo4j_client_key = "TEST_NEO4J_SSL_CLIENT_KEY"
 
 
 def get_authorization():
@@ -74,7 +81,23 @@ def get_neo4j_scheme():
     return scheme
 
 
-def get_driver(backend, uri=None, auth=None, **kwargs):
+def get_default_db():
+    return os.environ.get(env_neo4j_default_db, "neo4j")
+
+
+def get_client_certificate():
+    client_certificate_key = os.environ.get(env_neo4j_client_key)
+    client_certificate_cert = os.environ.get(env_neo4j_client_cert)
+    if client_certificate_cert is None or client_certificate_key is None:
+        if client_certificate_cert is not None or \
+                client_certificate_key is not None:
+            raise Exception("Miss configuration of client certificate.")
+        return None
+    return ClientCertificate(client_certificate_cert, client_certificate_key)
+
+
+def get_driver(backend, uri=None, auth=None,
+               client_certificate=None, **kwargs):
     """Return default driver for tests that do not test this aspect."""
     if uri is None:
         scheme = get_neo4j_scheme()
@@ -82,7 +105,10 @@ def get_driver(backend, uri=None, auth=None, **kwargs):
         uri = "%s://%s:%d" % (scheme, host, port)
     if auth is None:
         auth = get_authorization()
-    return Driver(backend, uri, auth, **kwargs)
+    if client_certificate is None:
+        client_certificate = get_client_certificate()
+    return Driver(backend, uri, auth, client_certificate=client_certificate,
+                  **kwargs)
 
 
 class ServerInfo:
@@ -90,6 +116,7 @@ class ServerInfo:
         self.version = version
         self.edition = edition
         self.cluster = cluster
+        self._parsed_version = None
 
     @property
     def server_agent(self):
@@ -107,13 +134,15 @@ class ServerInfo:
     def supports_multi_db(self):
         return self.version >= "4" and self.edition == "enterprise"
 
+    # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
-        match = re.match(r"(\d+)\.dev", self.version)
-        if match:
-            version = (int(match.group(1)), float("inf"))
-        else:
-            version = tuple(int(i) for i in self.version.split(".")[:2])
+        version = self.parsed_version()
+        if version >= (5, 26):
+            return "5.8"
+        if version >= (5, 23):
+            return "5.6"
+        # bolt 5.5 was never released
         if version >= (5, 13):
             return "5.4"
         if version >= (5, 9):
@@ -134,11 +163,22 @@ class ServerInfo:
 
     @property
     def has_utc_patch(self):
-        if self.version >= "5":
+        version = self.parsed_version()
+        if version >= (5, 0):
             return Potential.YES
-        if self.version >= "4.3":
+        if version >= (4, 3):
             return Potential.MAYBE
         return Potential.NO
+
+    def parsed_version(self):
+        if self._parsed_version is None:
+            match = re.match(r"(\d+)\.dev", self.version)
+            if match:
+                version = (int(match.group(1)), float("inf"))
+            else:
+                version = tuple(int(i) for i in self.version.split(".")[:2])
+            self._parsed_version = version
+        return self._parsed_version
 
 
 def get_server_info():
@@ -182,13 +222,6 @@ def requires_multi_db_support(func):
 
 
 def requires_min_bolt_version(min_version):
-    server_max_version = get_server_info().max_protocol_version
-    all_viable_versions = [
-        f for f in protocol.Feature
-        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
-            and min_version <= f.value.split(":")[-1] <= server_max_version)
-    ]
-
     def get_valid_test_case(*args, **kwargs):
         if not args or not isinstance(args[0], TestkitTestCase):
             raise TypeError("Should only decorate TestkitTestCase methods")
@@ -198,17 +231,42 @@ def requires_min_bolt_version(min_version):
         @wraps(func)
         def wrapper(*args, **kwargs):
             test_case = get_valid_test_case(*args, **kwargs)
-            if server_max_version < min_version:
-                test_case.skipTest("Server does not support minimum required "
-                                   "Bolt version: " + min_version)
-            missing = test_case.driver_missing_features(*all_viable_versions)
-            if len(missing) == len(all_viable_versions):
-                test_case.skipTest("There is no common version between server "
-                                   "and driver that fulfills the minimum "
-                                   "required protocol version: " + min_version)
+            require_min_bolt_version(min_version, test_case)
             return func(*args, **kwargs)
         return wrapper
     return bolt_version_decorator
+
+
+def require_min_bolt_version(min_version, test_case):
+    if not isinstance(test_case, TestkitTestCase):
+        raise TypeError("test_case should be a TestkitTestCase")
+    reason = _skip_reason_min_bolt_version(min_version, test_case)
+    if reason:
+        test_case.skipTest(reason)
+
+
+def has_min_bolt_version(min_version, test_case):
+    if not isinstance(test_case, TestkitTestCase):
+        raise TypeError("test_case should be a TestkitTestCase")
+    return not _skip_reason_min_bolt_version(min_version, test_case)
+
+
+def _skip_reason_min_bolt_version(min_version, test_case):
+    server_max_version = get_server_info().max_protocol_version
+    all_viable_versions = [
+        f for f in protocol.Feature
+        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
+            and min_version <= f.value.split(":")[-1] <= server_max_version)
+    ]
+
+    if server_max_version < min_version:
+        test_case.skipTest("Server does not support minimum required "
+                           "Bolt version: " + min_version)
+    missing = test_case.driver_missing_features(*all_viable_versions)
+    if len(missing) == len(all_viable_versions):
+        test_case.skipTest("There is no common version between server "
+                           "and driver that fulfills the minimum "
+                           "required protocol version: " + min_version)
 
 
 class QueryBuilder:
@@ -219,11 +277,11 @@ class QueryBuilder:
 
     @staticmethod
     def _wait_clause(version):
-        return " WAIT" if version >= "4.2" else ""
+        return " WAIT" if version >= (4, 2) else ""
 
     @staticmethod
     def create_db(database, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version()
         return "CREATE DATABASE {}{}".format(
             QueryBuilder.escape_identifier(database),
             QueryBuilder._wait_clause(version) if wait else ""
@@ -231,9 +289,33 @@ class QueryBuilder:
 
     @staticmethod
     def drop_db(database, if_exists=True, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version()
         return "DROP  DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
             " IF EXISTS" if if_exists else "",
             QueryBuilder._wait_clause(version) if wait else ""
         )
+
+    @staticmethod
+    def call_subquery(subquery, imports=()):
+        version = get_server_info().parsed_version()
+        imports = ", ".join(list(map(QueryBuilder.escape_identifier, imports)))
+        if not imports:
+            return (
+                f"CALL {{\n"
+                f"    {subquery}\n"
+                "}"
+            )
+        if version >= (5, 23):
+            return (
+                f"CALL ({imports}) {{\n"
+                f"    {subquery}\n"
+                "}"
+            )
+        else:
+            return (
+                f"CALL {{\n"
+                f"    WITH {imports}\n"
+                f"    {subquery}\n"
+                "}"
+            )

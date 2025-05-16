@@ -9,9 +9,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"math/big"
 	"os"
 	"path"
@@ -40,9 +42,44 @@ func writeKey(path string, keyx interface{}) {
 		if err != nil {
 			panic(err)
 		}
+	case *rsa.PrivateKey:
+		m := x509.MarshalPKCS1PrivateKey(key)
+		err := pem.Encode(file, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: m})
+		if err != nil {
+			panic(err)
+		}
 	default:
 		panic("Unknown key type")
 	}
+}
+
+func writeKeyEncrypted(password, path string, keyx interface{}) {
+	file := createFile(path)
+	defer file.Close()
+
+	switch key := keyx.(type) {
+	case *rsa.PrivateKey:
+		m := x509.MarshalPKCS1PrivateKey(key)
+
+		block := &pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: m,
+		}
+
+		block, err := x509.EncryptPEMBlock(rand.Reader, block.Type, block.Bytes,
+			[]byte(password), x509.PEMCipherAES256)
+		if err != nil {
+			panic(err)
+		}
+
+		err = pem.Encode(file, block)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		panic("Unknown key type")
+	}
+
 }
 
 func writeCert(path string, der []byte) {
@@ -113,6 +150,30 @@ func generateServer(parent *x509.Certificate, parentPrivate interface{}, notBefo
 	return key, derBytes
 }
 
+func generateRsa4096Sha512(notBefore, notAfter time.Time, commonName string) (interface{}, []byte) {
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		panic(err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber:          newSerialNumber(),
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		Subject:               pkix.Name{CommonName: commonName},
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
+	if err != nil {
+		panic(err)
+	}
+	return key, derBytes
+}
+
 func main() {
 	basePath := path.Join(os.Args[1], "certs")
 
@@ -177,4 +238,15 @@ func main() {
 	untrustedRoot_server1Key, untrustedRoot_server1Der := generateServer(untrustedRootCert, untrustedRootKey, anHourAgo, tenYearsFromNow, "untrustedRoot_thehost", "thehost")
 	writeKey(path.Join(basePath, "server", "untrustedRoot_thehost.key"), untrustedRoot_server1Key)
 	writeCert(path.Join(basePath, "server", "untrustedRoot_thehost.pem"), untrustedRoot_server1Der)
+
+	// Generate client's certificates
+	for i := 1; i <= 2; i++ {
+		clientKey, clientDer := generateRsa4096Sha512(anHourAgo, tenYearsFromNow, "client")
+		writeCert(path.Join(basePath, "driver", fmt.Sprintf("certificate%d.pem", i)), clientDer)
+		writeKey(path.Join(basePath, "driver", fmt.Sprintf("privatekey%d.pem", i)), clientKey)
+		writeKeyEncrypted(fmt.Sprintf("thepassword%d", i),
+			path.Join(basePath, "driver", fmt.Sprintf("privatekey%d_with_thepassword%d.pem", i, i)), clientKey)
+		// Copy to
+		writeCert(path.Join(basePath, "server", "bolt", "trusted", fmt.Sprintf("client%d.pem", i)), clientDer)
+	}
 }

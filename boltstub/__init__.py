@@ -20,6 +20,10 @@ import time
 import traceback
 from copy import deepcopy
 from logging import getLogger
+from socket import (
+    IPPROTO_TCP,
+    TCP_NODELAY,
+)
 from socketserver import (
     BaseRequestHandler,
     TCPServer,
@@ -108,6 +112,7 @@ class BoltStubService:
             server_address = None
 
             def setup(self):
+                self.request.setsockopt(IPPROTO_TCP, TCP_NODELAY, 1)
                 self.wire = create_wire(self.request, read_wake_up=True)
                 self.client_address = self.wire.remote_address
                 self.server_address = self.wire.local_address
@@ -214,8 +219,11 @@ class BoltActor:
     def __init__(self, script: Script, wire, eval_context: EvalContext):
         self.script = script
         self.channel = Channel(
-            wire, script.context.bolt_version, log_cb=self.log,
+            wire, script.context.bolt_version, script.context.bolt_features,
+            log_cb=self.log,
+            handshake_manifest=script.context.handshake_manifest,
             handshake_data=self.script.context.handshake,
+            handshake_response_data=self.script.context.handshake_response,
             handshake_delay=self.script.context.handshake_delay,
             eval_context=eval_context,
         )

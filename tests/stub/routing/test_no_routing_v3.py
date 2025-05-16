@@ -1,8 +1,8 @@
 from nutkit import protocol as types
-from tests.stub.routing.test_no_routing_v4x1 import NoRoutingV4x1
+from tests.stub.routing.test_no_routing_v4x2 import NoRoutingV4x2
 
 
-class NoRoutingV3(NoRoutingV4x1):
+class NoRoutingV3(NoRoutingV4x2):
 
     required_features = types.Feature.BOLT_3_0,
     bolt_version = "3"

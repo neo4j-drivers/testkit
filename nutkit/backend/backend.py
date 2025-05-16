@@ -1,5 +1,6 @@
 import inspect
 import json
+import math
 import os
 import socket
 from contextlib import contextmanager
@@ -10,11 +11,9 @@ import nutkit.protocol as protocol
 PROTOCOL_CLASSES = dict(
     m for m in inspect.getmembers(protocol, inspect.isclass)
 )
-DEBUG_MESSAGES = os.environ.get("TEST_DEBUG_REQRES", "0").lower() in (
-    "1", "y", "yes", "true", "t", "on"
-)
-DEBUG_TIMEOUT = os.environ.get("TEST_DEBUG_NO_BACKEND_TIMEOUT", "0") in (
-    "1", "y", "yes", "true", "t", "on"
+DEBUG_MESSAGES = (
+    os.environ.get("TEST_DEBUG_REQRES", "").lower()
+    in ("1", "y", "yes", "true", "t", "on")
 )
 
 
@@ -41,8 +40,35 @@ def decode_hook(x):
     return PROTOCOL_CLASSES[name](**data)
 
 
+def _get_default_backend_timeout():
+    test_debug_no_backend_timeout = (
+        os.environ.get("TEST_DEBUG_NO_BACKEND_TIMEOUT", "").lower()
+        in ("1", "y", "yes", "true", "t", "on")
+    )
+    default_timeout = os.environ.get("TEST_BACKEND_TIMEOUT")
+    if test_debug_no_backend_timeout:
+        if default_timeout is not None:
+            raise Exception(
+                "TEST_BACKEND_TIMEOUT and TEST_DEBUG_NO_BACKEND_TIMEOUT "
+                "are mutually exclusive"
+            )
+        return None
+    if default_timeout is None:
+        return 60.0
+    try:
+        default_timeout = float(default_timeout)
+        if not math.isfinite(default_timeout):
+            raise ValueError("not finite")
+    except (TypeError, ValueError) as e:
+        raise Exception(
+            "TEST_BACKEND_TIMEOUT must be a finite float, "
+            f"got {default_timeout}: {e}"
+        )
+    return default_timeout
+
+
 # How long to wait before backend responds
-DEFAULT_TIMEOUT = None if DEBUG_TIMEOUT else 10
+DEFAULT_TIMEOUT = _get_default_backend_timeout()
 
 
 class Backend:

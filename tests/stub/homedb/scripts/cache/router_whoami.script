@@ -1,0 +1,102 @@
+!: BOLT 5.8
+!: ALLOW CONCURRENT
+A: HELLO {"{}": "*"}
+
+{+
+    {{
+        A: LOGON {"scheme": "basic", "principal": "*", "credentials": "*", "[realm]": "*"}
+        *: RESET
+
+        {*
+            {{
+                C: ROUTE "*" "*" {"db": "db1", "[imp_user]": "*"}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+            ----
+                C: ROUTE "*" "*" {"db": "db2", "[imp_user]": "*"}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db2", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9011"], "role":"WRITE"}]}}
+            ----
+                {{
+                    C: ROUTE "*" ["db1"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["db1"] {"[imp_user]": {"U": "*"}, "db": ""}
+                ----
+                    C: ROUTE "*" ["route-db1-read-db2"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["route-db1-read-db2"] {"[imp_user]": {"U": "*"}, "db": ""}
+                ----
+                    C: ROUTE "*" [] {"[imp_user]": "user1", "[db]": null}
+                ----
+                    C: ROUTE "*" [] {"[imp_user]": "user1", "[db]": ""}
+                }}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+            ----
+                {{
+                    C: ROUTE "*" ["db2"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["db2"] {"[imp_user]": {"U": "*"}, "[db]": ""}
+                ----
+                    C: ROUTE "*" ["route-db2-read-db1"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["route-db2-read-db1"] {"[imp_user]": {"U": "*"}, "[db]": ""}
+                ----
+                    C: ROUTE "*" [] {"imp_user": "user2", "[db]": null}
+                ----
+                    C: ROUTE "*" [] {"imp_user": "user2", "[db]": ""}
+                }}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db2", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9011"], "role":"WRITE"}]}}
+            }}
+
+            *: RESET
+        *}
+
+    ----
+
+        A: LOGON {"scheme": "special", "[principal]": "*", "[credentials]": "*", "[realm]": "*", "[parameters]": "*"}
+        *: RESET
+
+        {*
+            {{
+                C: ROUTE "*" "*" {"db": "db1", "[imp_user]": "*"}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+            ----
+                C: ROUTE "*" "*" {"db": "db2", "[imp_user]": "*"}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db2", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9011"], "role":"WRITE"}]}}
+            ----
+                {{
+                    C: ROUTE "*" ["db2"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["db2"] {"[imp_user]": {"U": "*"}, "[db]": ""}
+                ----
+                    C: ROUTE "*" ["route-db2-read-db1"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["route-db2-read-db1"] {"[imp_user]": {"U": "*"}, "[db]": ""}
+                ----
+                    C: ROUTE "*" [] {"[imp_user]": "user2", "[db]": null}
+                ----
+                    C: ROUTE "*" [] {"[imp_user]": "user2", "[db]": ""}
+                }}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db2", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9011"], "role":"READ"}, {"addresses": ["#HOST#:9011"], "role":"WRITE"}]}}
+            ----
+                {{
+                    C: ROUTE "*" ["db1"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["db1"] {"[imp_user]": {"U": "*"}, "db": ""}
+                ----
+                    C: ROUTE "*" ["route-db1-read-db2"] {"[imp_user]": {"U": "*"}, "[db]": null}
+                ----
+                    C: ROUTE "*" ["route-db1-read-db2"] {"[imp_user]": {"U": "*"}, "db": ""}
+                ----
+                    C: ROUTE "*" [] {"imp_user": "user1", "[db]": null}
+                ----
+                    C: ROUTE "*" [] {"imp_user": "user1", "[db]": ""}
+                }}
+                S: SUCCESS { "rt": { "ttl": 1000000, "db": "db1", "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+            }}
+
+            *: RESET
+        *}
+    }}
+    ?: LOGOFF
++}
+
+?: GOODBYE

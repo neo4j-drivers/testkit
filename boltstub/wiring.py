@@ -229,7 +229,7 @@ class WebSocket:
     sendall = send
 
 
-class Wire(object):
+class Wire:
     """Buffered socket wrapper for reading and writing bytes."""
 
     _closed = False

@@ -79,6 +79,18 @@ class NotificationsBase(TestkitTestCase):
             },
             {
                 "protocol": {
+                    "min_sev": "INFORMATION",
+                    "dis_cats": ["SCHEMA"]
+                },
+                "script": {
+                    "#NOTIS#": '"notifications_minimum_severity": '
+                               '"INFORMATION", '
+                               '"notifications_disabled_categories": '
+                               '["SCHEMA"], '
+                }
+            },
+            {
+                "protocol": {
                     "min_sev": "WARNING",
                     "dis_cats": ["UNRECOGNIZED", "UNSUPPORTED"]
                 },

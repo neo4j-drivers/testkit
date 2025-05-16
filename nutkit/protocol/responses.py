@@ -116,11 +116,11 @@ class BasicAuthTokenManager:
     Represents a new auth manager to handle password rotation.
 
     The passed id is used when creating a new driver (`NewDriver`) to refer to
-    this auth token manager
+    this auth token manager.
     """
 
     def __init__(self, id):
-        # Id of BasicAuthTokenManager instance on backend.
+        # Id of BasicAuthTokenManager instance on the backend.
         # Note that the id space needs to be shared with AuthTokenManager.
         self.id = id
 
@@ -150,7 +150,7 @@ class BearerAuthTokenManager:
     Represents a new auth manager to handle potentially expiring bearer tokens.
 
     The passed id is used when creating a new driver (`NewDriver`) to refer to
-    this auth token manager
+    this auth token manager.
     """
 
     def __init__(self, id):
@@ -177,6 +177,39 @@ class BearerAuthTokenProviderRequest:
         # Id of the temporal auth token manager that called its provider
         # function.
         self.bearer_auth_token_manager_id = bearerAuthTokenManagerId
+
+
+class ClientCertificateProvider:
+    """
+    Represents a new auth manager to handle password rotation.
+
+    The passed id is used when creating a new driver (`NewDriver`) to refer to
+    this client certificate provider.
+    """
+
+    def __init__(self, id):
+        # Id of ClientCertificateProvider instance on the backend.
+        self.id = id
+
+
+class ClientCertificateProviderRequest:
+    """
+    Represents the need for a fresh client certificate.
+
+    This message may be sent by the backend at any time should the driver call
+    the `provide` method of a client certificate provider's that was previously
+    created in response to `ClientCertificateProvider`.
+
+    TestKit will respond with `ClientCertificateProviderCompleted`.
+    """
+
+    def __init__(self, id, clientCertificateProviderId):
+        # Id of the request. TestKit will send the same id back as `requestId`
+        # in the `ClientCertificateProviderCompleted` response.
+        self.id = id
+        # Id of the client certificate provider whose provide method was
+        # called.
+        self.client_certificate_provider_id = clientCertificateProviderId
 
 
 class ResolverResolutionRequired:
@@ -470,53 +503,8 @@ class Summary:
         # TODO: remove block when all drivers support the fields
         # ---------------------------------------------------------------------
         from tests.shared import get_driver_name
-        if get_driver_name() in ["javascript"]:
-            # already sends counters but the wrong format and not all fields
-            if "_stats" in data["counters"]:
-                del data["counters"]
-            else:
-                import warnings
-                warnings.warn(  # noqa: B028
-                    "Backend supports well-formatted counter. "
-                    "Remove the backwards compatibility check!"
-                )
-        if get_driver_name() in ["javascript", "go", "dotnet"]:
-            if "counters" in data:
-                import warnings
-                warnings.warn(  # noqa: B028
-                    "Backend supports counters field in Summary. "
-                    "Remove the backwards compatibility check!"
-                )
-            else:
-                data["counters"] = {
-                    "constraintsAdded": None,
-                    "constraintsRemoved": None,
-                    "containsSystemUpdates": None,
-                    "containsUpdates": None,
-                    "indexesAdded": None,
-                    "indexesRemoved": None,
-                    "labelsAdded": None,
-                    "labelsRemoved": None,
-                    "nodesCreated": None,
-                    "nodesDeleted": None,
-                    "propertiesSet": None,
-                    "relationshipsCreated": None,
-                    "relationshipsDeleted": None,
-                    "systemUpdates": None
-                }
-            if "query" in data:
-                import warnings
-                warnings.warn(  # noqa: B028
-                    "Backend supports query field in Summary. "
-                    "Remove the backwards compatibility check!"
-                )
-            else:
-                data["query"] = {
-                    "text": None,
-                    "parameters": None
-                }
+        if get_driver_name() in ["go", "javascript"]:
             for field in (
-                "database", "notifications", "plan", "profile",
                 "queryType", "resultAvailableAfter", "resultConsumedAfter"
             ):
                 if field in data:
@@ -531,6 +519,10 @@ class Summary:
         self.counters = SummaryCounters(**data["counters"])
         self.database = data["database"]
         self.notifications = data["notifications"]
+        self.gql_status_objects = [
+            GqlStatusObject(**obj)
+            for obj in data.get("gqlStatusObjects", [])
+        ]
         self.plan = data["plan"]
         self.profile = data["profile"]
         self.query = SummaryQuery(**data["query"])
@@ -582,6 +574,44 @@ class SummaryQuery:
     def __init__(self, text, parameters):
         self.text = text
         self.parameters = parameters
+
+
+class GqlStatusObject:
+    """
+    Represents a GQL status object included in the Summary response.
+
+    All fields but diagnosticRecord are encoded as plain JSON.
+    diagnosticRecord is a JSON dict with the values being encoded as cypher
+    types.
+    """
+
+    def __init__(self, gqlStatus, statusDescription, position, classification,
+                 rawClassification, severity, rawSeverity, diagnosticRecord,
+                 isNotification):
+        assert isinstance(gqlStatus, str)
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, str)
+        self.status_description = statusDescription
+        assert position is None or isinstance(position, dict)
+        if position is not None:
+            assert (sorted(list(position.keys()))
+                    == ["column", "line", "offset"])
+            assert all(isinstance(v, int) for v in position.values())
+        self.position = position
+        assert isinstance(classification, str)
+        self.classification = classification
+        if rawClassification is not None:
+            assert isinstance(rawClassification, str)
+        self.raw_classification = rawClassification
+        assert isinstance(severity, str)
+        self.severity = severity
+        if rawSeverity is not None:
+            assert isinstance(rawSeverity, str)
+        self.raw_severity = rawSeverity
+        assert isinstance(diagnosticRecord, dict)
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(isNotification, bool)
+        self.is_notification = isNotification
 
 
 class Bookmarks:
@@ -686,18 +716,79 @@ class DriverError(BaseError):
     """
 
     def __init__(self, id=None, errorType=None, msg="", code="",
-                 retryable=None):
+                 retryable=None, gqlStatus=None, statusDescription=None,
+                 cause=None, diagnosticRecord=None, classification=None,
+                 rawClassification=None):
         self.id = id
         self.errorType = errorType
         self.msg = msg
         self.code = code
         self.retryable = retryable
+        assert isinstance(gqlStatus, (str, type(None)))
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, (str, type(None)))
+        self.status_description = statusDescription
+        if cause is not None:
+            assert isinstance(cause, GqlError)
+        self.cause = cause
+        assert isinstance(diagnosticRecord, (dict, type(None)))
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(classification, (str, type(None)))
+        self.classification = classification
+        assert isinstance(rawClassification, (str, type(None)))
+        self.raw_classification = rawClassification
 
     def __str__(self):
-        return f"DriverError(type={self.errorType}, msg={self.msg!r})"
+        return (
+            f"DriverError("
+            f"errorType={self.errorType!r}, "
+            f"msg={self.msg!r}, "
+            f"code={self.code!r}, "
+            f"retryable={self.retryable!r}, "
+            f"gqlStatus={self.gql_status!r}, "
+            f"statusDescription={self.status_description!r}, "
+            f"diagnosticRecord={self.diagnostic_record!r}, "
+            f"classification={self.classification!r}, "
+            f"rawClassification={self.raw_classification!r}, "
+            f"cause={self.cause!r})"
+        )
 
     def __repr__(self):
         return self.__str__()
+
+
+class GqlError:
+    """TODO."""
+
+    def __init__(self, msg="", gqlStatus=None, statusDescription=None,
+                 cause=None, diagnosticRecord=None, classification=None,
+                 rawClassification=None):
+        self.msg = msg
+        assert isinstance(gqlStatus, (str, type(None)))
+        self.gql_status = gqlStatus
+        assert isinstance(statusDescription, (str, type(None)))
+        self.status_description = statusDescription
+        if cause is not None:
+            assert isinstance(cause, GqlError)
+        self.cause = cause
+        assert isinstance(diagnosticRecord, (dict, type(None)))
+        self.diagnostic_record = diagnosticRecord
+        assert isinstance(classification, (str, type(None)))
+        self.classification = classification
+        assert isinstance(rawClassification, (str, type(None)))
+        self.raw_classification = rawClassification
+
+    def __str__(self):
+        return (
+            f"DriverErrorCause("
+            f"msg={self.msg!r}, "
+            f"gqlStatus={self.gql_status!r}, "
+            f"statusDescription={self.status_description!r}, "
+            f"diagnosticRecord={self.diagnostic_record!r}, "
+            f"classification={self.classification!r}, "
+            f"rawClassification={self.raw_classification!r}, "
+            f"cause={self.cause!r})"
+        )
 
 
 class FrontendError(BaseError):

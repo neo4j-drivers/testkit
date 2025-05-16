@@ -146,8 +146,8 @@ def main():
         elif sigint_count == 2:
             print("2nd SIGINT received. Closing all connections.")
             service.close_all_connections_async()
-        if sigint_count > 3:
-            print("3nd SIGINT received. Hard exit.")
+        elif sigint_count >= 3:
+            print("3rd SIGINT received. Hard exit.")
             return exit_(130)
 
     if platform.system() == "Windows":

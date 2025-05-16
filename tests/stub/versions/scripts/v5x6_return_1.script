@@ -1,0 +1,19 @@
+!: BOLT 5.6
+
+C: HELLO {"{}": "*"}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+A: LOGON {"{}": "*"}
+*: RESET
+{?
+    ?: TELEMETRY {"{}": "*"}
+    C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"fields": ["n.name"]}
+    {{
+        C: PULL {"n": {"Z": "*"}}
+    ----
+        C: DISCARD {"n": {"Z": "*"}}
+    }}
+    S: SUCCESS {"type": "w"}
+?}
+*: RESET
+?: GOODBYE

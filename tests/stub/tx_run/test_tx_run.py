@@ -520,7 +520,7 @@ class TestTxRun(TestkitTestCase):
                 )
         elif driver in ["go"]:
             self.assertEqual("Neo4jError", e.exception.errorType)
-            self.assertIn("Neo.ClientError.", e.exception.msg)
+            self.assertIn("Neo.ClientError.", e.exception.code)
         elif driver in ["dotnet"]:
             self.assertEqual("ClientError", e.exception.errorType)
         elif driver in ["javascript"]:
@@ -568,6 +568,9 @@ class TestTxRun(TestkitTestCase):
             self.assertTrue(
                 e.exception.errorType.startswith("result failed")
             )
+        elif driver in ["java"]:
+            self._assert_is_tx_terminated_exception(e)
+            self._assert_is_client_exception(original_exception)
         else:
             self.assertEqual(e.exception.code,
                              original_exception.exception.code)

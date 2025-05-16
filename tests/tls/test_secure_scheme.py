@@ -49,9 +49,12 @@ class TestSecureScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._start_server("thehost")
-                    self.assertTrue(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertTrue(self._try_connect(
+                            self._server, driver
+                        ))
                 self._server.reset()
 
     def test_trusted_ca_expired_server_correct_hostname(self):
@@ -61,9 +64,12 @@ class TestSecureScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._start_server("thehost_expired")
-                    self.assertFalse(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertFalse(self._try_connect(
+                            self._server, driver
+                        ))
                 self._server.reset()
 
     def test_trusted_ca_wrong_hostname(self):
@@ -78,10 +84,12 @@ class TestSecureScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._start_server("thehost")
-                    self.assertFalse(self._try_connect(
-                        self._server, scheme, "thehostbutwrong",
-                        **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehostbutwrong", **driver_config
+                    ) as driver:
+                        self.assertFalse(self._try_connect(
+                            self._server, driver
+                        ))
                 self._server.reset()
 
     def test_untrusted_ca_correct_hostname(self):
@@ -91,9 +99,12 @@ class TestSecureScheme(TestkitTlsTestCase):
             for scheme in self.schemes:
                 with self.subTest(scheme=scheme, driver_config=driver_config):
                     self._server = TlsServer("untrustedRoot_thehost")
-                    self.assertFalse(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertFalse(self._try_connect(
+                            self._server, driver
+                        ))
                 self._server.reset()
 
     def test_unencrypted(self):
@@ -105,9 +116,12 @@ class TestSecureScheme(TestkitTlsTestCase):
                     # The server cert doesn't really matter but set it to the
                     # one that would work if TLS happens to be on.
                     self._start_server("thehost", disable_tls=True)
-                    self.assertFalse(self._try_connect(
-                        self._server, scheme, "thehost", **driver_config
-                    ))
+                    with self._make_driver(
+                        scheme, "thehost", **driver_config
+                    ) as driver:
+                        self.assertFalse(self._try_connect(
+                            self._server, driver
+                        ))
                 self._server.reset()
 
 

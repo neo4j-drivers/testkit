@@ -22,7 +22,6 @@ class Neo4jBookmarkManagerConfig:
     bookmarks_consumer: Optional[Callable[[List[str]], None]] = None
 
 
-@dataclass
 class BookmarkManager:
     _registry: ClassVar[Dict[Any, BookmarkManager]] = {}
 

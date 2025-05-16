@@ -1022,14 +1022,14 @@ class TestAuthorizationV4x3(AuthorizationBase):
         self.assertEqual([[types.Record([types.CypherInt(1)])]], sequences)
 
 
-class TestAuthorizationV4x1(TestAuthorizationV4x3):
-    required_features = types.Feature.BOLT_4_1,
+class TestAuthorizationV4x2(TestAuthorizationV4x3):
+    required_features = types.Feature.BOLT_4_2,
 
     def get_vars(self, host=None):
         if host is None:
             host = self._routing_server1.host
         return {
-            "#VERSION#": "4.1",
+            "#VERSION#": "4.2",
             "#HOST#": host,
             "#ROUTINGMODE#": '"mode": "r", ',
             "#ROUTINGCTX#": '{"address": "' + host + ':9000"}'

@@ -34,6 +34,10 @@ class TestDataTypes(_TestTypesBase):
                 ("longitude", "latitude", "height")
             ),
         ):
+            if self.driver_supports_features(
+                types.Feature.DETAIL_NUMBER_IS_NUMBER
+            ):
+                coords = tuple(c if c % 1 != 0 else c + 0.23 for c in coords)
             with self.subTest(system=system, coords=coords, names=names):
                 self._create_driver_and_session()
                 point = types.CypherPoint(system, *coords)
