@@ -196,7 +196,6 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
             }
         )
         out_notifications = [{
-            "severity": "WARNING",
             "description": "If a part of a query contains multiple "
                            "disconnected patterns, ...",
             "code": "Neo.ClientNotification.Statement.CartesianProductWarning",
@@ -353,7 +352,6 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
             }
         )
         out_notifications = [{
-            "severity": "WARNING",
             "description": "Please, don't do this™.",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": {"column": 9, "offset": 8, "line": 1},
@@ -394,7 +392,6 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
             }
         )
         out_notification = {
-            "severity": "WARNING",
             "description": "Please, don't do this™.",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": None,
@@ -441,7 +438,6 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
             }
         )
         out_notifications = [{
-            "severity": "ANYSEV",
             "code": "Neo.ClientNotification.Foo.Bar",
             "position": {"column": 9, "offset": 8, "line": 1},
             "description": "Please, don't do this™.",
@@ -487,7 +483,6 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
         )
         out_notifications = [
             {
-                "severity": "WARNING",
                 "code": f"Neo.ClientNotification.Foo.Bar{i}",
                 "position": {"column": 9, "offset": 8, "line": 1 + i},
                 "description": f"Please, don't do this™ {i}.",
