@@ -3,6 +3,7 @@
 Uses environment variables for configuration:
 """
 
+
 import errno
 import os
 import platform
@@ -12,12 +13,15 @@ import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 from queue import (
     Empty,
     Queue,
 )
 from textwrap import wrap
 from threading import Thread
+
+ROOT_DIR = Path(__file__).absolute().parents[2]
 
 if platform.system() == "Windows":
     INTERRUPT = signal.CTRL_BREAK_EVENT
@@ -95,14 +99,20 @@ class StubServer:
                 os.fsync(f)
             self._script_path = path
 
+        env = os.environ.copy()
+        env["RUST_BACKTRACE"] = "1"
         self._process = subprocess.Popen(
             [
-                sys.executable, "-m", "boltstub", "-l",
+                str(ROOT_DIR / "boltstub" / "rusty-bolt-stub"), "-l",
+                # sys.executable, "-m", "boltstub", "-l",
                 "0.0.0.0:%d" % self.port, "-v", path
             ],
             **POPEN_EXTRA_KWARGS,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True,
-            encoding="utf-8"
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            encoding="utf-8",
+            env=env,
         )
 
         Thread(target=_poll_pipe,
@@ -113,14 +123,13 @@ class StubServer:
                args=(self._process.stderr, self._stderr_buffer)).start()
 
         # Wait until something is written to know it started, requires
-        polls = 100
+        t0 = time.time()
         self._read_pipes()
         while (self._process.poll() is None
-               and polls
+               and time.time() - t0 < 10
                and "Listening\n" not in self._stdout_lines):
-            time.sleep(0.1)
+            time.sleep(0.001)
             self._read_pipes()
-            polls -= 1
 
         # Double check that the process started, a missing script would exit
         # process immediately
@@ -191,13 +200,13 @@ class StubServer:
         self._clean_up()
 
     def _poll(self, timeout):
-        polls = int(timeout * 50)
+        polls = int(timeout * 1000)
         while True:
             self._process.poll()
             if self._process.returncode is None:
                 if polls > 0:
                     polls -= 1
-                    time.sleep(0.02)
+                    time.sleep(0.001)
                 else:
                     break
             else:
@@ -240,7 +249,7 @@ class StubServer:
             # be started.
             return
         try:
-            if self._poll(.1) or self._interrupt():
+            if self._interrupt():
                 pass
             elif self._interrupt():
                 raise StubScriptNotFinishedError(
@@ -309,7 +318,7 @@ class StubServer:
             return 0,
         assert len(handshakes) == 1
         handshake = handshakes[0][len(handshake_prefix):]
-        handshake = re.sub(r"\s", "", handshake)
+        handshake = re.sub(r"\s|0x", "", handshake)
         if handshake[:8].upper() == "000001FF":
             # handshake v2
             handshakes = self.get_requests(handshake_prefix)
@@ -317,7 +326,7 @@ class StubServer:
                 return 0,
             assert len(handshakes) == 2
             handshake = handshakes[1][len(handshake_prefix):]
-            handshake = re.sub(r"\s", "", handshake)
+            handshake = re.sub(r"\s|0x", "", handshake)
         version = list(int(b, 16) for b in wrap(handshake, 2))[2:4]
         version.reverse()
         return tuple(version)
