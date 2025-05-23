@@ -235,9 +235,8 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
                     "rawCategory": "",
                     "category": "UNKNOWN",
                 })
-            self.assertEqual(summary.notifications, notifications)
-        else:
-            self.assertEqual(summary.notifications, notifications)
+                del notification["severity"]
+        self.assertEqual(summary.notifications, notifications)
 
     def test_multiple_notifications(self):
         notifications = [
@@ -264,9 +263,8 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
                     "rawCategory": "",
                     "category": "UNKNOWN",
                 })
-            self.assertEqual(summary.notifications, notifications)
-        else:
-            self.assertEqual(summary.notifications, notifications)
+                del notification["severity"]
+        self.assertEqual(summary.notifications, notifications)
 
 
 class TestSummaryNotifications4x4Discard(
