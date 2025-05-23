@@ -848,7 +848,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             line.startswith(begin_prefix),
             "Line should start with begin"
         )
-        begin_properties = json.loads(line[len(begin_prefix):])["{}"]
+        begin_properties = json.loads(line[len(begin_prefix):])
         if not bookmarks:
             self.assertFalse(
                 "bookmarks" in begin_properties,
