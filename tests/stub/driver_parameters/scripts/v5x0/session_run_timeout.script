@@ -1,0 +1,5 @@
+!: BOLT 5.0
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+?: GOODBYE
