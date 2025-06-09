@@ -260,7 +260,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
     def test_does_encompass_router_route_response(self):
         self._start_server(self._router, "router_route_delay.script")
-        self._start_server(self._server, "session_run_timeout.script")
+        self._start_server(self._server, "empty_hello.script")
 
         uri = "neo4j://%s" % self._router.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
