@@ -110,7 +110,7 @@ class ServerInfo:
 
     @property
     def supports_multi_db(self):
-        return self.version >= "4" and self.edition == "enterprise"
+        return self.parsed_version >= (4, 0) and self.edition == "enterprise"
 
     @property
     def max_protocol_version(self):
