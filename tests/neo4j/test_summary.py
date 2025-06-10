@@ -245,26 +245,29 @@ class TestSummary(TestkitTestCase):
         self._session.close()
 
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("CREATE INDEX ON :ALabel(prop)").consume()
+        summary = self._session.run(
+            "CREATE INDEX idx_prop FOR (n:ALabel) ON (n.prop)"
+        ).consume()
         self._assert_counters(summary, indexes_added=1, contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("DROP INDEX ON :ALabel(prop)").consume()
+        summary = self._session.run("DROP INDEX idx_prop").consume()
         self._assert_counters(summary, indexes_removed=1,
                               contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("CREATE CONSTRAINT ON (book:Book) "
-                                    "ASSERT book.isbn IS UNIQUE").consume()
+        summary = self._session.run(
+            "CREATE CONSTRAINT idx_isbn FOR (book:Book) "
+            "REQUIRE (book.isbn) IS UNIQUE"
+        ).consume()
         self._assert_counters(summary,
                               constraints_added=1, contains_updates=True)
         self._session.close()
 
         self._session = self._driver.session("w", database="test")
-        summary = self._session.run("DROP CONSTRAINT ON (book:Book) "
-                                    "ASSERT book.isbn IS UNIQUE").consume()
+        summary = self._session.run("DROP CONSTRAINT idx_isbn").consume()
         self._assert_counters(summary,
                               constraints_removed=1, contains_updates=True)
         self._session.close()
