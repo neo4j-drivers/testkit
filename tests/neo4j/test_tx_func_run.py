@@ -211,7 +211,7 @@ class TestTxFuncRun(TestkitTestCase):
             self.skipTest("Backend crashes.")
 
         lock_error_code = "Neo.TransientError.Transaction.LockClientStopped"
-        if get_server_info().version >= "5":
+        if get_server_info().parsed_version >= (5, 0):
             lock_error_code = "Neo.ClientError.Transaction.LockClientStopped"
 
         def create(tx):
@@ -257,6 +257,6 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(exc.code, lock_error_code)
         if get_driver_name() in ["python"]:
             error_type = "<class 'neo4j.exceptions.TransientError'>"
-            if get_server_info().version >= "5":
+            if get_server_info().parsed_version >= (5, 0):
                 error_type = "<class 'neo4j.exceptions.ClientError'>"
             self.assertEqual(exc.errorType, error_type)

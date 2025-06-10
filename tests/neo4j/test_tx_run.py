@@ -358,11 +358,22 @@ class TestTxRun(TestkitTestCase):
                 tx2.rollback()
             # does not set exception code
             return
-        self.assertEqual(e.exception.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
-        if get_driver_name() in ["python"]:
-            self.assertEqual(e.exception.errorType,
-                             "<class 'neo4j.exceptions.TransientError'>")
+        if get_server_info().parsed_version >= (5, 0):
+            self.assertEqual(
+                e.exception.code,
+                "Neo.ClientError.Transaction.LockClientStopped"
+            )
+            if get_driver_name() in ["python"]:
+                self.assertEqual(e.exception.errorType,
+                                 "<class 'neo4j.exceptions.ClientError'>")
+        else:
+            self.assertEqual(
+                e.exception.code,
+                "Neo.TransientError.Transaction.LockClientStopped"
+            )
+            if get_driver_name() in ["python"]:
+                self.assertEqual(e.exception.errorType,
+                                 "<class 'neo4j.exceptions.TransientError'>")
 
     @cluster_unsafe_test
     def test_consume_after_commit(self):

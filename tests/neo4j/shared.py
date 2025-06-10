@@ -89,6 +89,13 @@ class ServerInfo:
         self.cluster = cluster
 
     @property
+    def parsed_version(self):
+        return tuple(
+            int(i) if i != "dev" else float("inf")
+            for i in self.version.split(".")
+        )
+
+    @property
     def server_agent(self):
         if self.edition == "aura":
             raise ValueError(

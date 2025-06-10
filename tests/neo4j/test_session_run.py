@@ -135,11 +135,15 @@ class TestSessionRun(TestkitTestCase):
             if server_info.edition != "enterprise":
                 self.skipTest("cannot query tx meta data in community edition")
             query = "CALL dbms.getTXMetaData"
-        elif server_info.version.startswith("4."):
+        elif (
+            server_info.version.startswith("4.")
+            or server_info.version.startswith("5.")
+            or server_info.version.startswith("2025.")
+        ):
             query = "CALL tx.getMetaData"
         else:
-            self.fail("Unknown server version %s should be 3.x or 4.x." %
-                      server_info.version)
+            self.fail("Unknown server version %s should be 3.x, 4.x., 5.x, "
+                      "or 2025.x" % server_info.version)
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
         self._session1 = self._driver.session("r")
@@ -167,11 +171,22 @@ class TestSessionRun(TestkitTestCase):
         if get_driver_name() in ["go"]:
             # requires explicit termination of transactions
             tx1.rollback()
-        self.assertEqual(e.exception.code,
-                         "Neo.TransientError.Transaction.LockClientStopped")
-        if get_driver_name() in ["python"]:
-            self.assertEqual(e.exception.errorType,
-                             "<class 'neo4j.exceptions.TransientError'>")
+        if get_server_info().parsed_version >= (5, 0):
+            self.assertEqual(
+                e.exception.code,
+                "Neo.ClientError.Transaction.LockClientStopped"
+            )
+            if get_driver_name() in ["python"]:
+                self.assertEqual(e.exception.errorType,
+                                 "<class 'neo4j.exceptions.ClientError'>")
+        else:
+            self.assertEqual(
+                e.exception.code,
+                "Neo.TransientError.Transaction.LockClientStopped"
+            )
+            if get_driver_name() in ["python"]:
+                self.assertEqual(e.exception.errorType,
+                                 "<class 'neo4j.exceptions.TransientError'>")
 
     @cluster_unsafe_test
     def test_regex_in_parameter(self):
@@ -223,9 +238,9 @@ class TestSessionRun(TestkitTestCase):
     @cluster_unsafe_test
     def test_partial_iteration(self):
         # Verifies that not consuming all records works
-        self._session1 = self._driver.session("r", fetch_size=2)
+        self._session1 = self._driver.session("r", fetch_size=20)
         result = self._session1.run("UNWIND RANGE(0, 1000) AS x RETURN x")
-        for x in range(0, 4):
+        for x in range(0, 40):
             exp = types.Record(values=[types.CypherInt(x)])
             rec = result.next()
             self.assertEqual(rec, exp)
@@ -233,16 +248,16 @@ class TestSessionRun(TestkitTestCase):
         self._session1 = None
 
         # not consumed all records & starting a new session
-        self._session1 = self._driver.session("r", fetch_size=2)
+        self._session1 = self._driver.session("r", fetch_size=20)
         result = self._session1.run("UNWIND RANGE(2000, 3000) AS x RETURN x")
-        for x in range(2000, 2004):
+        for x in range(2000, 2040):
             exp = types.Record(values=[types.CypherInt(x)])
             rec = result.next()
             self.assertEqual(rec, exp)
 
         # not consumed all records & reusing the previous session
         result = self._session1.run("UNWIND RANGE(4000, 5000) AS x RETURN x")
-        for x in range(4000, 4004):
+        for x in range(4000, 4040):
             exp = types.Record(values=[types.CypherInt(x)])
             rec = result.next()
             self.assertEqual(rec, exp)
