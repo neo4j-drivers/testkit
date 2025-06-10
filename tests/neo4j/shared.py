@@ -229,11 +229,11 @@ class QueryBuilder:
 
     @staticmethod
     def _wait_clause(version):
-        return " WAIT" if version >= "4.2" else ""
+        return " WAIT" if version >= (4, 2) else ""
 
     @staticmethod
     def create_db(database, wait=True):
-        version = get_server_info().version
+        version = get_server_info().parsed_version
         return "CREATE DATABASE {}{}".format(
             QueryBuilder.escape_identifier(database),
             QueryBuilder._wait_clause(version) if wait else ""
@@ -241,8 +241,8 @@ class QueryBuilder:
 
     @staticmethod
     def drop_db(database, if_exists=True, wait=True):
-        version = get_server_info().version
-        return "DROP  DATABASE {}{}{}".format(
+        version = get_server_info().parsed_version
+        return "DROP DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
             " IF EXISTS" if if_exists else "",
             QueryBuilder._wait_clause(version) if wait else ""
