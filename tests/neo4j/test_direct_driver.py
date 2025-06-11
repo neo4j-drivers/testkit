@@ -145,7 +145,7 @@ class TestDirectDriver(TestkitTestCase):
             #        crude, ugly, fragile, <insert mom joke>
             #        just temporary for testing SPD
             import time
-            time.sleep(10)
+            time.sleep(2)
 
             self._session = self._driver.session("r", database="test-database")
             result = self._session.run("RETURN 1")
@@ -238,7 +238,7 @@ class TestDirectDriver(TestkitTestCase):
 
         # FIXME: just temporary for testing SPD
         import time
-        time.sleep(10)
+        time.sleep(2)
 
         self._session = self._driver.session("w", database="testb")
         result = self._session.run('CREATE (p:Person {name: "BOB"})')
