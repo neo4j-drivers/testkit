@@ -128,6 +128,10 @@ class TestDirectDriver(TestkitTestCase):
             self._session.run(create_db_query).consume()
             self._session.close()
 
+            # FIXME: just temporary for testing SPD
+            import time
+            time.sleep(2)
+
             self._session = self._driver.session("r", database="test-database")
             result = self._session.run("RETURN 1")
             # server bug on 4.4-: does not report db on DISCARD before PULL
@@ -206,6 +210,10 @@ class TestDirectDriver(TestkitTestCase):
         result.consume()
         bookmarks = self._session.last_bookmarks()
         self._session.close()
+
+        # FIXME: just temporary for testing SPD
+        import time
+        time.sleep(2)
 
         self._session = self._driver.session("w", database="testa",
                                              bookmarks=bookmarks)
