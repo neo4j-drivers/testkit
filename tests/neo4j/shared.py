@@ -132,7 +132,7 @@ class ServerInfo:
 
     @property
     def supports_multi_db(self):
-        return self.version >= "4" and self.edition == "enterprise"
+        return self.parsed_version() >= (4, 0) and self.edition == "enterprise"
 
     # [bolt-version-bump] search tag when updating IT matrix
     @property
@@ -172,13 +172,16 @@ class ServerInfo:
 
     def parsed_version(self):
         if self._parsed_version is None:
-            match = re.match(r"(\d+)\.dev", self.version)
-            if match:
-                version = (int(match.group(1)), float("inf"))
-            else:
-                version = tuple(int(i) for i in self.version.split(".")[:2])
-            self._parsed_version = version
+            self._parsed_version = _parse_version(self.version)
         return self._parsed_version
+
+
+def _parse_version(version_str: str) -> "tuple[float, ...]":
+    match = re.match(r"(\d+)\.dev", version_str)
+    if match:
+        return int(match.group(1)), float("inf")
+    else:
+        return tuple(int(i) for i in version_str.split(".")[:2])
 
 
 def get_server_info():
@@ -252,11 +255,18 @@ def has_min_bolt_version(min_version, test_case):
 
 
 def _skip_reason_min_bolt_version(min_version, test_case):
-    server_max_version = get_server_info().max_protocol_version
+    min_version = _parse_version(min_version)
+    server_max_version = _parse_version(get_server_info().max_protocol_version)
     all_viable_versions = [
         f for f in protocol.Feature
-        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
-            and min_version <= f.value.split(":")[-1] <= server_max_version)
+        if (
+            re.match(r"BOLT_(\d+_)*(\d+)", f.name)
+            and (
+                min_version
+                <= _parse_version(f.value.split(":")[-1])
+                <= server_max_version
+            )
+        )
     ]
 
     if server_max_version < min_version:

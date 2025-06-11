@@ -190,9 +190,9 @@ class TestSummary(TestkitTestCase):
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
-        version = get_server_info().version
-        new_index_syntax = version >= "4"
-        new_constraint_syntax = version >= "4.4"
+        version = get_server_info().parsed_version()
+        new_index_syntax = version >= (4, 0)
+        new_constraint_syntax = version >= (4, 4)
 
         self._session = self._driver.session("w", database="system")
 
