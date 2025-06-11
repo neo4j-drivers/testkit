@@ -141,6 +141,12 @@ class TestDirectDriver(TestkitTestCase):
             self._session.run(create_db_query).consume()
             self._session.close()
 
+            # FIXME: don't look at me like that
+            #        crude, ugly, fragile, <insert mom joke>
+            #        just temporary for testing SPD
+            import time
+            time.sleep(10)
+
             self._session = self._driver.session("r", database="test-database")
             result = self._session.run("RETURN 1")
             # server bug on 4.4-: does not report db on DISCARD before PULL
@@ -230,6 +236,10 @@ class TestDirectDriver(TestkitTestCase):
         result.consume()
         self._session.close()
 
+        # FIXME: just temporary for testing SPD
+        import time
+        time.sleep(10)
+
         self._session = self._driver.session("w", database="testb")
         result = self._session.run('CREATE (p:Person {name: "BOB"})')
         result.consume()
@@ -263,5 +273,4 @@ class TestDirectDriver(TestkitTestCase):
         self._session.run("MATCH (n) DETACH DELETE n").consume()
 
         result = self._session.run("SHOW DATABASES")
-        initial_dbs = get_names(result, node=False)
         self.assertEqual(get_names(result, node=False), initial_dbs)
