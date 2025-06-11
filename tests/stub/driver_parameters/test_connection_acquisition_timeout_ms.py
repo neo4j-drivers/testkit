@@ -225,7 +225,7 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
 
     def test_router_handshake_shares_acquisition_timeout(self):
         self._start_server(self._router, "router_hello_delay.script")
-        self._start_server(self._server, "session_run_auth_delay.script")
+        self._start_server(self._server, "empty_hello_delay.script")
 
         uri = "neo4j://%s" % self._router.address
         auth = types.AuthorizationToken("basic", principal="neo4j",
