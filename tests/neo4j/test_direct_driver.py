@@ -201,8 +201,10 @@ class TestDirectDriver(TestkitTestCase):
         self._session = self._driver.session("w", database="system",
                                              bookmarks=bookmarks)
         result = self._session.run("SHOW DATABASES")
-        self.assertEqual(get_names(result, node=False),
-                         {"system", get_default_db()})
+        initial_dbs = get_names(result, node=False)
+        self.assertNotIn("testa", initial_dbs)
+        self.assertNotIn("testb", initial_dbs)
+        self.assertIn("system", initial_dbs)
 
         result = self._session.run(create_db_testa_query)
         result.consume()
@@ -252,3 +254,6 @@ class TestDirectDriver(TestkitTestCase):
 
         self._session = self._driver.session("w")
         self._session.run("MATCH (n) DETACH DELETE n").consume()
+
+        result = self._session.run("SHOW DATABASES")
+        self.assertEqual(get_names(result, node=False), initial_dbs)
