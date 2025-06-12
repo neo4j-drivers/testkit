@@ -1,3 +1,4 @@
+import re
 from contextlib import contextmanager
 
 from nutkit import protocol as types
@@ -43,7 +44,7 @@ class TestProtocolVersions(TestkitTestCase):
             self._server.reset()
 
     def _run(self, version, server_agent=None, check_version=False,
-             rejected_agent=False, check_server_address=False, manifest=None):
+             check_server_address=False, manifest=None):
         """Run the common part of the tests.
 
         :param version: e.g. "4x3" or "3"
@@ -58,9 +59,6 @@ class TestProtocolVersions(TestkitTestCase):
             True: Expect the driver to fail by rejecting the server agent
             False: Expect the driver not to fail
         :type rejected_agent: bool
-        :param check_server_address: Check if the summary contains the right
-                                     server-address
-        :type check_server_address: bool
         :type manifest: str, optional
         :param manifest: Handshake manifest version to enforce
         """
@@ -80,45 +78,34 @@ class TestProtocolVersions(TestkitTestCase):
 
         script_path = self.script_path("v{}_return_1.script".format(version))
         with self._get_session(script_path, vars_=vars_) as session:
-            try:
-                result = session.run("RETURN 1 AS n")
-                if server_agent or check_version or check_server_address:
-                    summary = result.consume()
-                    if check_version:
-                        expected_protocol_version = \
-                            self._server.get_negotiated_bolt_version()
-                        expected_protocol_version = ".".join(
-                            map(str, expected_protocol_version)
-                        )
-                        if "." not in expected_protocol_version:
-                            expected_protocol_version += ".0"
-                        self.assertEqual(summary.server_info.protocol_version,
-                                         expected_protocol_version)
-                    if server_agent is not None:
-                        self.assertEqual(summary.server_info.agent,
-                                         vars_["#SERVER_AGENT#"])
-                    if check_server_address:
-                        self.assertIn(
-                            summary.server_info.address,
-                            [get_dns_resolved_server_address(self._server),
-                             self._server.address]
-                        )
-                else:
-                    # Otherwise the script will not fail when the protocol is
-                    # not present (on backends where run is lazily evaluated)
-                    result.next()
-            except types.DriverError:
-                if not rejected_agent:
-                    raise
-                # TODO: check exception further
+            result = session.run("RETURN 1 AS n")
+            if server_agent or check_version or check_server_address:
+                summary = result.consume()
+                if check_version:
+                    expected_protocol_version = \
+                        self._server.get_negotiated_bolt_version()
+                    expected_protocol_version = ".".join(
+                        map(str, expected_protocol_version)
+                    )
+                    if "." not in expected_protocol_version:
+                        expected_protocol_version += ".0"
+                    self.assertEqual(summary.server_info.protocol_version,
+                                     expected_protocol_version)
+                if server_agent is not None:
+                    self.assertEqual(summary.server_info.agent,
+                                     vars_["#SERVER_AGENT#"])
+                if check_server_address:
+                    self.assertIn(
+                        summary.server_info.address,
+                        [get_dns_resolved_server_address(self._server),
+                         self._server.address]
+                    )
             else:
-                if rejected_agent:
-                    self.fail("Driver should have rejected the server agent")
+                # Otherwise the script will not fail when the protocol is
+                # not present (on backends where run is lazily evaluated)
+                result.next()
             self._server.done()
-            if not rejected_agent:
-                self.assertEqual(self._server.count_requests("RUN"), 1)
-            else:
-                self.assertEqual(self._server.count_requests("RUN"), 0)
+            self.assertEqual(self._server.count_requests("RUN"), 1)
 
     @driver_feature(types.Feature.BOLT_3_0)
     def test_supports_bolt_3x0(self):
@@ -186,13 +173,13 @@ class TestProtocolVersions(TestkitTestCase):
             "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "3"
         ):
-            for agent, reject in (
-                ("Neo4j/4.3.0", False),
-                ("Neo4j/4.1.0", False),
-                ("neo4j/4.1.0", True),
-                ("Neo4j/Funky!", False),
-                ("Neo4j4.3.0", True),
-                ("FooBar/4.3.0", True),
+            for agent in (
+                "Neo4j/4.3.0",
+                "Neo4j/4.1.0",
+                "neo4j/4.1.0",
+                "Neo4j/Funky!",
+                "Neo4j4.3.0",
+                "FooBar/4.3.0",
             ):
                 # TODO: remove these blocks, once all drivers work
                 if get_driver_name() in ["dotnet"]:
@@ -200,18 +187,17 @@ class TestProtocolVersions(TestkitTestCase):
                     #               compiles server agent from bolt version
                     #               potentially more differences
                     continue
-                if reject and get_driver_name() in ["javascript", "go",
-                                                    "ruby"]:
-                    # skip subtest: Does not reject server's agent string
-                    continue
-                if agent == "Neo4j/Funky!" and get_driver_name() in ["ruby"]:
+                re.match(r"\w+/\d+\.\d+\.\d+", agent)
+                if (
+                    not re.match(r"\w+/\d+\.\d+\.\d+", agent)
+                    and get_driver_name() in ["ruby"]
+                ):
                     # skip subtest: Tries to parse the server agent
                     continue
                 if not self.driver_supports_bolt(version):
                     continue
                 with self.subTest(version=version, agent=agent):
-                    self._run(version, server_agent=agent,
-                              rejected_agent=reject)
+                    self._run(version, server_agent=agent)
 
     def test_server_address_in_summary(self):
         # TODO: remove block when all drivers support the address field
@@ -245,126 +231,6 @@ class TestProtocolVersions(TestkitTestCase):
         self.assertIn(summary.server_info.address,
                       [get_dns_resolved_server_address(self._server),
                        self._server.address])
-
-    @driver_feature(types.Feature.BOLT_3_0)
-    def test_should_reject_server_using_verify_connectivity_bolt_3x0(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="3", script="v3_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_4_2)
-    def test_should_reject_server_using_verify_connectivity_bolt_4x2(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="4.2", script="v3_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_4_3)
-    def test_should_reject_server_using_verify_connectivity_bolt_4x3(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="4.3", script="v3_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_4_4)
-    def test_should_reject_server_using_verify_connectivity_bolt_4x4(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="4.4", script="v3_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_0)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x0(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.0", script="v3_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_1)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x1(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.1", script="v5x1_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_2)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x2(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.2", script="v5x1_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_3)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x3(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.3", script="v5x1_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_4)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x4(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.4", script="v5x1_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_6)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x6(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.6", script="v5x1_and_up_optional_hello.script"
-        )
-
-    @driver_feature(types.Feature.BOLT_5_7)
-    def test_should_reject_server_using_verify_connectivity_bolt_5x7(self):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "go", "javascript"]:
-            self.skipTest("Driver does not check server agent string")
-        self._test_should_reject_server_using_verify_connectivity(
-            version="5.7", script="v5x1_and_up_optional_hello.script"
-        )
-
-    def _test_should_reject_server_using_verify_connectivity(
-        self, version, script
-    ):
-        uri = "bolt://%s" % self._server.address
-        driver = Driver(self._backend, uri,
-                        types.AuthorizationToken("basic", principal="",
-                                                 credentials=""))
-        script_path = self.script_path(script)
-        variables = {
-            "#VERSION#": version,
-            "#SERVER_AGENT#": "AgentSmith/0.0.1"
-        }
-        self._server.start(path=script_path, vars_=variables)
-
-        with self.assertRaises(types.DriverError) as e:
-            driver.verify_connectivity()
-
-        self._assert_is_untrusted_server_exception(e.exception)
-        self._server.done()
-        driver.close()
 
     def _assert_is_untrusted_server_exception(self, e):
         if get_driver_name() in ["java"]:
