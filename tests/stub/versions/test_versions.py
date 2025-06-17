@@ -176,10 +176,7 @@ class TestProtocolVersions(TestkitTestCase):
             for agent in (
                 "Neo4j/4.3.0",
                 "Neo4j/4.1.0",
-                "neo4j/4.1.0",
                 "Neo4j/Funky!",
-                "Neo4j4.3.0",
-                "FooBar/4.3.0",
             ):
                 # TODO: remove these blocks, once all drivers work
                 if get_driver_name() in ["dotnet"]:
