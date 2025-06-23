@@ -28,6 +28,7 @@ from .errors import (
 from .packstream import Structure
 from .simple_jolt import v1 as jolt_v1
 from .simple_jolt import v2 as jolt_v2
+from .simple_jolt import v3 as jolt_v3
 from .util import (
     hex_repr,
     recursive_subclasses,
@@ -36,6 +37,7 @@ from .util import (
 jolt_package = {
     1: jolt_v1,
     2: jolt_v2,
+    3: jolt_v3,
 }
 
 auto_bolt_id = 0
@@ -626,6 +628,21 @@ class Bolt5x8Protocol(Bolt5x7Protocol):
                 packstream_version=self.packstream_version
             )
         return super().get_auto_response(request)
+
+
+class Bolt6x0Protocol(Bolt5x8Protocol):
+    protocol_version = (6, 0)
+    version_aliases = set()
+    # allow the server to negotiate other bolt versions
+    equivalent_versions = set()
+
+    packstream_version = 3
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 1
+
+    # TODO: finalize server version
+    server_agent = "Neo4j/2025.08.0"
 
 
 # [stub-bolt-change] search tag when adding/removing bolt version support

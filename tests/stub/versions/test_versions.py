@@ -151,16 +151,29 @@ class TestProtocolVersions(TestkitTestCase):
     def test_supports_bolt5x7(self):
         self._run("5x7")
 
-    @driver_feature(
-        types.Feature.BOLT_5_7,
-        types.Feature.BOLT_HANDSHAKE_MANIFEST_V1,
-    )
-    def test_supports_bolt5x7_manifest_v1(self):
-        self._run("5x7", manifest="1")
+    @driver_feature(types.Feature.BOLT_5_8)
+    def test_supports_bolt5x8(self):
+        self._run("5x8")
+
+    @driver_feature(types.Feature.BOLT_6_0)
+    def test_supports_bolt6x0(self):
+        self._run("6x0")
+
+    @driver_feature(types.Feature.BOLT_HANDSHAKE_MANIFEST_V1)
+    def test_supports_manifest_v1(self):
+        for version in (
+            "6x0",
+            "5x8", "5x7",
+        ):
+            if not self.driver_supports_bolt(version):
+                continue
+            with self.subTest(version=version):
+                self._run(version, manifest="1")
 
     def test_server_version(self):
         for version in (
-            "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "6x0",
+            "5x8", "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "3"
         ):
             if not self.driver_supports_bolt(version):
@@ -170,7 +183,8 @@ class TestProtocolVersions(TestkitTestCase):
 
     def test_server_agent(self):
         for version in (
-            "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "6x0",
+            "5x8", "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "3"
         ):
             for agent in (
@@ -201,7 +215,8 @@ class TestProtocolVersions(TestkitTestCase):
         if get_driver_name() in ["javascript", "dotnet"]:
             self.skipTest("Backend doesn't support server address in summary")
         for version in (
-            "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
+            "6x0",
+            "5x8", "5x7", "5x6", "5x4", "5x3", "5x2", "5x1", "5x0",
             "4x4", "4x3", "4x2", "3"
         ):
             if not self.driver_supports_bolt(version):

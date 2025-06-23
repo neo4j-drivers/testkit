@@ -38,6 +38,7 @@ ALL_BOLT_VERSIONS = (
     (3,),
     (4, 1), (4, 2), (4, 3), (4, 4),
     (5, 0), (5, 1), (5, 2), (5, 3), (5, 4), (5, 5), (5, 6), (5, 7),
+    (6, 0)
 )
 
 
@@ -80,7 +81,6 @@ ALL_REQUESTS_PER_VERSION = tuple((
             (b"\x13", "ROLLBACK"),
         )
     ),
-
 
     ((5, 0), b"\x01", "HELLO"),
     ((5, 0), b"\x02", "GOODBYE"),
@@ -127,6 +127,19 @@ ALL_REQUESTS_PER_VERSION = tuple((
             (b"\x13", "ROLLBACK"),
         )
     ),
+
+    ((6, 0), b"\x01", "HELLO"),
+    ((6, 0), b"\x6A", "LOGON"),
+    ((6, 0), b"\x6B", "LOGOFF"),
+    ((6, 0), b"\x54", "TELEMETRY"),
+    ((6, 0), b"\x02", "GOODBYE"),
+    ((6, 0), b"\x0F", "RESET"),
+    ((6, 0), b"\x10", "RUN"),
+    ((6, 0), b"\x2F", "DISCARD"),
+    ((6, 0), b"\x3F", "PULL"),
+    ((6, 0), b"\x11", "BEGIN"),
+    ((6, 0), b"\x12", "COMMIT"),
+    ((6, 0), b"\x13", "ROLLBACK"),
 ))
 
 

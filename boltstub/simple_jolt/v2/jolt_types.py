@@ -20,10 +20,8 @@ import datetime
 
 import pytz
 
-from ..common.jolt_types import (
-    JoltType,
-    JoltWildcard,
-)
+from ..common.jolt_types import JoltType as JoltTypeCommon
+from ..common.jolt_types import JoltWildcard
 from ..v1.jolt_types import (
     JoltV1DateMixin,
     JoltV1DateTimeMixin,
@@ -36,7 +34,7 @@ from ..v1.jolt_types import (
 )
 
 
-class JoltType(JoltType):  # version specific type base class
+class JoltType(JoltTypeCommon):  # version specific type base class
     pass
 
 
@@ -63,7 +61,7 @@ class JoltV2DateTimeMixin(JoltV1DateTimeMixin):
         return cls._format_dt(dt, buffered_ns)
 
 
-class JoltV2NodeMixin(JoltType):
+class JoltV2NodeMixin(JoltTypeCommon):
     def __init__(self, id_, labels, properties, element_id):
         self.id = id_
         self.labels = labels
@@ -87,7 +85,7 @@ class JoltNode(JoltV2NodeMixin, JoltType):
     pass
 
 
-class JoltV2RelationshipMixin(JoltType):
+class JoltV2RelationshipMixin(JoltTypeCommon):
     def __init__(self, id_, start_node_id, rel_type, end_node_id, properties,
                  element_id, start_node_element_id, end_node_element_id):
         self.id = id_

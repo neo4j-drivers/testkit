@@ -88,6 +88,8 @@ class Feature(Enum):
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
     API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
+    # The driver supports sending and receiving vector data types.
+    API_TYPE_VECTOR = "Feature:API:Type.Vector"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
@@ -130,6 +132,8 @@ class Feature(Enum):
     BOLT_5_7 = "Feature:Bolt:5.7"
     # The driver supports Bolt protocol version 5.8
     BOLT_5_8 = "Feature:Bolt:5.8"
+    # The driver supports Bolt protocol version 6.0
+    BOLT_6_0 = "Feature:Bolt:6.0"
     # The driver supports negotiating the Bolt protocol version with the server
     # using handshake manifest v1.
     BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
