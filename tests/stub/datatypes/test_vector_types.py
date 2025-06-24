@@ -59,11 +59,72 @@ class TestVectorTypes(TestkitTestCase):
             ("i8", ""),
             ("i8", "01"),
             ("i8", "01 ff"),
+            ("i8", "00 80 7f"),  # 0 -MAX +MAX
             ("i16", "00 01"),
-            ("i32", "00 00 00 01"),
-            ("i64", "00 00 00 00 00 00 00 01"),
-            ("f32", "3f 80 00 00"),
-            ("f64", "3f f0 00 00 00 00 00 00"),
+            ("i16", "00 00 80 00 7f ff"),
+            ("i32", "00 00 00 00 80 00 00 00 7f ff ff ff"),
+            (
+                "i64",
+                (
+                    "00 00 00 00 00 00 00 00 "
+                    "80 00 00 00 00 00 00 00 "
+                    "7f ff ff ff ff ff ff ff"
+                ),
+            ),
+            (
+                "f32",
+                (
+                    # 1.0
+                    "3f 80 00 00 "
+                    # smallest subnormal
+                    "00 00 00 01 "
+                    # 0.0
+                    "00 00 00 00 "
+                    # -0.0
+                    "80 00 00 00 "
+                    # -1.0
+                    "bf 80 00 00 "
+                    # NaN
+                    "7f c0 00 00 "
+                    # NaN with some payload
+                    "7f 88 42 25 "
+                    # -NaN
+                    "ff c0 00 00 "
+                    # -NaN with some payload
+                    "ff f8 42 25 "
+                    # Infinity
+                    "7f 80 00 00 "
+                    # -Infinity
+                    "ff 80 00 00"
+                ),
+            ),
+            (
+                "f64",
+                (
+                    # 1.0
+                    "3f f0 00 00 00 00 00 00 "
+                    # smallest subnormal
+                    "00 00 00 00 00 00 00 01 "
+                    # 0.0
+                    "00 00 00 00 00 00 00 00 "
+                    # -0.0
+                    "80 00 00 00 00 00 00 00 "
+                    # -1.0
+                    "bf f0 00 00 00 00 00 00 "
+                    # NaN
+                    "7f f8 00 00 00 00 00 00 "
+                    # NaN with some payload
+                    "7f f0 10 08 08 10 42 25 "
+                    # -NaN
+                    "ff f8 00 00 00 00 00 00 "
+                    # -NaN with some payload
+                    "ff f0 10 08 08 10 42 25 "
+                    # Infinity
+                    "7f f0 00 00 00 00 00 00 "
+                    # -Infinity
+                    "ff f0 00 00 00 00 00 00"
+                ),
+            ),
         ):
             with self.subTest(dtype=dtype, data=data):
                 with self._started_server(
