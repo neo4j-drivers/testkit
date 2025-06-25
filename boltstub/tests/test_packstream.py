@@ -23,6 +23,7 @@ import pytest
 from ..bolt_protocol import Structure
 from ..simple_jolt.v1 import jolt_types as jolt_v1_types
 from ..simple_jolt.v2 import jolt_types as jolt_v2_types
+from ..simple_jolt.v3 import jolt_types as jolt_v3_types
 
 
 @pytest.mark.parametrize(("packstream_version", "fields", "res"), (
@@ -235,6 +236,47 @@ from ..simple_jolt.v2 import jolt_types as jolt_v2_types
         2,
         [Structure(b"\x59", 123, 1.2, 3.4, 5.6, packstream_version=2)],
         [jolt_v2_types.JoltPoint("SRID=123;POINT(1.2 3.4 5.6)")]
+    ),
+    # Vector
+    (
+        1,
+        [Structure(b"\x56", b"\xc8", b"", packstream_version=1)],
+        TypeError
+    ),
+    (
+        2,
+        [Structure(b"\x56", b"\xc8", b"", packstream_version=2)],
+        TypeError
+    ),
+    (
+        3,
+        [Structure(b"\x56", b"\xc8", b"\x00", packstream_version=3)],
+        [jolt_v3_types.JoltVector("i8", b"\x00")],
+    ),
+    (
+        3,
+        [Structure(b"\x56", b"\xc9", b"\x00\x01", packstream_version=3)],
+        [jolt_v3_types.JoltVector("i16", b"\x00\x01")],
+    ),
+    (
+        3,
+        [Structure(b"\x56", b"\xca", bytes(range(4)), packstream_version=3)],
+        [jolt_v3_types.JoltVector("i32", bytes(range(4)))],
+    ),
+    (
+        3,
+        [Structure(b"\x56", b"\xcb", bytes(range(8)), packstream_version=3)],
+        [jolt_v3_types.JoltVector("i64", bytes(range(8)))],
+    ),
+    (
+        3,
+        [Structure(b"\x56", b"\xc6", bytes(range(4)), packstream_version=3)],
+        [jolt_v3_types.JoltVector("f32", bytes(range(4)))],
+    ),
+    (
+        3,
+        [Structure(b"\x56", b"\xc1", bytes(range(8)), packstream_version=3)],
+        [jolt_v3_types.JoltVector("f64", bytes(range(8)))],
     ),
 ))
 def test_struct_to_jolt_type(packstream_version, fields, res):

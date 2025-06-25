@@ -24,6 +24,7 @@ from ..common.errors import (
 )
 
 # unused transformer imports are required for the codec to pick them up
+from ..v1.codec import Codec as _Codec
 from ..v1.codec import JoltBoolTransformer  # noqa: F401
 from ..v1.codec import JoltBytesTransformer  # noqa: F401
 from ..v1.codec import JoltDictTransformer  # noqa: F401
@@ -32,16 +33,15 @@ from ..v1.codec import JoltIntTransformer  # noqa: F401
 from ..v1.codec import JoltListTransformer  # noqa: F401
 from ..v1.codec import JoltNullTransformer  # noqa: F401
 from ..v1.codec import JoltStrTransformer  # noqa: F401
+from ..v1.codec import JoltDateTimeTransformer as _JoltDateTimeTransformer
+from ..v1.codec import JoltNodeTransformer as _JoltNodeTransformer
+from ..v1.codec import JoltPathTransformer as _JoltPathTransformer
+from ..v1.codec import JoltPointTransformer as _JoltPointTransformer
+from ..v1.codec import JoltRelationTransformer as _JoltRelationTransformer
 from ..v1.codec import (
-    Codec,
-    JoltDateTimeTransformer,
-    JoltNodeTransformer,
-    JoltPathTransformer,
-    JoltPointTransformer,
-    JoltRelationTransformer,
-    JoltReverseRelationTransformer,
-    JoltTypeTransformer,
+    JoltReverseRelationTransformer as _JoltReverseRelationTransformer,
 )
+from ..v1.codec import JoltTypeTransformer
 from .jolt_types import (
     JoltDate,
     JoltDateTime,
@@ -56,7 +56,7 @@ from .jolt_types import (
 )
 
 
-class JoltDateTimeTransformer(JoltDateTimeTransformer):
+class JoltDateTimeTransformer(_JoltDateTimeTransformer):
     _supported_types = (
         JoltDate, JoltTime, JoltLocalTime,
         JoltDateTime, JoltLocalDateTime, JoltDuration
@@ -84,7 +84,7 @@ class JoltDateTimeTransformer(JoltDateTimeTransformer):
                              .format(value, clss))
 
 
-class JoltPointTransformer(JoltPointTransformer):
+class JoltPointTransformer(_JoltPointTransformer):
     _supported_types = JoltPoint,
 
     @staticmethod
@@ -98,7 +98,7 @@ class JoltPointTransformer(JoltPointTransformer):
         return JoltPoint(value)
 
 
-class JoltNodeTransformer(JoltNodeTransformer):
+class JoltNodeTransformer(_JoltNodeTransformer):
     _supported_types = JoltNode,
 
     @staticmethod
@@ -132,7 +132,7 @@ class JoltNodeTransformer(JoltNodeTransformer):
         ]}
 
 
-class JoltRelationTransformer(JoltRelationTransformer):
+class JoltRelationTransformer(_JoltRelationTransformer):
     _supported_types = JoltRelationship,
 
     @classmethod
@@ -180,7 +180,7 @@ class JoltRelationTransformer(JoltRelationTransformer):
         ]}
 
 
-class JoltReverseRelationTransformer(JoltReverseRelationTransformer):
+class JoltReverseRelationTransformer(_JoltReverseRelationTransformer):
     sigil = "<-"
 
     @staticmethod
@@ -196,7 +196,7 @@ class JoltReverseRelationTransformer(JoltReverseRelationTransformer):
         return JoltRelationTransformer.decode_full(value, decode_cb)
 
 
-class JoltPathTransformer(JoltPathTransformer):
+class JoltPathTransformer(_JoltPathTransformer):
     _supported_types = JoltPath,
 
     @staticmethod
@@ -237,7 +237,7 @@ class JoltPathTransformer(JoltPathTransformer):
         return JoltPath(*path)
 
 
-class Codec(Codec):
+class Codec(_Codec):
     sigil_to_type = {
         cls.sigil: cls
         for cls in globals().values()
@@ -259,7 +259,7 @@ encode_full = Codec.encode_full
 
 
 __all__ = [
-    Codec,
+    _Codec,
     decode,
     encode_simple,
     encode_full,

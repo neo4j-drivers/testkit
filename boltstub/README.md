@@ -102,6 +102,8 @@ Client and server lines consist of three parts:
      Given some JOLT key `"T"`, you can append a `"vX"` giving `"TvX"`, where `X` is the version of PackStream you wish to overwrite.
      E.g., assume the specified Bolt version dictates PackStream version 123, then `{"Z": "1"}` would be encoded as integer in the way PackStream version 123 specifies.
      `{"Zv10": "1"}` would alter the encoding of that one element to follow PackStream version 10's specification.
+   * Jolt has been extended for vector types, e.g., `{"V": ["i8", "FF 00 12"]}`.  
+     The first string in the list is the inner type of the vector, the second the vector data (same syntax as for Jolt bytes).
 
 Example:
 ```

@@ -1,0 +1,16 @@
+!: BOLT 6.0
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN {"U": "RETURN $vec AS vec"} {"vec": #VECTOR#} {"{}": "*"}
+S: SUCCESS {"fields": ["vec"], "qid": 1}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+----
+    C: PULL {"n": {"Z": "*"}, "qid": 1}
+}}
+S: RECORD [#VECTOR#]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

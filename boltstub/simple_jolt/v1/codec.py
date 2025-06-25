@@ -243,19 +243,10 @@ class JoltBytesTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _decode_full(value, decode_cb):
-        if not (isinstance(value, str)
-                or (isinstance(value, list)
-                    and all(isinstance(b, int) and 0 <= b <= 255
-                            for b in value))):
-            raise JOLTValueError("Expected str or list of integers (0-255) "
-                                 'after sigil "#"')
-        if isinstance(value, str):
-            if not re.match(r"^([a-fA-F0-9]{2}\s*)*$", value):
-                raise JOLTValueError("Invalid hex encoded string for bytes %s"
-                                     % value)
-            return bytes.fromhex(value)
-        else:
-            return bytes(value)
+        try:
+            return parse_bytes(value)
+        except ValueError as e:
+            raise JOLTValueError(f'{e} after sigil "#"') from None
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
@@ -263,14 +254,32 @@ class JoltBytesTransformer(JoltTypeTransformer):
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
-        assert isinstance(value, (bytes, bytearray))
-        if not human_readable:
-            return {cls.sigil: value.hex().upper()}
+        return {cls.sigil: encode_bytes(value, human_readable=human_readable)}
+
+
+def parse_bytes(value):
+    if not (isinstance(value, str)
+            or (isinstance(value, list)
+                and all(isinstance(b, int) and 0 <= b <= 255
+                        for b in value))):
+        raise ValueError("Expected str or list of integers (0-255)")
+    if isinstance(value, str):
+        if not re.match(r"^([a-fA-F0-9]{2}\s*)*$", value):
+            raise ValueError(f"Invalid hex encoded string for bytes {value}")
+        return bytes.fromhex(value)
+    else:
+        return bytes(value)
+
+
+def encode_bytes(value, human_readable=False):
+    assert isinstance(value, (bytes, bytearray))
+    if not human_readable:
+        return value.hex().upper()
+    else:
+        if sys.version_info >= (3, 8):
+            return value.hex(" ").upper()
         else:
-            if sys.version_info >= (3, 8):
-                return {cls.sigil: value.hex(" ").upper()}
-            else:
-                return {cls.sigil: " ".join("{:02X}".format(x) for x in value)}
+            return " ".join(f"{x:02X}" for x in value)
 
 
 class JoltDictTransformer(JoltTypeTransformer):
