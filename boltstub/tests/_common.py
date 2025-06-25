@@ -111,7 +111,7 @@ ALL_REQUESTS_PER_VERSION = tuple((
 
     *(
         ((5, minor), tag, name)
-        for minor in range(4, 8)
+        for minor in range(4, 9)
         for (tag, name) in (
             (b"\x01", "HELLO"),
             (b"\x6A", "LOGON"),
