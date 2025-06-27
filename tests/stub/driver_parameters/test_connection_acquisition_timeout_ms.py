@@ -276,8 +276,9 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._session = None
         self._driver.close()
         self._driver = None
-        self._router.done()
+        self._router.reset()
         self._server.done(ignore_never_started=True)
+        self.assertEqual(self._router.count_requests("ROUTE"), 1)
         self.assertEqual(self._server.count_responses("<ACCEPT>"), 0)
 
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
