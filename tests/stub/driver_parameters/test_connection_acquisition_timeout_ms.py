@@ -277,7 +277,8 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._driver.close()
         self._driver = None
         self._router.done()
-        self._server.done()
+        self._server.done(ignore_never_started=True)
+        self.assertEqual(self._server.count_responses("<ACCEPT>"), 0)
 
     @driver_feature(types.Feature.OPT_EAGER_TX_BEGIN)
     def test_should_regulate_the_time_for_acquiring_connections(self):
