@@ -233,13 +233,18 @@ def load(readable):
 
 
 def build_and_tag(tag_name, dockerfile_path, cwd=None,
-                  log_path=None, args=None):
+                  log_path=None, args=None, build_contexts=None):
     if args is None:
         args = {}
+    if build_contexts is None:
+        build_contexts = {}
     build_args = [e for k, v in args.items()
                   for e in ("--build-arg", f"{k}={v}")]
+    build_context_args = [e for k, v in build_contexts.items()
+                          for e in ("--build-context", f"{k}={v}")]
 
-    cmd = ["docker", "build", *build_args, "--tag", tag_name, dockerfile_path]
+    cmd = ["docker", "build", *build_args, *build_context_args,
+           "--tag", tag_name, dockerfile_path]
     print(cmd)
 
     if not log_path:

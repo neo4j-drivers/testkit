@@ -102,11 +102,7 @@ class StubServer:
         env = os.environ.copy()
         env["RUST_BACKTRACE"] = "1"
         self._process = subprocess.Popen(
-            [
-                str(ROOT_DIR / "boltstub" / "rusty-bolt-stub"), "-l",
-                # sys.executable, "-m", "boltstub", "-l",
-                "0.0.0.0:%d" % self.port, "-v", path
-            ],
+            ["boltstub", "-l", "0.0.0.0:%d" % self.port, "-v", path],
             **POPEN_EXTRA_KWARGS,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

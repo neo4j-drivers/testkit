@@ -8,7 +8,13 @@ def _ensure_image(testkit_path, branch_name, artifacts_path):
     # Construct Docker image name from branch name
     image_name = "runner:%s" % branch_name
     image_path = os.path.join(testkit_path, "runner_image")
-    docker.build_and_tag(image_name, image_path, log_path=artifacts_path)
+    boltstub_path = os.path.join(testkit_path, "boltstub")
+    docker.build_and_tag(
+        image_name,
+        image_path,
+        log_path=artifacts_path,
+        build_contexts={"boltstub": boltstub_path},
+    )
 
     return image_name
 
