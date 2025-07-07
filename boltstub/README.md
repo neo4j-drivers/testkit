@@ -1,3 +1,31 @@
+# Bolt Stub Server
+This folder contains the source code for a stubbed neo4j/bolt server that is programmed using [Stubscript](#bolt-stub-server-script-stubscript) as described below.
+It can be used for testing or benchmarking bolt drivers and applications using the [Bolt protocol](https://7687.org/).
+
+## Installation
+ * A Rust toolchain is required to build the stub server.
+   See Rust's documentation on how to install it: https://www.rust-lang.org/.
+ * Python 3.7 or later (including development headers) is required to run the stub server.
+   See Python's documentation on how to install it: https://www.python.org/.  
+   The Python version installed is only relevant for Python lines in the stub scripts (s. below).
+
+You can then install the stub server using `cargo`:
+
+```bash
+# inside this folder
+cargo install --path .
+```
+
+And run it using:
+
+```bash
+boltstub --help
+```
+
+If compilation or running the stub server fails complaining about Python linking issues, you might have to experiment with explicitly configuring the Python version to use during compilation.
+See [`PyO3`'s documentation](https://pyo3.rs/v0.24.0/building-and-distribution.html#configuring-the-python-version) on this topic.
+
+
 # Bolt Stub Server Script (Stubscript)
 This document describes the DSL (domain specific language) that is used to instruct the bolt stub server that is part of testkit.
 
