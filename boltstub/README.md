@@ -125,6 +125,8 @@ Client and server lines consist of three parts:
    E.g., `"RETURN 1 as n" {} {}`.
    Cf. [[DRV16] Jolt](https://docs.google.com/document/u/0/d/1QK4OcC0tZ08lKqVr-3-z8HpPY9jFeEh6zZPhMm15D-w/edit) (internal document).
    Note, that Stubscript took the liberty to support a simple representation of dictionaries (whenever unambiguous) for improved backwards compatibility, brevity, and readability of Stubscripts.
+   Further, Stubscript's JOLT implementation added support for vector types (non-existent in the original JOLT specification).
+   A full JOLT specification of Stubscript's implementation can be found [below](#jolt-in-stubscript).
    * By default, the Stubserver derives the appropriate PackStream version to use from the specified Bolt version.
      However, you can manually overwrite this by appending a version to the JOLT object keys.
      Given some JOLT key `"T"`, you can append a `"vX"` giving `"TvX"`, where `X` is the version of PackStream you wish to overwrite.
@@ -467,4 +469,210 @@ Example:
 **WRONG** example (this isn't a valid comment and will cause an error):
 ```
 C: REQUEST  # this will be tried to be parsed as request data fields
+```
+
+
+## JOLT in Stubscript
+JOLT is a JSON-like format that is used to encode bolt values in JSON.
+Types may have either or both
+ * a simple/native JSON representation
+ * a full/strict JSON representation
+
+### JOLT null
+**Simple**: `null`
+
+**Full**: *not supported*
+
+### JOLT integer
+*NOTE*:  
+Stubscript's JOLT implementation supports non-standard JSON numbers.
+It differentiates between integers and floats by checking whether the number contains a decimal point.
+This is also non-standard JOLT behavior.
+
+**Simple**: `1`, `-1`, `0`
+
+**Full**: `{"Z": "1"}`, `{"Z": "-1"}`, `{"Z": "0"}`
+
+### JOLT float
+*NOTE*:  
+Stubscript's JOLT implementation supports non-standard JSON numbers.
+It differentiates between integers and floats by checking whether the number contains a decimal point.
+This is also non-standard JOLT behavior.
+
+**Simple**: `1.2`, `-1.2`, `0.0`, `-0.0`
+
+**Full**: `{"Z": "1.2"}`, `{"Z": "-1.2"}`, `{"Z": "0.0"}`, `{"Z": "-0"}`, `{"Z": "NaN"}`
+
+### JOLT string
+**Simple**: "foo"
+
+**Full**: `{"U": "foo"}`
+
+### JOLT bytes
+**Simple**: *not supported*
+
+**Full**: `{"#": "FF 12"}`, `{"#": "ff 12"}`, `{"#": "fF12"}`, `{"#": [255, 10]}`
+
+### JOLT list
+**Simple**: `[1, 2, "foo"]`
+
+**Full**: `{"[]": [1, 2, {"U": "foo"}]}`
+
+### JOLT dictionary
+*NOTE*:  
+The simple/native representation of dictionaries is only supported if the keys are unambiguous and don't make the JSON object look like a JOLT type in full/strict representation.  
+This is non-standard JOLT behavior.
+
+**Simple**: `{"foo": "bar", "baz": 1}`
+
+**Full**: `{"{}": {"foo": "bar", "baz": {"Z": "1"}}}`
+
+### JOLT temporal types
+All strings follow the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard.
+
+**Simple**: **not supported**
+
+**Full**:
+```json lines
+{"date": {"T": "2002-04-16"}}
+{"time": {"T": "12:50:35.556+01:00"}}
+{"localTime": {"T": "12:50:35.556"}}
+{"dateTime": {"T": "2002-04-16T12:34:56.556+01:00"}}
+{"dateTimeZoneId": {"T": "2002-04-16T12:34:56.556+02:00[Europe/Stockholm]"}}
+{"localDateTime": {"T": "2002-04-16T12:34:56"}}
+{"duration": {"T": "P3Y6M4DT12H30M5S"}}
+```
+
+### JOLT spatial types
+**Simple**: **not supported**
+
+**Full**: `{"@": "SRID=4326;POINT(56.21 13.43)"}`
+
+### JOLT node
+*NOTE*:  
+Stubscript's JOLT implementation expects the legacy ids (integer type) to always be present and element ids (string type) to be present if the packstream version chosen is >= 2.
+In contrast, standard JOLT only encodes either the element ids or the legacy ids, never both.
+
+**Simple**: **not supported**
+
+**Full**:
+```json lines
+{"node packstream v1": {"()": [node_id, [node_labels], {properties}]}}
+{"node packstream v2+": {"()": [node_id, [node_labels], {properties}, node_element_id]}}
+```
+
+Example:
+```json lines
+{
+  "()": [
+    123,
+    ["LabelA", "LabelB"],
+    {"prop1": {"Z": "1"}, "prop2": {"U": "Hello"}},
+    "element_id_123"
+  ]
+}
+```
+
+### JOLT relationship
+*NOTE*:  
+Stubscript's JOLT implementation expects the legacy ids (integer type) to always be present and element ids (string type) to be present if the packstream version chosen is >= 2.
+In contrast, standard JOLT only encodes either the element ids or the legacy ids, never both.
+
+**Simple**: **not supported**
+
+**Full**:
+```json lines
+{"forward/outbound relationship v1": {"->": [rel_id, start_node_id, rel_type, end_node_id, {properties}]}}
+{"backward/inbound relationship v1": {"<-": [rel_id, end_node_id, rel_type, start_node_id, {properties}]}}
+{"forward/outbound relationship v2+": {"->": [rel_id, start_node_id, rel_type, end_node_id, {properties}, rel_element_id, start_node_element_id, end_node_element_id]}}
+{"backward/inbound relationship v2+": {"<-": [rel_id, end_node_id, rel_type, start_node_id, {properties}, rel_element_id, end_node_element_id, start_node_element_id]}}
+```
+
+Example:
+```json lines
+{
+  "forward/outbound relationship v1": {
+    "->": [
+      123,
+      10,
+      "KNOWS",
+      20,
+      {"since": 1991, "prop2": true}
+    ]
+  }
+}
+{
+  "backward/inbound relationship v1": {
+    "<-": [
+      123,
+      20,
+      "KNOWS",
+      10,
+      {"since": 1991, "prop2": true}
+    ]
+  }
+}
+{
+  "forward/outbound relationship v2+": {
+    "->": [
+      123,
+      10,
+      "KNOWS",
+      20,
+      {"since": 1991, "prop2": true},
+      rel_element_id,
+      "foo-10",
+      "foo-20"
+    ]
+  }
+}
+{
+  "backward/inbound relationship v2+": {
+    "<-": [
+      123,
+      20,
+      "KNOWS",
+      10,
+      {"since": 1991, "prop2": true},
+      rel_element_id,
+      "foo-20",
+      "foo-10"
+    ]
+  }
+}
+```
+
+### JOLT path
+*NOTE*:  
+Stubscript's JOLT implementation expects the legacy ids (integer type) to always be present and element ids (string type) to be present if the packstream version chosen is >= 2.
+In contrast, standard JOLT only encodes either the element ids or the legacy ids, never both.
+
+**Simple**: **not supported**
+
+**Full**: `{"..": [{node_1}, {rel_1}, {node_2}, ..., {node_n}, {rel_n}, {node_n+1}]}`
+
+Example:
+```json lines
+{
+  "path packstream v1": {
+    "..": [
+      {"()": [101, ["LabelA"], {"prop1": {"Z": "1"}}]},
+      {"->": [201, 101, "KNOWS", 102, {"since": 1991}]},
+      {"()": [102, ["LabelB"], {"prop2": {"Z": "2"}}]},
+      {"<-": [203, 103, "LIKES", 102, {"since": 1991}]},
+      {"()": [103, ["LabelC"], {"prop3": {"Z": "3"}}]}
+    ]
+  }
+}
+{
+  "path packstream v2+": {
+    "..": [
+      {"()": [101, ["LabelA"], {"prop1": {"Z": "1"}}, "eid-101"]},
+      {"->": [201, 101, "KNOWS", 102, {"since": 1991}, "eid-201", "eid-101", "eid-102"]},
+      {"()": [102, ["LabelB"], {"prop2": {"Z": "2"}}, "eid-102"]},
+      {"<-": [203, 103, "LIKES", 102, {"since": 1991}, "eid-203", "eid-103", "eid-102"]},
+      {"()": [103, ["LabelC"], {"prop3": {"Z": "3"}}, "eid-103"]}
+    ]
+  }
+}
 ```
