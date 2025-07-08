@@ -32,3 +32,19 @@ repos:
     rev: 5.13.2
     hooks:
       - id: isort
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt
+        entry: cargo fmt --manifest-path boltstub/Cargo.toml --
+        language: system
+        types: [rust]
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --manifest-path boltstub/Cargo.toml --all-features --tests -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
