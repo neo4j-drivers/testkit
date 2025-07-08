@@ -88,7 +88,7 @@ impl<'a> JoltDateTime<'a> {
                             ],
                         }
                     }
-                    JoltVersion::V2 => {
+                    JoltVersion::V2 | JoltVersion::V3 => {
                         let date_time_utc = date_time.and_utc()
                             - TimeDelta::new(utc_offset_seconds.into(), 0).unwrap();
                         let seconds = date_time_utc.timestamp();
@@ -120,7 +120,7 @@ impl<'a> JoltDateTime<'a> {
                             ],
                         }
                     }
-                    JoltVersion::V2 => {
+                    JoltVersion::V2 | JoltVersion::V3  => {
                         let tz = FixedOffset::east_opt(utc_offset_seconds)
                             .expect("regex enforced offset in bounds");
                         let date_time = date_time.and_local_timezone(tz).unwrap();

@@ -8,6 +8,7 @@ mod path;
 mod point;
 mod relationship;
 mod time;
+mod vector;
 
 use std::fmt::{Debug, Display, Formatter};
 
@@ -27,6 +28,9 @@ use relationship::BoltRelationship;
 pub(crate) use relationship::JoltRelationship;
 use time::BoltTime;
 pub(crate) use time::JoltTime;
+use vector::BoltVector;
+pub(crate) use vector::JoltVector;
+pub(crate) use vector::JoltVectorType;
 
 use crate::bolt_version::JoltVersion;
 use crate::values::pack_stream_value::PackStreamStruct;
@@ -46,6 +50,7 @@ pub(crate) const TAG_POINT_3D: u8 = 0x59;
 pub(crate) const TAG_RELATIONSHIP: u8 = 0x52;
 pub(crate) const TAG_TIME: u8 = 0x54;
 pub(crate) const TAG_UNBOUND_RELATIONSHIP: u8 = 0x72;
+pub(crate) const TAG_VECTOR: u8 = 0x56;
 
 #[derive(Debug)]
 pub(crate) struct BoltStruct<'a> {
@@ -68,6 +73,7 @@ enum BoltStructType<'a> {
     Time(BoltTime<'a>),
     DateTime(BoltDateTime<'a>),
     Duration(BoltDuration),
+    Vector(BoltVector),
 }
 
 impl<'a> BoltStruct<'a> {
@@ -91,6 +97,7 @@ impl<'a> BoltStructType<'a> {
             .or_else(|| BoltTime::from_struct(value, jolt_version).map(Self::Time))
             .or_else(|| BoltDateTime::from_struct(value, jolt_version).map(Self::DateTime))
             .or_else(|| BoltDuration::from_struct(value, jolt_version).map(Self::Duration))
+            .or_else(|| BoltVector::from_struct(value, jolt_version).map(Self::Vector))
     }
 
     pub(crate) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
@@ -110,6 +117,7 @@ impl<'a> BoltStructType<'a> {
                     BoltStructType::Time(v) => v.jolt_fmt(self.jolt_version).fmt(f),
                     BoltStructType::DateTime(v) => v.jolt_fmt(self.jolt_version).fmt(f),
                     BoltStructType::Duration(v) => v.jolt_fmt(self.jolt_version).fmt(f),
+                    BoltStructType::Vector(v) => v.jolt_fmt(self.jolt_version).fmt(f),
                 }
             }
         }

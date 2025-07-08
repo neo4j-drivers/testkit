@@ -13,6 +13,7 @@ pub(crate) enum JoltSigil {
     RelationshipForward,
     RelationshipBackward,
     Path,
+    Vector,
 }
 
 impl JoltSigil {
@@ -31,6 +32,7 @@ impl JoltSigil {
             "->" => Self::RelationshipForward,
             "<-" => Self::RelationshipBackward,
             ".." => Self::Path,
+            "V" => Self::Vector,
             _ => return None,
         })
     }

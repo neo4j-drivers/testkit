@@ -676,3 +676,19 @@ Example:
   }
 }
 ```
+
+### JOLT vector
+*NOTE*:  
+Standard JOLT does not support vectors.
+
+**Simple**: **not supported**
+
+**Full**: `{"V": ["<inner type>", "<big endian hex data>"]}`
+
+Example:
+```json lines
+{"V": ["i8", "FF 00 12"]}
+{"V": ["f64", "FF 00 12 34 56 78 9A BC"]}
+{"V": ["i32", "FF 00 12 34"]}
+{"V": ["i16", "FF 00"]}
+```

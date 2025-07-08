@@ -47,7 +47,7 @@ impl JoltNode {
         let (i, properties) = next_json_field(&mut fields, "properties", i, "()", config)?;
         let (i, element_id) = match jolt_version {
             JoltVersion::V1 => (i, None),
-            JoltVersion::V2 => {
+            JoltVersion::V2 | JoltVersion::V3  => {
                 let (i, element_id) = next_json_field(&mut fields, "element id", i, "()", config)?;
                 (i, Some(element_id))
             }
@@ -120,7 +120,7 @@ impl<'a> BoltNode<'a> {
         let properties = next_pack_stream_field(&mut fields)?;
         let element_id = match jolt_version {
             JoltVersion::V1 => None,
-            JoltVersion::V2 => Some(next_pack_stream_field(&mut fields)?),
+            JoltVersion::V2 | JoltVersion::V3  => Some(next_pack_stream_field(&mut fields)?),
         };
 
         if !check_last_pack_stream_field(&mut fields) {

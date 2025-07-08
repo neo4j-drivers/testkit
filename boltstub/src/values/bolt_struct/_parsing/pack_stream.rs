@@ -31,6 +31,12 @@ impl<'a> ExtractableField<'a> for Vec<i64> {
     }
 }
 
+impl<'a> ExtractableField<'a> for &'a [u8] {
+    fn extract(field: &'a PackStreamValue) -> Option<Self> {
+        field.as_bytes().map(Vec::as_slice)
+    }
+}
+
 impl<'a> ExtractableField<'a> for i32 {
     fn extract(field: &'a PackStreamValue) -> Option<Self> {
         field.as_int().and_then(|i| i.try_into().ok())

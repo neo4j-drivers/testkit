@@ -124,6 +124,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
+name = "boltstub"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "chrono-tz",
+ "clap",
+ "fern",
+ "indexmap",
+ "indoc",
+ "itertools",
+ "log",
+ "nom",
+ "nom-span",
+ "pyo3",
+ "regex",
+ "rstest",
+ "serde",
+ "serde_json",
+ "termcolor",
+ "tokio",
+ "tokio-util",
+ "usize_cast",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -801,32 +827,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
 dependencies = [
  "semver",
-]
-
-[[package]]
-name = "rusty-bolt-stub"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "chrono-tz",
- "clap",
- "fern",
- "indexmap",
- "indoc",
- "itertools",
- "log",
- "nom",
- "nom-span",
- "pyo3",
- "regex",
- "rstest",
- "serde",
- "serde_json",
- "termcolor",
- "tokio",
- "tokio-util",
- "usize_cast",
 ]
 
 [[package]]

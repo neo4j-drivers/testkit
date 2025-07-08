@@ -27,6 +27,7 @@ pub enum BoltVersion {
     V5_6,
     V5_7,
     V5_8,
+    V6_0,
 }
 
 impl Display for BoltVersion {
@@ -64,6 +65,10 @@ impl BoltVersion {
                 8 => BoltVersion::V5_8,
                 _ => return None,
             },
+            (6, Some(x)) => match x {
+                0 => BoltVersion::V6_0,
+                _ => return None,
+            },
             _ => return None,
         })
     }
@@ -87,6 +92,7 @@ impl BoltVersion {
             BoltVersion::V5_6 => 5,
             BoltVersion::V5_7 => 5,
             BoltVersion::V5_8 => 5,
+            BoltVersion::V6_0 => 6,
         }
     }
 
@@ -109,6 +115,7 @@ impl BoltVersion {
             BoltVersion::V5_6 => 6,
             BoltVersion::V5_7 => 7,
             BoltVersion::V5_8 => 8,
+            BoltVersion::V6_0 => 0,
         }
     }
 
@@ -131,6 +138,7 @@ impl BoltVersion {
             BoltVersion::V5_6 => JoltVersion::V2,
             BoltVersion::V5_7 => JoltVersion::V2,
             BoltVersion::V5_8 => JoltVersion::V2,
+            BoltVersion::V6_0 => JoltVersion::V3,
         }
     }
 
@@ -161,6 +169,7 @@ impl BoltVersion {
             BoltVersion::V5_6 => 1,
             BoltVersion::V5_7 => 1,
             BoltVersion::V5_8 => 1,
+            BoltVersion::V6_0 => 1,
         }
     }
 
@@ -186,6 +195,7 @@ impl BoltVersion {
             BoltVersion::V5_6 => &NONE,
             BoltVersion::V5_7 => &NONE,
             BoltVersion::V5_8 => &NONE,
+            BoltVersion::V6_0 => &NONE,
         }
     }
 
@@ -322,6 +332,8 @@ impl BoltVersion {
             BoltVersion::V5_6 => "Neo4j/5.23.0",
             BoltVersion::V5_7 => "Neo4j/5.26.0",
             BoltVersion::V5_8 => "Neo4j/5.26.0",
+            // TODO: Finalize when Bolt 6.0 support has been released in the server.
+            BoltVersion::V6_0 => "Neo4j/2025.08.0",
         }
     }
 }
@@ -392,7 +404,11 @@ impl BoltCapabilities {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum JoltVersion {
     V1,
+    /// * Fixes temporal types' representation being ambiguous in V1.
+    /// * Adds element ids to nodes and relationships.
     V2,
+    /// * Adds support for vector types.
+    V3,
 }
 
 impl JoltVersion {
@@ -402,6 +418,7 @@ impl JoltVersion {
         Ok(match jolt_version {
             1 => Self::V1,
             2 => Self::V2,
+            3 => Self::V3,
             _ => return Err(format!("Unknown jolt version: {s}")),
         })
     }

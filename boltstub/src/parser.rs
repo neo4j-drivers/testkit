@@ -30,7 +30,8 @@ use crate::util::opt_res_ret;
 use crate::values::bolt_message::BoltMessage;
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltNode, JoltPath, JoltPoint, JoltRelationship,
-    JoltTime, TAG_DATE, TAG_DURATION, TAG_LOCAL_TIME, TAG_POINT_2D, TAG_POINT_3D, TAG_TIME,
+    JoltTime, JoltVector, JoltVectorType, TAG_DATE, TAG_DURATION, TAG_LOCAL_TIME, TAG_POINT_2D,
+    TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
 };
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
@@ -132,7 +133,7 @@ fn parse_config(bang_lines: &[BangLine]) -> Result<ActorConfig> {
                 let capabilities = match capabilities {
                     None => BoltCapabilities::default(),
                     Some((ctx_cap, cap)) => {
-                        let cap_bytes = str_bytes::str_to_bytes(cap)
+                        let cap_bytes = str_bytes::parse_stubscript_hex_string(cap)
                             .map_err(|e| ParseError::new_ctx(*ctx_cap, e.to_string()))?;
                         BoltCapabilities::from_bytes(cap_bytes)
                             .map_err(|e| ParseError::new_ctx(*ctx_cap, e.to_string()))?
@@ -163,7 +164,7 @@ fn parse_config(bang_lines: &[BangLine]) -> Result<ActorConfig> {
                     ));
                 }
 
-                let data = str_bytes::str_to_bytes(byte_str)
+                let data = str_bytes::parse_stubscript_hex_string(byte_str)
                     .map_err(|e| ParseError::new_ctx(*ctx_byte, e.to_string()))?;
                 handshake = Some(data);
             }
@@ -175,7 +176,7 @@ fn parse_config(bang_lines: &[BangLine]) -> Result<ActorConfig> {
                     ));
                 }
 
-                let data = str_bytes::str_to_bytes(byte_str)
+                let data = str_bytes::parse_stubscript_hex_string(byte_str)
                     .map_err(|e| ParseError::new_ctx(*ctx_byte, e.to_string()))?;
                 handshake_response = Some((*ctx, data));
             }
@@ -987,6 +988,10 @@ fn transcode_jolt_value(
             let bolt_path = JoltPath::parse(value, jolt_version, config)?;
             IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
         }
+        JoltSigil::Vector => {
+            let bolt_path = JoltVector::parse(value, jolt_version, config)?;
+            IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
+        }
     })
 }
 
@@ -1107,7 +1112,7 @@ fn check_server_action_hex_body(
             format!("Server action {action_name} requires a hex argument, found none"),
         ));
     };
-    str_bytes::str_to_bytes(body)
+    str_bytes::parse_stubscript_hex_string(body)
         .map_err(|e| ParseError::new_ctx(ctx, format!("Failed to parse hex argument: {e}")))
 }
 
@@ -1601,6 +1606,44 @@ fn build_jolt_validator(
                 If you meant to match a map, use `{fixed_syntax}` instead.",
             )));
         }
+        JoltSigil::Vector => {
+            if is_match_all(&expected) {
+                return Ok(IsJoltValidator::Yes(Box::new(|msg| {
+                    fn fail(msg: &PackStreamValue) -> anyhow::Result<()> {
+                        Err(anyhow!("Expected any vector struct found {msg:?}"))
+                    }
+
+                    match msg {
+                        PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
+                            match (tag, fields.as_slice()) {
+                                (
+                                    &TAG_VECTOR,
+                                    [PackStreamValue::Bytes(type_marker), PackStreamValue::Bytes(data)],
+                                ) => {
+                                    let [type_marker] = *type_marker.as_slice() else {
+                                        return fail(msg);
+                                    };
+                                    let Some(inner_type) =
+                                        JoltVectorType::from_packstream_marker(type_marker)
+                                    else {
+                                        return fail(msg);
+                                    };
+                                    if data.len() % inner_type.size() != 0 {
+                                        return fail(msg);
+                                    }
+                                    Ok(())
+                                }
+                                _ => fail(msg),
+                            }
+                        }
+                        _ => fail(msg),
+                    }
+                })));
+            }
+            let bolt_vector = JoltVector::parse(expected, jolt_version, config)?;
+            let expected_struct = bolt_vector.into_struct();
+            IsJoltValidator::Yes(build_struct_match_validator(expected_struct))
+        }
     })
 }
 
@@ -1658,52 +1701,7 @@ fn parse_jolt_bytes(expected: JsonValue) -> Result<Vec<u8>> {
 }
 
 fn parse_hex_string(s: &str) -> Result<Vec<u8>> {
-    if s.is_empty() {
-        return Ok(vec![]);
-    }
-    if s.chars()
-        .next()
-        .expect("checked for empty above")
-        .is_whitespace()
-    {
-        return Err(ParseError::new("Hex string may not start with whitespace"));
-    }
-    let mut result = Vec::new();
-    let mut start_offset = None;
-    let mut start_idx = None;
-    for (i, (offset, ch)) in s.char_indices().enumerate() {
-        if ch.is_whitespace() {
-            if start_offset.is_none() {
-                continue;
-            }
-            return Err(ParseError::new(format!(
-                "Hex sting contains unexpected whitespace {ch} (at {i}): \
-                whitespace may only occur between pairs of characters"
-            )));
-        }
-        if !ch.is_ascii_hexdigit() {
-            return Err(ParseError::new(format!(
-                "Hex sting contains invalid hex character {ch} (at {i})"
-            )));
-        }
-        let start_offset_val = *start_offset.get_or_insert(offset);
-        let start_idx_val = *start_idx.get_or_insert(i);
-        if i == start_idx_val + 1 {
-            result.push(
-                u8::from_str_radix(&s[start_offset_val..offset + ch.len_utf8()], 16)
-                    .expect("checked for valid hex u8 above"),
-            );
-            start_offset = None;
-            start_idx = None;
-        }
-    }
-    if let Some(start_offset) = start_offset {
-        return Err(ParseError::new(format!(
-            "Hex string has non-paired trailing character(s) {:?}",
-            &s[start_offset..]
-        )));
-    }
-    Ok(result)
+    str_bytes::parse_jolt_hex_string(s).map_err(|e| ParseError::new(format!("{e}")))
 }
 
 /// yes:
