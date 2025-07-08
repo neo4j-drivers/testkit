@@ -41,6 +41,7 @@ impl Display for BoltVersion {
 
 impl BoltVersion {
     pub fn match_valid_version(major: u8, minor: Option<u8>) -> Option<Self> {
+        #[expect(clippy::collapsible_match, reason = "improves readability")]
         Some(match (major, minor) {
             (1, None) | (1, Some(0)) => BoltVersion::V1,
             (2, None) | (2, Some(0)) => BoltVersion::V2,

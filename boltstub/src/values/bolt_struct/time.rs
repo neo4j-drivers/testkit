@@ -162,7 +162,7 @@ impl<'a> BoltTime<'a> {
         impl Display for JoltFormatter<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 f.write_str(r#"{"T": ""#)?;
-                self.this.jolt_fmt_innder(f)?;
+                self.this.jolt_fmt_inner(f)?;
                 f.write_str(r#""}"#)
             }
         }
@@ -170,7 +170,7 @@ impl<'a> BoltTime<'a> {
         JoltFormatter { this: self }
     }
 
-    pub(super) fn jolt_fmt_innder(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    pub(super) fn jolt_fmt_inner(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.time.format("%H:%M:%S%.f"), f)?;
         if let Some(utc_offset_seconds) = self.utc_offset_seconds {
             if utc_offset_seconds == 0 {
@@ -181,10 +181,10 @@ impl<'a> BoltTime<'a> {
                 let utc_offset_hours = utc_offset_seconds / (60 * 60);
                 let utc_offset_minutes = (utc_offset_hours % (60 * 60)) / 60;
                 let utc_offset_seconds = utc_offset_seconds % 60;
-                write!(f, "{sign}{:02}:{:02}", utc_offset_hours, utc_offset_minutes)?;
+                write!(f, "{sign}{utc_offset_hours:02}:{utc_offset_minutes:02}")?;
                 if utc_offset_seconds != 0 {
                     // not actually ISO compliant :/
-                    write!(f, ":{:02}", utc_offset_seconds)?;
+                    write!(f, ":{utc_offset_seconds:02}")?;
                 }
             }
         }

@@ -24,18 +24,12 @@ pub(crate) fn script_excerpt(script_name: &str, script: &str, ctx: Context) -> S
         }
         if line_num < start_line {
             // context before the excerpt
-            excerpt_lines.push(format!(
-                "  {line_num: >width$} {line}",
-                width = line_num_width
-            ));
+            excerpt_lines.push(format!("  {line_num: >line_num_width$} {line}"));
             continue;
         }
         if line_num <= end_line {
             // the excerpt
-            excerpt_lines.push(format!(
-                "> {line_num: >width$} {line}",
-                width = line_num_width
-            ));
+            excerpt_lines.push(format!("> {line_num: >line_num_width$} {line}"));
         }
         if line_num == start_line {
             let col = line[..line_offset].chars().count();
@@ -50,17 +44,14 @@ pub(crate) fn script_excerpt(script_name: &str, script: &str, ctx: Context) -> S
             continue;
         }
         // context after the excerpt
-        excerpt_lines.push(format!(
-            "  {line_num: >width$} {line}",
-            width = line_num_width
-        ));
+        excerpt_lines.push(format!("  {line_num: >line_num_width$} {line}"));
         if line_num >= end_line.saturating_add(CONTEXT_LINES) {
             // past context
             break;
         }
     }
     if end_line.saturating_add(CONTEXT_LINES) < line_num_max {
-        excerpt_lines.push(format!("  {: >width$} ...", "", width = line_num_width));
+        excerpt_lines.push(format!("  {: >line_num_width$} ...", ""));
     }
     let name_line = match column {
         None => {

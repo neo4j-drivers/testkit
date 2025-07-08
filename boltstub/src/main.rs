@@ -75,14 +75,13 @@ fn main_raw_error() -> Result<(), MainError> {
     let script_name = SCRIPT_NAME.get().unwrap();
     let script_text = with_exit_code(99, || {
         std::fs::read_to_string(script_name)
-            .with_context(|| format!("Failed to read script file: {}", script_name))
+            .with_context(|| format!("Failed to read script file: {script_name}"))
     })?;
     debug!(
-        "Read script file: {}\n\
+        "Read script file: {script_name}\n\
         ================================================================\n\
         {script_text}\n\
-        ================================================================",
-        script_name
+        ================================================================"
     );
     SCRIPT.get_or_init(move || script_text);
     let script = SCRIPT.get().unwrap();

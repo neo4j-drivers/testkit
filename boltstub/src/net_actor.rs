@@ -878,7 +878,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
             BlockWithState::Condition(state, _) => match state {
                 ConditionState::Init(state) => match state.choose_branch(script)? {
                     None => Ok(false),
-                    Some((_, block)) => Self::can_consume(&block, message, script),
+                    Some((_, block)) => Self::can_consume(block, message, script),
                 },
                 ConditionState::Chosen(_, block) => Self::can_consume(block, message, script),
                 ConditionState::Done => Ok(false),
@@ -887,8 +887,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 BranchState::Init => child_blocks
                     .iter()
                     .map(|b| Self::can_consume(b, message, script))
-                    .skip_while(|res| matches!(res, Ok(false)))
-                    .next()
+                    .find(|res| !matches!(res, Ok(false)))
                     .unwrap_or(Ok(false)),
                 BranchState::InBlock(i) => Self::can_consume(&child_blocks[*i], message, script),
                 BranchState::Done => Ok(false),
@@ -897,8 +896,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 && blocks
                     .iter()
                     .map(|b| Self::can_consume(b, message, script))
-                    .skip_while(|res| matches!(res, Ok(false)))
-                    .next()
+                    .find(|res| !matches!(res, Ok(false)))
                     .unwrap_or(Ok(false))?),
             BlockWithState::Optional(state, _, block) => match state {
                 OptionalState::Init | OptionalState::Started => {

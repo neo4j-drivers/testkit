@@ -58,7 +58,7 @@ impl JoltRelationship {
         let (i, properties) = next_json_field(&mut fields, "properties", i, "{}", config)?;
         let (i, element_id_ext) = match jolt_version {
             JoltVersion::V1 => (i, None),
-            JoltVersion::V2 | JoltVersion::V3  => {
+            JoltVersion::V2 | JoltVersion::V3 => {
                 let (i, element_id) = next_json_field(&mut fields, "element id", i, "{}", config)?;
                 let (i, start_node_element_id) =
                     next_json_field(&mut fields, "start node element id", i, "{}", config)?;
@@ -184,7 +184,7 @@ impl<'a> BoltRelationship<'a> {
         let element_id_ext = {
             match jolt_version {
                 JoltVersion::V1 => None,
-                JoltVersion::V2 | JoltVersion::V3  => {
+                JoltVersion::V2 | JoltVersion::V3 => {
                     let element_id = next_pack_stream_field(&mut fields)?;
                     let start_node_element_id = next_pack_stream_field(&mut fields)?;
                     let end_node_element_id = next_pack_stream_field(&mut fields)?;
@@ -268,7 +268,7 @@ impl<'a> BoltUnboundRelationship<'a> {
         let properties = next_pack_stream_field(&mut fields)?;
         let element_id = match jolt_version {
             JoltVersion::V1 => None,
-            JoltVersion::V2 | JoltVersion::V3  => Some(next_pack_stream_field(&mut fields)?),
+            JoltVersion::V2 | JoltVersion::V3 => Some(next_pack_stream_field(&mut fields)?),
         };
         if !check_last_pack_stream_field(&mut fields) {
             return None;

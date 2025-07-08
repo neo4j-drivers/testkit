@@ -94,7 +94,9 @@ impl JoltPath {
         }
         match jolt_version {
             JoltVersion::V1 => Self::encode_indices::<IdPathIndexer>(nodes, relationships),
-            JoltVersion::V2 | JoltVersion::V3  => Self::encode_indices::<ElementIdPathIndexer>(nodes, relationships),
+            JoltVersion::V2 | JoltVersion::V3 => {
+                Self::encode_indices::<ElementIdPathIndexer>(nodes, relationships)
+            }
         }
     }
 
@@ -229,7 +231,7 @@ impl JoltPath {
 
         let indices = relationship_indices
             .into_iter()
-            .interleave(node_indices.into_iter())
+            .interleave(node_indices)
             .collect();
 
         drop(nodes);

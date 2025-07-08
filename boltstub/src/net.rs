@@ -31,11 +31,11 @@ enum TakeNewConnection {
 impl Server {
     pub fn new(address: &str, server_script_cfg: &'static ActorScript<'static>) -> Self {
         let address = if address.starts_with(":") {
-            format!("localhost{}", address)
+            format!("localhost{address}")
         } else {
             address.to_string()
         };
-        debug!("Creating server listening on {}", address);
+        debug!("Creating server listening on {address}");
         Server {
             address,
             server_script_cfg,
@@ -174,7 +174,7 @@ impl Server {
 
         match conn {
             Ok((conn, addr)) => {
-                debug!("Server accepted connection from {}", addr);
+                debug!("Server accepted connection from {addr}");
                 self.ever_acted.store(true, atomic::Ordering::SeqCst);
                 conn.set_nodelay(true)?;
                 let script = self.server_script_cfg;

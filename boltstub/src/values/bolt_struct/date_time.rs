@@ -120,7 +120,7 @@ impl<'a> JoltDateTime<'a> {
                             ],
                         }
                     }
-                    JoltVersion::V2 | JoltVersion::V3  => {
+                    JoltVersion::V2 | JoltVersion::V3 => {
                         let tz = FixedOffset::east_opt(utc_offset_seconds)
                             .expect("regex enforced offset in bounds");
                         let date_time = date_time.and_local_timezone(tz).unwrap();
@@ -297,7 +297,7 @@ impl BoltDateTime<'_> {
                 f.write_str(r#"{"T": ""#)?;
                 self.this.date.repr_inner(f)?;
                 f.write_str("T")?;
-                self.this.time.jolt_fmt_innder(f)?;
+                self.this.time.jolt_fmt_inner(f)?;
                 f.write_str(r#""}"#)
             }
         }

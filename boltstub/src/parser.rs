@@ -151,7 +151,7 @@ fn parse_config(bang_lines: &[BangLine]) -> Result<ActorConfig> {
                 let version = u8::from_str(arg).map_err(|e| {
                     ParseError::new_ctx(
                         *ctx_arg,
-                        format!("Invalid handshake manifest version (expecting u8): {}", e),
+                        format!("Invalid handshake manifest version (expecting u8): {e}"),
                     )
                 })?;
                 handshake_manifest_version = Some((*ctx, version));
@@ -2236,7 +2236,7 @@ fn finalize_intermediate(block: IntermediateActorBlock) -> Result<ActorBlock> {
 }
 
 fn missing_leading_if(ctx: Context, block_name: &str) -> ParseError {
-    ParseError::new_ctx(ctx, format!("Missing leading IF for {}", block_name))
+    ParseError::new_ctx(ctx, format!("Missing leading IF for {block_name}"))
 }
 
 #[cfg(test)]
