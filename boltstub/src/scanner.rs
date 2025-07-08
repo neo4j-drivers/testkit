@@ -1186,14 +1186,16 @@ mod tests {
 
     #[rstest]
     #[case::cond_if("IF: foo == 10", Branch::If, Some("foo == 10"))]
-    #[case::cond_else_if("ELIF: baz == 20", Branch::ElseIf, Some("bay == 20"))]
+    #[case::cond_else_if("ELIF: baz == 20", Branch::ElseIf, Some("baz == 20"))]
     #[case::cond_else("ELSE:", Branch::Else, None)]
     fn test_conditions(
         #[case] input: &str,
         #[case] expected_branch: Branch,
         #[case] expected_condition: Option<&str>,
     ) {
-        let result = super::scan_block(wrap_input(input));
+        let empty_body = "{{\n# comment\n}}";
+        let input = format!("{input}\n{empty_body}");
+        let result = super::scan_block(wrap_input(&input));
         let (rem, block) = result.unwrap();
         let ScanBlock::ConditionPart(_, branch, condition, _) = block else {
             panic!("Expected ConditionPart, found {block:?}");
