@@ -12,7 +12,7 @@ use std::sync::{atomic, Arc};
 
 use anyhow::{anyhow, Context as AnyhowContext};
 use logging::{debug, error, info};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufStream};
 use tokio::net::TcpStream;
 use tokio::select;
 use tokio_util::sync::CancellationToken;
@@ -84,6 +84,7 @@ impl From<anyhow::Error> for NetActorError {
 mod private {
     pub(super) trait Sealed {}
     impl Sealed for tokio::net::TcpStream {}
+    impl Sealed for tokio::io::BufStream<tokio::net::TcpStream> {}
 }
 
 #[allow(private_bounds)]
@@ -94,6 +95,12 @@ pub trait Connection: AsyncRead + AsyncWrite + Unpin + private::Sealed {
 impl Connection for TcpStream {
     fn addresses(&self) -> io::Result<(SocketAddr, SocketAddr)> {
         Ok((self.peer_addr()?, self.local_addr()?))
+    }
+}
+
+impl Connection for BufStream<TcpStream> {
+    fn addresses(&self) -> io::Result<(SocketAddr, SocketAddr)> {
+        Ok((self.get_ref().peer_addr()?, self.get_ref().local_addr()?))
     }
 }
 

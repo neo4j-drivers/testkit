@@ -7,6 +7,7 @@ use std::sync::{atomic, Arc};
 use anyhow::{anyhow, Error, Result};
 use itertools::Itertools;
 use log::{debug, info};
+use tokio::io::BufStream;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::task::JoinSet;
@@ -177,6 +178,11 @@ impl Server {
                 debug!("Server accepted connection from {addr}");
                 self.ever_acted.store(true, atomic::Ordering::SeqCst);
                 conn.set_nodelay(true)?;
+                let conn = BufStream::with_capacity(
+                    8 * 1024, // 8 KiB read buffer
+                    8 * 1024, // 8 KiB write buffer
+                    conn,
+                );
                 let script = self.server_script_cfg;
                 let shutting_down = Arc::clone(&self.shutting_down);
                 let mut actor = NetActor::new(ct.child_token(), shutting_down, conn, script);
