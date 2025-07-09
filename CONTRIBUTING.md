@@ -13,6 +13,19 @@ Setting up the development environment:
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
+ * Compile and install the stubserver
+   ```bash
+   cargo install --locked --path boltstub
+   ```
+   *TIP*:  
+   When working on the stubserver, you can use `watchexec` to automatically
+   build and install it whenever you change the code:
+   ```bash
+   # only once, to install watchexec:
+   cargo install --locked watchexec-cli@2.3.2
+   # then, whenever you work on the stubserver:
+   watchexec -w boltstub -e rs cargo install --locked --path boltstub
+   ```
  * Install the pre-commit hook, that will do some code-format-checking.
    ```bash
    pre-commit install
