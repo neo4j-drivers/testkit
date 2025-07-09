@@ -1,6 +1,8 @@
 mod handshake;
 mod logging;
 
+use anyhow::{anyhow, Context as AnyhowContext};
+use logging::{debug, error, info};
 use std::borrow::Cow;
 use std::collections::HashSet;
 use std::error::Error;
@@ -9,9 +11,6 @@ use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::{atomic, Arc};
-
-use anyhow::{anyhow, Context as AnyhowContext};
-use logging::{debug, error, info};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufStream};
 use tokio::net::TcpStream;
 use tokio::select;
@@ -82,9 +81,12 @@ impl From<anyhow::Error> for NetActorError {
 }
 
 mod private {
+    use crate::web_socket_stream::WebSocketStream;
+
     pub(super) trait Sealed {}
     impl Sealed for tokio::net::TcpStream {}
     impl Sealed for tokio::io::BufStream<tokio::net::TcpStream> {}
+    impl<RW: Sealed> Sealed for WebSocketStream<RW> {}
 }
 
 #[allow(private_bounds)]

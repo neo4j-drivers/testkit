@@ -15,6 +15,7 @@ mod str_bytes;
 mod types;
 mod util;
 mod values;
+mod web_socket_stream;
 
 use std::fmt::Display;
 use std::io::Write;
