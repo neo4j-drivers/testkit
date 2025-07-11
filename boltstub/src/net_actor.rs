@@ -4,7 +4,7 @@ mod logging;
 use anyhow::{anyhow, Context as AnyhowContext};
 use logging::{debug, error, info};
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::future::Future;
@@ -220,21 +220,28 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 Err(e) => Err(e),
                 Ok(false) => self.try_consume(block).await,
                 Ok(true) => {
-                    debug!(self, "Taking state snapshot for auto bang handler");
-                    let snapshot = block.clone();
-                    let mut consume_res = self.try_consume(block).await;
-                    if let Ok(false) = consume_res {
-                        debug!(
-                            self,
-                            "No match in script found, falling back to auto bang handler"
-                        );
-                        consume_res = self.try_auto_bang_handler().await;
-                        if matches!(consume_res, Ok(true)) {
-                            debug!(self, "auto bang handler matched, restoring state");
-                            *block = snapshot;
+                    let can_consume = Self::peek_message(
+                        self.logging_ctx(),
+                        &self.ct,
+                        &mut self.conn,
+                        &mut self.peeked_message,
+                        self.script.config.bolt_version,
+                    )
+                    .await
+                    .and_then(|peeked_message| {
+                        Self::can_consume(block, peeked_message, &self.script.script)
+                    });
+                    match can_consume {
+                        Ok(true) => self.try_consume(block).await,
+                        Ok(false) => {
+                            debug!(
+                                self,
+                                "No match in script found, falling back to auto bang handler",
+                            );
+                            self.try_auto_bang_handler().await
                         }
+                        _ => can_consume,
                     }
-                    consume_res
                 }
             };
             match consume_res {
@@ -269,38 +276,33 @@ impl<'a, C: Connection> NetActor<'a, C> {
     /// bool indicates if a message could be consumed `true` or there was a script mismatch `false`
     async fn try_consume(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<bool> {
         match block {
-            BlockWithState::BlockList(state, ctx, blocks) => {
-                if state.current_block >= blocks.len() {
+            BlockWithState::BlockList(ctx, blocks, initial_size) => loop {
+                let Some(block) = blocks.front_mut() else {
+                    return Ok(false);
+                };
+                if Box::pin(self.try_consume(block)).await? {
+                    if block.done() {
+                        blocks.pop_front();
+                        debug!(
+                            self,
+                            "list child block done: moving block list ({ctx}) to \
+                                {}/{initial_size}",
+                            initial_size.saturating_sub(blocks.len()),
+                        );
+                    }
+                    return Ok(true);
+                }
+                if !block.can_skip() {
                     return Ok(false);
                 }
-                let blocks_len = blocks.len();
-                for block in blocks.iter_mut().skip(state.current_block) {
-                    if Box::pin(self.try_consume(block)).await? {
-                        if block.done() {
-                            state.current_block += 1;
-                            debug!(
-                                self,
-                                "list child block done: moving block list ({}) to {}/{blocks_len}",
-                                ctx,
-                                state.current_block + 1
-                            );
-                        }
-                        return Ok(true);
-                    }
-                    if !block.can_skip() {
-                        break;
-                    }
-                    state.current_block += 1;
-                    debug!(
-                        self,
-                        "list child block didn't match, but is skippable: \
-                        moving block list ({}) to {}/{blocks_len}",
-                        ctx,
-                        state.current_block + 1
-                    );
-                }
-                Ok(false)
-            }
+                blocks.pop_front();
+                debug!(
+                    self,
+                    "list child block didn't match, but is skippable: \
+                        moving block list ({ctx}) to {}/{initial_size}",
+                    initial_size.saturating_sub(blocks.len()),
+                );
+            },
             BlockWithState::ClientMessageValidate(state, ctx, validator) => match state.done {
                 true => Ok(false),
                 false => {
@@ -552,11 +554,10 @@ impl<'a, C: Connection> NetActor<'a, C> {
     /// Progresses the state even if the call fails.
     async fn server_action(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<()> {
         match block {
-            BlockWithState::BlockList(state, ctx, blocks) => {
-                let blocks_len = blocks.len();
+            BlockWithState::BlockList(ctx, blocks, initial_size) => {
                 let mut error = None;
                 loop {
-                    let Some(block) = blocks.get_mut(state.current_block) else {
+                    let Some(block) = blocks.front_mut() else {
                         break;
                     };
                     let res = Box::pin(self.server_action(block)).await;
@@ -566,12 +567,11 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     if !block.done() {
                         break;
                     }
-                    state.current_block += 1;
+                    blocks.pop_front();
                     debug!(
                         self,
-                        "list child block done: moving block list ({}) to {}/{blocks_len}",
-                        ctx,
-                        state.current_block + 1
+                        "list child block done: moving block list ({ctx}) to {}/{initial_size}",
+                        initial_size.saturating_sub(blocks.len()),
                     );
                 }
                 match error {
@@ -811,8 +811,8 @@ impl<'a, C: Connection> NetActor<'a, C> {
         res: &mut Vec<&'b dyn ClientMessageValidator>,
     ) -> anyhow::Result<()> {
         match block {
-            BlockWithState::BlockList(state, _, blocks) => {
-                for block in blocks.iter().skip(state.current_block) {
+            BlockWithState::BlockList(_, blocks, _) => {
+                for block in blocks.iter() {
                     self.current_verifiers(block, res)?;
                     if !block.can_skip() {
                         break;
@@ -899,8 +899,8 @@ impl<'a, C: Connection> NetActor<'a, C> {
         script: &Script,
     ) -> NetActorResult<bool> {
         match block {
-            BlockWithState::BlockList(state, _, blocks) => {
-                for block in blocks.iter().skip(state.current_block) {
+            BlockWithState::BlockList(_, blocks, _) => {
+                for block in blocks.iter() {
                     if Self::can_consume(block, message, script)? {
                         return Ok(true);
                     }
@@ -1200,7 +1200,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
 
 #[derive(Debug, Clone)]
 enum BlockWithState<'a> {
-    BlockList(ListState, Context, Vec<BlockWithState<'a>>),
+    BlockList(Context, VecDeque<BlockWithState<'a>>, usize),
     ClientMessageValidate(OneShotState, Context, &'a dyn ClientMessageValidator),
     ServerMessageSend(OneShotState, Context, &'a dyn ServerMessageSender),
     ServerActionLine(OneShotState, Context, &'a dyn ServerActionLine),
@@ -1216,7 +1216,7 @@ enum BlockWithState<'a> {
 
 /*
 match block {
-    BlockWithState::BlockList(state, ctx, blocks) => {},
+    BlockWithState::BlockList(ctx, blocks, initial_size) => {},
     BlockWithState::ClientMessageValidate(state, ctx, validator) => {},
     BlockWithState::ServerMessageSend(state, ctx, sender) => {},
     BlockWithState::Python(state, ctx, command) => {},
@@ -1233,8 +1233,8 @@ match block {
 impl BlockWithState<'_> {
     fn ensure_branched(&mut self, logging_ctx: LoggingCtx, script: &Script) -> NetActorResult<()> {
         match self {
-            BlockWithState::BlockList(state, _, blocks) => {
-                for block in blocks.iter_mut().skip(state.current_block) {
+            BlockWithState::BlockList(_, blocks, _) => {
+                for block in blocks.iter_mut() {
                     block.ensure_branched(logging_ctx, script)?;
                     if !(block.done() || block.can_skip()) {
                         break;
@@ -1294,11 +1294,6 @@ impl BlockWithState<'_> {
             BlockWithState::NoOp(_) => Ok(()),
         }
     }
-}
-
-#[derive(Debug, Default, Clone)]
-struct ListState {
-    current_block: usize,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -1377,11 +1372,9 @@ impl<'a> ConditionStateInit<'a> {
 impl<'a> BlockWithState<'a> {
     fn new(block: &'a ActorBlock) -> Self {
         match block {
-            ActorBlock::BlockList(ctx, blocks) => Self::BlockList(
-                Default::default(),
-                *ctx,
-                blocks.iter().map(Self::new).collect(),
-            ),
+            ActorBlock::BlockList(ctx, blocks) => {
+                Self::BlockList(*ctx, blocks.iter().map(Self::new).collect(), blocks.len())
+            }
             ActorBlock::ClientMessageValidate(ctx, validator) => {
                 Self::ClientMessageValidate(Default::default(), *ctx, validator.as_ref())
             }
@@ -1442,7 +1435,7 @@ impl<'a> BlockWithState<'a> {
 
     fn done(&self) -> bool {
         match self {
-            BlockWithState::BlockList(state, _, blocks) => state.current_block >= blocks.len(),
+            BlockWithState::BlockList(_, blocks, _) => blocks.is_empty(),
             BlockWithState::Condition(state, _) => match state {
                 ConditionState::Init(_) => {
                     panic!("Should have called `ensure_branched` before `done` {state:?}")
@@ -1471,9 +1464,7 @@ impl<'a> BlockWithState<'a> {
 
     fn can_skip(&self) -> bool {
         match self {
-            BlockWithState::BlockList(state, _, blocks) => {
-                blocks.iter().skip(state.current_block).all(Self::can_skip)
-            }
+            BlockWithState::BlockList(_, blocks, _) => blocks.iter().all(Self::can_skip),
             BlockWithState::Condition(state, _) => match state {
                 ConditionState::Init(_) => {
                     panic!("Should have called `ensure_branched` before `can_skip` {state:?}")
