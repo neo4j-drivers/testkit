@@ -216,11 +216,27 @@ impl<'a, C: Connection> NetActor<'a, C> {
             if block.done() {
                 break;
             }
-            let mut consume_res = self.try_consume(block).await;
-            if let Ok(false) = consume_res {
-                debug!(self, "No match in script found, trying auto bang handlers");
-                consume_res = self.try_auto_bang_handler().await;
-            }
+            let consume_res = match self.matches_bang_handler().await {
+                Err(e) => Err(e),
+                Ok(false) => self.try_consume(block).await,
+                Ok(true) => {
+                    debug!(self, "Taking state snapshot for auto bang handler");
+                    let snapshot = block.clone();
+                    let mut consume_res = self.try_consume(block).await;
+                    if let Ok(false) = consume_res {
+                        debug!(
+                            self,
+                            "No match in script found, falling back to auto bang handler"
+                        );
+                        consume_res = self.try_auto_bang_handler().await;
+                        if matches!(consume_res, Ok(true)) {
+                            debug!(self, "auto bang handler matched, restoring state");
+                            *block = snapshot;
+                        }
+                    }
+                    consume_res
+                }
+            };
             match consume_res {
                 Ok(true) => {}
                 Ok(false) => {
@@ -518,6 +534,19 @@ impl<'a, C: Connection> NetActor<'a, C> {
             .await
             .inspect_err(|err| info!(self, "Error sending message: {err}"))?;
         Ok(true)
+    }
+
+    async fn matches_bang_handler(&mut self) -> NetActorResult<bool> {
+        let peeked_message = Self::peek_message(
+            self.logging_ctx(),
+            &self.ct,
+            &mut self.conn,
+            &mut self.peeked_message,
+            self.script.config.bolt_version,
+        )
+        .await?;
+        let tag = peeked_message.tag;
+        Ok(self.script.config.auto_responses.contains_key(&tag))
     }
 
     /// Progresses the state even if the call fails.
