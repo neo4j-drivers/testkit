@@ -24,6 +24,9 @@ termcolor = "1.4.1"
 tokio = { version = "1.44.2", features = ["full"] }
 tokio-util = "0.7.14"
 usize_cast = "1.1.0"
+pin-project = "1.0.12"
+sha1 = "0.10.1"
+base64 = "0.22.1"
 
 [dev-dependencies]
 rstest = "0.25.0"

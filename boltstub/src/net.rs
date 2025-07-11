@@ -6,14 +6,14 @@ use std::sync::{atomic, Arc};
 
 use anyhow::{anyhow, Error, Result};
 use itertools::Itertools;
-use log::{debug, info};
+use log::{debug, info, trace};
 use tokio::io::BufStream;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
-use crate::net_actor::NetActor;
+use crate::net_actor::{Connection, NetActor};
 use crate::parser::ActorScript;
 use crate::web_socket_stream::WebSocketStream;
 
@@ -172,10 +172,9 @@ impl Server {
         handles: &mut JoinSet<Result<()>>,
     ) -> Result<TakeNewConnection> {
         let restarts = self.server_script_cfg.config.allow_restart;
-        let concurrent = self.server_script_cfg.config.allow_concurrent;
 
         match conn {
-            Ok((mut conn, addr)) => {
+            Ok((conn, addr)) => {
                 debug!("Server accepted connection from {addr}");
                 self.ever_acted.store(true, atomic::Ordering::SeqCst);
                 conn.set_nodelay(true)?;
@@ -188,58 +187,23 @@ impl Server {
                 let shutting_down = Arc::clone(&self.shutting_down);
 
                 if eval_http(conn.get_mut()).await {
-                    let conn = WebSocketStream::new(conn);
-                    let mut actor = NetActor::new(ct.child_token(), shutting_down, conn, script);
-                    let handler = async move {
-                        actor
-                            .run_client_connection()
-                            .await
-                            .inspect_err(|e| debug!("Async handler failed: {e:?}"))
-                    };
-                    if concurrent {
-                        handles.spawn(handler);
-                        debug!("Spawned new connection handler concurrently");
-                        return Ok(TakeNewConnection::Yes);
+                    debug!("Request looks like HTTP, switching to WebSocket");
+                    let conn = WebSocketStream::new(conn).await?;
+                    if let Some(res) = execute_actor(ct, shutting_down, conn, script, handles).await
+                    {
+                        return res;
                     }
-                    debug!("Spawning new connection handler serially");
-                    let res = handler.await;
-                    if restarts && res.is_err() {
-                        debug!(
-                            "Connection handler failed, storing error because restarting script"
-                        );
-                        handles.spawn(async move { res });
-                        return Ok(TakeNewConnection::Yes);
-                    }
-                    debug!("Connection handler completed");
                 } else {
-                    let mut actor = NetActor::new(ct.child_token(), shutting_down, conn, script);
-                    let handler = async move {
-                        actor
-                            .run_client_connection()
-                            .await
-                            .inspect_err(|e| debug!("Async handler failed: {e:?}"))
-                    };
-                    if concurrent {
-                        handles.spawn(handler);
-                        debug!("Spawned new connection handler concurrently");
-                        return Ok(TakeNewConnection::Yes);
+                    trace!("Non-WebSocket connection");
+                    if let Some(res) = execute_actor(ct, shutting_down, conn, script, handles).await
+                    {
+                        return res;
                     }
-                    debug!("Spawning new connection handler serially");
-                    let res = handler.await;
-                    if restarts && res.is_err() {
-                        debug!(
-                            "Connection handler failed, storing error because restarting script"
-                        );
-                        handles.spawn(async move { res });
-                        return Ok(TakeNewConnection::Yes);
-                    }
-                    debug!("Connection handler completed");
                 }
 
-                Ok(if restarts {
-                    TakeNewConnection::Yes
-                } else {
-                    TakeNewConnection::No
+                Ok(match restarts {
+                    true => TakeNewConnection::Yes,
+                    false => TakeNewConnection::No,
                 })
             }
             Err(inner) => {
@@ -251,13 +215,48 @@ impl Server {
 }
 
 async fn eval_http(p0: &mut TcpStream) -> bool {
-    let mut buf = [0u8; 4];
-    let Ok(_) = p0.peek(&mut buf).await else {
+    let mut buf = [0u8; 1024]; // 1 KiB buffer
+    let Ok(read) = p0.peek(&mut buf).await else {
         return false;
     };
+    let buf = &buf[..read];
+    let read_str = String::from_utf8_lossy(buf);
+    let read_str_trimmed = read_str.trim_start();
+    let first_line = read_str_trimmed.split("\r\n").next().unwrap();
+    first_line.starts_with("GET ") && first_line.contains("HTTP")
+}
 
-    let http = b"HTTP";
-    &buf == http
+async fn execute_actor(
+    ct: CancellationToken,
+    shutting_down: Arc<atomic::AtomicBool>,
+    conn: impl Connection + Send + Sync + 'static,
+    script: &'static ActorScript<'static>,
+    handles: &mut JoinSet<Result<()>>,
+) -> Option<Result<TakeNewConnection>> {
+    let restarts = script.config.allow_restart;
+    let concurrent = script.config.allow_concurrent;
+
+    let mut actor = NetActor::new(ct.child_token(), shutting_down, conn, script);
+    let handler = async move {
+        actor
+            .run_client_connection()
+            .await
+            .inspect_err(|e| debug!("Async handler failed: {e:?}"))
+    };
+    if concurrent {
+        handles.spawn(handler);
+        debug!("Spawned new connection handler concurrently");
+        return Some(Ok(TakeNewConnection::Yes));
+    }
+    debug!("Spawning new connection handler serially");
+    let res = handler.await;
+    if restarts && res.is_err() {
+        debug!("Connection handler failed, storing error because restarting script");
+        handles.spawn(async move { res });
+        return Some(Ok(TakeNewConnection::Yes));
+    }
+    debug!("Connection handler completed");
+    None
 }
 
 fn validate_results(results: &[Result<()>]) -> Result<()> {
