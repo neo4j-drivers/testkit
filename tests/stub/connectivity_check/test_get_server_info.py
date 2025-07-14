@@ -82,14 +82,6 @@ class TestGetServerInfo(TestkitTestCase):
     def _routing_driver(self, scripts=None):
         if scripts is None:
             scripts = {}
-        # import concurrent.futures
-        # with concurrent.futures.ThreadPoolExecutor() as executor:
-        #     futures = [
-        #         executor.submit(self._start_server, server, script)
-        #         for server, script in scripts.items()
-        #     ]
-        # for future in futures:
-        #     future.result()
         for server, script in scripts.items():
             self._start_server(server, script)
         driver = self._create_routing_driver()

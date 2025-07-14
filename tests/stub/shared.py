@@ -13,15 +13,12 @@ import subprocess
 import sys
 import tempfile
 import time
-from pathlib import Path
 from queue import (
     Empty,
     Queue,
 )
 from textwrap import wrap
 from threading import Thread
-
-ROOT_DIR = Path(__file__).absolute().parents[2]
 
 if platform.system() == "Windows":
     INTERRUPT = signal.CTRL_BREAK_EVENT
