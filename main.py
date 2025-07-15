@@ -96,29 +96,32 @@ def initialise_configurations(settings):
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
             # not officially supported versions
-            ("4.2",    True,        False,    "neo4j",  0),
-            ("4.3",    True,        False,    "neo4j",  0),
-            ("4.4",    True,        False,    "neo4j",  0),
+            ("4.2",       True,        False,    "neo4j",  0),
+            ("4.3",       True,        False,    "neo4j",  0),
+            ("4.4",       True,        False,    "neo4j",  0),
             # Selected 5.x versions
             # Oldest 5.x version (BOLT 5.0) would be 5.0.
             # However, that has no tag at dockerhub, so we use 5.1
             # https://github.com/neo4j/docker-neo4j/issues/391
-            ("5.1",    True,        True,     "neo4j",  0),
+            ("5.1",       True,        True,     "neo4j",  0),
             # Bolt 5.1
-            ("5.5",    True,        True,     "neo4j",  0),
+            ("5.5",       True,        True,     "neo4j",  0),
             # Bolt 5.2
-            ("5.7",    True,        True,     "neo4j",  0),
+            ("5.7",       True,        True,     "neo4j",  0),
             # Bolt 5.3
-            ("5.9",    True,        True,     "neo4j",  0),
+            ("5.9",       True,        True,     "neo4j",  0),
             # Bolt 5.4
-            ("5.13",   True,        True,     "neo4j",  0),
+            ("5.13",      True,        True,     "neo4j",  0),
             # Bolt 5.5 (skipped - no server released with support)
             # Bolt 5.6
-            ("5.23",   True,        True,     "neo4j",  0),
+            ("5.23",      True,        True,     "neo4j",  0),
             # Bolt 5.7 + 5.8
             # official backwards-compatibility
             # LTS version
-            ("5.26",   True,        True,     "neo4j",  0),
+            ("5.26",      True,        True,     "neo4j",  0),
+            # Bolt 6.0
+            # TODO: uncomment as soon as GA
+            # ("2025.07",   True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
