@@ -791,7 +791,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
             .auto_responses
             .values()
             .map(|handler| {
-                let line = handler.ctx.original_line(self.script.script.input);
+                let line = handler.ctx.original_source(self.script.script.input);
                 let line_number = handler.ctx.start_line_number;
                 format!("({line_number:4}) !: AUTO {line}")
             })
@@ -1219,6 +1219,7 @@ match block {
     BlockWithState::BlockList(ctx, blocks, initial_size) => {},
     BlockWithState::ClientMessageValidate(state, ctx, validator) => {},
     BlockWithState::ServerMessageSend(state, ctx, sender) => {},
+    BlockWithState::ServerActionLine(state, ctx, action) => {},
     BlockWithState::Python(state, ctx, command) => {},
     BlockWithState::Condition(state, ctx) => {},
     BlockWithState::Alt(state, ctx, blocks) => {},

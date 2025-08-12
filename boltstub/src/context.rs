@@ -23,7 +23,7 @@ impl Display for Context {
 
 impl ScriptLine for Context {
     fn line_repr<'a: 'c, 'b: 'c, 'c>(&'b self, script: &'a str) -> Option<&'c str> {
-        Some(self.original_line(script))
+        Some(self.original_source(script))
     }
 
     fn line_number(&self) -> Option<usize> {
@@ -41,25 +41,7 @@ impl Context {
         }
     }
 
-    pub fn original_line<'a>(&self, script: &'a str) -> &'a str {
-        // let mut to_start = self.start_line_number.saturating_sub(1);
-        // let mut to_end = self.end_line_number.saturating_sub(1);
-        //
-        // let mut current_offset = 0;
-        // let mut start = 0;
-        // let mut end = script.len();
-        // while let Some(i) = script.find("\n") {
-        //     if to_start == 0 {
-        //         start = current_offset;
-        //     }
-        //     if to_end == 0 {
-        //         end = current_offset + i;
-        //         break;
-        //     }
-        //     current_offset += i + "\n".len();
-        //     to_start = to_start.wrapping_sub(1);
-        //     to_end = to_end.wrapping_sub(1);
-        // }
+    pub fn original_source<'a>(&self, script: &'a str) -> &'a str {
         &script[self.start_byte..self.end_byte]
     }
 }

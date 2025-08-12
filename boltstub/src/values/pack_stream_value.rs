@@ -129,8 +129,6 @@ impl_value_from_into!(PackStreamValue::Bytes, &[u8]);
 
 impl_value_from_owned!(PackStreamValue::String, String);
 impl_value_from_owned!(PackStreamValue::Struct, PackStreamStruct);
-// impl_value_from_owned!(Value::List, Vec<Value>);
-// impl_value_from_owned!(Value::Map, HashMap<String, Value>);
 impl<T: Into<PackStreamValue>> From<IndexMap<String, T>> for PackStreamValue {
     fn from(value: IndexMap<String, T>) -> Self {
         PackStreamValue::Dict(value.into_iter().map(|(k, v)| (k, v.into())).collect())
@@ -530,8 +528,7 @@ impl<'a> PackStreamDecoder<'a> {
             }
             _ if high_nibble == TINY_STRUCT => self.read_struct((marker & 0x0F).into())?,
             _ => {
-                // raise ValueError("Unknown PackStream marker %02X" % marker)
-                return Err(anyhow!("Unknown PackStream marker {:02X}", marker));
+                return Err(anyhow!("Unknown PackStream marker {marker:02X}"));
             }
         })
     }

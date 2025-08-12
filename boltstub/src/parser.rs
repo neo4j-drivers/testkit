@@ -314,8 +314,6 @@ fn parse_config(bang_lines: &[BangLine]) -> Result<ActorConfig> {
 }
 
 fn parse_bolt_version(ctx: Context, s: &str) -> Result<((u8, u8), BoltVersion)> {
-    // let mut current_ctx = ctx;
-    // current_ctx.end_byte = current_ctx.start_byte;
     let mut current_start = 0;
     let mut segments = Vec::with_capacity(2);
     for (offset, char) in s.char_indices() {
@@ -745,7 +743,7 @@ impl ScriptLine for SenderBytes {
     fn line_repr<'a: 'c, 'b: 'c, 'c>(&'b self, script: &'a str) -> Option<&'c str> {
         match self {
             Self::Static { line, .. } => Some(match line {
-                SenderBytesLine::Ctx { ctx, .. } => ctx.original_line(script),
+                SenderBytesLine::Ctx { ctx, .. } => ctx.original_source(script),
                 SenderBytesLine::Repr(repr) => repr,
             }),
             Self::Dynamic { .. } => None,
@@ -1074,7 +1072,7 @@ struct ParsedServerAction {
 
 impl ScriptLine for ParsedServerAction {
     fn line_repr<'a: 'c, 'b: 'c, 'c>(&'b self, script: &'a str) -> Option<&'c str> {
-        Some(self.ctx.original_line(script))
+        Some(self.ctx.original_source(script))
     }
 
     fn line_number(&self) -> Option<usize> {
@@ -1152,7 +1150,7 @@ impl<T: Fn(&BoltMessage) -> anyhow::Result<()> + Send + Sync> Debug for Validato
 
 impl<T: Fn(&BoltMessage) -> anyhow::Result<()> + Send + Sync> ScriptLine for ValidatorImpl<T> {
     fn line_repr<'a: 'c, 'b: 'c, 'c>(&'b self, script: &'a str) -> Option<&'c str> {
-        Some(self.ctx.original_line(script))
+        Some(self.ctx.original_source(script))
     }
 
     fn line_number(&self) -> Option<usize> {
@@ -1418,7 +1416,6 @@ fn build_jolt_validator(
         };
     }
 
-    // https://docs.google.com/document/d/1QK4OcC0tZ08lKqVr-3-z8HpPY9jFeEh6zZPhMm15D-w/edit?tab=t.0
     if expected.len() != 1 {
         return Ok(IsJoltValidator::No(expected));
     }
@@ -2099,27 +2096,6 @@ fn is_action_block(block: &ActorBlock) -> bool {
         | ActorBlock::NoOp(..) => false,
     }
 }
-
-/*
-
-TODO: how should IFs work? Eager? What when nested inside alt blocks, etc.
-
-S: BAZ
-IF foo
-    S: BAZ2
-    C: FOO
-ELIF bar
-    C: BAR
-
-{{
-    IF foo
-        C: FOO
-----
-    IF bar
-        C: BAR
-}}
-
- */
 
 fn validate_non_action(block: &ActorBlock, context: Option<&str>) -> Result<()> {
     if is_action_block(block) {

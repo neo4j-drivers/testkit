@@ -409,18 +409,18 @@ are internally expanded to
 Whenever there is ambiguity in the path of the script, the first option (top to bottom) will be chosen.
 Furthermore, each block that might or might not be executed due to ambiguity must not start with a Server Block, neither can it start with another block that potentially starts with a Server Block.
 
-| Type of Block     | Inner Block List(s) can start with a Server/Python Block | Can be followed by a Server/Python Block |
-|-------------------|----------------------------------------------------------|------------------------------------------|
-| Block List        | ✅                                                        | Depends on the last inner block          |
-| Client Block      | —                                                        | ✅                                        |
-| Server Block      | —                                                        | ✅                                        |
-| Python Block      | —                                                        | ✅                                        |
-| Alternative Block | ❌                                                        | ✅                                        |
-| Optional Block    | ❌                                                        | ❌                                        |
-| Repeat 0 Block    | ❌                                                        | ❌                                        |
-| Repeat 1 Block    | ❌                                                        | ❌                                        |
-| Simple Block      | ✅                                                        | Depends on the last inner block          |
-| Conditional Block | ✅                                                        | If last inner block of each branch can   |
+| Type of Block     | Inner Block List(s) can start with a Server/Python Block | Can be followed by a Server/Python Block                           |
+|-------------------|----------------------------------------------------------|--------------------------------------------------------------------|
+| Block List        | ✅️                                                       | Depends on the last inner block                                    |
+| Client Block      | —                                                        | ✅️                                                                 |
+| Server Block      | —                                                        | ✅️                                                                 |
+| Python Block      | —                                                        | ✅️                                                                 |
+| Alternative Block | ❌️                                                       | ✅️                                                                 |
+| Optional Block    | ❌️                                                       | ❌️                                                                 |
+| Repeat 0 Block    | ❌️                                                       | ❌️                                                                 |
+| Repeat 1 Block    | ❌️                                                       | ❌️                                                                 |
+| Simple Block      | ✅️                                                       | Depends on the last inner block                                    |
+| Conditional Block | ✅️                                                       | If last inner block of each branch can and an `ELSE` branch exists |
 
 
 ## Whitespace

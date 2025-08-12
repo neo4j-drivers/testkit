@@ -79,8 +79,6 @@ struct ColoredLoggerGuard<'a> {
 
 impl ColoredLoggerGuard<'_> {
     fn write_rich_log_start(&mut self) -> io::Result<()> {
-        // self.stream.set_color(self.color_rich_wrap)?;
-        // self.stream.write_all("[".as_bytes())?;
         self.stream.reset()?;
         Ok(())
     }
