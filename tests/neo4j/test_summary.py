@@ -117,16 +117,14 @@ class TestSummary(TestkitTestCase):
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
 
-        max_server_protocol_version = get_server_info().max_protocol_version
-        common_protocol_versions = [
-            f.value.split(":")[-1] for f in self._driver_features
-            if (re.match(r"^BOLT_\d+_\d+$", f.name)
-                and f.value.split(":")[-1] <= max_server_protocol_version)
-        ]
+        common_protocol_versions = (
+            get_server_info().common_protocol_versions(self._driver_features)
+        )
         if not common_protocol_versions:
             self.skipTest("Driver does not support server version.")
         common_max_version = max(common_protocol_versions)
-        if common_max_version == "4.2":
+        common_max_version_srt = ".".join(map(str, common_max_version))
+        if common_max_version == (4, 2):
             # Both versions are equivalent. Since 4.2 was introduced before
             # having version ranges in the handshake, we allow drivers to
             # negotiate bolt 4.1 with 4.2 to be able to fit support for more
@@ -135,7 +133,7 @@ class TestSummary(TestkitTestCase):
                           ("4.2", "4.1"))
         else:
             self.assertEqual(summary.server_info.protocol_version,
-                             common_max_version)
+                             common_max_version_srt)
 
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
@@ -144,8 +142,8 @@ class TestSummary(TestkitTestCase):
         self.assertIsInstance(agent, str)
         server_info = get_server_info()
         if server_info.edition == "aura":
-            # for aura the agent string tends to be all over the place...
             self.assertTrue(agent.startswith("Neo4j/"))
+            # for aura the agent string tends to be all over the place...
         elif re.match(r"(\d+)\.dev", server_info.version):
             self.assertTrue(agent.startswith(
                 "Neo4j/" + server_info.version.split(".")[0]
@@ -190,9 +188,9 @@ class TestSummary(TestkitTestCase):
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
-        version = get_server_info().version
-        new_index_syntax = version >= "4"
-        new_constraint_syntax = version >= "4.4"
+        version = get_server_info().parsed_version()
+        new_index_syntax = version >= (4, 0)
+        new_constraint_syntax = version >= (4, 4)
 
         self._session = self._driver.session("w", database="system")
 
