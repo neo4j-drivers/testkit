@@ -9,23 +9,6 @@ Setting up the development environment:
    python3 -m pip install -Ur requirements.txt
    ```
    You have to repeat this step whenever a commit adds new dependencies.
- * Install Rust
-   ```bash
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-   ```
- * Compile and install the stubserver
-   ```bash
-   cargo install --locked --path boltstub
-   ```
-   *TIP*:  
-   When working on the stubserver, you can use `watchexec` to automatically
-   build and install it whenever you change the code:
-   ```bash
-   # only once, to install watchexec:
-   cargo install --locked watchexec-cli@2.3.2
-   # then, whenever you work on the stubserver:
-   watchexec -w boltstub -e rs cargo install --locked --path boltstub
-   ```
  * Install the pre-commit hook, that will do some code-format-checking.
    ```bash
    pre-commit install
@@ -47,4 +30,23 @@ Setting up the development environment:
    pre-commit run --all-files
    # or
    pre-commit run --file path/to/a/file
+   ```
+
+When working with the Rust rewrite of the stubserver, you will also need to
+ * Install Rust
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+ * Compile and install the stubserver
+   ```bash
+   cargo install --locked --path boltstub_rs
+   ```
+   *TIP*:  
+   When working on the stubserver, you can use `watchexec` to automatically
+   build and install it whenever you change the code:
+   ```bash
+   # only once, to install watchexec:
+   cargo install --locked watchexec-cli@2.3.2
+   # then, whenever you work on the stubserver:
+   watchexec -w boltstub -e rs cargo install --locked --path boltstub_rs
    ```

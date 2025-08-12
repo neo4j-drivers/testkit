@@ -36,7 +36,7 @@ repos:
     hooks:
       - id: cargo-fmt
         name: cargo fmt
-        entry: cargo fmt --manifest-path boltstub/Cargo.toml --
+        entry: cargo fmt --manifest-path boltstub_rs/Cargo.toml --
         language: system
         types: [rust]
         pass_filenames: false
@@ -44,7 +44,7 @@ repos:
     hooks:
       - id: cargo-clippy
         name: cargo clippy
-        entry: cargo clippy --manifest-path boltstub/Cargo.toml --all-features --tests -- -D warnings
+        entry: cargo clippy --manifest-path boltstub_rs/Cargo.toml --all-features --tests -- -D warnings
         language: system
         types: [rust]
         pass_filenames: false

@@ -1,0 +1,98 @@
+%ignore WS
+%ignore COMMENT
+
+start : [NLS] (bang_line NLS)* block_list [NLS]
+
+block_list : block (NLS block)*
+
+?block : client_block
+       | auto_block
+       | auto_optional_block
+       | auto_loop0_block
+       | auto_loop1_block
+       | server_block
+       | python_block
+       | simple_block
+       | alternative_block
+       | parallel_block
+       | optional_block
+       | repeat_0_block
+       | repeat_1_block
+       | conditional_block
+
+simple_block : BLOCK_START_L NLS block_list NLS BLOCK_END_L
+alternative_block : ALT_START_L NLS (block_list NLS ALT_SEP_L NLS)+ block_list NLS ALT_END_L
+parallel_block : PAR_START_L NLS (block_list NLS PAR_SEP_L NLS)+ block_list NLS PAR_END_L
+optional_block : OPT_START_L NLS block_list NLS OPT_END_L
+repeat_0_block : LOOP0_START_L NLS block_list NLS LOOP0_END_L
+repeat_1_block : LOOP1_START_L NLS block_list NLS LOOP1_END_L
+conditional_block : if_line NLS block (NLS elif_line NLS block)* (NLS else_line NLS block)?
+
+BLOCK_START_L : "{{"
+BLOCK_END_L : "}}"
+ALT_START_L : "{{"
+ALT_SEP_L : "----"
+ALT_END_L : "}}"
+PAR_START_L : "{{"
+PAR_SEP_L : "++++"
+PAR_END_L : "}}"
+OPT_START_L : "{?"
+OPT_END_L : "?}"
+LOOP0_START_L : "{*"
+LOOP0_END_L : "*}"
+LOOP1_START_L : "{+"
+LOOP1_END_L : "+}"
+
+
+bang_line : BANG_MARKER WS* LINE
+client_block : explicit_client_line (NLS implicit_client_line)*
+explicit_client_line : CLIENT_MARKER WS* LINE  -> client_line
+implicit_client_line.-1: WS* LINE              -> client_line
+
+auto_block : explicit_auto_line
+explicit_auto_line : AUTO_MARKER WS* LINE    -> auto_line
+
+auto_optional_block : explicit_auto_optional_line
+explicit_auto_optional_line : AUTO_OPTIONAL_MARKER WS* LINE  -> auto_line
+
+auto_loop0_block : explicit_auto_loop0_line
+explicit_auto_loop0_line : AUTO_LOOP0_MARKER WS* LINE  -> auto_line
+
+auto_loop1_block : explicit_auto_loop1_line
+explicit_auto_loop1_line : AUTO_LOOP1_MARKER WS* LINE  -> auto_line
+
+server_block : explicit_server_line (NLS implicit_server_line)*
+explicit_server_line : SERVER_MARKER WS* LINE  -> server_line
+implicit_server_line.-1: WS* LINE              -> server_line
+
+python_block : explicit_python_line
+explicit_python_line : PYTHON_MARKER WS* LINE  -> python_line
+
+if_line : IF_MARKER WS* LINE
+elif_line : ELIF_MARKER WS* LINE
+else_line : ELSE_MARKER WS*
+
+
+WS : /[ \t\f\r]/+
+COMMENT: /^/m WS* /#[^\n]*/m [NLS]
+// this is ugly but needed to avoid unprocessable amounts of ambiguity in the grammar
+LINE : /(?!\s*(!:|S:|C:|A:|\?:|\*:|\+:|#|{{|----|\+\+\+\+|}}|{[?*+]|[?*+]\}))[^\n]+/
+
+
+BANG_MARKER : "!:"
+CLIENT_MARKER : "C:"
+AUTO_MARKER : "A:"
+AUTO_OPTIONAL_MARKER : "?:"
+AUTO_LOOP0_MARKER : "*:"
+AUTO_LOOP1_MARKER : "+:"
+SERVER_MARKER : "S:"
+PYTHON_MARKER : "PY:"
+IF_MARKER : "IF:"
+ELIF_MARKER : "ELIF:"
+ELSE_MARKER : "ELSE:"
+
+
+CR : /\r/
+LF : /\n/
+NL: (CR? LF)
+NLS: NL ([WS] NL)*

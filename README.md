@@ -43,6 +43,10 @@ Environment variables:
     The default socket timeout to use when waiting for the TestKit backend to
     respond. This can be any finite float value (in seconds).
     The default is `60.0` seconds.
+  * `TEST_RUSTY_STUB`  
+    *Temporary environment variable*.
+    Set to `true` to use the Rust rewrite of the bolt stub server instead of
+    the original Python implementation.
 
 ```console
 export TEST_DRIVER_NAME=go

@@ -1,3 +1,31 @@
+# Bolt Stub Server
+This folder contains the source code for a stubbed neo4j/bolt server that is programmed using [Stubscript](#bolt-stub-server-script-stubscript) as described below.
+It can be used for testing or benchmarking bolt drivers and applications using the [Bolt protocol](https://7687.org/).
+
+## Installation
+ * A Rust toolchain is required to build the stub server.
+   See Rust's documentation on how to install it: https://www.rust-lang.org/.
+ * Python 3.7 or later (including development headers) is required to run the stub server.
+   See Python's documentation on how to install it: https://www.python.org/.  
+   The Python version installed is only relevant for Python lines in the stub scripts (s. below).
+
+You can then install the stub server using `cargo`:
+
+```bash
+# inside this folder
+cargo install --path .
+```
+
+And run it using:
+
+```bash
+boltstub --help
+```
+
+If compilation or running the stub server fails complaining about Python linking issues, you might have to experiment with explicitly configuring the Python version to use during compilation.
+See [`PyO3`'s documentation](https://pyo3.rs/v0.24.0/building-and-distribution.html#configuring-the-python-version) on this topic.
+
+
 # Bolt Stub Server Script (Stubscript)
 This document describes the DSL (domain specific language) that is used to instruct the bolt stub server that is part of testkit.
 
@@ -97,6 +125,8 @@ Client and server lines consist of three parts:
    E.g., `"RETURN 1 as n" {} {}`.
    Cf. [[DRV16] Jolt](https://docs.google.com/document/u/0/d/1QK4OcC0tZ08lKqVr-3-z8HpPY9jFeEh6zZPhMm15D-w/edit) (internal document).
    Note, that Stubscript took the liberty to support a simple representation of dictionaries (whenever unambiguous) for improved backwards compatibility, brevity, and readability of Stubscripts.
+   Further, Stubscript's JOLT implementation added support for vector types (non-existent in the original JOLT specification).
+   A full JOLT specification of Stubscript's implementation can be found [below](#jolt-in-stubscript).
    * By default, the Stubserver derives the appropriate PackStream version to use from the specified Bolt version.
      However, you can manually overwrite this by appending a version to the JOLT object keys.
      Given some JOLT key `"T"`, you can append a `"vX"` giving `"TvX"`, where `X` is the version of PackStream you wish to overwrite.
@@ -379,18 +409,18 @@ are internally expanded to
 Whenever there is ambiguity in the path of the script, the first option (top to bottom) will be chosen.
 Furthermore, each block that might or might not be executed due to ambiguity must not start with a Server Block, neither can it start with another block that potentially starts with a Server Block.
 
-| Type of Block     | Inner Block List(s) can start with a Server/Python Block | Can be followed by a Server/Python Block |
-|-------------------|----------------------------------------------------------|------------------------------------------|
-| Block List        | ✅                                                        | Depends on the last inner block          |
-| Client Block      | —                                                        | ✅                                        |
-| Server Block      | —                                                        | ✅                                        |
-| Python Block      | —                                                        | ✅                                        |
-| Alternative Block | ❌                                                        | ✅                                        |
-| Optional Block    | ❌                                                        | ❌                                        |
-| Repeat 0 Block    | ❌                                                        | ❌                                        |
-| Repeat 1 Block    | ❌                                                        | ❌                                        |
-| Simple Block      | ✅                                                        | Depends on the last inner block          |
-| Conditional Block | ✅                                                        | If last inner block of each branch can   |
+| Type of Block     | Inner Block List(s) can start with a Server/Python Block | Can be followed by a Server/Python Block                           |
+|-------------------|----------------------------------------------------------|--------------------------------------------------------------------|
+| Block List        | ✅️                                                       | Depends on the last inner block                                    |
+| Client Block      | —                                                        | ✅️                                                                 |
+| Server Block      | —                                                        | ✅️                                                                 |
+| Python Block      | —                                                        | ✅️                                                                 |
+| Alternative Block | ❌️                                                       | ✅️                                                                 |
+| Optional Block    | ❌️                                                       | ❌️                                                                 |
+| Repeat 0 Block    | ❌️                                                       | ❌️                                                                 |
+| Repeat 1 Block    | ❌️                                                       | ❌️                                                                 |
+| Simple Block      | ✅️                                                       | Depends on the last inner block                                    |
+| Conditional Block | ✅️                                                       | If last inner block of each branch can and an `ELSE` branch exists |
 
 
 ## Whitespace
@@ -439,4 +469,226 @@ Example:
 **WRONG** example (this isn't a valid comment and will cause an error):
 ```
 C: REQUEST  # this will be tried to be parsed as request data fields
+```
+
+
+## JOLT in Stubscript
+JOLT is a JSON-like format that is used to encode bolt values in JSON.
+Types may have either or both
+ * a simple/native JSON representation
+ * a full/strict JSON representation
+
+### JOLT null
+**Simple**: `null`
+
+**Full**: *not supported*
+
+### JOLT integer
+*NOTE*:  
+Stubscript's JOLT implementation supports non-standard JSON numbers.
+It differentiates between integers and floats by checking whether the number contains a decimal point.
+This is also non-standard JOLT behavior.
+
+**Simple**: `1`, `-1`, `0`
+
+**Full**: `{"Z": "1"}`, `{"Z": "-1"}`, `{"Z": "0"}`
+
+### JOLT float
+*NOTE*:  
+Stubscript's JOLT implementation supports non-standard JSON numbers.
+It differentiates between integers and floats by checking whether the number contains a decimal point.
+This is also non-standard JOLT behavior.
+
+**Simple**: `1.2`, `-1.2`, `0.0`, `-0.0`
+
+**Full**: `{"Z": "1.2"}`, `{"Z": "-1.2"}`, `{"Z": "0.0"}`, `{"Z": "-0"}`, `{"Z": "NaN"}`
+
+### JOLT string
+**Simple**: "foo"
+
+**Full**: `{"U": "foo"}`
+
+### JOLT bytes
+**Simple**: *not supported*
+
+**Full**: `{"#": "FF 12"}`, `{"#": "ff 12"}`, `{"#": "fF12"}`, `{"#": [255, 10]}`
+
+### JOLT list
+**Simple**: `[1, 2, "foo"]`
+
+**Full**: `{"[]": [1, 2, {"U": "foo"}]}`
+
+### JOLT dictionary
+*NOTE*:  
+The simple/native representation of dictionaries is only supported if the keys are unambiguous and don't make the JSON object look like a JOLT type in full/strict representation.  
+This is non-standard JOLT behavior.
+
+**Simple**: `{"foo": "bar", "baz": 1}`
+
+**Full**: `{"{}": {"foo": "bar", "baz": {"Z": "1"}}}`
+
+### JOLT temporal types
+All strings follow the [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) standard.
+
+**Simple**: **not supported**
+
+**Full**:
+```json lines
+{"date": {"T": "2002-04-16"}}
+{"time": {"T": "12:50:35.556+01:00"}}
+{"localTime": {"T": "12:50:35.556"}}
+{"dateTime": {"T": "2002-04-16T12:34:56.556+01:00"}}
+{"dateTimeZoneId": {"T": "2002-04-16T12:34:56.556+02:00[Europe/Stockholm]"}}
+{"localDateTime": {"T": "2002-04-16T12:34:56"}}
+{"duration": {"T": "P3Y6M4DT12H30M5S"}}
+```
+
+### JOLT spatial types
+**Simple**: **not supported**
+
+**Full**: `{"@": "SRID=4326;POINT(56.21 13.43)"}`
+
+### JOLT node
+*NOTE*:  
+Stubscript's JOLT implementation expects the legacy ids (integer type) to always be present and element ids (string type) to be present if the packstream version chosen is >= 2.
+In contrast, standard JOLT only encodes either the element ids or the legacy ids, never both.
+
+**Simple**: **not supported**
+
+**Full**:
+```json lines
+{"node packstream v1": {"()": [node_id, [node_labels], {properties}]}}
+{"node packstream v2+": {"()": [node_id, [node_labels], {properties}, node_element_id]}}
+```
+
+Example:
+```json lines
+{
+  "()": [
+    123,
+    ["LabelA", "LabelB"],
+    {"prop1": {"Z": "1"}, "prop2": {"U": "Hello"}},
+    "element_id_123"
+  ]
+}
+```
+
+### JOLT relationship
+*NOTE*:  
+Stubscript's JOLT implementation expects the legacy ids (integer type) to always be present and element ids (string type) to be present if the packstream version chosen is >= 2.
+In contrast, standard JOLT only encodes either the element ids or the legacy ids, never both.
+
+**Simple**: **not supported**
+
+**Full**:
+```json lines
+{"forward/outbound relationship v1": {"->": [rel_id, start_node_id, rel_type, end_node_id, {properties}]}}
+{"backward/inbound relationship v1": {"<-": [rel_id, end_node_id, rel_type, start_node_id, {properties}]}}
+{"forward/outbound relationship v2+": {"->": [rel_id, start_node_id, rel_type, end_node_id, {properties}, rel_element_id, start_node_element_id, end_node_element_id]}}
+{"backward/inbound relationship v2+": {"<-": [rel_id, end_node_id, rel_type, start_node_id, {properties}, rel_element_id, end_node_element_id, start_node_element_id]}}
+```
+
+Example:
+```json lines
+{
+  "forward/outbound relationship v1": {
+    "->": [
+      123,
+      10,
+      "KNOWS",
+      20,
+      {"since": 1991, "prop2": true}
+    ]
+  }
+}
+{
+  "backward/inbound relationship v1": {
+    "<-": [
+      123,
+      20,
+      "KNOWS",
+      10,
+      {"since": 1991, "prop2": true}
+    ]
+  }
+}
+{
+  "forward/outbound relationship v2+": {
+    "->": [
+      123,
+      10,
+      "KNOWS",
+      20,
+      {"since": 1991, "prop2": true},
+      rel_element_id,
+      "foo-10",
+      "foo-20"
+    ]
+  }
+}
+{
+  "backward/inbound relationship v2+": {
+    "<-": [
+      123,
+      20,
+      "KNOWS",
+      10,
+      {"since": 1991, "prop2": true},
+      rel_element_id,
+      "foo-20",
+      "foo-10"
+    ]
+  }
+}
+```
+
+### JOLT path
+*NOTE*:  
+Stubscript's JOLT implementation expects the legacy ids (integer type) to always be present and element ids (string type) to be present if the packstream version chosen is >= 2.
+In contrast, standard JOLT only encodes either the element ids or the legacy ids, never both.
+
+**Simple**: **not supported**
+
+**Full**: `{"..": [{node_1}, {rel_1}, {node_2}, ..., {node_n}, {rel_n}, {node_n+1}]}`
+
+Example:
+```json lines
+{
+  "path packstream v1": {
+    "..": [
+      {"()": [101, ["LabelA"], {"prop1": {"Z": "1"}}]},
+      {"->": [201, 101, "KNOWS", 102, {"since": 1991}]},
+      {"()": [102, ["LabelB"], {"prop2": {"Z": "2"}}]},
+      {"<-": [203, 103, "LIKES", 102, {"since": 1991}]},
+      {"()": [103, ["LabelC"], {"prop3": {"Z": "3"}}]}
+    ]
+  }
+}
+{
+  "path packstream v2+": {
+    "..": [
+      {"()": [101, ["LabelA"], {"prop1": {"Z": "1"}}, "eid-101"]},
+      {"->": [201, 101, "KNOWS", 102, {"since": 1991}, "eid-201", "eid-101", "eid-102"]},
+      {"()": [102, ["LabelB"], {"prop2": {"Z": "2"}}, "eid-102"]},
+      {"<-": [203, 103, "LIKES", 102, {"since": 1991}, "eid-203", "eid-103", "eid-102"]},
+      {"()": [103, ["LabelC"], {"prop3": {"Z": "3"}}, "eid-103"]}
+    ]
+  }
+}
+```
+
+### JOLT vector
+*NOTE*:  
+Standard JOLT does not support vectors.
+
+**Simple**: **not supported**
+
+**Full**: `{"V": ["<inner type>", "<big endian hex data>"]}`
+
+Example:
+```json lines
+{"V": ["i8", "FF 00 12"]}
+{"V": ["f64", "FF 00 12 34 56 78 9A BC"]}
+{"V": ["i32", "FF 00 12 34"]}
+{"V": ["i16", "FF 00"]}
 ```

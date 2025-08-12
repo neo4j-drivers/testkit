@@ -29,6 +29,11 @@ else:
     INTERRUPT_EXIT_CODE = -signal.SIGINT
     POPEN_EXTRA_KWARGS = {}
 
+USE_RUST = (
+    os.environ.get("TEST_RUSTY_STUB", "").lower()
+    in ("true", "y", "yes", "1", "on")
+)
+
 
 class StubServerError(Exception):
     pass
@@ -100,10 +105,17 @@ class StubServer:
                 os.fsync(f)
             self._script_path = path
 
-        env = os.environ.copy()
-        env["RUST_BACKTRACE"] = "1"
+        if USE_RUST:
+            env = os.environ.copy()
+            env["RUST_BACKTRACE"] = "1"
+            cmd = ["boltstub"]
+        else:
+            env = None
+            cmd = [sys.executable, "-m", "boltstub"]
+
+        cmd += ["-l", "0.0.0.0:%d" % self.port, "-v", path]
         self._process = subprocess.Popen(
-            ["boltstub", "-l", "0.0.0.0:%d" % self.port, "-v", path],
+            cmd,
             **POPEN_EXTRA_KWARGS,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -125,7 +137,7 @@ class StubServer:
         while (self._process.poll() is None
                and time.time() - t0 < 10
                and "Listening\n" not in self._stdout_lines):
-            time.sleep(0.001)
+            time.sleep(0.001 if USE_RUST else 0.02)
             self._read_pipes()
 
         # Double check that the process started, a missing script would exit
@@ -202,13 +214,13 @@ class StubServer:
         self._clean_up()
 
     def _poll(self, timeout):
-        polls = int(timeout * 1000)
+        polls = int(timeout * (1000 if USE_RUST else 50))
         while True:
             self._process.poll()
             if self._process.returncode is None:
                 if polls > 0:
                     polls -= 1
-                    time.sleep(0.001)
+                    time.sleep(0.001 if USE_RUST else 0.02)
                 else:
                     break
             else:
@@ -251,7 +263,11 @@ class StubServer:
             # be started.
             return
         try:
-            if self._interrupt():
+            if USE_RUST:
+                stopped = self._interrupt()
+            else:
+                stopped = self._poll(.1) or self._interrupt()
+            if stopped:
                 pass
             elif self._interrupt():
                 raise StubScriptNotFinishedError(
