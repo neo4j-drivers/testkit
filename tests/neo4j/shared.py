@@ -138,8 +138,8 @@ class ServerInfo:
     @property
     def max_protocol_version(self):
         version = self.parsed_version()
-        if version >= (2025, 7):
-            return 6, 0
+        # if version >= (2025, 8):
+        #     return 6, 0
         if version >= (5, 26):
             return 5, 8
         if version >= (5, 23):
