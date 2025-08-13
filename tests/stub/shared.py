@@ -449,3 +449,22 @@ class StubServer:
 scripts_path = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "scripts"
 )
+
+
+if USE_RUST:
+
+    def as_parsed_dict(data):
+        if not isinstance(data, dict):
+            raise TypeError("Expected a dict, got %s" % type(data).__name__)
+        if len(data) == 1 and "{}" in data:
+            data = data["{}"]
+        return data
+
+else:
+
+    def as_parsed_dict(data):
+        if not isinstance(data, dict):
+            raise TypeError(f"Expected a dict, got {type(data).__name__}")
+        if len(data) != 1 or "{}" not in data:
+            raise ValueError(f"Expected JOLT encoded map, got {data}")
+        return data["{}"]

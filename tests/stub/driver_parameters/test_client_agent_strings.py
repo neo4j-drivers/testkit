@@ -6,7 +6,10 @@ from contextlib import contextmanager
 import nutkit.protocol as types
 from nutkit.frontend import Driver
 from tests.shared import TestkitTestCase
-from tests.stub.shared import StubServer
+from tests.stub.shared import (
+    as_parsed_dict,
+    StubServer,
+)
 
 
 class _ClientAgentStringsTestBase(TestkitTestCase, abc.ABC):
@@ -105,8 +108,10 @@ class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
 
         hellos = self._server.get_requests("HELLO")
         assert len(hellos) == 1
-        hello_extra = json.loads(hellos[0].split(maxsplit=1)[1])
-        bolt_agent = hello_extra["bolt_agent"]
+        hello_extra = as_parsed_dict(
+            json.loads(hellos[0].split(maxsplit=1)[1])
+        )
+        bolt_agent = as_parsed_dict(hello_extra["bolt_agent"])
         self._assert_bolt_agent_product_conforms_format(bolt_agent["product"])
 
         self._server.reset()
@@ -114,9 +119,11 @@ class TestClientAgentStringsV5x3(_ClientAgentStringsTestBase):
 
         hellos = self._server.get_requests("HELLO")
         assert len(hellos) == 1
-        hello_extra = json.loads(hellos[0].split(maxsplit=1)[1])
+        hello_extra = as_parsed_dict(
+            json.loads(hellos[0].split(maxsplit=1)[1])
+        )
         # asserts user agent is does not affect bolt agent
-        assert bolt_agent == hello_extra["bolt_agent"]
+        assert bolt_agent == as_parsed_dict(hello_extra["bolt_agent"])
 
     @staticmethod
     def _assert_bolt_agent_product_conforms_format(bolt_agent_product):
