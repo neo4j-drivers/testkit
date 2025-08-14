@@ -25,21 +25,12 @@ impl JoltDuration {
         thread_local! {
             static DURATION_RE: LazyCell<Regex> = LazyCell::new(|| {
                 Regex::new(concat!(
-                    r"^P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)",
-                    r"(?:T(?:(-?\d+)H)?(?:(-?\d+)M)?(?:(-)?(\d+)(?:\.(\d{1,9}))?S)?)?"
+                    r"^P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)?",
+                    r"(?:T(?:(-?\d+)H)?(?:(-?\d+)M)?(?:((-)?\d+|\d*)(?:\.(\d+))?S)?)?$"
                 )).unwrap()
             });
         }
         let captures = DURATION_RE.with(|re| re.captures(s))?;
-        let years = match i64::from_str(&captures[1]) {
-            Ok(years) => years,
-            Err(e) => {
-                return Some(Err(ParseError::new(format!(
-                    "Failed to parse duration years {}: {e}",
-                    &captures[0]
-                ))))
-            }
-        };
 
         fn i64_capture(
             i: usize,
@@ -57,29 +48,33 @@ impl JoltDuration {
             })
         }
 
+        let years = opt_res_ret!(i64_capture(1, "years", &captures));
         let months = opt_res_ret!(i64_capture(2, "months", &captures));
         let days = opt_res_ret!(i64_capture(3, "days", &captures));
         let hours = opt_res_ret!(i64_capture(4, "hours", &captures));
         let minutes = opt_res_ret!(i64_capture(5, "minutes", &captures));
-        let seconds_sign = captures.get(6).map(|_| -1).unwrap_or(1);
-        let mut seconds = opt_res_ret!(i64_capture(6, "seconds", &captures)) * seconds_sign;
-        let mut nanos = captures
-            .get(7)
+        let seconds = opt_res_ret!(i64_capture(6, "seconds", &captures));
+        let seconds_sign = captures.get(7).map(|_| -1).unwrap_or(1);
+        let mut nanos = opt_res_ret!(captures
+            .get(8)
             .map(|m| {
-                // left align to fill in omitted decimal places
-                i64::from_str(&format!("{:<09}", m.as_str()))
-                    .expect("regex enforces nanos to be i64")
+                let padded = format!("{:0<9}", m.as_str());
+                if padded.len() > 9 {
+                    return Some(Err(ParseError::new(
+                        "Duration has too many sub-seconds digits \
+                        (only nanoseconds are allowed, up to 9 digits)",
+                    )));
+                }
+                Some(Ok(
+                    i64::from_str(&padded).expect("regex + length check enforce nanos to be i64")
+                ))
             })
-            .unwrap_or_default();
+            .unwrap_or(Some(Ok(0))));
         assert!(
             (0..=999_999_999).contains(&nanos),
             "regex enforces nanos to not overflow into seconds"
         );
-        if seconds_sign < 0 && nanos > 0 {
-            // sub-seconds being negative
-            seconds -= 1;
-            nanos = 1_000_000_000 - nanos;
-        }
+        nanos *= seconds_sign;
 
         let Some(months) = years
             .checked_mul(12)
@@ -92,7 +87,7 @@ impl JoltDuration {
         let Some(seconds) = hours
             .checked_mul(60)
             .and_then(|hours_as_minutes| minutes.checked_add(hours_as_minutes))
-            .and_then(|minutes| seconds.checked_add(minutes * 60))
+            .and_then(|minutes| seconds.checked_add(minutes.checked_mul(60)?))
         else {
             return Some(Err(ParseError::new(
                 "Duration seconds (together with hours and minutes) are overflowing",
@@ -206,5 +201,106 @@ impl BoltDuration {
         }
 
         JoltFormatter { this: self }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case("P12Y", Some(Ok((12 * 12, 0, 0, 0))))]
+    #[case("P13M", Some(Ok((13, 0, 0, 0))))]
+    #[case("P12345D", Some(Ok((0, 12345, 0, 0))))]
+    #[case("PT1234H", Some(Ok((0, 0, 1234 * 60 * 60, 0))))]
+    #[case("PT123456M", Some(Ok((0, 0, 123456 * 60, 0))))]
+    #[case("PT12345678S", Some(Ok((0, 0, 12345678, 0))))]
+    #[case("PT0.123456789S", Some(Ok((0, 0, 0, 123456789))))]
+    #[case("PT0.01S", Some(Ok((0, 0, 0, 10_000_000))))]
+    #[case("PT0.1000000S", Some(Ok((0, 0, 0, 100_000_000))))]
+    #[case("P-12Y", Some(Ok((-12 * 12, 0, 0, 0))))]
+    #[case("P-13M", Some(Ok((-13, 0, 0, 0))))]
+    #[case("P-12345D", Some(Ok((0, -12345, 0, 0))))]
+    #[case("PT-1234H", Some(Ok((0, 0, -1234 * 60 * 60, 0))))]
+    #[case("PT-123456M", Some(Ok((0, 0, -123456 * 60, 0))))]
+    #[case("PT-12345678S", Some(Ok((0, 0, -12345678, 0))))]
+    #[case("PT-0.123456789S", Some(Ok((0, 0, 0, -123456789))))]
+    #[case("PT-0.01S", Some(Ok((0, 0, 0, -10_000_000))))]
+    #[case("PT-0.1000000S", Some(Ok((0, 0, 0, -100_000_000))))]
+    #[case("PT", Some(Ok((0, 0, 0, 0))))]
+    #[case("P", Some(Ok((0, 0, 0, 0))))]
+    #[case("P12Y13M40DT10H70M80.1S", Some(Ok((12 * 12 + 13, 40, (10 * 60 + 70) * 60 + 80, 100_000_000))))]
+    #[case("P12Y-13M40DT-10H70M-80.01234567S", Some(Ok((12 * 12 - 13, 40, (-10 * 60 + 70) * 60 - 80, -12345670))))]
+    #[case("P12DT10H70M", Some(Ok((0, 12, (10 * 60 + 70) * 60, 0))))]
+    #[case("P12Y13M40DT10H70M80.0000000000S", Some(Err(())))] // too many nanos digits
+    #[case("P12Y13M40DT10H70.1M10S", None)] // invalid minutes format
+    #[case("P5W", None)] // unsupported: weeks component
+    #[case("P123", None)]
+    #[case("PT123", None)]
+    // years overflows months
+    #[case("P768614336404564650Y", Some(Ok((768614336404564650 * 12, 0, 0, 0))))]
+    #[case("P768614336404564651Y", Some(Err(())))]
+    #[case("P-768614336404564650Y", Some(Ok((-768614336404564650 * 12, 0, 0, 0))))]
+    #[case("P-768614336404564651Y", Some(Err(())))]
+    // months overflow
+    #[case("P9223372036854775807M", Some(Ok((9223372036854775807, 0, 0, 0))))]
+    #[case("P9223372036854775808M", Some(Err(())))]
+    #[case("P-9223372036854775808M", Some(Ok((-9223372036854775808, 0, 0, 0))))]
+    #[case("P-9223372036854775809M", Some(Err(())))]
+    // years * 12 + months overflows months
+    #[case("P1Y9223372036854775795M", Some(Ok((9223372036854775807, 0, 0, 0))))]
+    #[case("P1Y9223372036854775796M", Some(Err(())))]
+    #[case("P2Y9223372036854775795M", Some(Err(())))]
+    #[case("P-1Y-9223372036854775796M", Some(Ok((-9223372036854775808, 0, 0, 0))))]
+    #[case("P-1Y-9223372036854775797M", Some(Err(())))]
+    #[case("P-2Y-9223372036854775796M", Some(Err(())))]
+    // days overflow
+    #[case("P9223372036854775807D", Some(Ok((0, 9223372036854775807, 0, 0))))]
+    #[case("P9223372036854775808D", Some(Err(())))]
+    #[case("P-9223372036854775808D", Some(Ok((0, -9223372036854775808, 0, 0))))]
+    #[case("P-9223372036854775809D", Some(Err(())))]
+    // hours overflows seconds
+    #[case("PT2562047788015215H", Some(Ok((0, 0, 2562047788015215 * 60 * 60, 0))))]
+    #[case("PT2562047788015216H", Some(Err(())))]
+    #[case("PT-2562047788015215H", Some(Ok((0, 0, -2562047788015215 * 60 * 60, 0))))]
+    #[case("PT-2562047788015216H", Some(Err(())))]
+    // minutes overflows seconds
+    #[case("PT153722867280912930M", Some(Ok((0, 0, 153722867280912930 * 60, 0))))]
+    #[case("PT153722867280912931M", Some(Err(())))]
+    #[case("PT-153722867280912930M", Some(Ok((0, 0, -153722867280912930 * 60, 0))))]
+    #[case("PT-153722867280912931M", Some(Err(())))]
+    // seconds overflow
+    #[case("PT9223372036854775807S", Some(Ok((0, 0, 9223372036854775807, 0))))]
+    #[case("PT9223372036854775808S", Some(Err(())))]
+    #[case("PT-9223372036854775808S", Some(Ok((0, 0, -9223372036854775808, 0))))]
+    #[case("PT-9223372036854775809S", Some(Err(())))]
+    // hours + minutes + seconds overflow seconds
+    #[case("PT1H2M9223372036854772087S", Some(Ok((0, 0, 9223372036854775807, 0))))]
+    #[case("PT2H2M9223372036854772087S", Some(Err(())))]
+    #[case("PT1H3M9223372036854772087S", Some(Err(())))]
+    #[case("PT1H2M9223372036854772088S", Some(Err(())))]
+    #[case("PT-1H-2M-9223372036854772088S", Some(Ok((0, 0, -9223372036854775808, 0))))]
+    #[case("PT-2H-2M-9223372036854772088S", Some(Err(())))]
+    #[case("PT-1H-3M-9223372036854772088S", Some(Err(())))]
+    #[case("PT-1H-2M-9223372036854772089S", Some(Err(())))]
+    fn test_jolt_duration_parse(
+        #[case] input: &str,
+        #[case] expected: Option<Result<(i64, i64, i64, i64), ()>>,
+    ) {
+        let result = dbg!(JoltDuration::parse(dbg!(input)));
+        match (result, expected) {
+            (Some(Ok(parsed)), Some(Ok((months, days, seconds, nanos)))) => {
+                assert_eq!(parsed.months, months);
+                assert_eq!(parsed.days, days);
+                assert_eq!(parsed.seconds, seconds);
+                assert_eq!(parsed.nanos, nanos);
+            }
+            (None, None) => {}
+            (Some(Err(_)), Some(Err(_))) => {}
+            (result, expected) => panic!(
+                "Unexpected result for input: {input}\nExpected: {expected:?}, Got: {result:?}"
+            ),
+        }
     }
 }
