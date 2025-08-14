@@ -585,10 +585,13 @@ impl<'a> PackStreamDecoder<'a> {
     }
 
     fn read_byte(&mut self) -> Result<u8> {
-        let byte = *self
-            .bytes
-            .get(self.index)
-            .ok_or_else(|| anyhow!("Nothing to unpack"))?;
+        let byte = *self.bytes.get(self.index).ok_or_else(|| {
+            anyhow!(
+                "Unexpected end of stream at {} (index: {}, reading: 1)",
+                self.bytes.len(),
+                self.index,
+            )
+        })?;
         self.index += 1;
         Ok(byte)
     }
@@ -600,7 +603,11 @@ impl<'a> PackStreamDecoder<'a> {
                 self.index = to;
                 Ok(<[u8; N]>::try_from(b).expect("we know the slice has exactly N values"))
             }
-            None => Err(anyhow!("no me gusta")),
+            None => Err(anyhow!(
+                "Unexpected end of stream at {} (index: {}, reading: {N})",
+                self.bytes.len(),
+                self.index,
+            )),
         }
     }
 
