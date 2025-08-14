@@ -284,6 +284,11 @@ mod tests {
     #[case("PT-2H-2M-9223372036854772088S", Some(Err(())))]
     #[case("PT-1H-3M-9223372036854772088S", Some(Err(())))]
     #[case("PT-1H-2M-9223372036854772089S", Some(Err(())))]
+    // nanoseconds overflow
+    #[case("PT0.999999999S", Some(Ok((0, 0, 0, 999_999_999))))]
+    #[case("PT-0.999999999S", Some(Ok((0, 0, 0, -999_999_999))))]
+    #[case("PT0.1000000000S", Some(Err(())))]
+    #[case("PT-0.1000000000S", Some(Err(())))]
     fn test_jolt_duration_parse(
         #[case] input: &str,
         #[case] expected: Option<Result<(i64, i64, i64, i64), ()>>,
