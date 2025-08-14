@@ -3,6 +3,7 @@
 Uses environment variables for configuration:
 """
 
+
 import errno
 import os
 import platform
@@ -28,6 +29,11 @@ else:
     INTERRUPT_EXIT_CODE = -signal.SIGINT
     POPEN_EXTRA_KWARGS = {}
 
+USE_RUST = (
+    os.environ.get("TEST_RUSTY_STUB", "").lower()
+    in ("true", "y", "yes", "1", "on")
+)
+
 
 class StubServerError(Exception):
     pass
@@ -41,10 +47,14 @@ class StubScriptNotFinishedError(StubServerError):
     pass
 
 
+QUEUE_TERMINAL_VALUE = object()
+
+
 def _poll_pipe(pipe, queue):
     for line in iter(pipe.readline, ""):
         queue.put(line)
     pipe.close()
+    queue.put(QUEUE_TERMINAL_VALUE)
 
 
 class StubServer:
@@ -53,9 +63,9 @@ class StubServer:
         self.address = "%s:%d" % (self.host, port)
         self.port = port
         self._process = None
-        self._stdout_buffer = Queue()
+        self._stdout_queue = Queue()
         self._stdout_lines = []
-        self._stderr_buffer = Queue()
+        self._stderr_queue = Queue()
         self._stderr_lines = []
         self._pipes_closed = False
         self._script_path = None
@@ -65,9 +75,9 @@ class StubServer:
         if self._process:
             raise Exception("Stub server in use")
 
-        self._stdout_buffer = Queue()
+        self._stdout_queue = Queue()
         self._stdout_lines = []
-        self._stderr_buffer = Queue()
+        self._stderr_queue = Queue()
         self._stderr_lines = []
         self._pipes_closed = False
 
@@ -95,32 +105,40 @@ class StubServer:
                 os.fsync(f)
             self._script_path = path
 
+        if USE_RUST:
+            env = os.environ.copy()
+            env["RUST_BACKTRACE"] = "1"
+            cmd = ["boltstub"]
+        else:
+            env = None
+            cmd = [sys.executable, "-m", "boltstub"]
+
+        cmd += ["-l", "0.0.0.0:%d" % self.port, "-v", path]
         self._process = subprocess.Popen(
-            [
-                sys.executable, "-m", "boltstub", "-l",
-                "0.0.0.0:%d" % self.port, "-v", path
-            ],
+            cmd,
             **POPEN_EXTRA_KWARGS,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True,
-            encoding="utf-8"
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+            encoding="utf-8",
+            env=env,
         )
 
         Thread(target=_poll_pipe,
                daemon=True,
-               args=(self._process.stdout, self._stdout_buffer)).start()
+               args=(self._process.stdout, self._stdout_queue)).start()
         Thread(target=_poll_pipe,
                daemon=True,
-               args=(self._process.stderr, self._stderr_buffer)).start()
+               args=(self._process.stderr, self._stderr_queue)).start()
 
         # Wait until something is written to know it started, requires
-        polls = 100
+        t0 = time.time()
         self._read_pipes()
         while (self._process.poll() is None
-               and polls
+               and time.time() - t0 < 10
                and "Listening\n" not in self._stdout_lines):
-            time.sleep(0.1)
+            time.sleep(0.001 if USE_RUST else 0.02)
             self._read_pipes()
-            polls -= 1
 
         # Double check that the process started, a missing script would exit
         # process immediately
@@ -151,17 +169,23 @@ class StubServer:
         self._process = None
         self._rm_tmp_script()
 
-    def _read_pipes(self):
+    @staticmethod
+    def _read_queue_into(buffer, queue, read_all):
         while True:
             try:
-                self._stdout_lines.append(self._stdout_buffer.get(False))
+                value = queue.get(False)
+                if value is QUEUE_TERMINAL_VALUE:
+                    queue.put(QUEUE_TERMINAL_VALUE)
+                    break
+                buffer.append(value)
             except Empty:
+                if read_all:
+                    continue  # read until terminal value is reached
                 break
-        while True:
-            try:
-                self._stderr_lines.append(self._stderr_buffer.get(False))
-            except Empty:
-                break
+
+    def _read_pipes(self, /, read_all=False):
+        self._read_queue_into(self._stdout_lines, self._stdout_queue, read_all)
+        self._read_queue_into(self._stderr_lines, self._stderr_queue, read_all)
 
     def _dump(self):
         if self._last_rewritten_path:
@@ -184,20 +208,19 @@ class StubServer:
     def _kill(self):
         self._process.kill()
         self._process.wait()
+        self._read_pipes(read_all=True)
         if self._process.returncode > 0:
             self._dump()
-        else:
-            self._read_pipes()
         self._clean_up()
 
     def _poll(self, timeout):
-        polls = int(timeout * 50)
+        polls = int(timeout * (1000 if USE_RUST else 50))
         while True:
             self._process.poll()
             if self._process.returncode is None:
                 if polls > 0:
                     polls -= 1
-                    time.sleep(0.02)
+                    time.sleep(0.001 if USE_RUST else 0.02)
                 else:
                     break
             else:
@@ -240,7 +263,11 @@ class StubServer:
             # be started.
             return
         try:
-            if self._poll(.1) or self._interrupt():
+            if USE_RUST:
+                stopped = self._interrupt()
+            else:
+                stopped = self._poll(.1) or self._interrupt()
+            if stopped:
                 pass
             elif self._interrupt():
                 raise StubScriptNotFinishedError(
@@ -264,7 +291,7 @@ class StubServer:
             self._dump()
             raise
         finally:
-            self._read_pipes()
+            self._read_pipes(read_all=True)
             self._clean_up()
 
     def reset(self):
@@ -309,7 +336,7 @@ class StubServer:
             return 0,
         assert len(handshakes) == 1
         handshake = handshakes[0][len(handshake_prefix):]
-        handshake = re.sub(r"\s", "", handshake)
+        handshake = re.sub(r"\s|0x", "", handshake)
         if handshake[:8].upper() == "000001FF":
             # handshake v2
             handshakes = self.get_requests(handshake_prefix)
@@ -317,7 +344,7 @@ class StubServer:
                 return 0,
             assert len(handshakes) == 2
             handshake = handshakes[1][len(handshake_prefix):]
-            handshake = re.sub(r"\s", "", handshake)
+            handshake = re.sub(r"\s|0x", "", handshake)
         version = list(int(b, 16) for b in wrap(handshake, 2))[2:4]
         version.reverse()
         return tuple(version)
@@ -422,3 +449,22 @@ class StubServer:
 scripts_path = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "scripts"
 )
+
+
+if USE_RUST:
+
+    def as_parsed_dict(data):
+        if not isinstance(data, dict):
+            raise TypeError("Expected a dict, got %s" % type(data).__name__)
+        if len(data) == 1 and "{}" in data:
+            data = data["{}"]
+        return data
+
+else:
+
+    def as_parsed_dict(data):
+        if not isinstance(data, dict):
+            raise TypeError(f"Expected a dict, got {type(data).__name__}")
+        if len(data) != 1 or "{}" not in data:
+            raise ValueError(f"Expected JOLT encoded map, got {data}")
+        return data["{}"]

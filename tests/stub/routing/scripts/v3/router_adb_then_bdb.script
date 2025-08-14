@@ -17,5 +17,9 @@ S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
         PY: request += 1
         *: RESET
     }}
+    ELSE:
+    {{
+        *: RESET
+    }}
 *}
 ?: GOODBYE

@@ -8,7 +8,10 @@ from nutkit.frontend import (
     Neo4jBookmarkManagerConfig,
 )
 from tests.shared import TestkitTestCase
-from tests.stub.shared import StubServer
+from tests.stub.shared import (
+    as_parsed_dict,
+    StubServer,
+)
 
 
 class TestNeo4jBookmarkManager(TestkitTestCase):
@@ -848,7 +851,7 @@ class TestNeo4jBookmarkManager(TestkitTestCase):
             line.startswith(begin_prefix),
             "Line should start with begin"
         )
-        begin_properties = json.loads(line[len(begin_prefix):])["{}"]
+        begin_properties = as_parsed_dict(json.loads(line[len(begin_prefix):]))
         if not bookmarks:
             self.assertFalse(
                 "bookmarks" in begin_properties,
