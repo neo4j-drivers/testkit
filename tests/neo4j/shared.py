@@ -19,7 +19,12 @@ TEST_NEO4J_DEFAULT_DB  Default database name, default "neo4j"
 
 import os
 import re
+import traceback
 from functools import wraps
+from time import (
+    sleep,
+    time,
+)
 from warnings import warn
 
 from nutkit import protocol
@@ -303,10 +308,11 @@ class QueryBuilder:
         return " WAIT" if version >= (4, 2) else ""
 
     @staticmethod
-    def create_db(database, wait=True):
+    def create_db(database, if_not_exists=True, wait=True):
         version = get_server_info().parsed_version()
-        return "CREATE DATABASE {}{}".format(
+        return "CREATE DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
+            " IF NOT EXISTS" if if_not_exists else "",
             QueryBuilder._wait_clause(version) if wait else ""
         )
 
@@ -341,4 +347,27 @@ class QueryBuilder:
                 f"    WITH {imports}\n"
                 f"    {subquery}\n"
                 "}"
+            )
+
+
+def with_retries(work, *args, **kwargs):
+    t0 = None
+    t_last = time()
+    while True:
+        try:
+            return work(*args, **kwargs)
+        except protocol.DriverError as e:
+            if not e.retryable:
+                raise
+            if t0 is None:
+                t0 = time()
+            if time() - t0 > 30:
+                raise
+            to_sleep = 0.5 - (time() - t_last)
+            if to_sleep > 0:
+                sleep(to_sleep)
+            t_last = time()
+            warn(
+                f"Retrying due to retryable error: {traceback.format_exc()}",
+                stacklevel=1,
             )
