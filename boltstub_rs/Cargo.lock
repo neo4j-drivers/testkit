@@ -154,7 +154,7 @@ dependencies = [
  "itertools",
  "log",
  "nom",
- "nom-span",
+ "nom_locate",
  "pin-project",
  "pyo3",
  "regex",
@@ -566,10 +566,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "nom-span"
-version = "0.1.2"
+name = "nom_locate"
+version = "4.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddd6267b7510ca5169043ca65862e7efad0247dcfbb04c8db17d7e5650c41009"
+checksum = "1e3c83c053b0713da60c5b8de47fe8e494fe3ece5267b2f23090a07a053ba8f3"
 dependencies = [
  "bytecount",
  "memchr",

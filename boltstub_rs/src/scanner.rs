@@ -11,7 +11,7 @@ use nom::error::{context, ErrorKind, FromExternalError, ParseError};
 use nom::multi::{many1, many_till};
 use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::{AsChar, Compare, InputLength, InputTake, InputTakeAtPosition, Offset, Parser, Slice};
-use nom_span::Spanned;
+use nom_locate::LocatedSpan;
 
 use crate::bang_line::BangLine;
 use crate::context::Context;
@@ -19,17 +19,20 @@ use crate::error::script_excerpt;
 use crate::types::{Branch, ScanBlock, Script};
 
 type PError<I> = nom::error::Error<I>;
-type Input<'a> = Spanned<&'a str>;
+type Input<'a> = LocatedSpan<&'a str>;
 type IResult<'a, O> = nom::IResult<Input<'a>, O, PError<Input<'a>>>;
 
 impl From<Input<'_>> for Context {
     fn from(value: Input) -> Self {
-        let start_line_number = value.line();
+        let start_line_number = value
+            .location_line()
+            .try_into()
+            .expect("Get at least a 32-bit architecture");
         Self {
             start_line_number,
-            end_line_number: start_line_number + max(1, value.data().lines().count()) - 1,
-            start_byte: value.byte_offset(),
-            end_byte: value.byte_offset() + value.len(),
+            end_line_number: start_line_number + max(1, (*value).lines().count()) - 1,
+            start_byte: value.location_offset(),
+            end_byte: value.location_offset() + value.len(),
         }
     }
 }
@@ -38,7 +41,7 @@ pub fn scan_script<'a>(
     input: &'a str,
     name: &'a str,
 ) -> Result<Script<'a>, nom::Err<PError<Input<'a>>>> {
-    let span = Spanned::new(input, true);
+    let span = LocatedSpan::new(input);
     let (span, (bangs, body)) = complete(terminated(
         pair(
             preceded(multispace0, context("Bang line headers", scan_bang_lines)),
@@ -787,7 +790,7 @@ where
 #[allow(clippy::too_many_arguments)]
 mod tests {
     use indoc::indoc;
-    use nom_span::Spanned;
+    use nom_locate::LocatedSpan;
     use rstest::rstest;
 
     use crate::bang_line::BangLine;
@@ -810,7 +813,7 @@ mod tests {
     }
 
     fn wrap_input(input: &str) -> super::Input<'_> {
-        Spanned::new(input, true)
+        LocatedSpan::new(input)
     }
 
     fn new_ctx(
