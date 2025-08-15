@@ -120,12 +120,14 @@ class Core:
     DISCOVERY_PORT = 5000
     TRANSACTION_PORT = 6000
     RAFT_PORT = 7000
+    SSR_PORT = 8000
 
     def __init__(self, index, artifacts_path, version):
         self.name = "core%d" % index
         self.discover = "%s:%d" % (self.name, Core.DISCOVERY_PORT + index)
         self.transaction = "%s:%d" % (self.name, Core.TRANSACTION_PORT + index)
         self.raft = "%s:%d" % (self.name, Core.RAFT_PORT + index)
+        self.ssr = "%s:%d" % (self.name, Core.SSR_PORT + index)
         self._index = index
         self._artifacts_path = join(artifacts_path, self.name)
         self._container = None
@@ -138,66 +140,122 @@ class Core:
 
     def start(self, image, initial_members, network):
         env_map = {
-            "NEO4J_dbms_mode": "CORE",
             "NEO4J_ACCEPT_LICENSE_AGREEMENT": "yes",
             "NEO4J_AUTH": f"{username}/{password}",
         }
+
+        # Allow password to be short for testing
         if self._version >= (5, 3) and len(password) < 8:
             env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
                 str(len(password))
+
+        # Configure networking
+        if self._version < (5, 0):
+            env_map.update({
+                "NEO4J_dbms_default__advertised__address": self.name,
+                "NEO4J_dbms_default__listen__address": "0.0.0.0",
+            })
+        else:
+            env_map.update({
+                "NEO4J_server_default__advertised__address": self.name,
+                "NEO4J_server_default__listen__address": "0.0.0.0",
+            })
+
+        # Configure bolt server
         if self._version < (5, 0):
             env_map.update({
                 "NEO4J_dbms_connector_bolt_advertised__address":
                     f"{self.name}:7687",
-                "NEO4J_causal__clustering_discovery__type":
-                    "LIST",
-                "NEO4J_causal__clustering_initial__discovery__members":
-                    ",".join(initial_members),
-                "NEO4J_causal__clustering_discovery__advertised__address":
-                    self.discover,
-                "NEO4J_causal__clustering_raft__advertised__address":
-                    self.raft,
-                "NEO4J_causal__clustering_transaction__advertised__address":
-                    self.transaction,
-                "NEO4J_causal__clustering_discovery__listen__address":
-                    "0.0.0.0:%d" % (Core.DISCOVERY_PORT + self._index),
-                "NEO4J_causal__clustering_raft__listen__address":
-                    "0.0.0.0:%d" % (Core.RAFT_PORT + self._index),
-                "NEO4J_causal__clustering_transaction__listen__address":
-                    "0.0.0.0:%d" % (Core.TRANSACTION_PORT + self._index),
             })
         else:
-            # Config options renamed in 5.0
             env_map.update({
                 "NEO4J_server_bolt_advertised__address":
                     f"{self.name}:7687",
-                "NEO4J_dbms_cluster_discovery_type":
-                    "LIST",
-                "NEO4J_dbms_cluster_discovery_initial__members":
+            })
+
+        # Configure clustering
+        if self._version < (5, 0):
+            env_map.update({
+                "NEO4J_dbms_mode": "CORE",
+                "NEO4J_causal__clustering_discovery__type": "LIST",
+                "NEO4J_causal__clustering_initial__discovery__members":
                     ",".join(initial_members),
-                "NEO4J_server_discovery_advertised__address":
-                    self.discover,
-                "NEO4J_server_cluster_raft_advertised__address":
-                    self.raft,
-                "NEO4J_server_cluster_advertised__address":
-                    self.transaction,
+                "NEO4J_causal__clustering_discovery__listen__address":
+                    ":%d" % (Core.DISCOVERY_PORT + self._index),
+                "NEO4J_causal__clustering_discovery__advertised__address":
+                    ":%d" % (Core.DISCOVERY_PORT + self._index),
+                "NEO4J_causal__clustering_raft__listen__address":
+                    ":%d" % (Core.RAFT_PORT + self._index),
+                "NEO4J_causal__clustering_raft__advertised__address":
+                    ":%d" % (Core.RAFT_PORT + self._index),
+                "NEO4J_causal__clustering_transaction__listen__address":
+                    ":%d" % (Core.TRANSACTION_PORT + self._index),
+                "NEO4J_causal__clustering_transaction__advertised__address":
+                    ":%d" % (Core.TRANSACTION_PORT + self._index),
+                "NEO4J_causal__clustering_minimum__core__cluster__size__at__formation":  # noqa: E501
+                    str(len(initial_members)),
+                "NEO4J_causal__clustering_minimum__core__cluster__size__at__runtime":  # noqa: E501
+                    str(len(initial_members)),
+            })
+        elif self._version < (2025, 0):
+            env_map.update({
+                "NEO4J_initial_server_mode__constraint": "PRIMARY",
+                "NEO4J_dbms_cluster_discovery_type": "LIST",
+                "NEO4J_dbms_cluster_discovery_endpoints":
+                    ",".join(initial_members),
                 "NEO4J_server_discovery_listen__address":
-                    "0.0.0.0:%d" % (Core.DISCOVERY_PORT + self._index),
+                    ":%d" % (Core.DISCOVERY_PORT + self._index),
+                "NEO4J_server_discovery_advertised__address":
+                    ":%d" % (Core.DISCOVERY_PORT + self._index),
                 "NEO4J_server_cluster_raft_listen__address":
-                    "0.0.0.0:%d" % (Core.RAFT_PORT + self._index),
+                    ":%d" % (Core.RAFT_PORT + self._index),
+                "NEO4J_server_cluster_raft_advertised__address":
+                    ":%d" % (Core.RAFT_PORT + self._index),
                 "NEO4J_server_cluster_listen__address":
-                    "0.0.0.0:%d" % (Core.TRANSACTION_PORT + self._index),
+                    ":%d" % (Core.TRANSACTION_PORT + self._index),
+                "NEO4J_server_cluster_advertised__address":
+                    ":%d" % (Core.TRANSACTION_PORT + self._index),
+                "NEO4J_dbms_cluster_minimum__initial__system__primaries__count":  # noqa: E501
+                    str(len(initial_members)),
                 "NEO4J_initial_dbms_default__primaries__count":
                     str(len(initial_members)),
             })
-            if self._version < (5, 16):
-                # Bug in server which can lead to the server SSRing a query
-                # to itself in an infinite loop.
-                # https://trello.com/c/NvCIKscB/1216-erroneous-auto-ssring
-                env_map.update({
-                    "NEO4J_dbms_cluster_raft_leader__transfer_balancing__strategy":  # noqa: E501
-                        "NO_BALANCING",  # noqa: E131
-                })
+        else:
+            env_map.update({
+                "NEO4J_initial_server_mode__constraint": "PRIMARY",
+                "NEO4J_dbms_cluster_discovery.resolver_type": "LIST",
+                "NEO4J_dbms_cluster_endpoints": ",".join(initial_members),
+                "NEO4J_server_cluster_raft_listen__address":
+                    ":%d" % (Core.RAFT_PORT + self._index),
+                "NEO4J_server_cluster_raft_advertised__address":
+                    ":%d" % (Core.RAFT_PORT + self._index),
+                "NEO4J_server_cluster_listen__address":
+                    ":%d" % (Core.DISCOVERY_PORT + self._index),
+                "NEO4J_server_cluster_advertised__address":
+                    ":%d" % (Core.DISCOVERY_PORT + self._index),
+                "NEO4J_dbms_cluster_minimum__initial__system__primaries__count":  # noqa: E501
+                    str(len(initial_members)),
+                "NEO4J_initial_dbms_default__primaries__count":
+                    str(len(initial_members)),
+            })
+
+        # Configure SSR
+        if (5, 0) <= self._version:
+            env_map.update({
+                "NEO4J_server_routing_listen__address":
+                    ":%d" % (Core.SSR_PORT + self._index),
+                "NEO4J_server_routing_advertised__address":
+                    ":%d" % (Core.SSR_PORT + self._index),
+            })
+
+        if (5, 0) <= self._version < (5, 16):
+            # Bug in server which can lead to the server SSRing a query
+            # to itself in an infinite loop.
+            # https://trello.com/c/NvCIKscB/1216-erroneous-auto-ssring
+            env_map.update({
+                "NEO4J_dbms_cluster_raft_leader__transfer_balancing__strategy":
+                    "NO_BALANCING",  # noqa: E131
+            })
 
         logs_path = join(self._artifacts_path, "logs")
         os.makedirs(logs_path, exist_ok=True)
