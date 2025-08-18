@@ -1,5 +1,4 @@
 use std::cmp::max;
-use std::ops::RangeTo;
 
 use anyhow::anyhow;
 use log::trace;
@@ -10,8 +9,8 @@ use nom::combinator::{complete, cond, consumed, eof, map, opt, peek, recognize, 
 use nom::error::{context, ErrorKind, FromExternalError, ParseError};
 use nom::multi::{many1, many_till};
 use nom::sequence::{delimited, pair, preceded, terminated};
-use nom::{AsChar, Compare, InputLength, InputTake, InputTakeAtPosition, Offset, Parser, Slice};
-use nom_span::Spanned;
+use nom::{AsChar, Input as _, Parser};
+use nom_locate::LocatedSpan;
 
 use crate::bang_line::BangLine;
 use crate::context::Context;
@@ -19,17 +18,20 @@ use crate::error::script_excerpt;
 use crate::types::{Branch, ScanBlock, Script};
 
 type PError<I> = nom::error::Error<I>;
-type Input<'a> = Spanned<&'a str>;
+type Input<'a> = LocatedSpan<&'a str>;
 type IResult<'a, O> = nom::IResult<Input<'a>, O, PError<Input<'a>>>;
 
 impl From<Input<'_>> for Context {
     fn from(value: Input) -> Self {
-        let start_line_number = value.line();
+        let start_line_number = value
+            .location_line()
+            .try_into()
+            .expect("Get at least a 32-bit architecture");
         Self {
             start_line_number,
-            end_line_number: start_line_number + max(1, value.data().lines().count()) - 1,
-            start_byte: value.byte_offset(),
-            end_byte: value.byte_offset() + value.len(),
+            end_line_number: start_line_number + max(1, (*value).lines().count()) - 1,
+            start_byte: value.location_offset(),
+            end_byte: value.location_offset() + value.len(),
         }
     }
 }
@@ -38,14 +40,15 @@ pub fn scan_script<'a>(
     input: &'a str,
     name: &'a str,
 ) -> Result<Script<'a>, nom::Err<PError<Input<'a>>>> {
-    let span = Spanned::new(input, true);
+    let span = LocatedSpan::new(input);
     let (span, (bangs, body)) = complete(terminated(
         pair(
             preceded(multispace0, context("Bang line headers", scan_bang_lines)),
             delimited(multispace0, opt(scan_body), multispace0),
         ),
         eof,
-    ))(span)?;
+    ))
+    .parse(span)?;
     if !span.is_empty() {
         return Err(nom::Err::Failure(PError::from_external_error(
             span,
@@ -133,7 +136,8 @@ fn scan_bang_lines(input: Input) -> IResult<Vec<BangLine>> {
             string_arg_bang_line("PY", BangLine::Python),
         ),
         context("comment bang line", comment(BangLine::Comment)),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 fn bolt_version_bang_line(input: Input) -> IResult<BangLine> {
@@ -164,7 +168,8 @@ fn bolt_version_bang_line(input: Input) -> IResult<BangLine> {
                 arg2.map(|arg| (arg.into(), String::from(*arg))),
             )
         },
-    )(input)
+    )
+    .parse(input)
 }
 
 fn auto_bang_line(input: Input) -> IResult<BangLine> {
@@ -177,13 +182,14 @@ fn auto_bang_line(input: Input) -> IResult<BangLine> {
             )),
         ),
         |(ctx, message)| BangLine::Auto(ctx.into(), (message.into(), String::from(*message))),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn string_arg_bang_line<'a>(
     expect: &'static str,
     mut res: impl FnMut(Context, (Context, String)) -> BangLine + 'static,
-) -> impl FnMut(Input<'a>) -> IResult<'a, BangLine> {
+) -> impl Parser<Input<'a>, Output = BangLine, Error = PError<Input<'a>>> {
     map(
         preceded(
             multispace0,
@@ -199,7 +205,7 @@ fn string_arg_bang_line<'a>(
 fn simple_bang_line<'a>(
     expect: &'static str,
     mut res: impl FnMut(Context) -> BangLine,
-) -> impl FnMut(Input<'a>) -> IResult<'a, BangLine> {
+) -> impl Parser<Input<'a>, Output = BangLine, Error = PError<Input<'a>>> {
     map(
         preceded(
             multispace0,
@@ -209,7 +215,9 @@ fn simple_bang_line<'a>(
     )
 }
 
-fn bang_line<'a>(expect: &'static str) -> impl FnMut(Input<'a>) -> IResult<'a, Input<'a>> {
+fn bang_line<'a>(
+    expect: &'static str,
+) -> impl Parser<Input<'a>, Output = Input<'a>, Error = PError<Input<'a>>> {
     preceded(tag("!:"), preceded(space1, tag(expect)))
 }
 
@@ -224,7 +232,7 @@ fn wrap_block_vec(context: Context, blocks: Vec<ScanBlock>) -> ScanBlock {
 }
 
 fn scan_body(input: Input) -> IResult<(Context, Vec<ScanBlock>)> {
-    let (input, (i, blocks)) = consumed(many1(scan_block))(input)?;
+    let (input, (i, blocks)) = consumed(many1(scan_block)).parse(input)?;
     Ok((input, (i.into(), blocks)))
 }
 
@@ -312,7 +320,8 @@ fn scan_block(input: Input) -> IResult<ScanBlock> {
                 ),
             ),
         )),
-    )(input)
+    )
+    .parse(input)
 }
 
 fn keyword(input: Input) -> IResult<()> {
@@ -335,7 +344,8 @@ fn keyword(input: Input) -> IResult<()> {
         tag("+:"),
         tag("?:"),
         tag("#"),
-    )))(input)
+    )))
+    .parse(input)
 }
 
 // ############
@@ -350,7 +360,8 @@ fn multi_message<'a, 'b>(
             message_tag,
             |ctx, msg_name, body| block(ctx, (msg_name.into(), String::from(*msg_name)), body),
             message_name,
-        ))(input)?;
+        ))
+        .parse(input)?;
         Ok((input, wrap_block_vec(ctx.into(), blocks)))
     }
 }
@@ -360,7 +371,7 @@ fn multi_message_or_action<'a, 'b>(
     mut block: impl FnMut(Context, (Context, String), Option<(Context, String)>) -> ScanBlock + 'b,
     mut action_block: impl FnMut(Context, (Context, String), Option<(Context, String)>) -> ScanBlock
         + 'b,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ScanBlock> + 'b {
+) -> impl Parser<Input<'a>, Output = ScanBlock, Error = PError<Input<'a>>> + 'b {
     move |input| {
         let (input, (ctx, blocks)) = consumed(multi_message_vec(
             message_tag,
@@ -377,7 +388,8 @@ fn multi_message_or_action<'a, 'b>(
                 ),
             },
             server_message_name,
-        ))(input)?;
+        ))
+        .parse(input)?;
         Ok((input, wrap_block_vec(ctx.into(), blocks)))
     }
 }
@@ -386,12 +398,13 @@ fn multi_message_vec<'a, 'b, 'c, N: 'a>(
     message_tag: Option<&'static str>,
     mut block: impl FnMut(Context, N, Option<(Context, String)>) -> ScanBlock + 'b,
     mut message_name_matcher: impl FnMut(Input<'a>) -> IResult<'a, N> + 'c,
-) -> impl FnMut(Input<'a>) -> IResult<'a, Vec<ScanBlock>> {
+) -> impl Parser<Input<'a>, Output = Vec<ScanBlock>, Error = PError<Input<'a>>> {
     move |input| {
         let (input, head) = many1(context(
             "explicit line",
             message(message_tag, &mut block, &mut message_name_matcher),
-        ))(input)?;
+        ))
+        .parse(input)?;
         let (input, (tail, _)) = context(
             "implicit line",
             map(
@@ -404,7 +417,8 @@ fn multi_message_vec<'a, 'b, 'c, N: 'a>(
                 )),
                 Option::unwrap_or_default,
             ),
-        )(input)?;
+        )
+        .parse(input)?;
         Ok((input, head.into_iter().chain(tail).collect()))
     }
 }
@@ -412,7 +426,7 @@ fn multi_message_vec<'a, 'b, 'c, N: 'a>(
 fn message_with_simple_name<'a, 'b>(
     tag: Option<&'static str>,
     mut block: impl FnMut(Context, (Context, String), Option<(Context, String)>) -> ScanBlock + 'b,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ScanBlock> {
+) -> impl Parser<Input<'a>, Output = ScanBlock, Error = PError<Input<'a>>> {
     message(
         tag,
         move |ctx, name, body| block(ctx, (name.into(), String::from(*name)), body),
@@ -424,7 +438,7 @@ fn message<'a, 'b, 'n, N: 'a>(
     tag: Option<&'static str>,
     mut block: impl (FnMut(Context, N, Option<(Context, String)>) -> ScanBlock) + 'b,
     message_name_matcher: impl FnMut(Input<'a>) -> IResult<'a, N> + 'n,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ScanBlock> {
+) -> impl Parser<Input<'a>, Output = ScanBlock, Error = PError<Input<'a>>> {
     map(
         terminated(
             preceded(
@@ -446,7 +460,7 @@ fn message<'a, 'b, 'n, N: 'a>(
 fn prefixed_line<'a, 'n, N: 'a>(
     prefix: Option<&'static str>,
     message_name_matcher: impl FnMut(Input<'a>) -> IResult<'a, N> + 'n,
-) -> impl FnMut(Input<'a>) -> IResult<'a, (N, Option<Input<'a>>)> {
+) -> impl Parser<Input<'a>, Output = (N, Option<Input<'a>>), Error = PError<Input<'a>>> {
     preceded(
         multispace0,
         preceded(
@@ -471,7 +485,7 @@ fn prefixed_line<'a, 'n, N: 'a>(
 fn message_simple_content<'a>(
     tag: Option<&'static str>,
     mut block: impl FnMut(Context, (Context, String)) -> ScanBlock,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ScanBlock> {
+) -> impl Parser<Input<'a>, Output = ScanBlock, Error = PError<Input<'a>>> {
     map(
         message_simple_content_matcher(tag),
         move |(ctx, content)| block(ctx.into(), (content.into(), String::from(*content))),
@@ -480,7 +494,7 @@ fn message_simple_content<'a>(
 
 fn message_simple_content_matcher<'a>(
     tag: Option<&'static str>,
-) -> impl FnMut(Input<'a>) -> IResult<'a, (Input<'a>, Input<'a>)> {
+) -> impl Parser<Input<'a>, Output = (Input<'a>, Input<'a>), Error = PError<Input<'a>>> {
     preceded(
         multispace0,
         terminated(
@@ -493,7 +507,7 @@ fn message_simple_content_matcher<'a>(
 fn message_simple_content_with_block<'a>(
     tag: Option<&'static str>,
     mut block: impl FnMut(Context, (Context, String), ScanBlock) -> ScanBlock,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ScanBlock> {
+) -> impl Parser<Input<'a>, Output = ScanBlock, Error = PError<Input<'a>>> {
     map(
         pair(message_simple_content_matcher(tag), scan_block),
         move |((ctx, content), subsequent)| {
@@ -508,7 +522,7 @@ fn message_simple_content_with_block<'a>(
 
 fn prefixed_line_simple_content<'a>(
     prefix: Option<&'static str>,
-) -> impl FnMut(Input<'a>) -> IResult<'a, Input<'a>> {
+) -> impl Parser<Input<'a>, Output = Input<'a>, Error = PError<Input<'a>>> {
     preceded(
         cond(
             prefix.is_some(),
@@ -521,7 +535,7 @@ fn prefixed_line_simple_content<'a>(
 fn message_empty_content_with_block<'a>(
     tag: Option<&'static str>,
     mut block: impl FnMut(Context, ScanBlock) -> ScanBlock,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ScanBlock> {
+) -> impl Parser<Input<'a>, Output = ScanBlock, Error = PError<Input<'a>>> {
     map(
         pair(
             preceded(
@@ -539,7 +553,7 @@ fn message_empty_content_with_block<'a>(
 
 fn prefixed_line_empty_content<'a>(
     prefix: Option<&'static str>,
-) -> impl FnMut(Input<'a>) -> IResult<'a, ()> {
+) -> impl Parser<Input<'a>, Output = (), Error = PError<Input<'a>>> {
     preceded(
         cond(
             prefix.is_some(),
@@ -551,7 +565,7 @@ fn prefixed_line_empty_content<'a>(
 
 fn comment<'a, T>(
     mut block: impl FnMut(Context) -> T + 'static,
-) -> impl FnMut(Input<'a>) -> IResult<'a, T> {
+) -> impl Parser<Input<'a>, Output = T, Error = PError<Input<'a>>> {
     map(
         preceded(
             multispace0,
@@ -570,7 +584,7 @@ fn comment<'a, T>(
 fn block<'a>(
     opening: &'static str,
     closing: &'static str,
-) -> impl FnMut(Input<'a>) -> IResult<'a, Vec<ScanBlock>> {
+) -> impl Parser<Input<'a>, Output = Vec<ScanBlock>, Error = PError<Input<'a>>> {
     preceded(
         multispace0,
         preceded(
@@ -588,7 +602,7 @@ fn multiblock<'a>(
     opening: &'static str,
     closing: &'static str,
     sep: &'static str,
-) -> impl FnMut(Input<'a>) -> IResult<'a, Vec<ScanBlock>> {
+) -> impl Parser<Input<'a>, Output = Vec<ScanBlock>, Error = PError<Input<'a>>> {
     preceded(
         delimited(multispace0, tag(opening), end_of_line),
         terminated(
@@ -628,7 +642,7 @@ fn auto_syntactic_sugar<'a>(
     mut wrapper_block: impl FnMut(Context, Box<ScanBlock>) -> ScanBlock,
 ) -> IResult<'a, ScanBlock> {
     let (input, (line_ctx, (message_name, args))) =
-        consumed(prefixed_line(Some(prefix), message_name))(input)?;
+        consumed(prefixed_line(Some(prefix), message_name)).parse(input)?;
     Ok((
         input,
         wrapper_block(
@@ -647,25 +661,20 @@ fn auto_syntactic_sugar<'a>(
 // #########
 fn message_name<T, E: ParseError<T>>(input: T) -> nom::IResult<T, T, E>
 where
-    T: InputTakeAtPosition + Clone,
-    <T as InputTakeAtPosition>::Item: AsChar + Clone,
+    T: nom::Input,
+    <T as nom::Input>::Item: AsChar + Clone,
 {
-    take_while1(|item: T::Item| item.clone().is_alphanum() || item.as_char() == '_')(input)
+    take_while1(|item: T::Item| item.is_alphanum() || item.as_char() == '_')(input)
 }
 
 fn server_message_name<T, E: ParseError<T>>(input: T) -> nom::IResult<T, (T, T, MessageNameType), E>
 where
-    T: InputTakeAtPosition
-        + Clone
-        + Compare<&'static str>
-        + InputTake
-        + Offset
-        + Slice<RangeTo<usize>>,
-    <T as InputTakeAtPosition>::Item: AsChar + Clone,
+    T: nom::Input + nom::Offset + nom::Compare<&'static str>,
+    <T as nom::Input>::Item: AsChar + Clone,
 {
     alt((
         map(
-            take_while1(|item: T::Item| item.clone().is_alphanum() || item.as_char() == '_'),
+            take_while1(|item: T::Item| item.is_alphanum() || item.as_char() == '_'),
             |o: T| (o.clone(), o, MessageNameType::Name),
         ),
         map(
@@ -676,7 +685,8 @@ where
             )),
             |(outer, inner)| (outer, inner, MessageNameType::Action),
         ),
-    ))(input)
+    ))
+    .parse(input)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -687,8 +697,8 @@ enum MessageNameType {
 
 fn non_space<T, E: ParseError<T>>(input: T) -> nom::IResult<T, T, E>
 where
-    T: InputTakeAtPosition,
-    <T as InputTakeAtPosition>::Item: AsChar + Clone,
+    T: nom::Input,
+    <T as nom::Input>::Item: AsChar + Clone,
 {
     input.split_at_position1_complete(|item| item.as_char().is_whitespace(), ErrorKind::Alpha)
 }
@@ -696,7 +706,7 @@ where
 fn rest_of_line<'a, E: ParseError<Input<'a>>>(
     input: Input<'a>,
 ) -> nom::IResult<Input<'a>, Input<'a>, E> {
-    let (input, line) = terminated(not_line_ending, peek(end_of_line))(input)?;
+    let (input, line) = terminated(not_line_ending, peek(end_of_line)).parse(input)?;
     if line.is_empty() {
         return Err(nom::Err::Error(E::from_error_kind(
             input,
@@ -706,24 +716,24 @@ fn rest_of_line<'a, E: ParseError<Input<'a>>>(
     match line.rfind(|c: char| !c.is_whitespace()) {
         None => Ok((input, line)),
         Some(i) => {
-            let rest = line.slice(i..);
+            let rest = line.take_from(i);
             let (_, c) = rest
                 .char_indices()
                 .next()
                 .expect("not at of string, because i points to non-whitespace char");
-            Ok((input, line.slice(..i + c.len_utf8())))
+            Ok((input, line.take(i + c.len_utf8())))
         }
     }
 }
 
 fn end_of_line<'a, E: ParseError<Input<'a>>>(input: Input<'a>) -> nom::IResult<Input<'a>, (), E> {
     let eol = alt((line_ending, eof));
-    void(preceded(space0, eol))(input)
+    void(preceded(space0, eol)).parse(input)
 }
 
-fn void<F, I, O, E: ParseError<I>>(f: F) -> impl FnMut(I) -> nom::IResult<I, (), E>
+fn void<F, I, O, E: ParseError<I>>(f: F) -> impl Parser<I, Output = (), Error = E>
 where
-    F: Parser<I, O, E>,
+    F: Parser<I, Output = O, Error = E>,
 {
     value((), f)
 }
@@ -733,9 +743,9 @@ pub fn separated_list2<I, O, O2, E, F, G>(
     mut f: F,
 ) -> impl FnMut(I) -> nom::IResult<I, Vec<O>, E>
 where
-    I: Clone + InputLength,
-    F: Parser<I, O, E>,
-    G: Parser<I, O2, E>,
+    I: nom::Input,
+    F: Parser<I, Output = O, Error = E>,
+    G: Parser<I, Output = O2, Error = E>,
     E: ParseError<I>,
 {
     move |mut i: I| {
@@ -786,8 +796,10 @@ where
 #[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 mod tests {
+    use super::*;
+
     use indoc::indoc;
-    use nom_span::Spanned;
+    use nom_locate::LocatedSpan;
     use rstest::rstest;
 
     use crate::bang_line::BangLine;
@@ -810,7 +822,7 @@ mod tests {
     }
 
     fn wrap_input(input: &str) -> super::Input<'_> {
-        Spanned::new(input, true)
+        LocatedSpan::new(input)
     }
 
     fn new_ctx(
@@ -997,7 +1009,7 @@ mod tests {
         let bytes = base.len() + ending.find(char::is_whitespace).unwrap_or(ending.len());
         let input = wrap_input(&input);
         let mut f = super::simple_bang_line("ALLOW CONCURRENT", BangLine::AllowConcurrent);
-        let result = f(input);
+        let result = f.parse(input);
         let (rem, bang) = result.unwrap();
         assert_eq!(*rem, ending);
         assert_eq!(bang, BangLine::AllowConcurrent(new_ctx(1, 1, 0, bytes)));
@@ -1104,9 +1116,8 @@ mod tests {
         #[case] bytes_msg_start: usize,
         #[case] bytes: usize,
     ) {
-        let result = super::message_with_simple_name(Some("C:"), ScanBlock::ClientMessage)(
-            wrap_input(input),
-        );
+        let result = super::message_with_simple_name(Some("C:"), ScanBlock::ClientMessage)
+            .parse(wrap_input(input));
         let (rem, block) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1133,9 +1144,8 @@ mod tests {
         #[case] body_start: usize,
         #[case] bytes: usize,
     ) {
-        let result = super::message_with_simple_name(Some("C:"), ScanBlock::ClientMessage)(
-            wrap_input(input),
-        );
+        let result = super::message_with_simple_name(Some("C:"), ScanBlock::ClientMessage)
+            .parse(wrap_input(input));
         let (rem, block) = result.unwrap();
         let body = "foo bar";
         let body_end = body_start + body.len();
@@ -1160,7 +1170,7 @@ mod tests {
     #[case::messy("#C:  RUN   foo bar  ", 20)]
     #[case::messy("#", 1)]
     fn test_comment(#[case] input: &str, #[case] bytes: usize) {
-        let result = super::comment(ScanBlock::Comment)(wrap_input(input));
+        let result = super::comment(ScanBlock::Comment).parse(wrap_input(input));
         let (rem, block) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(block, ScanBlock::Comment(new_ctx(1, 1, 0, bytes)));
@@ -1169,10 +1179,8 @@ mod tests {
     #[rstest]
     fn test_python_line() {
         let input = wrap_input("PY: print('Hello, World!')");
-        let result = dbg!(super::message_simple_content(
-            Some("PY:"),
-            ScanBlock::Python
-        )(input));
+        let result =
+            dbg!(super::message_simple_content(Some("PY:"), ScanBlock::Python).parse(input));
         let (rem, block) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1214,7 +1222,7 @@ mod tests {
     #[test]
     fn test_simple_block() {
         let input = wrap_input("{{\n    C: RUN\n    S: OK\n}}");
-        let result = dbg!(super::block("{{", "}}")(input));
+        let result = dbg!(super::block("{{", "}}").parse(input));
         let (rem, blocks) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1237,7 +1245,7 @@ mod tests {
     #[test]
     fn test_multi_block() {
         let input = wrap_input("{{\n    C: RUN1\n    S: OK\n----\n    C: RUN2\n}}");
-        let result = dbg!(super::multiblock("{{", "}}", "----")(input));
+        let result = dbg!(super::multiblock("{{", "}}", "----").parse(input));
         let (rem, blocks) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
