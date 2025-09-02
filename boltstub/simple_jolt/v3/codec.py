@@ -44,7 +44,10 @@ from ..v2.codec import JoltRelationTransformer  # noqa: F401
 from ..v2.codec import JoltReverseRelationTransformer  # noqa: F401
 from ..v2.codec import JoltStrTransformer  # noqa: F401
 from ..v2.codec import JoltTypeTransformer
-from .jolt_types import JoltVector
+from .jolt_types import (
+    JoltUnknownType,
+    JoltVector,
+)
 
 
 class JoltVectorTransformer(JoltTypeTransformer):
@@ -82,6 +85,49 @@ class JoltVectorTransformer(JoltTypeTransformer):
                 f"{JoltVector.DTYPE_SIZES[dtype]} for dtype {dtype!r}"
             )
         return JoltVector(dtype, data)
+
+    @staticmethod
+    def _encode_simple(value, encode_cb, human_readable):
+        raise NoSimpleRepresentation()
+
+    @classmethod
+    def _encode_full(cls, value, encode_cb, human_readable):
+        data = encode_bytes(value.data, human_readable=human_readable)
+        return {cls.sigil: [value.dtype, data]}
+
+
+class JoltUnknownTypeTransformer(JoltTypeTransformer):
+    _supported_types = (JoltVector,)
+    sigil = "W"
+
+    @staticmethod
+    def _decode_simple(value, decode_cb):
+        raise NoSimpleRepresentation()
+
+    @staticmethod
+    def _decode_full(value, decode_cb):
+        if not isinstance(value, list):
+            raise JOLTValueError('Expecting array after sigil "W"')
+        if len(value) != 3:
+            raise JOLTValueError('Expecting array of length 3 after sigil "W"')
+        if not isinstance(value[0], str):
+            raise JOLTValueError(
+                "Expecting unknown type name as string as"
+                ' first element of array after sigil "W"'
+            )
+        name = value[0]
+        if not isinstance(value[1], str):
+            raise JOLTValueError(
+                "Expecting minimum bolt value as string as"
+                ' second element of array after sigil "W"'
+            )
+        min_bolt = value[1]
+        if not isinstance(value[2], dict):
+            raise JOLTValueError(
+                "Expecting extra dictonary as third element of array "
+                'after sigil "W"'
+            )
+        return JoltUnknownType(name, min_bolt, value[2]["message"])
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):

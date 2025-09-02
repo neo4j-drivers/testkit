@@ -64,7 +64,23 @@ class JoltVector(JoltV3VectorMixin, JoltType):
         super().__init__(dtype, data)
 
 
+class JoltUnknownType(JoltType):
+    """
+    Represents an Unknown Type object in Jolt v3.
+
+    :param name: The name of the type that could not be sent.
+    :param min_bolt: The minimum bolt version needed to transmit the type.
+    :param message: The optional message to the user.
+    """
+
+    def __init__(self, name, min_bolt, message):
+        self.name = name
+        self.min_bolt = min_bolt
+        self.message = message
+
+
 __all__ = [
     JoltType,
     JoltVector,
+    JoltUnknownType,
 ]

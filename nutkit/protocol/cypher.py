@@ -515,6 +515,45 @@ class CypherVector:
                    for attr in ("dtype", "data"))
 
 
+class CypherUnknownType:
+    r"""
+    A cypher unknown type.
+
+    :param dtype: "i8", "i16", "i32", "i64", "f32", or "f64".
+    :param data: bytes representing the vector's data (big-endian),
+        e.g. b"\x01\x02\x03\xff" or
+        "01 02 03 ff" (IMPORTANT: with spaces and lower-case).
+    """
+
+    def __init__(self, name, min_bolt, message):
+        self.name = str(name)
+        self.min_bolt = str(min_bolt)
+        self.message = str(message)
+
+    def __str__(self):
+        return (
+            "CypherUnknownType(name={}, min_bolt={}, message={})"
+            .format(self.name, self.min_bolt, self.message)
+        )
+
+    def __repr__(self):
+        return (
+            "<{}(name={}, min_bolt={}, message={})>"
+            .format(
+                self.__class__.__name__,
+                self.name, self.min_bolt,
+                self.message
+            )
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+
+        return all(getattr(self, attr) == getattr(other, attr)
+                   for attr in ("name", "min_bolt", "message"))
+
+
 def as_cypher_type(value):
     if value is None:
         return CypherNull()
@@ -544,6 +583,7 @@ def as_cypher_type(value):
             CypherDateTime,
             CypherDuration,
             CypherVector,
+            CypherUnknownType,
         )
     ):
         return value

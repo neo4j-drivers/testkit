@@ -95,6 +95,7 @@ class StructTagV2(StructTagV1):
 
 class StructTagV3(StructTagV2):
     vector = b"\x56"
+    unknown = b"\x3F"
 
 
 class Structure:
@@ -414,6 +415,15 @@ class Structure:
                 StructTagV3.vector,
                 dtype_marker,
                 jolt.data,
+                packstream_version=3,
+            )
+        if isinstance(jolt, jolt_v3_types.JoltUnknownType):
+            extra = {"message": jolt.message}
+            return cls(
+                StructTagV3.unknown,
+                jolt.name,
+                jolt.min_bolt,
+                extra,
                 packstream_version=3,
             )
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
