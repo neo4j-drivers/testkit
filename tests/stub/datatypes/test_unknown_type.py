@@ -7,7 +7,7 @@ from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
-class TestVectorTypes(TestkitTestCase):
+class TestUnknownTypes(TestkitTestCase):
 
     required_features = (
         types.Feature.API_TYPE_UNKNOWNTYPE,
@@ -71,7 +71,7 @@ class TestVectorTypes(TestkitTestCase):
                 ):
                     with self._driver(self._server) as driver:
                         with self._session(driver) as session:
-                            vec = types.CypherUnknownType(
+                            unknown = types.CypherUnknownType(
                                 name,
                                 min_bolt,
                                 message
@@ -84,4 +84,4 @@ class TestVectorTypes(TestkitTestCase):
                             self.assertEqual(len(records), 1)
                             self.assertEqual(len(records[0].values), 1)
                             print(records[0].values[0])
-                            self.assertEqual(vec, records[0].values[0])
+                            self.assertEqual(unknown, records[0].values[0])
