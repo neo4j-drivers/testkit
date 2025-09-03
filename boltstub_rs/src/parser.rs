@@ -30,8 +30,8 @@ use crate::util::opt_res_ret;
 use crate::values::bolt_message::BoltMessage;
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltNode, JoltPath, JoltPoint, JoltRelationship,
-    JoltTime, JoltVector, JoltVectorType, TAG_DATE, TAG_DURATION, TAG_LOCAL_TIME, TAG_POINT_2D,
-    TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
+    JoltTime, JoltUnknownType, JoltVector, JoltVectorType, TAG_DATE, TAG_DURATION, TAG_LOCAL_TIME,
+    TAG_POINT_2D, TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
 };
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
@@ -990,6 +990,10 @@ fn transcode_jolt_value(
             let bolt_path = JoltVector::parse(value, jolt_version, config)?;
             IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
         }
+        JoltSigil::UnknownType => {
+            let bolt_path = JoltUnknownType::parse(value, jolt_version, config)?;
+            IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
+        }
     })
 }
 
@@ -1640,6 +1644,11 @@ fn build_jolt_validator(
             let bolt_vector = JoltVector::parse(expected, jolt_version, config)?;
             let expected_struct = bolt_vector.into_struct();
             IsJoltValidator::Yes(build_struct_match_validator(expected_struct))
+        }
+        JoltSigil::UnknownType => {
+            return Err(ParseError::new(
+                "UnknownType structs cannot be received by the server, only sent.",
+            ));
         }
     })
 }
