@@ -53,97 +53,54 @@ class TestUnknownTypes(TestkitTestCase):
         finally:
             session.close()
 
-    def test_unknown_type_with_message(self):
-        script = "echo_unknown.script"
-        name = "encrypted_value"
-        min_bolt = "6.10"
-        message = "This is an encrypted value"
-        with self._started_server(
-            self._server,
-            script,
-            vars_={
-                "#UNKNOWN#":
-                    f'{{"W": [{json.dumps(name)}, '
-                    f"{json.dumps(min_bolt)}, "
-                    f'{{"message": {json.dumps(message)}}}]}}',
-            },
-        ):
-            with self._driver(self._server) as driver:
-                with self._session(driver) as session:
-                    unknown = types.CypherUnknownType(
-                        name,
-                        min_bolt,
-                        message
-                    )
-                    result = session.run(
-                        "RETURN 1 as one",
-                    )
-                    records = list(result)
-                    self._server.done()
-                    self.assertEqual(len(records), 1)
-                    self.assertEqual(len(records[0].values), 1)
-                    print(records[0].values[0])
-                    self.assertEqual(unknown, records[0].values[0])
+    def test_unknown_type_subtests(self):
 
-    def test_unknown_type_without_message(self):
         script = "echo_unknown.script"
-        name = "encrypted_value"
-        min_bolt = "6.10"
-        with self._started_server(
-            self._server,
-            script,
-            vars_={
-                "#UNKNOWN#":
-                    f'{{"W": [{json.dumps(name)}, '
-                    f"{json.dumps(min_bolt)}, "
-                    f"{{}}]}}"
-            },
+        for (name, min_bolt, extra) in (
+            ("encrypted_value", "6.10", None),
+            ("encrypted_value", "6.10", {"message": "test message"}),
+            (
+                "encrypted_value", "6.10",
+                {"message": "test message", "junk data": "junk"}
+            ),
         ):
-            with self._driver(self._server) as driver:
-                with self._session(driver) as session:
-                    unknown = types.CypherUnknownType(
-                        name,
-                        min_bolt
-                    )
-                    result = session.run(
-                        "RETURN 1 as one",
-                    )
-                    records = list(result)
-                    self._server.done()
-                    self.assertEqual(len(records), 1)
-                    self.assertEqual(len(records[0].values), 1)
-                    print(records[0].values[0])
-                    self.assertEqual(unknown, records[0].values[0])
-
-    def test_unknown_type_with_junk_value_in_dict(self):
-        script = "echo_unknown.script"
-        name = "encrypted_value"
-        min_bolt = "6.10"
-        message = "This is an encrypted value"
-        junk_value = "Should be ignored"
-        with self._started_server(
-            self._server,
-            script,
-            vars_={
-                "#UNKNOWN#":
-                    f'{{"W": [{json.dumps(name)}, '
-                    f"{json.dumps(min_bolt)}, "
-                    f'{{"message": {json.dumps(message)}, '
-                    f'"junk": {json.dumps(junk_value)}}}]}}',
-            },
-        ):
-            with self._driver(self._server) as driver:
-                with self._session(driver) as session:
-                    unknown = types.CypherUnknownType(
-                        name,
-                        min_bolt,
-                        message
-                    )
-                    result = session.run(
-                        "RETURN 1 as one",
-                    )
-                    records = list(result)
-                    self._server.done()
-                    self.assertEqual(len(records), 1)
-                    self.assertEqual(len(records[0].values), 1)
-                    self.assertEqual(unknown, records[0].values[0])
+            with self.subTest(name=name, min_bolt=min_bolt, extra=extra):
+                if extra is not None:
+                    extra_string = ", {"
+                    for key in extra.keys():
+                        if extra_string != ", {":
+                            extra_string += ", "
+                        extra_string += f'"{key}": {json.dumps(extra[key])}'
+                    extra_string += "}"
+                else:
+                    extra_string = ", {}"
+                with self._started_server(
+                    self._server,
+                    script,
+                    vars_={
+                        "#UNKNOWN#":
+                            f'{{"W": [{json.dumps(name)}, '
+                            f"{json.dumps(min_bolt)}"
+                            f"{extra_string}]}}"
+                    },
+                ):
+                    if extra is None:
+                        message = None
+                    else:
+                        message = extra["message"]
+                    with self._driver(self._server) as driver:
+                        with self._session(driver) as session:
+                            unknown = types.CypherUnknownType(
+                                name,
+                                min_bolt,
+                                message
+                            )
+                            result = session.run(
+                                "RETURN 1 as one",
+                            )
+                            records = list(result)
+                            self._server.done()
+                            self.assertEqual(len(records), 1)
+                            self.assertEqual(len(records[0].values), 1)
+                            print(records[0].values[0])
+                            self.assertEqual(unknown, records[0].values[0])
