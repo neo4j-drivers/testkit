@@ -53,7 +53,7 @@ class TestUnknownTypes(TestkitTestCase):
         finally:
             session.close()
 
-    def test_unknown_type(self):
+    def test_unknown_type_with_message(self):
         script = "echo_unknown.script"
         for (name, min_bolt, message) in (
             ("encrypted_value", "6.10", "This is an encrypted value"),
@@ -75,6 +75,40 @@ class TestUnknownTypes(TestkitTestCase):
                                 name,
                                 min_bolt,
                                 message
+                            )
+                            result = session.run(
+                                "RETURN 1 as one",
+                            )
+                            records = list(result)
+                            self._server.done()
+                            self.assertEqual(len(records), 1)
+                            self.assertEqual(len(records[0].values), 1)
+                            print(records[0].values[0])
+                            self.assertEqual(unknown, records[0].values[0])
+
+    def test_unknown_type_without_message(self):
+
+        script = "echo_unknown.script"
+        for (name, min_bolt) in (
+            ("encrypted_value", "6.10"),
+        ):
+            with self.subTest(name=name, min_bolt=min_bolt):
+                with self._started_server(
+                    self._server,
+                    script,
+                    vars_={
+                        "#UNKNOWN#":
+                            f'{{"W": [{json.dumps(name)}, '
+                            f"{json.dumps(min_bolt)}, "
+                            f"{{}}]}}"
+                    },
+                ):
+
+                    with self._driver(self._server) as driver:
+                        with self._session(driver) as session:
+                            unknown = types.CypherUnknownType(
+                                name,
+                                min_bolt
                             )
                             result = session.run(
                                 "RETURN 1 as one",

@@ -73,7 +73,7 @@ class JoltUnknownType(JoltType):
     :param message: The optional message to the user.
     """
 
-    def __init__(self, name, min_bolt, message):
+    def __init__(self, name, min_bolt, message=None):
         self.name = name
         self.min_bolt = min_bolt
         self.message = message

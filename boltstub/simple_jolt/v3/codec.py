@@ -127,6 +127,8 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
                 "Expecting extra dictonary as third element of array "
                 'after sigil "W"'
             )
+        if "message" not in value[2].keys():
+            return JoltUnknownType(name, min_bolt)
         return JoltUnknownType(name, min_bolt, value[2]["message"])
 
     @staticmethod

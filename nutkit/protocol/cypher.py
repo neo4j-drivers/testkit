@@ -519,32 +519,49 @@ class CypherUnknownType:
     r"""
     A cypher unknown type.
 
-    :param dtype: "i8", "i16", "i32", "i64", "f32", or "f64".
-    :param data: bytes representing the vector's data (big-endian),
-        e.g. b"\x01\x02\x03\xff" or
-        "01 02 03 ff" (IMPORTANT: with spaces and lower-case).
+    :param name: The name of the unknown type.
+    :param min_bolt: The minimum required bolt version to transmit the type.
+    :param message: An optional message to the user.
     """
 
-    def __init__(self, name, min_bolt, message):
+    def __init__(self, name, min_bolt, message=None):
         self.name = str(name)
         self.min_bolt = str(min_bolt)
-        self.message = str(message)
+        if message is None:
+            self.message = None
+        else:
+            self.message = str(message)
 
     def __str__(self):
-        return (
-            "CypherUnknownType(name={}, min_bolt={}, message={})"
-            .format(self.name, self.min_bolt, self.message)
-        )
+        if self.message is None:
+            return (
+                "CypherUnknownType(name={}, min_bolt={})"
+                .format(self.name, self.min_bolt)
+            )
+        else:
+            return (
+                "CypherUnknownType(name={}, min_bolt={}, message={})"
+                .format(self.name, self.min_bolt, self.message)
+            )
 
     def __repr__(self):
-        return (
-            "<{}(name={}, min_bolt={}, message={})>"
-            .format(
-                self.__class__.__name__,
-                self.name, self.min_bolt,
-                self.message
+        if self.message is None:
+            return (
+                "<{}(name={}, min_bolt={})>"
+                .format(
+                    self.__class__.__name__,
+                    self.name, self.min_bolt,
+                )
             )
-        )
+        else:
+            return (
+                "<{}(name={}, min_bolt={}, message={})>"
+                .format(
+                    self.__class__.__name__,
+                    self.name, self.min_bolt,
+                    self.message
+                )
+            )
 
     def __eq__(self, other):
         if not isinstance(other, type(self)):

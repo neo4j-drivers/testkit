@@ -14,7 +14,7 @@ use indexmap::IndexMap;
 pub(crate) struct JoltUnknownType {
     pub(crate) name: String,
     pub(crate) min_bolt: String,
-    pub(crate) message: String,
+    pub(crate) message: Option<String>,
 }
 
 impl JoltUnknownType {
@@ -46,22 +46,32 @@ impl JoltUnknownType {
             config,
         )?;
         check_last_json_field(&mut fields, i, "W")?;
-        let PackStreamValue::String(ref message) = extra["message"] else {
-            return Err(ParseError::new("Expected message in extra to be string."));
-        };
-        Ok(Self {
-            name,
-            min_bolt,
-            message: message.clone(),
-        })
+        if extra.contains_key("message") {
+            let PackStreamValue::String(ref message) = extra["message"] else {
+                return Err(ParseError::new("Expected message in extra to be string."));
+            };
+            Ok(Self {
+                name,
+                min_bolt,
+                message: Some(message.clone()),
+            })
+        } else {
+            Ok(Self {
+                name,
+                min_bolt,
+                message: None,
+            })
+        }
     }
 
     pub(crate) fn into_struct(self) -> PackStreamStruct {
         let mut extra_map = IndexMap::with_capacity(1);
-        extra_map.insert(
-            String::from("message"),
-            PackStreamValue::String(self.message),
-        );
+        if self.message.is_some() {
+            extra_map.insert(
+                String::from("message"),
+                PackStreamValue::String(self.message.unwrap()),
+            );
+        }
         let fields = vec![
             PackStreamValue::String(self.name),
             PackStreamValue::String(self.min_bolt),
@@ -90,7 +100,7 @@ impl BoltUnknownType {
         Some(Self(JoltUnknownType {
             name: name.to_string(),
             min_bolt: min_bolt.to_string(),
-            message: message.clone(),
+            message: Some(message.clone()),
         }))
     }
 
@@ -108,7 +118,7 @@ impl BoltUnknownType {
                 f.write_str(&self.this.min_bolt)?;
 
                 f.write_str(r#"", {message: ""#)?;
-                f.write_str(&self.this.message)?;
+                f.write_str(&self.this.message.clone().expect("TEST"))?;
                 f.write_str(r#""}]}"#)
             }
         }
