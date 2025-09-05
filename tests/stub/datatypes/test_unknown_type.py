@@ -10,7 +10,7 @@ from tests.stub.shared import StubServer
 class TestUnknownTypes(TestkitTestCase):
 
     required_features = (
-        types.Feature.API_TYPE_UNKNOWNTYPE,
+        types.Feature.API_TYPE_UNKNOWN_TYPE,
         types.Feature.BOLT_6_0,
     )
     bolt_version = "6.0"

@@ -91,7 +91,7 @@ class Feature(Enum):
     # The driver supports sending and receiving vector data types.
     API_TYPE_VECTOR = "Feature:API:Type.Vector"
     # The driver supports sending and receiving the unknown data type.
-    API_TYPE_UNKNOWNTYPE = "Feature:API:Type.UnknownType"
+    API_TYPE_UNKNOWN_TYPE = "Feature:API:Type.UnknownType"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
