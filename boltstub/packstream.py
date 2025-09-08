@@ -422,7 +422,8 @@ class Structure:
             return cls(
                 StructTagV3.unknown,
                 jolt.name,
-                jolt.min_bolt,
+                jolt.minimum_protocol_major,
+                jolt.minimum_protocol_minor,
                 extra,
                 packstream_version=3,
             )

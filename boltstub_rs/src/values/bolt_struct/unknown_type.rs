@@ -13,7 +13,8 @@ use indexmap::IndexMap;
 #[derive(Debug, Clone)]
 pub(crate) struct JoltUnknownType {
     pub(crate) name: String,
-    pub(crate) min_bolt: String,
+    pub(crate) minimum_protocol_major: i64,
+    pub(crate) minimum_protocol_minor: i64,
     pub(crate) message: Option<String>,
 }
 
@@ -37,7 +38,10 @@ impl JoltUnknownType {
         let i = 0;
 
         let (i, name) = next_json_field::<String>(&mut fields, "name", i, "W", config)?;
-        let (i, min_bolt) = next_json_field::<String>(&mut fields, "min_bolt", i, "W", config)?;
+        let (i, minimum_protocol_major) =
+            next_json_field::<i64>(&mut fields, "minimum_protocol_major", i, "W", config)?;
+        let (i, minimum_protocol_minor) =
+            next_json_field::<i64>(&mut fields, "minimum_protocol_minor", i, "W", config)?;
         let (i, extra) = next_json_field::<IndexMap<String, PackStreamValue>>(
             &mut fields,
             "extra",
@@ -52,13 +56,15 @@ impl JoltUnknownType {
             };
             Ok(Self {
                 name,
-                min_bolt,
+                minimum_protocol_major,
+                minimum_protocol_minor,
                 message: Some(message.clone()),
             })
         } else {
             Ok(Self {
                 name,
-                min_bolt,
+                minimum_protocol_major,
+                minimum_protocol_minor,
                 message: None,
             })
         }
@@ -74,7 +80,8 @@ impl JoltUnknownType {
         }
         let fields = vec![
             PackStreamValue::String(self.name),
-            PackStreamValue::String(self.min_bolt),
+            PackStreamValue::Integer(self.minimum_protocol_major),
+            PackStreamValue::Integer(self.minimum_protocol_minor),
             PackStreamValue::Dict(extra_map),
         ];
         PackStreamStruct {
@@ -92,14 +99,16 @@ impl BoltUnknownType {
         }
         let mut fields = s.fields.iter();
         let name: &str = next_pack_stream_field(&mut fields)?;
-        let min_bolt: &str = next_pack_stream_field(&mut fields)?;
+        let minimum_protocol_major: i64 = next_pack_stream_field(&mut fields)?;
+        let minimum_protocol_minor: i64 = next_pack_stream_field(&mut fields)?;
         let extra: &IndexMap<String, PackStreamValue> = next_pack_stream_field(&mut fields)?;
         let PackStreamValue::String(ref message) = extra["message"] else {
             return None;
         };
         Some(Self(JoltUnknownType {
             name: name.to_string(),
-            min_bolt: min_bolt.to_string(),
+            minimum_protocol_major,
+            minimum_protocol_minor,
             message: Some(message.clone()),
         }))
     }
@@ -115,7 +124,10 @@ impl BoltUnknownType {
                 f.write_str(&self.this.name)?;
 
                 f.write_str(r#"", ""#)?;
-                f.write_str(&self.this.min_bolt)?;
+                f.write_str(&self.this.minimum_protocol_major.to_string())?;
+
+                f.write_str(r#"", ""#)?;
+                f.write_str(&self.this.minimum_protocol_minor.to_string())?;
 
                 f.write_str(r#"", {message: ""#)?;
                 f.write_str(&self.this.message.clone().expect("TEST"))?;

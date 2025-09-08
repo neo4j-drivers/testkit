@@ -56,15 +56,18 @@ class TestUnknownTypes(TestkitTestCase):
     def test_unknown_type_subtests(self):
 
         script = "echo_unknown.script"
-        for (name, min_bolt, extra) in (
-            ("encrypted_value", "6.10", None),
-            ("encrypted_value", "6.10", {"message": "test message"}),
+        for (name, minimum_protocol_major, minimum_protocol_minor, extra) in (
+            ("encrypted_value", 6, 10, None),
+            ("encrypted_value", 6, 10, {"message": "test message"}),
             (
-                "encrypted_value", "6.10",
+                "encrypted_value", 6, 10,
                 {"message": "test message", "junk data": "junk"}
             ),
         ):
-            with self.subTest(name=name, min_bolt=min_bolt, extra=extra):
+            with self.subTest(
+                name=name, minimum_protocol_major=minimum_protocol_major,
+                minimum_protocol_minor=minimum_protocol_minor, extra=extra
+            ):
                 if extra is not None:
                     extra_string = ", {"
                     for key in extra.keys():
@@ -80,7 +83,8 @@ class TestUnknownTypes(TestkitTestCase):
                     vars_={
                         "#UNKNOWN#":
                             f'{{"W": [{json.dumps(name)}, '
-                            f"{json.dumps(min_bolt)}"
+                            f"{json.dumps(minimum_protocol_major)}, "
+                            f"{json.dumps(minimum_protocol_minor)}"
                             f"{extra_string}]}}"
                     },
                 ):
@@ -92,7 +96,8 @@ class TestUnknownTypes(TestkitTestCase):
                         with self._session(driver) as session:
                             unknown = types.CypherUnknownType(
                                 name,
-                                min_bolt,
+                                minimum_protocol_major,
+                                minimum_protocol_minor,
                                 message
                             )
                             result = session.run(

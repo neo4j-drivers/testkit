@@ -108,28 +108,39 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
     def _decode_full(value, decode_cb):
         if not isinstance(value, list):
             raise JOLTValueError('Expecting array after sigil "W"')
-        if len(value) != 3:
-            raise JOLTValueError('Expecting array of length 3 after sigil "W"')
+        if len(value) != 4:
+            raise JOLTValueError('Expecting array of length 4 after sigil "W"')
         if not isinstance(value[0], str):
             raise JOLTValueError(
                 "Expecting unknown type name as string as"
                 ' first element of array after sigil "W"'
             )
         name = value[0]
-        if not isinstance(value[1], str):
+        if not isinstance(value[1], int):
             raise JOLTValueError(
-                "Expecting minimum bolt value as string as"
+                "Expecting minimum bolt major version as"
                 ' second element of array after sigil "W"'
             )
-        min_bolt = value[1]
-        if not isinstance(value[2], dict):
+        minimum_protocol_major = value[1]
+        if not isinstance(value[2], int):
             raise JOLTValueError(
-                "Expecting extra dictonary as third element of array "
+                "Expecting minimum bolt minor version as"
+                ' third element of array after sigil "W"'
+            )
+        minimum_protocol_minor = value[2]
+        if not isinstance(value[3], dict):
+            raise JOLTValueError(
+                "Expecting extra dictonary as fourth element of array "
                 'after sigil "W"'
             )
-        if "message" not in value[2].keys():
-            return JoltUnknownType(name, min_bolt)
-        return JoltUnknownType(name, min_bolt, value[2]["message"])
+        if "message" not in value[3].keys():
+            return JoltUnknownType(
+                name, minimum_protocol_major, minimum_protocol_minor
+            )
+        return JoltUnknownType(
+            name, minimum_protocol_major,
+            minimum_protocol_minor, value[3]["message"]
+        )
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):

@@ -69,13 +69,18 @@ class JoltUnknownType(JoltType):
     Represents an Unknown Type object in Jolt v3.
 
     :param name: The name of the type that could not be sent.
-    :param min_bolt: The minimum bolt version needed to transmit the type.
+    :param minimum_protocol_major: The major bolt version needed for the type.
+    :param minimum_protocol_minor: The minor bolt version needed for the type.
     :param message: The optional message to the user.
     """
 
-    def __init__(self, name, min_bolt, message=None):
+    def __init__(
+        self, name, minimum_protocol_major,
+        minimum_protocol_minor, message=None
+    ):
         self.name = name
-        self.min_bolt = min_bolt
+        self.minimum_protocol_major = minimum_protocol_major
+        self.minimum_protocol_minor = minimum_protocol_minor
         self.message = message
 
 
