@@ -692,3 +692,26 @@ Example:
 {"V": ["i32", "FF 00 12 34"]}
 {"V": ["i16", "FF 00"]}
 ```
+
+
+## PackStream Versions
+Some types require a certain PackStream version to be available.
+Others change the required fields or their representation with different PackStream versions.
+
+N.B.: 7687.org conceptualizes PackStream versions different from Stubscript.
+7687.org currently documents only a single PackStream version and makes Structure representations dependent on the negotiated Bolt version.
+Stubscript in contrast considers each change, regardless whether to a Structure type or a primitive type, to be a new PackStream version.
+
+### Stubscript's PackStream Version 1
+ * Default for Bolt versions: 1 - 4.4
+
+### Stubscript's PackStream Version 2
+ * Default for Bolt versions: 5.0 - 5.8
+ * Changes:
+   * `element_id` field(s) added to types `Node`, `Relationship`, and `Path`
+   * Changed structure representation on the wire for types `DateTime`, `DateTimeZoneId`, and `LocalDateTime`.
+
+### Stubscript's PackStream Version 3
+ * Default for Bolt versions: 6.0+
+ * Changes:
+   * Add `Vector` type
