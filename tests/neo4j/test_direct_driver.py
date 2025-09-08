@@ -9,6 +9,7 @@ from tests.neo4j.shared import (
     get_server_info,
     QueryBuilder,
     requires_multi_db_support,
+    with_retries,
 )
 from tests.shared import (
     dns_resolve_single,
@@ -115,49 +116,40 @@ class TestDirectDriver(TestkitTestCase):
                              "<class 'neo4j.exceptions.ClientError'>")
 
     @requires_multi_db_support
-    @cluster_unsafe_test
     def test_multi_db(self):
         self._driver = get_driver(self._backend)
         create_db_query = QueryBuilder.create_db("test-database")
         drop_db_query = QueryBuilder.drop_db("test-database")
-        server_info = get_server_info()
-        if server_info.max_protocol_version >= (4, 0):
-            self._session = self._driver.session("w", database="system")
 
-            self._session.run(drop_db_query).consume()
-            self._session.run(create_db_query).consume()
-            self._session.close()
+        self._session = self._driver.session("w", database="system")
 
-            self._session = self._driver.session("r", database="test-database")
-            result = self._session.run("RETURN 1")
+        with_retries(lambda: self._session.run(drop_db_query).consume())
+        with_retries(lambda: self._session.run(create_db_query).consume())
+        self._session.close()
+
+        self._session = self._driver.session("r", database="test-database")
+
+        def get_db_name(session):
+            result = session.run("RETURN 1")
             # server bug on 4.4-: does not report db on DISCARD before PULL
             result.next()
-            summary = result.consume()
-            self.assertEqual(summary.database, "test-database")
+            return result.consume().database
 
-            self._session.close()
-            self._session = self._driver.session("w", database="system")
-            self._session.run(drop_db_query).consume()
-        else:
-            self._session = self._driver.session(
-                "w",
-                database=get_default_db(),
-            )
-            with self.assertRaises(types.DriverError) as e:
-                self._session.run("RETURN 1").consume()
-            if get_driver_name() in ["python"]:
-                self.assertEqual(
-                    "<class 'neo4j.exceptions.ConfigurationError'>",
-                    e.exception.errorType
-                )
-                self.assertIn(
-                    "database is not supported in Bolt Protocol Version(3, 0)",
-                    e.exception.msg
-                )
+        db_name = with_retries(lambda: get_db_name(self._session))
+        self.assertEqual(db_name, "test-database")
+
+        self._session.close()
+        self._session = self._driver.session("w", database="system")
+        with_retries(lambda: self._session.run(drop_db_query).consume())
 
     @requires_multi_db_support
-    @cluster_unsafe_test
     def test_multi_db_various_databases(self):
+        def get_people_names(sessions):
+            return get_names(sessions.run("MATCH (p:Person) RETURN p"))
+
+        def get_db_names(sessions):
+            return get_names(sessions.run("SHOW DATABASES"), node=False)
+
         def get_names(result_, node=True):
             names = set()
             for record in result_:
@@ -176,71 +168,72 @@ class TestDirectDriver(TestkitTestCase):
                 self.assertIsInstance(name, types.CypherString)
                 names.add(name.value)
             return names
+
+        def run_consume(session, query):
+            with_retries(lambda: session.run(query).consume())
+
         create_db_testa_query = QueryBuilder.create_db("testa")
         create_db_testb_query = QueryBuilder.create_db("testb")
         drop_db_testa_query = QueryBuilder.drop_db("testa")
         drop_db_testb_query = QueryBuilder.drop_db("testb")
+        wipe_all_query = "MATCH (n) DETACH DELETE n"
 
         self._driver = get_driver(self._backend)
 
         self._session = self._driver.session("w")
         # Test that default database is empty
-        self._session.run("MATCH (n) DETACH DELETE n").consume()
-        result = self._session.run("MATCH (p:Person) RETURN p")
-        self.assertIsInstance(result.next(), types.NullRecord)
+        run_consume(self._session, wipe_all_query)
+        names = with_retries(lambda: get_people_names(self._session))
+        self.assertEqual(names, set())
         self._session.close()
+
         self._session = self._driver.session("w", database="system")
-        self._session.run(drop_db_testa_query).consume()
-        self._session.run(drop_db_testb_query).consume()
+        run_consume(self._session, drop_db_testa_query)
+        run_consume(self._session, drop_db_testb_query)
         bookmarks = self._session.last_bookmarks()
         self._session.close()
         self._session = self._driver.session("w", database="system",
                                              bookmarks=bookmarks)
-        result = self._session.run("SHOW DATABASES")
-        self.assertEqual(get_names(result, node=False),
-                         {"system", get_default_db()})
+        names = with_retries(lambda: get_db_names(self._session))
+        self.assertEqual(names, {"system", get_default_db()})
 
-        result = self._session.run(create_db_testa_query)
-        result.consume()
-        result = self._session.run(create_db_testb_query)
-        result.consume()
+        run_consume(self._session, create_db_testa_query)
+        run_consume(self._session, create_db_testb_query)
         bookmarks = self._session.last_bookmarks()
         self._session.close()
 
         self._session = self._driver.session("w", database="testa",
                                              bookmarks=bookmarks)
-        result = self._session.run('CREATE (p:Person {name: "ALICE"})')
-        result.consume()
+        run_consume(self._session, 'CREATE (p:Person {name: "ALICE"})')
         self._session.close()
 
         self._session = self._driver.session("w", database="testb")
-        result = self._session.run('CREATE (p:Person {name: "BOB"})')
-        result.consume()
+        run_consume(self._session, 'CREATE (p:Person {name: "BOB"})')
         self._session.close()
 
         self._session = self._driver.session("w")
         # Test that default database is still empty
-        result = self._session.run("MATCH (p:Person) RETURN p")
-        self.assertIsInstance(result.next(), types.NullRecord)
+        names = with_retries(lambda: get_people_names(self._session))
+        self.assertEqual(names, set())
         self._session.close()
 
         self._session = self._driver.session("w", database="testa")
-        result = self._session.run("MATCH (p:Person) RETURN p")
-        self.assertEqual(get_names(result), {"ALICE"})
+        names = with_retries(lambda: get_people_names(self._session))
+        self.assertEqual(names, {"ALICE"})
         self._session.close()
 
         self._session = self._driver.session("w", database="testb")
-        result = self._session.run("MATCH (p:Person) RETURN p")
-        self.assertEqual(get_names(result), {"BOB"})
+        names = with_retries(lambda: get_people_names(self._session))
+        self.assertEqual(names, {"BOB"})
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run(drop_db_testa_query).consume()
+        run_consume(self._session, drop_db_testa_query)
         self._session.close()
 
         self._session = self._driver.session("w", database="system")
-        self._session.run(drop_db_testb_query).consume()
+        run_consume(self._session, drop_db_testb_query)
         self._session.close()
 
         self._session = self._driver.session("w")
-        self._session.run("MATCH (n) DETACH DELETE n").consume()
+        run_consume(self._session, wipe_all_query)

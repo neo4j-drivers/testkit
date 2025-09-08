@@ -1,3 +1,5 @@
+import contextlib
+
 from .. import protocol
 from .exceptions import ApplicationCodeError
 from .result import Result
@@ -8,6 +10,7 @@ class Session:
     def __init__(self, driver, session):
         self._driver = driver
         self._session = session
+        self._closed = False
 
     def close(self, hooks=None):
         req = protocol.SessionClose(self._session.id)
@@ -15,6 +18,7 @@ class Session:
                                             allow_resolution=False)
         if not isinstance(res, protocol.Session):
             raise Exception("Should be session but was: %s" % res)
+        self._closed = True
 
     def run(self, cypher, *, params=None, tx_meta=None, hooks=None, **kwargs):
         req = protocol.SessionRun(self._session.id, cypher, params,
@@ -111,3 +115,16 @@ class Session:
         if not isinstance(res, protocol.Bookmarks):
             raise Exception("Should be Bookmarks but was: %s" % res)
         return res.bookmarks
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._closed:
+            return
+        if exc_type is not None:
+            cm = contextlib.suppress(Exception)
+        else:
+            cm = contextlib.nullcontext()
+        with cm:
+            self.close()
