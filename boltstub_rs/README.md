@@ -693,6 +693,20 @@ Example:
 {"V": ["i16", "FF 00"]}
 ```
 
+### JOLT UnknownType
+*NOTE*:  
+Standard JOLT does not support Unknown Types.
+
+**Simple**: **not supported**
+
+**Full**: `{"W": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, <extra dictionary with optional message>]}`
+
+Example:
+```json lines
+{"W": ["Encrypted Data", 6, 10, {"message": "encypted data requires an updated driver."}]}
+{"W": ["Quantum Integer", 11, 3, {}]}
+```
+
 
 ## PackStream Versions
 Some types require a certain PackStream version to be available.
@@ -715,3 +729,4 @@ Stubscript in contrast considers each change, regardless whether to a Structure 
  * Default for Bolt versions: 6.0+
  * Changes:
    * Add `Vector` type
+   * Add `UnknownType` type
