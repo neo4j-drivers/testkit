@@ -10,7 +10,7 @@ from tests.stub.shared import StubServer
 class TestVectorTypes(TestkitTestCase):
 
     required_features = (
-        types.Feature.API_TYPE_TEMPORAL,
+        types.Feature.API_TYPE_VECTOR,
         types.Feature.BOLT_6_0,
     )
     bolt_version = "6.0"
