@@ -160,8 +160,14 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 );
                 return Ok(());
             }
-            Err(err) => return Err(err.into()),
-            Ok(res) => res,
+            Err(err) => {
+                debug!(self, "Handshake failed: {err:#}");
+                return Err(err.into());
+            }
+            Ok(res) => {
+                debug!(self, "Handshake completed.");
+                res
+            }
         }
         let mut block = BlockWithState::new(&self.script.tree);
         match self.run_block(&mut block).await {

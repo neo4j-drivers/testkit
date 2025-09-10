@@ -96,10 +96,10 @@ impl Server {
                     debug!("signal_handler exit");
                     Ok::<(), Error>(())
                 },
-                _ = self.run_server(ct.child_token(), listener, &mut set) => {
+                res = self.run_server(ct.child_token(), listener, &mut set) => {
                     // successfully completed script!
-                    debug!("self.run_server exit");
-                    Ok::<(), Error>(())
+                    debug!("self.run_server exit {res:?}");
+                    res
                 }
             }
         }?;
@@ -250,10 +250,15 @@ async fn execute_actor(
     }
     debug!("Spawning new connection handler serially");
     let res = handler.await;
-    if restarts && res.is_err() {
-        debug!("Connection handler failed, storing error because restarting script");
-        handles.spawn(async move { res });
-        return Some(Ok(TakeNewConnection::Yes));
+    if let Err(err) = res {
+        return if restarts {
+            debug!("Connection handler failed, storing error because restarting script");
+            handles.spawn(async move { Err(err) });
+            Some(Ok(TakeNewConnection::Yes))
+        } else {
+            debug!("Connection handler failed, not restarting script");
+            Some(Err(err))
+        };
     }
     debug!("Connection handler completed");
     None

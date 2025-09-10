@@ -38,7 +38,6 @@ impl<C: Connection> NetActor<'_, C> {
                 if self.script.config.bolt_capabilities != Default::default() {
                     let msg = "Script contains bolt capabilities, \
                         but non-manifest style negotiation is used.";
-                    debug!(self, "{msg}");
                     swallow_anyhow_error(
                         self.logging_ctx(),
                         self.send_no_negotiated_bolt_version().await,
@@ -47,7 +46,6 @@ impl<C: Connection> NetActor<'_, C> {
                 } else if self.script.config.handshake_response.is_some() {
                     let msg = "Script contains hard-coded handshake response, \
                         but non-manifest style negotiation is used.";
-                    debug!(self, "{msg}");
                     swallow_anyhow_error(
                         self.logging_ctx(),
                         self.send_no_negotiated_bolt_version().await,
