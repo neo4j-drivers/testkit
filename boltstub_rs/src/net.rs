@@ -143,10 +143,12 @@ impl Server {
             let ct_connection = ct.clone();
             let result = select! {
                 conn = listener.accept() => {
-                    self.handle_connection(conn, ct_connection,handles).await
+                    self.handle_connection(conn, ct_connection, handles).await
                 },
                 _ = ct.cancelled() => {
-                    Err(anyhow!("Shutdown while awaiting new connection"))
+                    debug!("Server stops listening after being cancelled \
+                        while awaiting a new connection");
+                    return Ok(())
                 }
             };
             match result {
