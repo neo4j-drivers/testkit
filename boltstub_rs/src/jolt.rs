@@ -34,7 +34,7 @@ impl JoltSigil {
             "<-" => Self::RelationshipBackward,
             ".." => Self::Path,
             "V" => Self::Vector,
-            "W" => Self::UnknownType,
+            "UT" => Self::UnknownType,
             _ => return None,
         })
     }

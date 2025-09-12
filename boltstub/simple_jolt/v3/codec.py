@@ -98,7 +98,7 @@ class JoltVectorTransformer(JoltTypeTransformer):
 
 class JoltUnknownTypeTransformer(JoltTypeTransformer):
     _supported_types = (JoltVector,)
-    sigil = "W"
+    sigil = "UT"
 
     @staticmethod
     def _decode_simple(value, decode_cb):
@@ -107,31 +107,33 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
     @staticmethod
     def _decode_full(value, decode_cb):
         if not isinstance(value, list):
-            raise JOLTValueError('Expecting array after sigil "W"')
+            raise JOLTValueError('Expecting array after sigil "UT"')
         if len(value) != 4:
-            raise JOLTValueError('Expecting array of length 4 after sigil "W"')
+            raise JOLTValueError(
+                'Expecting array of length 4 after sigil "UT"'
+            )
         if not isinstance(value[0], str):
             raise JOLTValueError(
                 "Expecting unknown type name as string as"
-                ' first element of array after sigil "W"'
+                ' first element of array after sigil "UT"'
             )
         name = value[0]
         if not isinstance(value[1], int):
             raise JOLTValueError(
                 "Expecting minimum bolt major version as"
-                ' second element of array after sigil "W"'
+                ' second element of array after sigil "UT"'
             )
         minimum_protocol_major = value[1]
         if not isinstance(value[2], int):
             raise JOLTValueError(
                 "Expecting minimum bolt minor version as"
-                ' third element of array after sigil "W"'
+                ' third element of array after sigil "UT"'
             )
         minimum_protocol_minor = value[2]
         if not isinstance(value[3], dict):
             raise JOLTValueError(
                 "Expecting extra dictonary as fourth element of array "
-                'after sigil "W"'
+                'after sigil "UT"'
             )
         if "message" not in value[3].keys():
             return JoltUnknownType(

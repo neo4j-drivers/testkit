@@ -82,7 +82,7 @@ class TestUnknownTypes(TestkitTestCase):
                     script,
                     vars_={
                         "#UNKNOWN#":
-                            f'{{"W": [{json.dumps(name)}, '
+                            f'{{"UT": [{json.dumps(name)}, '
                             f"{json.dumps(minimum_protocol_major)}, "
                             f"{json.dumps(minimum_protocol_minor)}"
                             f"{extra_string}]}}"
@@ -137,7 +137,7 @@ class TestUnknownTypes(TestkitTestCase):
                     script,
                     vars_={
                         "#UNKNOWN#":
-                            f'[1, 2, {{"W": [{json.dumps(name)}, '
+                            f'[1, 2, {{"UT": [{json.dumps(name)}, '
                             f"{json.dumps(minimum_protocol_major)}, "
                             f"{json.dumps(minimum_protocol_minor)}"
                             f"{extra_string}]}}]"

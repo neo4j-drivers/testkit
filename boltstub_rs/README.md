@@ -699,12 +699,12 @@ Standard JOLT does not support Unknown Types.
 
 **Simple**: **not supported**
 
-**Full**: `{"W": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, <extra dictionary with optional message>]}`
+**Full**: `{"UT": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, <extra dictionary with optional message>]}`
 
 Example:
 ```json lines
-{"W": ["Encrypted Data", 6, 10, {"message": "encypted data requires an updated driver."}]}
-{"W": ["Quantum Integer", 11, 3, {}]}
+{"UT": ["Encrypted Data", 6, 10, {"message": "encypted data requires an updated driver."}]}
+{"UT": ["Quantum Integer", 11, 3, {}]}
 ```
 
 

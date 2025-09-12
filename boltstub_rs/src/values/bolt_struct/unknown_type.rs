@@ -26,30 +26,30 @@ impl JoltUnknownType {
     ) -> Result<Self, ParseError> {
         if !matches!(jolt_version, JoltVersion::V3) {
             return Err(ParseError::new(format!(
-                "Sigil \"W\" (unknown type) can only be parsed in JoltVersion::V3, using {jolt_version:?}"
+                "Sigil \"UT\" (unknown type) can only be parsed in JoltVersion::V3, using {jolt_version:?}"
             )));
         }
         let JsonValue::Array(fields) = v else {
             return Err(ParseError::new(
-                "Expected array after sigil \"W\", but found {v:?}",
+                "Expected array after sigil \"UT\", but found {v:?}",
             ));
         };
         let mut fields = fields.into_iter().enumerate();
         let i = 0;
 
-        let (i, name) = next_json_field::<String>(&mut fields, "name", i, "W", config)?;
+        let (i, name) = next_json_field::<String>(&mut fields, "name", i, "UT", config)?;
         let (i, minimum_protocol_major) =
-            next_json_field::<i64>(&mut fields, "minimum_protocol_major", i, "W", config)?;
+            next_json_field::<i64>(&mut fields, "minimum_protocol_major", i, "UT", config)?;
         let (i, minimum_protocol_minor) =
-            next_json_field::<i64>(&mut fields, "minimum_protocol_minor", i, "W", config)?;
+            next_json_field::<i64>(&mut fields, "minimum_protocol_minor", i, "UT", config)?;
         let (i, extra) = next_json_field::<IndexMap<String, PackStreamValue>>(
             &mut fields,
             "extra",
             i,
-            "W",
+            "UT",
             config,
         )?;
-        check_last_json_field(&mut fields, i, "W")?;
+        check_last_json_field(&mut fields, i, "UT")?;
         if extra.contains_key("message") {
             let PackStreamValue::String(ref message) = extra["message"] else {
                 return Err(ParseError::new("Expected message in extra to be string."));
@@ -120,7 +120,7 @@ impl BoltUnknownType {
 
         impl Display for JoltFormatter<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                f.write_str(r#"{"W": [""#)?;
+                f.write_str(r#"{"UT": [""#)?;
                 f.write_str(&self.this.name)?;
 
                 f.write_str(r#"", ""#)?;
