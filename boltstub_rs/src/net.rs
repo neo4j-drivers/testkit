@@ -96,10 +96,10 @@ impl Server {
                     debug!("signal_handler exit");
                     Ok::<(), Error>(())
                 },
-                _ = self.run_server(ct.child_token(), listener, &mut set) => {
+                res = self.run_server(ct.child_token(), listener, &mut set) => {
                     // successfully completed script!
-                    debug!("self.run_server exit");
-                    Ok::<(), Error>(())
+                    debug!("self.run_server exit {res:?}");
+                    res
                 }
             }
         }?;
@@ -143,10 +143,12 @@ impl Server {
             let ct_connection = ct.clone();
             let result = select! {
                 conn = listener.accept() => {
-                    self.handle_connection(conn, ct_connection,handles).await
+                    self.handle_connection(conn, ct_connection, handles).await
                 },
                 _ = ct.cancelled() => {
-                    Err(anyhow!("Shutdown while awaiting new connection"))
+                    debug!("Server stops listening after being cancelled \
+                        while awaiting a new connection");
+                    return Ok(())
                 }
             };
             match result {
@@ -250,10 +252,15 @@ async fn execute_actor(
     }
     debug!("Spawning new connection handler serially");
     let res = handler.await;
-    if restarts && res.is_err() {
-        debug!("Connection handler failed, storing error because restarting script");
-        handles.spawn(async move { res });
-        return Some(Ok(TakeNewConnection::Yes));
+    if let Err(err) = res {
+        return if restarts {
+            debug!("Connection handler failed, storing error because restarting script");
+            handles.spawn(async move { Err(err) });
+            Some(Ok(TakeNewConnection::Yes))
+        } else {
+            debug!("Connection handler failed, not restarting script");
+            Some(Err(err))
+        };
     }
     debug!("Connection handler completed");
     None
