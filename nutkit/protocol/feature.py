@@ -88,10 +88,10 @@ class Feature(Enum):
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
     API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
-    # The driver supports sending and receiving vector data types.
-    API_TYPE_VECTOR = "Feature:API:Type.Vector"
     # The driver supports sending and receiving the unknown data type.
     API_TYPE_UNKNOWN_TYPE = "Feature:API:Type.UnknownType"
+    # The driver supports sending and receiving vector data types.
+    API_TYPE_VECTOR = "Feature:API:Type.Vector"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
     # API.
     AUTH_BEARER = "Feature:Auth:Bearer"
