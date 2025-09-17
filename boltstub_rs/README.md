@@ -699,12 +699,12 @@ Standard JOLT does not support Unknown Types.
 
 **Simple**: **not supported**
 
-**Full**: `{"UT": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, <extra dictionary with optional message>]}`
+**Full**: `{"UT": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, "<optional message>"]}`
 
 Example:
 ```json lines
-{"UT": ["Encrypted Data", 6, 10, {"message": "encypted data requires an updated driver."}]}
-{"UT": ["Quantum Integer", 11, 3, {}]}
+{"UT": ["Encrypted Data", 6, 10, "encypted data requires an updated driver."]}
+{"UT": ["Quantum Integer", 11, 3]}
 ```
 
 
@@ -714,6 +714,23 @@ Others change the required fields or their representation with different PackStr
 
 N.B.: 7687.org conceptualizes PackStream versions different from Stubscript.
 7687.org currently documents only a single PackStream version and makes Structure representations dependent on the negotiated Bolt version.
+Stubscript in contrast considers each change, regardless whether to a Structure type or a primitive type, to be a new PackStream version.
+
+### Stubscript's PackStream Version 1
+ * Default for Bolt versions: 1 - 4.4
+
+### Stubscript's PackStream Version 2
+ * Default for Bolt versions: 5.0 - 5.8
+ * Changes:
+   * `element_id` field(s) added to types `Node`, `Relationship`, and `Path`
+   * Changed structure representation on the wire for types `DateTime`, `DateTimeZoneId`, and `LocalDateTime`.
+
+### Stubscript's PackStream Version 3
+ * Default for Bolt versions: 6.0+
+ * Changes:
+   * Add `Vector` type
+   * Add `UnknownType` type
+tructure representations dependent on the negotiated Bolt version.
 Stubscript in contrast considers each change, regardless whether to a Structure type or a primitive type, to be a new PackStream version.
 
 ### Stubscript's PackStream Version 1

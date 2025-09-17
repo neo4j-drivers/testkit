@@ -56,27 +56,20 @@ class TestUnknownTypes(TestkitTestCase):
     def test_unknown_type_subtests(self):
 
         script = "echo_unknown.script"
-        for (name, minimum_protocol_major, minimum_protocol_minor, extra) in (
+        for (
+            name, minimum_protocol_major, minimum_protocol_minor, message
+        ) in (
             ("encrypted_value", 6, 10, None),
-            ("encrypted_value", 6, 10, {"message": "test message"}),
-            (
-                "encrypted_value", 6, 10,
-                {"message": "test message", "junk data": "junk"}
-            ),
+            ("encrypted_value", 6, 10, "test message"),
         ):
             with self.subTest(
                 name=name, minimum_protocol_major=minimum_protocol_major,
-                minimum_protocol_minor=minimum_protocol_minor, extra=extra
+                minimum_protocol_minor=minimum_protocol_minor, message=message
             ):
-                if extra is not None:
-                    extra_string = ", {"
-                    for key in extra.keys():
-                        if extra_string != ", {":
-                            extra_string += ", "
-                        extra_string += f'"{key}": {json.dumps(extra[key])}'
-                    extra_string += "}"
+                if message is not None:
+                    message_string = ', "' + message + '"'
                 else:
-                    extra_string = ", {}"
+                    message_string = ""
                 with self._started_server(
                     self._server,
                     script,
@@ -85,13 +78,9 @@ class TestUnknownTypes(TestkitTestCase):
                             f'{{"UT": [{json.dumps(name)}, '
                             f"{json.dumps(minimum_protocol_major)}, "
                             f"{json.dumps(minimum_protocol_minor)}"
-                            f"{extra_string}]}}"
+                            f"{message_string}]}}"
                     },
                 ):
-                    if extra is None:
-                        message = None
-                    else:
-                        message = extra["message"]
                     with self._driver(self._server) as driver:
                         with self._session(driver) as session:
                             unknown = types.CypherUnknownType(
@@ -101,7 +90,7 @@ class TestUnknownTypes(TestkitTestCase):
                                 message
                             )
                             result = session.run(
-                                "RETURN 1 as one",
+                                "RETURN 1 AS one",
                             )
                             records = list(result)
                             self._server.done()
@@ -111,27 +100,20 @@ class TestUnknownTypes(TestkitTestCase):
 
     def test_unknown_type_in_list(self):
         script = "echo_unknown.script"
-        for (name, minimum_protocol_major, minimum_protocol_minor, extra) in (
+        for (
+            name, minimum_protocol_major, minimum_protocol_minor, message
+        ) in (
             ("encrypted_value", 6, 10, None),
-            ("encrypted_value", 6, 10, {"message": "test message"}),
-            (
-                "encrypted_value", 6, 10,
-                {"message": "test message", "junk data": "junk"}
-            ),
+            ("encrypted_value", 6, 10, "test message"),
         ):
             with self.subTest(
                 name=name, minimum_protocol_major=minimum_protocol_major,
-                minimum_protocol_minor=minimum_protocol_minor, extra=extra
+                minimum_protocol_minor=minimum_protocol_minor, message=message
             ):
-                if extra is not None:
-                    extra_string = ", {"
-                    for key in extra.keys():
-                        if extra_string != ", {":
-                            extra_string += ", "
-                        extra_string += f'"{key}": {json.dumps(extra[key])}'
-                    extra_string += "}"
+                if message is not None:
+                    message_string = ', "' + message + '"'
                 else:
-                    extra_string = ", {}"
+                    message_string = ""
                 with self._started_server(
                     self._server,
                     script,
@@ -140,13 +122,9 @@ class TestUnknownTypes(TestkitTestCase):
                             f'[1, 2, {{"UT": [{json.dumps(name)}, '
                             f"{json.dumps(minimum_protocol_major)}, "
                             f"{json.dumps(minimum_protocol_minor)}"
-                            f"{extra_string}]}}]"
+                            f"{message_string}]}}]"
                     },
                 ):
-                    if extra is None:
-                        message = None
-                    else:
-                        message = extra["message"]
                     with self._driver(self._server) as driver:
                         with self._session(driver) as session:
                             unknown = types.CypherUnknownType(
@@ -156,7 +134,7 @@ class TestUnknownTypes(TestkitTestCase):
                                 message
                             )
                             result = session.run(
-                                "RETURN 1 as one",
+                                "RETURN 1 AS one",
                             )
                             records = list(result)
                             self._server.done()

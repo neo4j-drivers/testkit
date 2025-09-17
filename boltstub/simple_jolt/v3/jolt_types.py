@@ -86,6 +86,6 @@ class JoltUnknownType(JoltType):
 
 __all__ = [
     JoltType,
-    JoltVector,
     JoltUnknownType,
+    JoltVector,
 ]

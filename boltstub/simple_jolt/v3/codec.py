@@ -108,9 +108,9 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
     def _decode_full(value, decode_cb):
         if not isinstance(value, list):
             raise JOLTValueError('Expecting array after sigil "UT"')
-        if len(value) != 4:
+        if len(value) not in [3, 4]:
             raise JOLTValueError(
-                'Expecting array of length 4 after sigil "UT"'
+                'Expecting array of length 3 or 4 after sigil "UT"'
             )
         if not isinstance(value[0], str):
             raise JOLTValueError(
@@ -130,18 +130,18 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
                 ' third element of array after sigil "UT"'
             )
         minimum_protocol_minor = value[2]
-        if not isinstance(value[3], dict):
-            raise JOLTValueError(
-                "Expecting extra dictonary as fourth element of array "
-                'after sigil "UT"'
-            )
-        if "message" not in value[3].keys():
+        if len(value) == 3:
             return JoltUnknownType(
                 name, minimum_protocol_major, minimum_protocol_minor
             )
+        if not isinstance(value[3], str):
+            raise JOLTValueError(
+                "Expecting message string as fourth element of array "
+                'after sigil "UT"'
+            )
+        message = value[3]
         return JoltUnknownType(
-            name, minimum_protocol_major,
-            minimum_protocol_minor, value[3]["message"]
+            name, minimum_protocol_major, minimum_protocol_minor, message
         )
 
     @staticmethod

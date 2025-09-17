@@ -991,8 +991,8 @@ fn transcode_jolt_value(
             IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
         }
         JoltSigil::UnknownType => {
-            let bolt_path = JoltUnknownType::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
+            let bolt_unknown_type = JoltUnknownType::parse(value, jolt_version, config)?;
+            IsJoltValue::Yes(PackStreamValue::Struct(bolt_unknown_type.into_struct()))
         }
     })
 }

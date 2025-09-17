@@ -418,7 +418,10 @@ class Structure:
                 packstream_version=3,
             )
         if isinstance(jolt, jolt_v3_types.JoltUnknownType):
-            extra = {"message": jolt.message}
+            if jolt.message is not None:
+                extra = {"message": jolt.message}
+            else:
+                extra = {}
             return cls(
                 StructTagV3.unknown,
                 jolt.name,
