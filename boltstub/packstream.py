@@ -95,7 +95,7 @@ class StructTagV2(StructTagV1):
 
 class StructTagV3(StructTagV2):
     vector = b"\x56"
-    unknown = b"\x3F"
+    unsupported = b"\x3F"
 
 
 class Structure:
@@ -417,13 +417,13 @@ class Structure:
                 jolt.data,
                 packstream_version=3,
             )
-        if isinstance(jolt, jolt_v3_types.JoltUnknownType):
+        if isinstance(jolt, jolt_v3_types.JoltUnsupportedType):
             if jolt.message is not None:
                 extra = {"message": jolt.message}
             else:
                 extra = {}
             return cls(
-                StructTagV3.unknown,
+                StructTagV3.unsupported,
                 jolt.name,
                 jolt.minimum_protocol_major,
                 jolt.minimum_protocol_minor,

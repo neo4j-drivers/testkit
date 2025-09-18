@@ -515,7 +515,7 @@ class CypherVector:
                    for attr in ("dtype", "data"))
 
 
-class CypherUnknownType:
+class CypherUnsupportedType:
     r"""
     A cypher unknown type.
 
@@ -539,7 +539,7 @@ class CypherUnknownType:
     def __str__(self):
         if self.message is None:
             return (
-                "CypherUnknownType(name={}, minimum_protocol_major={},"
+                "CypherUnsupportedType(name={}, minimum_protocol_major={},"
                 " minimum_protocol_minor={})"
                 .format(
                     self.name, self.minimum_protocol_major,
@@ -548,7 +548,7 @@ class CypherUnknownType:
             )
         else:
             return (
-                "CypherUnknownType(name={}, minimum_protocol_major={},"
+                "CypherUnsupportedType(name={}, minimum_protocol_major={},"
                 " minimum_protocol_minor={}, message={})"
                 .format(
                     self.name, self.minimum_protocol_major,
@@ -618,7 +618,7 @@ def as_cypher_type(value):
             CypherDateTime,
             CypherDuration,
             CypherVector,
-            CypherUnknownType,
+            CypherUnsupportedType,
         )
     ):
         return value

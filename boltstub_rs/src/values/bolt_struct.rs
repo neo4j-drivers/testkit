@@ -8,7 +8,7 @@ mod path;
 mod point;
 mod relationship;
 mod time;
-mod unknown_type;
+mod unsupported_type;
 mod vector;
 
 use std::fmt::{Debug, Display, Formatter};
@@ -29,8 +29,8 @@ use relationship::BoltRelationship;
 pub(crate) use relationship::JoltRelationship;
 use time::BoltTime;
 pub(crate) use time::JoltTime;
-use unknown_type::BoltUnknownType;
-pub(crate) use unknown_type::JoltUnknownType;
+use unsupported_type::BoltUnsupportedType;
+pub(crate) use unsupported_type::JoltUnsupportedType;
 use vector::BoltVector;
 pub(crate) use vector::JoltVector;
 pub(crate) use vector::JoltVectorType;
@@ -54,7 +54,7 @@ pub(crate) const TAG_RELATIONSHIP: u8 = 0x52;
 pub(crate) const TAG_TIME: u8 = 0x54;
 pub(crate) const TAG_UNBOUND_RELATIONSHIP: u8 = 0x72;
 pub(crate) const TAG_VECTOR: u8 = 0x56;
-pub(crate) const TAG_UNKNOWN_TYPE: u8 = 0x3F;
+pub(crate) const TAG_UNSUPPORTED_TYPE: u8 = 0x3F;
 
 #[derive(Debug)]
 pub(crate) struct BoltStruct<'a> {
@@ -78,7 +78,7 @@ enum BoltStructType<'a> {
     DateTime(BoltDateTime<'a>),
     Duration(BoltDuration),
     Vector(BoltVector),
-    UnknownType(BoltUnknownType),
+    UnsupportedType(BoltUnsupportedType),
 }
 
 impl<'a> BoltStruct<'a> {
@@ -103,7 +103,9 @@ impl<'a> BoltStructType<'a> {
             .or_else(|| BoltDateTime::from_struct(value, jolt_version).map(Self::DateTime))
             .or_else(|| BoltDuration::from_struct(value, jolt_version).map(Self::Duration))
             .or_else(|| BoltVector::from_struct(value, jolt_version).map(Self::Vector))
-            .or_else(|| BoltUnknownType::from_struct(value, jolt_version).map(Self::UnknownType))
+            .or_else(|| {
+                BoltUnsupportedType::from_struct(value, jolt_version).map(Self::UnsupportedType)
+            })
     }
 
     pub(crate) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
@@ -124,7 +126,7 @@ impl<'a> BoltStructType<'a> {
                     BoltStructType::DateTime(v) => v.jolt_fmt(self.jolt_version).fmt(f),
                     BoltStructType::Duration(v) => v.jolt_fmt(self.jolt_version).fmt(f),
                     BoltStructType::Vector(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::UnknownType(v) => v.jolt_fmt(self.jolt_version).fmt(f),
+                    BoltStructType::UnsupportedType(v) => v.jolt_fmt(self.jolt_version).fmt(f),
                 }
             }
         }

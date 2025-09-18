@@ -45,7 +45,7 @@ from ..v2.codec import JoltReverseRelationTransformer  # noqa: F401
 from ..v2.codec import JoltStrTransformer  # noqa: F401
 from ..v2.codec import JoltTypeTransformer
 from .jolt_types import (
-    JoltUnknownType,
+    JoltUnsupportedType,
     JoltVector,
 )
 
@@ -96,7 +96,7 @@ class JoltVectorTransformer(JoltTypeTransformer):
         return {cls.sigil: [value.dtype, data]}
 
 
-class JoltUnknownTypeTransformer(JoltTypeTransformer):
+class JoltUnsupportedTypeTransformer(JoltTypeTransformer):
     _supported_types = (JoltVector,)
     sigil = "UT"
 
@@ -114,7 +114,7 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
             )
         if not isinstance(value[0], str):
             raise JOLTValueError(
-                "Expecting unknown type name as string as"
+                "Expecting unsupported type name as string as"
                 ' first element of array after sigil "UT"'
             )
         name = value[0]
@@ -131,7 +131,7 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
             )
         minimum_protocol_minor = value[2]
         if len(value) == 3:
-            return JoltUnknownType(
+            return JoltUnsupportedType(
                 name, minimum_protocol_major, minimum_protocol_minor
             )
         if not isinstance(value[3], str):
@@ -140,7 +140,7 @@ class JoltUnknownTypeTransformer(JoltTypeTransformer):
                 'after sigil "UT"'
             )
         message = value[3]
-        return JoltUnknownType(
+        return JoltUnsupportedType(
             name, minimum_protocol_major, minimum_protocol_minor, message
         )
 

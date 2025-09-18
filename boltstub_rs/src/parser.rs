@@ -30,8 +30,8 @@ use crate::util::opt_res_ret;
 use crate::values::bolt_message::BoltMessage;
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltNode, JoltPath, JoltPoint, JoltRelationship,
-    JoltTime, JoltUnknownType, JoltVector, JoltVectorType, TAG_DATE, TAG_DURATION, TAG_LOCAL_TIME,
-    TAG_POINT_2D, TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
+    JoltTime, JoltUnsupportedType, JoltVector, JoltVectorType, TAG_DATE, TAG_DURATION,
+    TAG_LOCAL_TIME, TAG_POINT_2D, TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
 };
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
@@ -990,9 +990,9 @@ fn transcode_jolt_value(
             let bolt_path = JoltVector::parse(value, jolt_version, config)?;
             IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
         }
-        JoltSigil::UnknownType => {
-            let bolt_unknown_type = JoltUnknownType::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_unknown_type.into_struct()))
+        JoltSigil::UnsupportedType => {
+            let bolt_unsupported_type = JoltUnsupportedType::parse(value, jolt_version, config)?;
+            IsJoltValue::Yes(PackStreamValue::Struct(bolt_unsupported_type.into_struct()))
         }
     })
 }
@@ -1645,9 +1645,9 @@ fn build_jolt_validator(
             let expected_struct = bolt_vector.into_struct();
             IsJoltValidator::Yes(build_struct_match_validator(expected_struct))
         }
-        JoltSigil::UnknownType => {
+        JoltSigil::UnsupportedType => {
             return Err(ParseError::new(
-                "UnknownType structs cannot be received by the server, only sent.",
+                "UnsupportedType structs cannot be received by the server, only sent.",
             ));
         }
     })

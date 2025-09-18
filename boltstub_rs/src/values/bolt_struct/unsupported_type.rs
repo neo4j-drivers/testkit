@@ -7,18 +7,18 @@ use super::_parsing::{check_last_json_field, next_json_field, next_pack_stream_f
 use crate::bolt_version::JoltVersion;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
-use crate::values::bolt_struct::TAG_UNKNOWN_TYPE;
+use crate::values::bolt_struct::TAG_UNSUPPORTED_TYPE;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 #[derive(Debug, Clone)]
-pub(crate) struct JoltUnknownType {
+pub(crate) struct JoltUnsupportedType {
     pub(crate) name: String,
     pub(crate) minimum_protocol_major: i64,
     pub(crate) minimum_protocol_minor: i64,
     pub(crate) message: Option<String>,
 }
 
-impl JoltUnknownType {
+impl JoltUnsupportedType {
     pub(crate) fn parse(
         v: JsonValue,
         jolt_version: JoltVersion,
@@ -77,14 +77,14 @@ impl JoltUnknownType {
             PackStreamValue::Dict(extra_map),
         ];
         PackStreamStruct {
-            tag: TAG_UNKNOWN_TYPE,
+            tag: TAG_UNSUPPORTED_TYPE,
             fields,
         }
     }
 }
 #[derive(Debug, Clone)]
-pub(super) struct BoltUnknownType(pub(super) JoltUnknownType);
-impl BoltUnknownType {
+pub(super) struct BoltUnsupportedType(pub(super) JoltUnsupportedType);
+impl BoltUnsupportedType {
     pub(super) fn from_struct(s: &PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
         match jolt_version {
             JoltVersion::V1 | JoltVersion::V2 => return None,
@@ -96,14 +96,14 @@ impl BoltUnknownType {
         let minimum_protocol_minor: i64 = next_pack_stream_field(&mut fields)?;
         let extra: &IndexMap<String, PackStreamValue> = next_pack_stream_field(&mut fields)?;
         let PackStreamValue::String(ref message) = extra["message"] else {
-            return Some(Self(JoltUnknownType {
+            return Some(Self(JoltUnsupportedType {
                 name: name.to_string(),
                 minimum_protocol_major,
                 minimum_protocol_minor,
                 message: None,
             }));
         };
-        Some(Self(JoltUnknownType {
+        Some(Self(JoltUnsupportedType {
             name: name.to_string(),
             minimum_protocol_major,
             minimum_protocol_minor,
@@ -113,7 +113,7 @@ impl BoltUnknownType {
 
     pub(super) fn jolt_fmt(&self, _jolt_version: JoltVersion) -> impl Display + '_ {
         struct JoltFormatter<'a> {
-            this: &'a JoltUnknownType,
+            this: &'a JoltUnsupportedType,
         }
 
         impl Display for JoltFormatter<'_> {

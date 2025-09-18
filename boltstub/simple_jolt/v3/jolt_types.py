@@ -64,9 +64,9 @@ class JoltVector(JoltV3VectorMixin, JoltType):
         super().__init__(dtype, data)
 
 
-class JoltUnknownType(JoltType):
+class JoltUnsupportedType(JoltType):
     """
-    Represents an Unknown Type object in Jolt v3.
+    Represents an Unsupported Type object in Jolt v3.
 
     :param name: The name of the type that could not be sent.
     :param minimum_protocol_major: The major bolt version needed for the type.
@@ -86,6 +86,6 @@ class JoltUnknownType(JoltType):
 
 __all__ = [
     JoltType,
-    JoltUnknownType,
+    JoltUnsupportedType,
     JoltVector,
 ]

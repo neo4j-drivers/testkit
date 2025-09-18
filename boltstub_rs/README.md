@@ -693,9 +693,9 @@ Example:
 {"V": ["i16", "FF 00"]}
 ```
 
-### JOLT UnknownType
+### JOLT UnsupportedType
 *NOTE*:  
-Standard JOLT does not support Unknown Types.
+Standard JOLT does not support Unsupported Types.
 
 **Simple**: **not supported**
 
@@ -729,7 +729,7 @@ Stubscript in contrast considers each change, regardless whether to a Structure 
  * Default for Bolt versions: 6.0+
  * Changes:
    * Add `Vector` type
-   * Add `UnknownType` type
+   * Add `UnsupportedType` type
 tructure representations dependent on the negotiated Bolt version.
 Stubscript in contrast considers each change, regardless whether to a Structure type or a primitive type, to be a new PackStream version.
 
@@ -746,4 +746,4 @@ Stubscript in contrast considers each change, regardless whether to a Structure 
  * Default for Bolt versions: 6.0+
  * Changes:
    * Add `Vector` type
-   * Add `UnknownType` type
+   * Add `UnsupportedType` type

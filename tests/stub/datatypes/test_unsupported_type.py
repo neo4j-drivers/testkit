@@ -7,10 +7,10 @@ from tests.shared import TestkitTestCase
 from tests.stub.shared import StubServer
 
 
-class TestUnknownTypes(TestkitTestCase):
+class TestUnsupportedTypes(TestkitTestCase):
 
     required_features = (
-        types.Feature.API_TYPE_UNKNOWN_TYPE,
+        types.Feature.API_TYPE_UNSUPPORTED_TYPE,
         types.Feature.BOLT_6_0,
     )
     bolt_version = "6.0"
@@ -53,9 +53,9 @@ class TestUnknownTypes(TestkitTestCase):
         finally:
             session.close()
 
-    def test_unknown_type_subtests(self):
+    def test_unsupported_type_subtests(self):
 
-        script = "echo_unknown.script"
+        script = "echo_unsupported.script"
         for (
             name, minimum_protocol_major, minimum_protocol_minor, message
         ) in (
@@ -74,7 +74,7 @@ class TestUnknownTypes(TestkitTestCase):
                     self._server,
                     script,
                     vars_={
-                        "#UNKNOWN#":
+                        "#UNSUPPORTED#":
                             f'{{"UT": [{json.dumps(name)}, '
                             f"{json.dumps(minimum_protocol_major)}, "
                             f"{json.dumps(minimum_protocol_minor)}"
@@ -83,7 +83,7 @@ class TestUnknownTypes(TestkitTestCase):
                 ):
                     with self._driver(self._server) as driver:
                         with self._session(driver) as session:
-                            unknown = types.CypherUnknownType(
+                            unsupported = types.CypherUnsupportedType(
                                 name,
                                 minimum_protocol_major,
                                 minimum_protocol_minor,
@@ -96,10 +96,10 @@ class TestUnknownTypes(TestkitTestCase):
                             self._server.done()
                             self.assertEqual(len(records), 1)
                             self.assertEqual(len(records[0].values), 1)
-                            self.assertEqual(unknown, records[0].values[0])
+                            self.assertEqual(unsupported, records[0].values[0])
 
-    def test_unknown_type_in_list(self):
-        script = "echo_unknown.script"
+    def test_unsupported_type_in_list(self):
+        script = "echo_unsupported.script"
         for (
             name, minimum_protocol_major, minimum_protocol_minor, message
         ) in (
@@ -118,7 +118,7 @@ class TestUnknownTypes(TestkitTestCase):
                     self._server,
                     script,
                     vars_={
-                        "#UNKNOWN#":
+                        "#UNSUPPORTED#":
                             f'[1, 2, {{"UT": [{json.dumps(name)}, '
                             f"{json.dumps(minimum_protocol_major)}, "
                             f"{json.dumps(minimum_protocol_minor)}"
@@ -127,7 +127,7 @@ class TestUnknownTypes(TestkitTestCase):
                 ):
                     with self._driver(self._server) as driver:
                         with self._session(driver) as session:
-                            unknown = types.CypherUnknownType(
+                            unsupported = types.CypherUnsupportedType(
                                 name,
                                 minimum_protocol_major,
                                 minimum_protocol_minor,
@@ -145,6 +145,6 @@ class TestUnknownTypes(TestkitTestCase):
                                 records[0].values[0].value[0]
                             )
                             self.assertEqual(
-                                unknown,
+                                unsupported,
                                 records[0].values[0].value[2]
                             )
