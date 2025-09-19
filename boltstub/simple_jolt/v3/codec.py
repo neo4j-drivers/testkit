@@ -97,7 +97,7 @@ class JoltVectorTransformer(JoltTypeTransformer):
 
 
 class JoltUnsupportedTypeTransformer(JoltTypeTransformer):
-    _supported_types = (JoltVector,)
+    _supported_types = (JoltUnsupportedType,)
     sigil = "UT"
 
     @staticmethod

@@ -1,5 +1,3 @@
-#![allow(mismatched_lifetime_syntaxes)]
-
 mod bang_line;
 mod bolt_version;
 mod context;

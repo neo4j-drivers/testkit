@@ -278,6 +278,38 @@ from ..simple_jolt.v3 import jolt_types as jolt_v3_types
         [Structure(b"\x56", b"\xc1", bytes(range(8)), packstream_version=3)],
         [jolt_v3_types.JoltVector("f64", bytes(range(8)))],
     ),
+    # Unsupported Type
+    (
+        1,
+        [Structure(b"\x3F", "Quantum Integer", 6, 10, packstream_version=1)],
+        TypeError
+    ),
+    (
+        2,
+        [Structure(b"\x3F", "Quantum Integer", 6, 10, packstream_version=3)],
+        TypeError
+    ),
+    (
+        3,
+        [Structure(b"\x3F", "Quantum Integer", 6, 10, packstream_version=3)],
+        [jolt_v3_types.JoltUnsupportedType("Quantum Integer", 6, 10)]
+    ),
+    (
+        3,
+        [
+            Structure(
+                b"\x3F", "Quantum Integer", 6, 10,
+                {"message": "quantum computing is always 10 years away"},
+                packstream_version=3
+            )
+        ],
+        [
+            jolt_v3_types.JoltUnsupportedType(
+                "Quantum Integer", 6, 10,
+                "quantum computing is always 10 years away"
+            )
+        ]
+    ),
 ))
 def test_struct_to_jolt_type(packstream_version, fields, res):
     struct = Structure(b"\x00", *fields, packstream_version=packstream_version)
