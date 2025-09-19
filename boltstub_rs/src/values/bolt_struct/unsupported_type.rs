@@ -126,7 +126,7 @@ impl BoltUnsupportedType {
 
                 f.write_str(r#"", ""#)?;
                 Display::fmt(&self.this.minimum_protocol_minor, f)?;
-                if self.this.message.is_none() {
+                if self.this.message.is_some() {
                     f.write_str(r#"", ""#)?;
                     f.write_str(&self.this.message.clone().expect("TEST"))?;
                 }
@@ -164,7 +164,7 @@ mod test {
 
     #[rstest]
     #[case::no_message(
-        r#"{"UT": ["Quantum Integer", 6, 10]}"#,
+        r#"["Quantum Integer", 6, 10]"#,
         JoltUnsupportedType {
             name: "Quantum Integer".to_string(),
             minimum_protocol_major: 6,
@@ -173,7 +173,7 @@ mod test {
         },
     )]
     #[case::with_message(
-        r#"{"UT": ["Quantum Integer", 6, 10, "From the future"]}"#,
+        r#"["Quantum Integer", 6, 10, "From the future"]"#,
         JoltUnsupportedType {
             name: "Quantum Integer".to_string(),
             minimum_protocol_major: 6,
