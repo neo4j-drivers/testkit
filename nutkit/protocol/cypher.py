@@ -520,17 +520,15 @@ class CypherUnsupportedType:
     A cypher unknown type.
 
     :param name: The name of the unknown type.
-    :param minimum_protocol_major: The major bolt version needed for the type.
-    :param minimum_protocol_minor: The minor bolt version needed for the type.
+    :param minimum_protocol: The bolt version needed for the type.
     :param message: An optional message to the user.
     """
 
     def __init__(
-        self, name, minimumProtocolMajor, minimumProtocolMinor, message=None
+        self, name, minimumProtocol, message=None
     ):
         self.name = str(name)
-        self.minimum_protocol_major = minimumProtocolMajor
-        self.minimum_protocol_minor = minimumProtocolMinor
+        self.minimum_protocol = minimumProtocol
         if message is None:
             self.message = None
         else:
@@ -539,41 +537,35 @@ class CypherUnsupportedType:
     def __str__(self):
         if self.message is None:
             return (
-                "CypherUnsupportedType(name={}, minimum_protocol_major={},"
-                " minimum_protocol_minor={})"
+                "CypherUnsupportedType(name={}, minimum_protocol={})"
                 .format(
-                    self.name, self.minimum_protocol_major,
-                    self.minimum_protocol_minor
+                    self.name, self.minimum_protocol,
                 )
             )
         else:
             return (
-                "CypherUnsupportedType(name={}, minimum_protocol_major={},"
-                " minimum_protocol_minor={}, message={})"
+                "CypherUnsupportedType(name={}, "
+                "minimum_protocol={}, message={})"
                 .format(
-                    self.name, self.minimum_protocol_major,
-                    self.minimum_protocol_minor, self.message
+                    self.name, self.minimum_protocol, self.message
                 )
             )
 
     def __repr__(self):
         if self.message is None:
             return (
-                "<{}(name={}, minimum_protocol_major={}, "
-                "minimum_protocol_minor={})>"
+                "<{}(name={}, minimum_protocol={}"
                 .format(
                     self.__class__.__name__, self.name,
-                    self.minimum_protocol_major, self.minimum_protocol_minor,
+                    self.minimum_protocol,
                 )
             )
         else:
             return (
-                "<{}(name={}, minimum_protocol_major={}, "
-                "minimum_protocol_minor={}, message={})>"
+                "<{}(name={}, minimum_protocol={}, message={})>"
                 .format(
                     self.__class__.__name__,
-                    self.name, self.minimum_protocol_major,
-                    self.minimum_protocol_minor, self.message
+                    self.name, self.minimum_protocol, self.message
                 )
             )
 
@@ -583,8 +575,7 @@ class CypherUnsupportedType:
 
         return all(
             getattr(self, attr) == getattr(other, attr) for attr in (
-                "name", "minimum_protocol_major",
-                "minimum_protocol_minor", "message"
+                "name", "minimum_protocol", "message"
             )
         )
 

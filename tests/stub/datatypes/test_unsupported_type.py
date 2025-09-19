@@ -85,8 +85,8 @@ class TestUnsupportedTypes(TestkitTestCase):
                         with self._session(driver) as session:
                             unsupported = types.CypherUnsupportedType(
                                 name,
-                                minimum_protocol_major,
-                                minimum_protocol_minor,
+                                str(minimum_protocol_major)
+                                + "." + str(minimum_protocol_minor),
                                 message
                             )
                             result = session.run(
@@ -129,8 +129,8 @@ class TestUnsupportedTypes(TestkitTestCase):
                         with self._session(driver) as session:
                             unsupported = types.CypherUnsupportedType(
                                 name,
-                                minimum_protocol_major,
-                                minimum_protocol_minor,
+                                str(minimum_protocol_major)
+                                + "." + str(minimum_protocol_minor),
                                 message
                             )
                             result = session.run(
