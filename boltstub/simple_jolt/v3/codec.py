@@ -150,8 +150,19 @@ class JoltUnsupportedTypeTransformer(JoltTypeTransformer):
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
-        data = encode_bytes(value.data, human_readable=human_readable)
-        return {cls.sigil: [value.dtype, data]}
+        if value.message is not None:
+            return {
+                cls.sigil: [
+                    value.name, value.minimum_protocol_major,
+                    value.minimum_protocol_minor, value.message
+                ]
+            }
+        return {
+            cls.sigil: [
+                value.name, value.minimum_protocol_major,
+                value.minimum_protocol_minor
+            ]
+        }
 
 
 class Codec(_Codec):

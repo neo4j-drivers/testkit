@@ -121,16 +121,17 @@ impl BoltUnsupportedType {
                 f.write_str(r#"{"UT": [""#)?;
                 f.write_str(&self.this.name)?;
 
-                f.write_str(r#"", ""#)?;
+                f.write_str(r#"", "#)?;
                 Display::fmt(&self.this.minimum_protocol_major, f)?;
 
-                f.write_str(r#"", ""#)?;
+                f.write_str(r#", "#)?;
                 Display::fmt(&self.this.minimum_protocol_minor, f)?;
                 if self.this.message.is_some() {
-                    f.write_str(r#"", ""#)?;
+                    f.write_str(r#", ""#)?;
                     f.write_str(&self.this.message.clone().expect("TEST"))?;
+                    f.write_str(r#"""#)?;
                 }
-                f.write_str(r#""]}"#)
+                f.write_str(r#"]}"#)
             }
         }
 
