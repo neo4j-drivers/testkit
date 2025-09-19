@@ -38,7 +38,10 @@ from ....simple_jolt.v3 import (
     dumps_simple,
     loads,
 )
-from ....simple_jolt.v3.jolt_types import JoltVector
+from ....simple_jolt.v3.jolt_types import (
+    JoltUnsupportedType,
+    JoltVector,
+)
 from ... import _common
 from ..v1.parse_data import V1_EXPLICIT_LOADS
 from ..v2.parse_data import V2_EXPLICIT_LOADS
@@ -373,6 +376,16 @@ def test_dumps_full(in_, out_, human_readable):
             '{"V": ["i8", "01020304FF"]}',
             '{"V": ["i8", "01 02 03 04 FF"]}',
         )
+    ),
+
+    # unsupported type
+    (
+        JoltUnsupportedType("Quantum Integer", 6, 10),
+        '{"UT": ["Quantum Integer", 6, 10]}',
+    ),
+    (
+        JoltUnsupportedType("Quantum Integer", 6, 10, "future"),
+        '{"UT": ["Quantum Integer", 6, 10, {"message": "future"}]}',
     ),
 ))
 @pytest.mark.parametrize("human_readable", [True, False])

@@ -137,3 +137,121 @@ impl BoltUnsupportedType {
         JoltFormatter { this: &self.0 }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::bolt_version::BoltVersion;
+
+    use rstest::rstest;
+
+    use super::*;
+
+    fn actor_config() -> ActorConfig {
+        ActorConfig {
+            bolt_version: BoltVersion::V6_0,
+            bolt_version_raw: (6, 0),
+            bolt_capabilities: Default::default(),
+            handshake_manifest_version: Default::default(),
+            handshake: Default::default(),
+            handshake_response: Default::default(),
+            handshake_delay: Default::default(),
+            allow_restart: Default::default(),
+            allow_concurrent: Default::default(),
+            auto_responses: Default::default(),
+            py_lines: Default::default(),
+        }
+    }
+
+    #[rstest]
+    #[case::no_message(
+        r#"{"UT": ["Quantum Integer", 6, 10]}"#,
+        JoltUnsupportedType {
+            name: "Quantum Integer".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: None
+        },
+    )]
+    #[case::with_message(
+        r#"{"UT": ["Quantum Integer", 6, 10, "From the future"]}"#,
+        JoltUnsupportedType {
+            name: "Quantum Integer".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: Some("From the future".to_string())
+        },
+    )]
+    fn test_jolt_unsupported_type_parse(
+        #[case] input: &str,
+        #[case] expected: JoltUnsupportedType,
+    ) {
+        let json = serde_json::from_str(input).unwrap();
+        let jolt_version = JoltVersion::V3;
+        let config = actor_config();
+
+        let result = JoltUnsupportedType::parse(json, jolt_version, &config).unwrap();
+
+        assert_eq!(result.name, expected.name);
+        assert_eq!(
+            result.minimum_protocol_major,
+            expected.minimum_protocol_major
+        );
+        assert_eq!(
+            result.minimum_protocol_minor,
+            expected.minimum_protocol_minor
+        );
+        assert_eq!(result.message, expected.message);
+    }
+
+    #[rstest]
+    #[case::wrong_type(r#"1"#)]
+    #[case::array_too_short(r#"["quantum integer", 6]"#)]
+    #[case::array_too_long(r#"["quantum integer", 6, 10, "future", "from the"]"#)]
+    #[case::invalid_data(r#"[1, 6, 10, "future"]"#)]
+    #[case::invalid_data(r#"["quantum integer", "6", 10, "future"]"#)]
+    #[case::invalid_data(r#"["quantum integer", 6, "10", "future"]"#)]
+    #[case::invalid_data(r#"["quantum integer", 6, 10, 11]"#)]
+    fn test_jolt_unsupported_type_parse_invalid(#[case] input: &str) {
+        let json = serde_json::from_str(input).unwrap();
+        let jolt_version = JoltVersion::V3;
+        let config = actor_config();
+
+        JoltUnsupportedType::parse(json, jolt_version, &config).unwrap_err();
+    }
+
+    #[rstest]
+    #[case::v1(JoltVersion::V1)]
+    #[case::v2(JoltVersion::V2)]
+    fn test_jolt_unsupported_type_parse_invalid_jolt_version(#[case] jolt_version: JoltVersion) {
+        let json = serde_json::from_str(r#"["Quantum Integer", 6, 10]"#).unwrap();
+        let config = actor_config();
+
+        JoltUnsupportedType::parse(json, jolt_version, &config).unwrap_err();
+    }
+
+    #[rstest]
+    #[case::no_message(
+        JoltUnsupportedType {
+            name: "Quantum Integer".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: None
+        },
+        r#"{"UT": ["Quantum Integer", 6, 10]}"#,
+    )]
+    #[case::with_message(
+        JoltUnsupportedType {
+            name: "Quantum Integer".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: Some("From the future".to_string())
+        },
+        r#"{"UT": ["Quantum Integer", 6, 10, "From the future"]}"#,
+    )]
+    fn test_jolt_fmt(#[case] jolt_unsupported_type: JoltUnsupportedType, #[case] expected: &str) {
+        let jolt_version = JoltVersion::V3;
+        let bolt_unsupported_type = BoltUnsupportedType(jolt_unsupported_type);
+        let formatted = bolt_unsupported_type.jolt_fmt(jolt_version).to_string();
+        assert_eq!(formatted, expected);
+    }
+}
