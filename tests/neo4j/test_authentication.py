@@ -2,11 +2,11 @@ import os
 
 import nutkit.protocol as types
 from tests.neo4j.shared import (
-    cluster_unsafe_test,
     env_neo4j_pass,
     env_neo4j_user,
     get_authorization,
     get_driver,
+    with_retries,
 )
 from tests.shared import (
     get_driver_name,
@@ -39,12 +39,9 @@ class TestAuthenticationBasic(TestkitTestCase):
         if use_tx:
             result = self._session.execute_read(dummy_query)
         else:
-            result = self._session.run("RETURN 2 as Number")
-        self.assertEqual(
-            result.next(), types.Record(values=[types.CypherInt(2)])
-        )
+            result = with_retries(dummy_query, self._session)
+        self.assertEqual(result, types.Record(values=[types.CypherInt(2)]))
 
-    @cluster_unsafe_test
     def test_error_on_incorrect_credentials(self):
         auth = get_authorization()
         auth.credentials = auth.credentials + "-but-wrong!"
@@ -57,7 +54,6 @@ class TestAuthenticationBasic(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.AuthError'>")
 
-    @cluster_unsafe_test
     def test_error_on_incorrect_credentials_tx(self):
         auth = get_authorization()
         auth.credentials = auth.credentials + "-but-wrong!"
@@ -71,7 +67,6 @@ class TestAuthenticationBasic(TestkitTestCase):
                              "<class 'neo4j.exceptions.AuthError'>")
 
     # Tests both basic with realm specified and also custom auth token. All
-    @cluster_unsafe_test
     def test_success_on_provide_realm_with_basic_token(self):
         auth_token = types.AuthorizationToken(
             "basic",
@@ -81,7 +76,6 @@ class TestAuthenticationBasic(TestkitTestCase):
         )
         self.verify_connectivity(auth_token)
 
-    @cluster_unsafe_test
     def test_success_on_basic_token(self):
         auth_token = types.AuthorizationToken(
             "basic",

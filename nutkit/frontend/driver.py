@@ -1,3 +1,5 @@
+import contextlib
+
 from .. import protocol
 from .auth_token_manager import (
     AuthTokenManager,
@@ -72,6 +74,7 @@ class Driver:
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be Driver but was %s" % res)
         self._driver = res
+        self._closed = False
 
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
         while True:
@@ -188,6 +191,7 @@ class Driver:
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Driver):
             raise Exception(f"Should be Driver but was {res}")
+        self._closed = True
         if self._auth_token_manager:
             self._auth_token_manager.close()
 
@@ -239,3 +243,16 @@ class Driver:
         if not isinstance(res, protocol.ConnectionPoolMetrics):
             raise Exception(f"Should be ConnectionPoolMetrics but was {res}")
         return res
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._closed:
+            return
+        if exc_type is not None:
+            cm = contextlib.suppress(Exception)
+        else:
+            cm = contextlib.nullcontext()
+        with cm:
+            self.close()
