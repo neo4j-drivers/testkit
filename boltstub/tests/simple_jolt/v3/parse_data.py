@@ -326,7 +326,7 @@ V3_LOADS = (
         JoltUnsupportedType("Quantum Integer", 6, 10)
     ),
     (
-        '{"UT": ["Quantum Integer", 6, 10, {"message": "future"}]}',
+        '{"UT": ["Quantum Integer", 6, 10, "future"]}',
         JoltUnsupportedType("Quantum Integer", 6, 10, "future")
     ),
 )

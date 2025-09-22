@@ -385,7 +385,7 @@ def test_dumps_full(in_, out_, human_readable):
     ),
     (
         JoltUnsupportedType("Quantum Integer", 6, 10, "future"),
-        '{"UT": ["Quantum Integer", 6, 10, {"message": "future"}]}',
+        '{"UT": ["Quantum Integer", 6, 10, "future"]}',
     ),
 ))
 @pytest.mark.parametrize("human_readable", [True, False])

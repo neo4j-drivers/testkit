@@ -226,6 +226,13 @@ class Structure:
                 and self.tag == struct_tags.vector
             ):
                 return True
+            elif (
+                hasattr(jolt_types_, "JoltUnsupportedType")
+                and issubclass(t, jolt_types_.JoltUnsupportedType)
+                and hasattr(struct_tags, "unsupported")
+                and self.tag == struct_tags.unsupported
+            ):
+                return True
         return False
 
     @classmethod
@@ -562,6 +569,20 @@ class Structure:
             dtype_marker, data = self.fields
             dtype = V3_VECTOR_DTYPE[dtype_marker]
             return jolt_v3_types.JoltVector(dtype, data)
+        if self.tag == StructTagV3.unsupported:
+            if len(self.fields) == 4:
+                (
+                    name, protocol_minimum_major,
+                    protocol_minimum_minor, extra
+                ) = self.fields
+                return jolt_v3_types.JoltUnsupportedType(
+                    name, protocol_minimum_major,
+                    protocol_minimum_minor, extra["message"]
+                )
+            name, protocol_minimum_major, protocol_minimum_minor = self.fields
+            return jolt_v3_types.JoltUnsupportedType(
+                name, protocol_minimum_major, protocol_minimum_minor
+            )
         raise TypeError("Unsupported struct type: {}".format(self.tag))
 
     def to_jolt_type(self):

@@ -11,6 +11,7 @@ use crate::values::bolt_struct::TAG_UNSUPPORTED_TYPE;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct JoltUnsupportedType {
     pub(crate) name: String,
     pub(crate) minimum_protocol_major: i64,
@@ -27,7 +28,7 @@ impl JoltUnsupportedType {
         match jolt_version {
             JoltVersion::V1 | JoltVersion::V2 => {
                 return Err(ParseError::new(format!(
-                    "Sigil \"UT\" (unsupported type) can only be parsed in JoltVersion::V3,
+                    "Sigil \"UT\" (unknown type) can only be parsed in JoltVersion::V3,
                     using {jolt_version:?}"
                 )));
             }
@@ -66,9 +67,12 @@ impl JoltUnsupportedType {
     }
 
     pub(crate) fn into_struct(self) -> PackStreamStruct {
-        let mut extra_map = IndexMap::with_capacity(1);
+        let mut extra_map;
         if let Some(message) = self.message {
+            extra_map = IndexMap::with_capacity(1);
             extra_map.insert(String::from("message"), PackStreamValue::String(message));
+        } else {
+            extra_map = IndexMap::with_capacity(0);
         }
         let fields = vec![
             PackStreamValue::String(self.name),
@@ -83,6 +87,7 @@ impl JoltUnsupportedType {
     }
 }
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(super) struct BoltUnsupportedType(pub(super) JoltUnsupportedType);
 impl BoltUnsupportedType {
     pub(super) fn from_struct(s: &PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
@@ -95,7 +100,7 @@ impl BoltUnsupportedType {
         let minimum_protocol_major: i64 = next_pack_stream_field(&mut fields)?;
         let minimum_protocol_minor: i64 = next_pack_stream_field(&mut fields)?;
         let extra: &IndexMap<String, PackStreamValue> = next_pack_stream_field(&mut fields)?;
-        let PackStreamValue::String(ref message) = extra["message"] else {
+        let Some(PackStreamValue::String(ref message)) = extra.get("message") else {
             return Some(Self(JoltUnsupportedType {
                 name: name.to_string(),
                 minimum_protocol_major,
@@ -126,9 +131,9 @@ impl BoltUnsupportedType {
 
                 f.write_str(r#", "#)?;
                 Display::fmt(&self.this.minimum_protocol_minor, f)?;
-                if self.this.message.is_some() {
+                if let Some(message) = &self.this.message {
                     f.write_str(r#", ""#)?;
-                    f.write_str(&self.this.message.clone().expect("TEST"))?;
+                    f.write_str(message)?;
                     f.write_str(r#"""#)?;
                 }
                 f.write_str(r#"]}"#)
@@ -254,5 +259,36 @@ mod test {
         let bolt_unsupported_type = BoltUnsupportedType(jolt_unsupported_type);
         let formatted = bolt_unsupported_type.jolt_fmt(jolt_version).to_string();
         assert_eq!(formatted, expected);
+    }
+
+    #[rstest]
+    #[case(None)]
+    #[case(Some(String::from("From the future")))]
+    fn test_struct_parsing(#[case] message: Option<String>) {
+        let extra = match message.clone() {
+            Some(message) => IndexMap::from([(
+                String::from("message"),
+                PackStreamValue::String(message.clone()),
+            )]),
+            None => IndexMap::new(),
+        };
+        let structure = PackStreamStruct {
+            tag: TAG_UNSUPPORTED_TYPE,
+            fields: vec![
+                PackStreamValue::String(String::from("Quantum Integer")),
+                PackStreamValue::Integer(6),
+                PackStreamValue::Integer(10),
+                PackStreamValue::Dict(extra),
+            ],
+        };
+        assert_eq!(
+            BoltUnsupportedType::from_struct(&structure, JoltVersion::V3),
+            Some(BoltUnsupportedType(JoltUnsupportedType {
+                name: String::from("Quantum Integer"),
+                minimum_protocol_major: 6,
+                minimum_protocol_minor: 10,
+                message,
+            }))
+        )
     }
 }

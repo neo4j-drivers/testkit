@@ -83,6 +83,29 @@ class JoltUnsupportedType(JoltType):
         self.minimum_protocol_minor = minimum_protocol_minor
         self.message = message
 
+    def __eq__(self, other):
+        if not isinstance(other, JoltUnsupportedType):
+            return NotImplemented
+
+        return all(
+            getattr(self, attr) == getattr(other, attr)
+            for attr in (
+                "name", "minimum_protocol_major",
+                "minimum_protocol_major", "message"
+            )
+        )
+
+    def __repr__(self):
+        cls_name = self.__class__.__name__
+        name = self.name
+        minimum_protocol_major = self.minimum_protocol_major
+        minimum_protocol_minor = self.minimum_protocol_minor
+        message = self.message
+        return (
+            f"{cls_name}<{name!r}, {minimum_protocol_major!r}, "
+            f"{minimum_protocol_minor!r}, {message!r} >"
+        )
+
 
 __all__ = [
     JoltType,

@@ -730,20 +730,3 @@ Stubscript in contrast considers each change, regardless whether to a Structure 
  * Changes:
    * Add `Vector` type
    * Add `UnsupportedType` type
-tructure representations dependent on the negotiated Bolt version.
-Stubscript in contrast considers each change, regardless whether to a Structure type or a primitive type, to be a new PackStream version.
-
-### Stubscript's PackStream Version 1
- * Default for Bolt versions: 1 - 4.4
-
-### Stubscript's PackStream Version 2
- * Default for Bolt versions: 5.0 - 5.8
- * Changes:
-   * `element_id` field(s) added to types `Node`, `Relationship`, and `Path`
-   * Changed structure representation on the wire for types `DateTime`, `DateTimeZoneId`, and `LocalDateTime`.
-
-### Stubscript's PackStream Version 3
- * Default for Bolt versions: 6.0+
- * Changes:
-   * Add `Vector` type
-   * Add `UnsupportedType` type
