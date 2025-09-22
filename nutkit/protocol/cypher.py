@@ -517,9 +517,9 @@ class CypherVector:
 
 class CypherUnsupportedType:
     r"""
-    A cypher unknown type.
+    A cypher unsupported type.
 
-    :param name: The name of the unknown type.
+    :param name: The name of the unsupported type.
     :param minimum_protocol: The bolt version needed for the type.
     :param message: An optional message to the user.
     """
