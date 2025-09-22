@@ -27,7 +27,7 @@ impl JoltUnsupportedType {
         match jolt_version {
             JoltVersion::V1 | JoltVersion::V2 => {
                 return Err(ParseError::new(format!(
-                    "Sigil \"UT\" (unknown type) can only be parsed in JoltVersion::V3,
+                    "Sigil \"UT\" (unsupported type) can only be parsed in JoltVersion::V3,
                     using {jolt_version:?}"
                 )));
             }
