@@ -570,16 +570,15 @@ class Structure:
             dtype = V3_VECTOR_DTYPE[dtype_marker]
             return jolt_v3_types.JoltVector(dtype, data)
         if self.tag == StructTagV3.unsupported:
-            if len(self.fields) == 4:
-                (
-                    name, protocol_minimum_major,
-                    protocol_minimum_minor, extra
-                ) = self.fields
+            (
+                name, protocol_minimum_major,
+                protocol_minimum_minor, extra
+            ) = self.fields
+            if "message" in extra:
                 return jolt_v3_types.JoltUnsupportedType(
                     name, protocol_minimum_major,
                     protocol_minimum_minor, extra["message"]
                 )
-            name, protocol_minimum_major, protocol_minimum_minor = self.fields
             return jolt_v3_types.JoltUnsupportedType(
                 name, protocol_minimum_major, protocol_minimum_minor
             )

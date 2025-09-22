@@ -281,17 +281,23 @@ from ..simple_jolt.v3 import jolt_types as jolt_v3_types
     # Unsupported Type
     (
         1,
-        [Structure(b"\x3F", "Quantum Integer", 6, 10, packstream_version=1)],
+        [Structure(
+            b"\x3F", "Quantum Integer", 6, 10, {}, packstream_version=1
+        )],
         TypeError
     ),
     (
         2,
-        [Structure(b"\x3F", "Quantum Integer", 6, 10, packstream_version=2)],
+        [Structure(
+            b"\x3F", "Quantum Integer", 6, 10, {}, packstream_version=2
+        )],
         TypeError
     ),
     (
         3,
-        [Structure(b"\x3F", "Quantum Integer", 6, 10, packstream_version=3)],
+        [Structure(
+            b"\x3F", "Quantum Integer", 6, 10, {}, packstream_version=3
+        )],
         [jolt_v3_types.JoltUnsupportedType("Quantum Integer", 6, 10)]
     ),
     (

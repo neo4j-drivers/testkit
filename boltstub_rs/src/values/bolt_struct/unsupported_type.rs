@@ -67,13 +67,12 @@ impl JoltUnsupportedType {
     }
 
     pub(crate) fn into_struct(self) -> PackStreamStruct {
-        let mut extra_map;
-        if let Some(message) = self.message {
-            extra_map = IndexMap::with_capacity(1);
-            extra_map.insert(String::from("message"), PackStreamValue::String(message));
-        } else {
-            extra_map = IndexMap::with_capacity(0);
-        }
+        let extra_map = match self.message {
+            Some(message) => {
+                IndexMap::from([(String::from("message"), PackStreamValue::String(message))])
+            }
+            None => IndexMap::new(),
+        };
         let fields = vec![
             PackStreamValue::String(self.name),
             PackStreamValue::Integer(self.minimum_protocol_major),
