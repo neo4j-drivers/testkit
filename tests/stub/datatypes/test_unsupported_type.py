@@ -53,7 +53,7 @@ class TestUnsupportedTypes(TestkitTestCase):
         finally:
             session.close()
 
-    def test_unsupported_type_subtests(self):
+    def test_unsupported_type(self):
 
         script = "echo_unsupported.script"
         for (
