@@ -14,6 +14,7 @@ pub(crate) enum JoltSigil {
     RelationshipBackward,
     Path,
     Vector,
+    UnsupportedType,
 }
 
 impl JoltSigil {
@@ -33,6 +34,7 @@ impl JoltSigil {
             "<-" => Self::RelationshipBackward,
             ".." => Self::Path,
             "V" => Self::Vector,
+            "UT" => Self::UnsupportedType,
             _ => return None,
         })
     }

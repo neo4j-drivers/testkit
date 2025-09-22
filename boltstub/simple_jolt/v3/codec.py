@@ -44,7 +44,10 @@ from ..v2.codec import JoltRelationTransformer  # noqa: F401
 from ..v2.codec import JoltReverseRelationTransformer  # noqa: F401
 from ..v2.codec import JoltStrTransformer  # noqa: F401
 from ..v2.codec import JoltTypeTransformer
-from .jolt_types import JoltVector
+from .jolt_types import (
+    JoltUnsupportedType,
+    JoltVector,
+)
 
 
 class JoltVectorTransformer(JoltTypeTransformer):
@@ -91,6 +94,75 @@ class JoltVectorTransformer(JoltTypeTransformer):
     def _encode_full(cls, value, encode_cb, human_readable):
         data = encode_bytes(value.data, human_readable=human_readable)
         return {cls.sigil: [value.dtype, data]}
+
+
+class JoltUnsupportedTypeTransformer(JoltTypeTransformer):
+    _supported_types = (JoltUnsupportedType,)
+    sigil = "UT"
+
+    @staticmethod
+    def _decode_simple(value, decode_cb):
+        raise NoSimpleRepresentation()
+
+    @staticmethod
+    def _decode_full(value, decode_cb):
+        if not isinstance(value, list):
+            raise JOLTValueError('Expecting array after sigil "UT"')
+        if len(value) not in [3, 4]:
+            raise JOLTValueError(
+                'Expecting array of length 3 or 4 after sigil "UT"'
+            )
+        if not isinstance(value[0], str):
+            raise JOLTValueError(
+                "Expecting unsupported type name as string as"
+                ' first element of array after sigil "UT"'
+            )
+        name = value[0]
+        if not isinstance(value[1], int):
+            raise JOLTValueError(
+                "Expecting minimum bolt major version as"
+                ' second element of array after sigil "UT"'
+            )
+        minimum_protocol_major = value[1]
+        if not isinstance(value[2], int):
+            raise JOLTValueError(
+                "Expecting minimum bolt minor version as"
+                ' third element of array after sigil "UT"'
+            )
+        minimum_protocol_minor = value[2]
+        if len(value) == 3:
+            return JoltUnsupportedType(
+                name, minimum_protocol_major, minimum_protocol_minor
+            )
+        if not isinstance(value[3], str):
+            raise JOLTValueError(
+                "Expecting message string as fourth element of array "
+                'after sigil "UT"'
+            )
+        message = value[3]
+        return JoltUnsupportedType(
+            name, minimum_protocol_major, minimum_protocol_minor, message
+        )
+
+    @staticmethod
+    def _encode_simple(value, encode_cb, human_readable):
+        raise NoSimpleRepresentation()
+
+    @classmethod
+    def _encode_full(cls, value, encode_cb, human_readable):
+        if value.message is not None:
+            return {
+                cls.sigil: [
+                    value.name, value.minimum_protocol_major,
+                    value.minimum_protocol_minor, value.message
+                ]
+            }
+        return {
+            cls.sigil: [
+                value.name, value.minimum_protocol_major,
+                value.minimum_protocol_minor
+            ]
+        }
 
 
 class Codec(_Codec):

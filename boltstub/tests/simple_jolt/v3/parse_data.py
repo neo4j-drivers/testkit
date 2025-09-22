@@ -30,7 +30,10 @@ from ....simple_jolt.v2.jolt_types import (
     JoltRelationship,
     JoltTime,
 )
-from ....simple_jolt.v3.jolt_types import JoltVector
+from ....simple_jolt.v3.jolt_types import (
+    JoltUnsupportedType,
+    JoltVector,
+)
 
 V3_LOADS = (
     # (in, out)
@@ -315,6 +318,16 @@ V3_LOADS = (
     (
         '{"V": ["f64", "FF EE DD CC BB AA 99 88"]}',
         JoltVector("f64", b"\xff\xee\xdd\xcc\xbb\xaa\x99\x88"),
+    ),
+
+    # unsupported type
+    (
+        '{"UT": ["Quantum Integer", 6, 10]}',
+        JoltUnsupportedType("Quantum Integer", 6, 10)
+    ),
+    (
+        '{"UT": ["Quantum Integer", 6, 10, "future"]}',
+        JoltUnsupportedType("Quantum Integer", 6, 10, "future")
     ),
 )
 

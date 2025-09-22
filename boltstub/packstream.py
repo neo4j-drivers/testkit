@@ -95,6 +95,7 @@ class StructTagV2(StructTagV1):
 
 class StructTagV3(StructTagV2):
     vector = b"\x56"
+    unsupported = b"\x3F"
 
 
 class Structure:
@@ -223,6 +224,13 @@ class Structure:
                 and issubclass(t, jolt_types_.JoltVector)
                 and hasattr(struct_tags, "vector")
                 and self.tag == struct_tags.vector
+            ):
+                return True
+            elif (
+                hasattr(jolt_types_, "JoltUnsupportedType")
+                and issubclass(t, jolt_types_.JoltUnsupportedType)
+                and hasattr(struct_tags, "unsupported")
+                and self.tag == struct_tags.unsupported
             ):
                 return True
         return False
@@ -416,6 +424,19 @@ class Structure:
                 jolt.data,
                 packstream_version=3,
             )
+        if isinstance(jolt, jolt_v3_types.JoltUnsupportedType):
+            if jolt.message is not None:
+                extra = {"message": jolt.message}
+            else:
+                extra = {}
+            return cls(
+                StructTagV3.unsupported,
+                jolt.name,
+                jolt.minimum_protocol_major,
+                jolt.minimum_protocol_minor,
+                extra,
+                packstream_version=3,
+            )
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
@@ -548,6 +569,19 @@ class Structure:
             dtype_marker, data = self.fields
             dtype = V3_VECTOR_DTYPE[dtype_marker]
             return jolt_v3_types.JoltVector(dtype, data)
+        if self.tag == StructTagV3.unsupported:
+            (
+                name, protocol_minimum_major,
+                protocol_minimum_minor, extra
+            ) = self.fields
+            if "message" in extra:
+                return jolt_v3_types.JoltUnsupportedType(
+                    name, protocol_minimum_major,
+                    protocol_minimum_minor, extra["message"]
+                )
+            return jolt_v3_types.JoltUnsupportedType(
+                name, protocol_minimum_major, protocol_minimum_minor
+            )
         raise TypeError("Unsupported struct type: {}".format(self.tag))
 
     def to_jolt_type(self):

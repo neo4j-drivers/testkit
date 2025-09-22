@@ -693,6 +693,20 @@ Example:
 {"V": ["i16", "FF 00"]}
 ```
 
+### JOLT UnsupportedType
+*NOTE*:  
+Standard JOLT does not support Unsupported Types.
+
+**Simple**: **not supported**
+
+**Full**: `{"UT": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, "<optional message>"]}`
+
+Example:
+```json lines
+{"UT": ["Encrypted Data", 6, 10, "encypted data requires an updated driver."]}
+{"UT": ["Quantum Integer", 11, 3]}
+```
+
 
 ## PackStream Versions
 Some types require a certain PackStream version to be available.
@@ -715,3 +729,4 @@ Stubscript in contrast considers each change, regardless whether to a Structure 
  * Default for Bolt versions: 6.0+
  * Changes:
    * Add `Vector` type
+   * Add `UnsupportedType` type

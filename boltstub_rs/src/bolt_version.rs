@@ -408,7 +408,7 @@ pub(crate) enum JoltVersion {
     /// * Fixes temporal types' representation being ambiguous in V1.
     /// * Adds element ids to nodes and relationships.
     V2,
-    /// * Adds support for vector types.
+    /// * Adds support for vector and unsupported types.
     V3,
 }
 
