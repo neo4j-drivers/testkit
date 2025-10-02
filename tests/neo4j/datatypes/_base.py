@@ -30,13 +30,20 @@ class _TestTypesBase(TestkitTestCase):
 
     def _verify_can_echo(self, val):
         def work(tx):
-            result = tx.run("RETURN $x as y", params={"x": val})
+            result = tx.run("RETURN $x AS y", params={"x": val})
             record_ = result.next()
             assert isinstance(result.next(), types.NullRecord)
             return record_
 
         record = self._session.execute_read(work)
         self.assertEqual(record, types.Record(values=[val]))
+
+    def _send_value(self, val):
+        def work(tx):
+            result = tx.run("RETURN 1 AS n", params={"x": val})
+            result.consume()
+
+        self._session.execute_read(work)
 
     def _read_query_values(self, query, params=None):
         def work(tx):

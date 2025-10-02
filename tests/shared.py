@@ -148,7 +148,7 @@ def get_driver_name():
 
 class TestkitTestCase(unittest.TestCase):
 
-    required_features = None
+    required_features = ()
 
     def setUp(self):
         super().setUp()
