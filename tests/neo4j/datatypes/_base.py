@@ -38,7 +38,7 @@ class _TestTypesBase(TestkitTestCase):
         record = self._session.execute_read(work)
         self.assertEqual(record, types.Record(values=[val]))
 
-    def _send_value(self, val):
+    def _send_value_as_param(self, val):
         def work(tx):
             result = tx.run("RETURN 1 AS n", params={"x": val})
             result.consume()

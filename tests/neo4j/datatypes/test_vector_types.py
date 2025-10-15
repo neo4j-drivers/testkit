@@ -206,7 +206,7 @@ class TestDataTypes(_TestTypesBase):
         for val in vals:
             with self.subTest(dtype=val.dtype, size=len(val.data)):
                 with self.assertRaises(types.DriverError) as e:
-                    self._send_value(val)
+                    self._send_value_as_param(val)
                 exc = e.exception
                 self.assertEqual(exc.gql_status, "22NBE")
                 self.assertIn("vector", exc.msg.lower())
@@ -265,7 +265,7 @@ class TestDataTypes(_TestTypesBase):
         for val in vals:
             with self.subTest(dtype=val.dtype, size=len(val.data)):
                 with self.assertRaises(types.DriverError) as e:
-                    self._send_value(val)
+                    self._send_value_as_param(val)
                 exc = e.exception
                 self.assertEqual(exc.gql_status, "22NBG")
                 self.assertIn("vector", exc.msg.lower())
