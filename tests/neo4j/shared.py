@@ -137,14 +137,24 @@ class ServerInfo:
 
     @property
     def supports_multi_db(self):
-        return self.parsed_version() >= (4,) and self.edition == "enterprise"
+        return (
+            self.max_protocol_version >= (4, 0)
+            and self.edition == "enterprise"
+        )
+
+    @property
+    def supports_vectors(self):
+        return (
+            self.max_protocol_version >= (6, 0)
+            and self.edition in {"enterprise", "aura"}
+        )
 
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
         version = self.parsed_version()
-        # if version >= (2025, 8):
-        #     return 6, 0
+        if version >= (2025, 10):
+            return 6, 0
         if version >= (5, 26):
             return 5, 8
         if version >= (5, 23):
@@ -231,6 +241,22 @@ def requires_multi_db_support(func):
     return wrapper
 
 
+def requires_vector_support(func):
+    def get_valid_test_case(*args, **kwargs):
+        if not args or not isinstance(args[0], TestkitTestCase):
+            raise TypeError("Should only decorate TestkitTestCase methods")
+        return args[0]
+
+    @requires_min_bolt_version("6.0")
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        test_case = get_valid_test_case(*args, **kwargs)
+        if not get_server_info().supports_vectors:
+            test_case.skipTest("Server does not support vector types.")
+        return func(*args, **kwargs)
+    return wrapper
+
+
 def requires_min_bolt_version(min_version):
     def get_valid_test_case(*args, **kwargs):
         if not args or not isinstance(args[0], TestkitTestCase):
@@ -281,12 +307,12 @@ def _skip_reason_min_bolt_version(min_version, test_case):
 
     if server_max_version < min_version:
         test_case.skipTest("Server does not support minimum required "
-                           "Bolt version: " + min_version)
+                           f"Bolt version: {min_version}")
     missing = test_case.driver_missing_features(*all_viable_versions)
     if len(missing) == len(all_viable_versions):
         test_case.skipTest("There is no common version between server "
                            "and driver that fulfills the minimum "
-                           "required protocol version: " + min_version)
+                           f"required protocol version: {min_version}")
 
 
 def _parse_version(v: str):
