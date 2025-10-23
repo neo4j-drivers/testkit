@@ -23,9 +23,9 @@ from io import BytesIO
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
 
-from .simple_jolt.common import types as jolt_common_types
-from .simple_jolt.v1 import types as jolt_v1_types
-from .simple_jolt.v2 import types as jolt_v2_types
+from .simple_jolt.common import jolt_types as jolt_common_types
+from .simple_jolt.v1 import jolt_types as jolt_v1_types
+from .simple_jolt.v2 import jolt_types as jolt_v2_types
 
 _jolt_types = {
     1: jolt_v1_types,

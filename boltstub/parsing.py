@@ -46,7 +46,7 @@ from .errors import (
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt.common.types import (
+from .simple_jolt.common.jolt_types import (
     JoltType,
     JoltWildcard,
 )
