@@ -390,7 +390,7 @@ impl<'a> BoltPath<'a> {
         if nodes_count == 0 {
             return false;
         }
-        self.indices.len() % 2 == 0
+        self.indices.len().is_multiple_of(2)
             && self
                 .indices
                 .iter()

@@ -52,7 +52,7 @@ pub enum Resolvable<T> {
 
 impl<T: ToOwned<Owned = T>> Resolvable<T> {
     #[allow(dead_code, reason = "Most useful function")]
-    pub fn resolve(&self) -> Cow<T> {
+    pub fn resolve(&self) -> Cow<'_, T> {
         match self {
             Self::Static(t) => Cow::Borrowed(t),
             Self::Dynamic { func, .. } => Cow::Owned(func()),
@@ -87,7 +87,7 @@ pub mod actor_types {
     }
 
     pub trait ServerMessageSender: ScriptLine + Send {
-        fn send(&self) -> anyhow::Result<Cow<[u8]>>;
+        fn send(&self) -> anyhow::Result<Cow<'_, [u8]>>;
     }
 
     pub trait ServerActionLine: ScriptLine + Send {
