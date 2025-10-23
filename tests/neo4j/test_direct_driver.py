@@ -121,7 +121,7 @@ class TestDirectDriver(TestkitTestCase):
         create_db_query = QueryBuilder.create_db("test-database")
         drop_db_query = QueryBuilder.drop_db("test-database")
         server_info = get_server_info()
-        if server_info.max_protocol_version >= "4":
+        if server_info.max_protocol_version >= (4, 0):
             self._session = self._driver.session("w", database="system")
 
             self._session.run(drop_db_query).consume()

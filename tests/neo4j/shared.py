@@ -117,6 +117,7 @@ class ServerInfo:
         self.edition = edition
         self.cluster = cluster
         self._parsed_version = None
+        self._is_dev_version = None
 
     @property
     def server_agent(self):
@@ -124,7 +125,7 @@ class ServerInfo:
             raise ValueError(
                 "We can't predict the server's agent string for aura!"
             )
-        if re.match(r"(\d+)\.dev", self.version):
+        if self.is_dev_version:
             raise ValueError(
                 "We can't predict the server's agent string for dev versions!"
             )
@@ -132,34 +133,48 @@ class ServerInfo:
 
     @property
     def supports_multi_db(self):
-        return self.version >= "4" and self.edition == "enterprise"
+        return (
+            self.max_protocol_version >= (4, 0)
+            and self.edition == "enterprise"
+        )
 
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
+        if self.edition == "aura" and self.is_dev_version:
+            return 5, 8
         version = self.parsed_version()
         if version >= (5, 26):
-            return "5.8"
+            # bolt 5.7 and 5.8 were released in a single server version
+            return 5, 8
         if version >= (5, 23):
-            return "5.6"
+            return 5, 6
         # bolt 5.5 was never released
         if version >= (5, 13):
-            return "5.4"
+            return 5, 4
         if version >= (5, 9):
-            return "5.3"
+            return 5, 3
         if version >= (5, 7):
-            return "5.2"
+            return 5, 2
         if version >= (5, 5):
-            return "5.1"
+            return 5, 1
         if version >= (5, 0):
-            return "5.0"
+            return 5, 0
         if version >= (4, 4):
-            return "4.4"
+            return 4, 4
         if version >= (4, 3):
-            return "4.3"
+            return 4, 3
         if version >= (4, 2):
-            return "4.2"
+            return 4, 2
         raise ValueError(f"Unsupported Neo4j version to test: {self.version}")
+
+    def common_protocol_versions(self, driver_features):
+        driver_bolt_features = bolt_versions_in_features(driver_features)
+        max_server_protocol_version = self.max_protocol_version
+        return [
+            version for (version, _feature) in driver_bolt_features
+            if version <= max_server_protocol_version
+        ]
 
     @property
     def has_utc_patch(self):
@@ -172,13 +187,14 @@ class ServerInfo:
 
     def parsed_version(self):
         if self._parsed_version is None:
-            match = re.match(r"(\d+)\.dev", self.version)
-            if match:
-                version = (int(match.group(1)), float("inf"))
-            else:
-                version = tuple(int(i) for i in self.version.split(".")[:2])
-            self._parsed_version = version
+            self._parsed_version = parse_version(self.version)
         return self._parsed_version
+
+    @property
+    def is_dev_version(self):
+        if self._is_dev_version is None:
+            self._is_dev_version = bool(re.match(r"(\d+)\.dev", self.version))
+        return self._is_dev_version
 
 
 def get_server_info():
@@ -251,12 +267,22 @@ def has_min_bolt_version(min_version, test_case):
     return not _skip_reason_min_bolt_version(min_version, test_case)
 
 
+def bolt_versions_in_features(features):
+    return (
+        (parse_version(f.value.split(":")[-1]), f)
+        for f in features
+        if re.match(r"BOLT_(\d+_)*(\d+)", f.name)
+    )
+
+
 def _skip_reason_min_bolt_version(min_version, test_case):
+    if isinstance(min_version, str):
+        min_version = parse_version(min_version)
     server_max_version = get_server_info().max_protocol_version
+    all_version_features = bolt_versions_in_features(protocol.Feature)
     all_viable_versions = [
-        f for f in protocol.Feature
-        if (re.match(r"BOLT_(\d+_)*(\d+)", f.name)
-            and min_version <= f.value.split(":")[-1] <= server_max_version)
+        feature for (version, feature) in all_version_features
+        if min_version <= version <= server_max_version
     ]
 
     if server_max_version < min_version:
@@ -267,6 +293,14 @@ def _skip_reason_min_bolt_version(min_version, test_case):
         test_case.skipTest("There is no common version between server "
                            "and driver that fulfills the minimum "
                            "required protocol version: " + min_version)
+
+
+def parse_version(v: str):
+    match = re.match(r"(\d+)\.dev", v)
+    if match:
+        return int(match.group(1)), float("inf")
+    else:
+        return tuple(int(i) for i in v.split(".")[:2])
 
 
 class QueryBuilder:

@@ -297,7 +297,7 @@ class TestTxRun(TestkitTestCase):
         self.assertEqual(result.keys(), ["x"])
         for record in result:
             values.append(record.values[0])
-        if get_server_info().version >= "4":
+        if get_server_info().parsed_version() >= (4, 0):
             result = tx.run("CALL tx.getMetaData")
             record = result.next()
             self.assertIsInstance(record, types.Record)
@@ -305,7 +305,6 @@ class TestTxRun(TestkitTestCase):
         tx.commit()
         self.assertEqual(values, list(map(types.CypherInt, range(1, 5))))
 
-    @cluster_unsafe_test
     def test_tx_timeout(self):
         self._session1 = self._driver.session("w")
         tx0 = self._session1.begin_transaction()
