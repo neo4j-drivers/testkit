@@ -18,7 +18,7 @@
 
 import json
 
-from ....simple_jolt.v1.types import (
+from ....simple_jolt.v1.jolt_types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,

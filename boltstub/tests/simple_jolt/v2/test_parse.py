@@ -26,7 +26,7 @@ from ....simple_jolt.v2 import (
     dumps_simple,
     loads,
 )
-from ....simple_jolt.v2.types import (
+from ....simple_jolt.v2.jolt_types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,

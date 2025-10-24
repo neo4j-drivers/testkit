@@ -23,9 +23,9 @@ from typing import Union
 import pytz
 
 from ..common.errors import JOLTValueError
-from ..common.types import _JoltParsedType
-from ..common.types import JoltType as _JoltTypeCommon
-from ..common.types import JoltWildcard
+from ..common.jolt_types import _JoltParsedType
+from ..common.jolt_types import JoltType as _JoltTypeCommon
+from ..common.jolt_types import JoltWildcard
 
 
 class JoltType(_JoltTypeCommon):  # version specific type base class
