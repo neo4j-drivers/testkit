@@ -784,7 +784,7 @@ impl Debug for SenderBytes {
 }
 
 impl ServerMessageSender for SenderBytes {
-    fn send(&self) -> anyhow::Result<Cow<[u8]>> {
+    fn send(&self) -> anyhow::Result<Cow<'_, [u8]>> {
         Ok(match self {
             SenderBytes::Static { data, line: _ } => data.into(),
             SenderBytes::Dynamic {

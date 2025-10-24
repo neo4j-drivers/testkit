@@ -16,6 +16,7 @@
 # limitations under the License.
 
 
+import copy
 import itertools
 import re
 from collections import defaultdict
@@ -41,7 +42,10 @@ from ..errors import (
     BoltMissingVersionError,
     BoltProtocolError,
 )
-from ..parsing import LineError
+from ..parsing import (
+    ClientLine,
+    LineError,
+)
 from ..simple_jolt import v1 as jolt_v1
 from ..simple_jolt import v2 as jolt_v2
 from ._common import (
@@ -880,3 +884,22 @@ def test_comment_like_field(unverified_script):
     script = parsing.parse(script)
     assert_dialogue_blocks_block_list(script.block_list,
                                       ['C: MSG "# NOT a comment"'])
+
+
+def test_line_error_copy():
+    error = LineError(ClientLine(1, "C: cont", "cont"), "An error occurred")
+    error_copy = copy.copy(error)
+    assert repr(error) == repr(error_copy)
+    assert error is not error_copy
+    assert error.args is error_copy.args
+    assert error.line is error_copy.line
+
+
+def test_line_error_deepcopy():
+    error = LineError(ClientLine(1, "C: cont", "cont"), "An error occurred")
+    error_copy = copy.deepcopy(error)
+    assert repr(error) == repr(error_copy)
+    assert error is not error_copy
+    assert error.args == error_copy.args
+    assert error.line == error_copy.line
+    assert error.line is not error_copy.line
