@@ -205,7 +205,7 @@ class TestTxFuncRun(TestkitTestCase):
     def test_tx_timeout(self):
         class WrappedError(Exception):
             def __init__(self, inner):
-                super().__init__()
+                super().__init__(inner)
                 self.inner = inner
 
         # TODO: remove this block once all languages work

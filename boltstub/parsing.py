@@ -85,17 +85,27 @@ class CopyableRLock:
 
 
 class LineError(lark.GrammarError):
-    def __init__(self, line, *args, **kwargs):
+    def __init__(self, line, *args):  # noqa: B042
         assert isinstance(line, Line)
         self.line = line
         if args and isinstance(args[0], str):
-            args = (args[0] + ": {}".format(line),) + args[1:]
+            args = (f"{args[0]}: {line}",) + args[1:]
         else:
-            args = ("{}".format(line),) + args
-        super().__init__(*args, **kwargs)
+            args = (f"{line}",) + args
+        super().__init__(*args)
 
     def __repr__(self):
-        str(self.args)
+        return str(self.args)
+
+    def __copy__(self):
+        obj = LineError(self.line)
+        obj.args = self.args
+        return obj
+
+    def __deepcopy__(self, memo):
+        obj = LineError(deepcopy(self.line, memo))
+        obj.args = deepcopy(self.args, memo)
+        return obj
 
 
 class Line(str, abc.ABC):

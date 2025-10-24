@@ -171,7 +171,7 @@ impl<'a> BoltDateTime<'a> {
             date_time: NaiveDateTime,
             utc_offset_seconds: Option<i64>,
             time_zone_id: Option<&str>,
-        ) -> BoltDateTime {
+        ) -> BoltDateTime<'_> {
             let date = date_time.date();
             let time = date_time.time();
             BoltDateTime {
@@ -188,11 +188,11 @@ impl<'a> BoltDateTime<'a> {
             new(date_time, None, None)
         }
 
-        fn new_unknown_tz(date_time: NaiveDateTime, time_zone_id: &str) -> BoltDateTime {
+        fn new_unknown_tz(date_time: NaiveDateTime, time_zone_id: &str) -> BoltDateTime<'_> {
             new(date_time, Some(0), Some(time_zone_id))
         }
 
-        fn new_tz<Tz: TimeZone>(date_time: DateTime<Tz>, time_zone_id: &str) -> BoltDateTime {
+        fn new_tz<Tz: TimeZone>(date_time: DateTime<Tz>, time_zone_id: &str) -> BoltDateTime<'_> {
             let local_date_time = date_time.naive_local();
             let utc_offset = date_time.offset().fix().local_minus_utc();
             new(local_date_time, Some(utc_offset.into()), Some(time_zone_id))

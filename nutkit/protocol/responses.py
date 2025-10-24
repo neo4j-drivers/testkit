@@ -715,7 +715,7 @@ class DriverError(BaseError):
     test framework needs to check detailed error handling.
     """
 
-    def __init__(self, id=None, errorType=None, msg="", code="",
+    def __init__(self, id=None, errorType=None, msg="", code="",  # noqa: B042
                  retryable=None, gqlStatus=None, statusDescription=None,
                  cause=None, diagnosticRecord=None, classification=None,
                  rawClassification=None):
@@ -800,6 +800,7 @@ class FrontendError(BaseError):
     """
 
     def __init__(self, msg):
+        super().__init__(msg)
         self.msg = msg
 
     def __str__(self):
@@ -826,6 +827,7 @@ class BackendError(BaseError):
     """
 
     def __init__(self, msg):
+        super().__init__(msg)
         self.msg = msg
 
     def __str__(self):

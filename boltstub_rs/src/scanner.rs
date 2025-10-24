@@ -809,19 +809,19 @@ mod tests {
     #[test]
     fn test_scan_minimal_script() {
         let input = "!: BOLT 5.5\n";
-        let result = dbg!(super::scan_script(input, "test.script"));
+        let result = dbg!(scan_script(input, "test.script"));
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_failing_scan() {
         let input = "!: BOLT 5.4\n\nF: NOPE foo\n";
-        let result = dbg!(super::scan_script(input, "test.script"));
+        let result = dbg!(scan_script(input, "test.script"));
         assert!(result.is_err());
         println!("{:}", result.unwrap_err());
     }
 
-    fn wrap_input(input: &str) -> super::Input<'_> {
+    fn wrap_input(input: &str) -> Input<'_> {
         LocatedSpan::new(input)
     }
 
@@ -939,7 +939,7 @@ mod tests {
         #[values(1, 3)] repetition: usize,
     ) {
         let input = input.repeat(repetition);
-        let result = dbg!(super::scan_script(input.as_str(), "test.script"));
+        let result = dbg!(scan_script(input.as_str(), "test.script"));
         let result = result.unwrap();
         let start_bytes = expected.ctx().start_byte;
         let end_bytes = expected.ctx().end_byte;
@@ -956,7 +956,7 @@ mod tests {
     #[test]
     fn test_scan_multiple_bangs() {
         let input = "!: BOLT 5.4\n!: AUTO Nonsense\n!: ALLOW RESTART\n";
-        let result = dbg!(super::scan_script(input, "test.script"));
+        let result = dbg!(scan_script(input, "test.script"));
         let result = result.unwrap();
         assert_eq!(result.bang_lines.len(), 3);
         assert_eq!(
@@ -982,7 +982,7 @@ mod tests {
         let base = "!: AUTO Nonsense";
         let input = format!("{base}{ending}");
         let bytes = base.len() + ending.find(char::is_whitespace).unwrap_or(ending.len());
-        let (input, bl) = super::auto_bang_line(wrap_input(&input)).unwrap();
+        let (input, bl) = auto_bang_line(wrap_input(&input)).unwrap();
         assert_eq!(*input, ending);
         assert_eq!(bl, str_bang_line(BangLine::Auto, bytes, "Nonsense"));
     }
@@ -994,7 +994,7 @@ mod tests {
         let base = "!: AUTO Nonsense";
         let input = format!("{base}{ending}");
         let bytes = base.len() + ending.find(char::is_whitespace).unwrap_or(ending.len());
-        let result = dbg!(super::scan_script(&input, "test.script"));
+        let result = dbg!(scan_script(&input, "test.script"));
         let result = result.unwrap();
         assert_eq!(
             result.bang_lines.first(),
@@ -1008,7 +1008,7 @@ mod tests {
         let input = format!("{base}{ending}");
         let bytes = base.len() + ending.find(char::is_whitespace).unwrap_or(ending.len());
         let input = wrap_input(&input);
-        let mut f = super::simple_bang_line("ALLOW CONCURRENT", BangLine::AllowConcurrent);
+        let mut f = simple_bang_line("ALLOW CONCURRENT", BangLine::AllowConcurrent);
         let result = f.parse(input);
         let (rem, bang) = result.unwrap();
         assert_eq!(*rem, ending);
@@ -1041,7 +1041,7 @@ mod tests {
         #[values("", "\n", "\nS: Baz\n", "\n \n\n  S: Baz\n", "\n?}")] ending: &'static str,
     ) {
         let input = format!("{input}{ending}");
-        let (rem, block) = dbg!(super::multi_message(Some("C:"), ScanBlock::ClientMessage)(
+        let (rem, block) = dbg!(multi_message(Some("C:"), ScanBlock::ClientMessage)(
             wrap_input(&input)
         ))
         .unwrap();
@@ -1081,7 +1081,7 @@ mod tests {
         let input = "C: Foo a b\nC: Bar lel lol";
         let ending = "\nS:Baz\n";
         let input = format!("{input}{ending}");
-        let (rem, block) = dbg!(super::multi_message(Some("C:"), ScanBlock::ClientMessage)(
+        let (rem, block) = dbg!(multi_message(Some("C:"), ScanBlock::ClientMessage)(
             wrap_input(&input)
         ))
         .unwrap();
@@ -1116,8 +1116,8 @@ mod tests {
         #[case] bytes_msg_start: usize,
         #[case] bytes: usize,
     ) {
-        let result = super::message_with_simple_name(Some("C:"), ScanBlock::ClientMessage)
-            .parse(wrap_input(input));
+        let result =
+            message_with_simple_name(Some("C:"), ScanBlock::ClientMessage).parse(wrap_input(input));
         let (rem, block) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1144,8 +1144,8 @@ mod tests {
         #[case] body_start: usize,
         #[case] bytes: usize,
     ) {
-        let result = super::message_with_simple_name(Some("C:"), ScanBlock::ClientMessage)
-            .parse(wrap_input(input));
+        let result =
+            message_with_simple_name(Some("C:"), ScanBlock::ClientMessage).parse(wrap_input(input));
         let (rem, block) = result.unwrap();
         let body = "foo bar";
         let body_end = body_start + body.len();
@@ -1170,7 +1170,7 @@ mod tests {
     #[case::messy("#C:  RUN   foo bar  ", 20)]
     #[case::messy("#", 1)]
     fn test_comment(#[case] input: &str, #[case] bytes: usize) {
-        let result = super::comment(ScanBlock::Comment).parse(wrap_input(input));
+        let result = comment(ScanBlock::Comment).parse(wrap_input(input));
         let (rem, block) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(block, ScanBlock::Comment(new_ctx(1, 1, 0, bytes)));
@@ -1179,8 +1179,7 @@ mod tests {
     #[rstest]
     fn test_python_line() {
         let input = wrap_input("PY: print('Hello, World!')");
-        let result =
-            dbg!(super::message_simple_content(Some("PY:"), ScanBlock::Python).parse(input));
+        let result = dbg!(message_simple_content(Some("PY:"), ScanBlock::Python).parse(input));
         let (rem, block) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1203,7 +1202,7 @@ mod tests {
     ) {
         let empty_body = "{{\n# comment\n}}";
         let input = format!("{input}\n{empty_body}");
-        let result = super::scan_block(wrap_input(&input));
+        let result = scan_block(wrap_input(&input));
         let (rem, block) = result.unwrap();
         let ScanBlock::ConditionPart(_, branch, condition, _) = block else {
             panic!("Expected ConditionPart, found {block:?}");
@@ -1222,7 +1221,7 @@ mod tests {
     #[test]
     fn test_simple_block() {
         let input = wrap_input("{{\n    C: RUN\n    S: OK\n}}");
-        let result = dbg!(super::block("{{", "}}").parse(input));
+        let result = dbg!(block("{{", "}}").parse(input));
         let (rem, blocks) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1245,7 +1244,7 @@ mod tests {
     #[test]
     fn test_multi_block() {
         let input = wrap_input("{{\n    C: RUN1\n    S: OK\n----\n    C: RUN2\n}}");
-        let result = dbg!(super::multiblock("{{", "}}", "----").parse(input));
+        let result = dbg!(multiblock("{{", "}}", "----").parse(input));
         let (rem, blocks) = result.unwrap();
         assert_eq!(*rem, "");
         assert_eq!(
@@ -1282,8 +1281,8 @@ mod tests {
     // #########
     // Utilities
     // #########
-    fn call_message_name(input: &str) -> super::IResult<super::Input> {
-        super::message_name(wrap_input(input))
+    fn call_message_name(input: &str) -> IResult<'_, Input<'_>> {
+        message_name(wrap_input(input))
     }
 
     #[rstest]
@@ -1318,8 +1317,8 @@ mod tests {
         result.unwrap_err();
     }
 
-    fn call_end_of_line(input: &str) -> super::IResult<()> {
-        super::end_of_line(wrap_input(input))
+    fn call_end_of_line(input: &str) -> IResult<'_, ()> {
+        end_of_line(wrap_input(input))
     }
 
     #[rstest]
@@ -1331,8 +1330,8 @@ mod tests {
         assert_eq!(*rem, "jeff");
     }
 
-    fn call_rest_of_line(input: &str) -> super::IResult<super::Input> {
-        super::rest_of_line(wrap_input(input))
+    fn call_rest_of_line(input: &str) -> IResult<'_, Input<'_>> {
+        rest_of_line(wrap_input(input))
     }
 
     #[rstest]
@@ -1378,24 +1377,24 @@ mod tests {
             ?: GOODBYE"#
         };
 
-        dbg!(super::scan_script(input, "test.script")).unwrap();
+        dbg!(scan_script(input, "test.script")).unwrap();
     }
 
     #[test]
     fn test_server_message_name_normal_name() {
-        let (rem, taken) = super::server_message_name::<_, super::PError<_>>("AB_C").unwrap();
+        let (rem, taken) = server_message_name::<_, PError<_>>("AB_C").unwrap();
         assert_eq!(taken.0, "AB_C");
         assert_eq!(taken.1, "AB_C");
-        assert_eq!(taken.2, super::MessageNameType::Name);
+        assert_eq!(taken.2, MessageNameType::Name);
         assert_eq!(rem, "");
     }
 
     #[test]
     fn test_server_message_name_action() {
-        let (rem, taken) = super::server_message_name::<_, super::PError<_>>("<A1 O?>").unwrap();
+        let (rem, taken) = server_message_name::<_, PError<_>>("<A1 O?>").unwrap();
         assert_eq!(taken.0, "<A1 O?>");
         assert_eq!(taken.1, "A1 O?");
-        assert_eq!(taken.2, super::MessageNameType::Action);
+        assert_eq!(taken.2, MessageNameType::Action);
         assert_eq!(rem, "");
     }
 }
