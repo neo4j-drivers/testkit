@@ -2,12 +2,14 @@ import re
 
 from nutkit import protocol as types
 from tests.neo4j.shared import (
+    bolt_versions_in_features,
     cluster_unsafe_test,
     get_default_db,
     get_driver,
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    parse_version,
     QueryBuilder,
     requires_multi_db_support,
 )
@@ -116,26 +118,42 @@ class TestSummary(TestkitTestCase):
 
     def test_protocol_version_information(self):
         summary = self.get_summary("RETURN 1 AS number")
+        raw_version = summary.server_info.protocol_version
 
-        max_server_protocol_version = get_server_info().max_protocol_version
-        common_protocol_versions = [
-            f.value.split(":")[-1] for f in self._driver_features
-            if (re.match(r"^BOLT_\d+_\d+$", f.name)
-                and f.value.split(":")[-1] <= max_server_protocol_version)
-        ]
+        version_match = re.match(r"(\d+)\.(\d+)", raw_version)
+        self.assertIsNotNone(
+            version_match,
+            f"Unexpected server version format: {raw_version}"
+        )
+        version = parse_version(raw_version)
+
+        server_info = get_server_info()
+        is_aura_dev = (
+            server_info.edition == "aura" and server_info.is_dev_version
+        )
+        common_protocol_versions = (
+            server_info.common_protocol_versions(self._driver_features)
+        )
         if not common_protocol_versions:
             self.skipTest("Driver does not support server version.")
         common_max_version = max(common_protocol_versions)
-        if common_max_version == "4.2":
-            # Both versions are equivalent. Since 4.2 was introduced before
-            # having version ranges in the handshake, we allow drivers to
-            # negotiate bolt 4.1 with 4.2 to be able to fit support for more
-            # server versions into the handshake
-            self.assertIn(summary.server_info.protocol_version,
-                          ("4.2", "4.1"))
+        if is_aura_dev:
+            # Against dev aura, we are happy with any version newer or equal
+            # to the expected max version
+            self.assertIn(
+                version,
+                bolt_versions_in_features(self._driver_features),
+            )
         else:
-            self.assertEqual(summary.server_info.protocol_version,
-                             common_max_version)
+            self.assertGreaterEqual(version, common_max_version)
+            if common_max_version == (4, 2):
+                # Both versions are equivalent. Since 4.2 was introduced before
+                # having version ranges in the handshake, we allow drivers to
+                # negotiate bolt 4.1 with 4.2 to be able to fit support for
+                # more server versions into the handshake
+                self.assertIn(version, ((4, 2), (4, 1)))
+            else:
+                self.assertEqual(version, common_max_version)
 
     def test_agent_string(self):
         summary = self.get_summary("RETURN 1 AS number")
@@ -146,7 +164,7 @@ class TestSummary(TestkitTestCase):
         if server_info.edition == "aura":
             # for aura the agent string tends to be all over the place...
             self.assertTrue(agent.startswith("Neo4j/"))
-        elif re.match(r"(\d+)\.dev", server_info.version):
+        elif server_info.is_dev_version:
             self.assertTrue(agent.startswith(
                 "Neo4j/" + server_info.version.split(".")[0]
             ))
@@ -190,9 +208,9 @@ class TestSummary(TestkitTestCase):
     @requires_multi_db_support
     @cluster_unsafe_test
     def test_summary_counters_case_2(self):
-        version = get_server_info().version
-        new_index_syntax = version >= "4"
-        new_constraint_syntax = version >= "4.4"
+        version = get_server_info().parsed_version()
+        new_index_syntax = version >= (4, 0)
+        new_constraint_syntax = version >= (4, 4)
 
         self._session = self._driver.session("w", database="system")
 
