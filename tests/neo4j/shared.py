@@ -122,6 +122,7 @@ class ServerInfo:
         self.edition = edition
         self.cluster = cluster
         self._parsed_version = None
+        self._is_dev_version = None
 
     @property
     def server_agent(self):
@@ -129,7 +130,7 @@ class ServerInfo:
             raise ValueError(
                 "We can't predict the server's agent string for aura!"
             )
-        if re.match(r"(\d+)\.dev", self.version):
+        if self.is_dev_version:
             raise ValueError(
                 "We can't predict the server's agent string for dev versions!"
             )
@@ -152,10 +153,13 @@ class ServerInfo:
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
+        if self.edition == "aura" and self.is_dev_version:
+            return 5, 8
         version = self.parsed_version()
         if version >= (2025, 10):
             return 6, 0
         if version >= (5, 26):
+            # bolt 5.7 and 5.8 were released in a single server version
             return 5, 8
         if version >= (5, 23):
             return 5, 6
@@ -197,8 +201,14 @@ class ServerInfo:
 
     def parsed_version(self):
         if self._parsed_version is None:
-            self._parsed_version = _parse_version(self.version)
+            self._parsed_version = parse_version(self.version)
         return self._parsed_version
+
+    @property
+    def is_dev_version(self):
+        if self._is_dev_version is None:
+            self._is_dev_version = bool(re.match(r"(\d+)\.dev", self.version))
+        return self._is_dev_version
 
 
 def get_server_info():
@@ -289,7 +299,7 @@ def has_min_bolt_version(min_version, test_case):
 
 def bolt_versions_in_features(features):
     return (
-        (_parse_version(f.value.split(":")[-1]), f)
+        (parse_version(f.value.split(":")[-1]), f)
         for f in features
         if re.match(r"BOLT_(\d+_)*(\d+)", f.name)
     )
@@ -297,7 +307,7 @@ def bolt_versions_in_features(features):
 
 def _skip_reason_min_bolt_version(min_version, test_case):
     if isinstance(min_version, str):
-        min_version = _parse_version(min_version)
+        min_version = parse_version(min_version)
     server_max_version = get_server_info().max_protocol_version
     all_version_features = bolt_versions_in_features(protocol.Feature)
     all_viable_versions = [
@@ -315,7 +325,7 @@ def _skip_reason_min_bolt_version(min_version, test_case):
                            f"required protocol version: {min_version}")
 
 
-def _parse_version(v: str):
+def parse_version(v: str):
     match = re.match(r"(\d+)\.dev", v)
     if match:
         return int(match.group(1)), float("inf")

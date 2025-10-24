@@ -354,7 +354,7 @@ class TestTxRun(TestkitTestCase):
                 self.assertEqual(result.keys(), ["x"])
                 for record in result:
                     values.append(record.values[0])
-                if get_server_info().version >= "4":
+                if get_server_info().parsed_version() >= (4, 0):
                     result = tx.run("CALL tx.getMetaData")
                     record = result.next()
                     self.assertIsInstance(record, types.Record)
