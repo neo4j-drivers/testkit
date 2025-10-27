@@ -1,0 +1,21 @@
+!: BOLT 5.8
+
+A: HELLO {"{}": "*"}
+C: LOGON {"{}": "*"}
+S: SUCCESS {"advertised_address": "#ADVERTISED_HOST#:#PORT#"}
+
+*: RESET
+
+C: ROUTE {"{}": "*"} {"[]": "*"} {"{}": "*"}
+S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["doesnt_exist:9001"], "role":"ROUTE"}, {"addresses": ["doesnt_exist2:#PORT#"], "role":"READ"}, {"addresses": ["#ADVERTISED_HOST#:#PORT#"], "role":"WRITE"}]}}
+
+*: RESET
+
+C: RUN "RETURN 1 AS n" {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"{}": "*"}
+S: RECORD [1]
+S: SUCCESS {}
+
+*: RESET
+A: GOODBYE

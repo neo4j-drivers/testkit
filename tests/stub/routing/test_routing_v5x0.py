@@ -2412,6 +2412,7 @@ class RoutingV5x0(RoutingBase):
         self.assertEqual([1], sequence)
         self.assertEqual(["foo:6678"], last_bookmarks)
 
+    @driver_feature(types.Feature.BACKEND_DNS_RESOLVER)
     def _test_should_request_rt_from_all_initial_routers_until_successful(
         self, failure_script
     ):
