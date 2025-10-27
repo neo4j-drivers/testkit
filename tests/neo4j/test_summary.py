@@ -142,7 +142,10 @@ class TestSummary(TestkitTestCase):
             # to the expected max version
             self.assertIn(
                 version,
-                bolt_versions_in_features(self._driver_features),
+                [
+                    version for version, _feature in
+                    bolt_versions_in_features(self._driver_features)
+                ]
             )
         else:
             self.assertGreaterEqual(version, common_max_version)
