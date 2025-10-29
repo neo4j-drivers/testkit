@@ -9,7 +9,7 @@ from tests.stub.shared import StubServer
 
 class TestRetry(TestkitTestCase):
 
-    required_features = types.Feature.BOLT_4_3,
+    required_features = types.Feature.BOLT_4_4,
 
     def setUp(self):
         super().setUp()
@@ -222,4 +222,105 @@ class TestRetry(TestkitTestCase):
         for failure in failures:
             with self.subTest(failure=failure):
                 _test()
-            self._server.reset()
+
+    def test_reset_fails_after_pull(self):
+        def _test(invalid_response_, api_):
+            def check_exception(exc):
+                self.assertEqual(
+                    exc.exception.code,
+                    "Neo.TransientError.Statement."
+                    "RemoteExecutionTransientError"
+                )
+                if self.driver_supports_features(
+                    types.Feature.API_RETRYABLE_EXCEPTION
+                ):
+                    self.assertTrue(exc.exception.retryable)
+
+            def api_call(session_):
+                if api_ == "session":
+                    with self.assertRaises(types.DriverError) as exc:
+                        result = session_.run("RETURN 1 AS n")
+                        list(result)
+                    check_exception(exc)
+                elif api_ == "explicit_tx":
+                    tx = session_.begin_transaction()
+                    try:
+                        with self.assertRaises(types.DriverError) as exc:
+                            result = tx.run("RETURN 1 AS n")
+                            list(result)
+                        check_exception(exc)
+                    finally:
+                        tx.close()
+                elif api_ == "managed_tx":
+                    run = 0
+
+                    def work(tx):
+                        nonlocal run
+                        run += 1
+                        if run == 1:
+                            with self.assertRaises(types.DriverError) as exc:
+                                result = tx.run("RETURN 1 AS n")
+                                list(result)
+                            check_exception(exc)
+                            raise exc.exception
+                        else:
+                            result = tx.run("RETURN 1 AS n")
+                            return list(result)
+
+                    records = session_.execute_write(work)
+                    assert len(records) == 1
+                    self.assertEqual(records, [
+                        types.Record(values=[types.CypherInt(1)])
+                    ])
+                else:
+                    raise ValueError(f"Unknown API: {api_}")
+
+            self._server.start(
+                path=self.script_path("reset_fails_after_pull.script"),
+                vars_={
+                    "#INVALID_RESPONSE#": invalid_response_,
+                }
+            )
+            auth = types.AuthorizationToken("basic", principal="",
+                                            credentials="")
+            driver = Driver(self._backend,
+                            "bolt://%s" % self._server.address, auth)
+            try:
+                session = driver.session("r")
+                try:
+                    api_call(session)
+
+                finally:
+                    session.close()
+                # driver should've killed the misbehaving connection
+                try:
+                    self.assertEqual(
+                        self._server.count_responses("<HANGUP>"), 1
+                    )
+                finally:
+                    self._server._dump()
+            finally:
+                driver.close()
+            self._server.done()
+
+        invalid_responses = (
+            (
+                'S: FAILURE {"code": "Neo.ClientError.General.Unknown", '
+                '"message": "The driver should ignore this error!"}'
+            ),
+            "S: IGNORED",
+            (
+                "# MIXED   \n"
+                "IF: invalid_responses <= 1\n"
+                '    S: FAILURE {"code": "Neo.ClientError.General.Unknown", '
+                '"message": "The driver should ignore this error!"}\n'
+                "ELSE:\n"
+                "    S: IGNORED\n"
+            )
+        )
+        for invalid_response in invalid_responses:
+            for api in ("session", "explicit_tx", "managed_tx"):
+                with self.subTest(response=invalid_response[2:10].strip(),
+                                  api=api):
+                    _test(invalid_response, api)
+                self._server.reset()

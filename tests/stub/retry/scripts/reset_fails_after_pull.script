@@ -1,0 +1,58 @@
+!: BOLT 4.4
+!: ALLOW RESTART
+!: PY invalid_responses = round = 0
+
+A: HELLO {"{}": "*"}
+
+IF: round == 0
+{{
+    PY: round += 1
+    *: RESET
+
+    {?
+        # Optionally a transaction
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+    ?}
+    C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+    S: SUCCESS {"t_first": 2, "fields": ["n"], "qid": 0}
+    C: PULL {"n": {"Z": "*"}}
+    S: FAILURE {"code": "Neo.TransientError.Statement.RemoteExecutionTransientError", "message": "Remote execution failed with code N/A and message 'Failed to obtain connection towards READ server. Known routing table is: Ttl 1703005857129, currentTime 1703005847132, routers [], writers [], readers [], database 'neo4j''"}
+    {*
+        C: RESET
+        #INVALID_RESPONSE#
+        PY: invalid_responses += 1
+    *}
+}}
+ELIF: round == 1
+{{
+    PY: round += 1
+    *: RESET
+
+    {{
+        C: BEGIN {"{}": "*"}
+        S: SUCCESS {}
+        C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+        S: SUCCESS {"t_first": 2, "fields": ["n"], "qid": 0}
+        C: PULL {"n": {"Z": "*"}}
+        S: RECORD [1]
+        S: SUCCESS {"type": "r"}
+        C: COMMIT
+        S: SUCCESS {}
+    ----
+        C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+        S: SUCCESS {"t_first": 2, "fields": ["n"], "qid": 0}
+        C: PULL {"n": {"Z": "*"}}
+        S: RECORD [1]
+        S: SUCCESS {"type": "r"}
+    }}
+
+    *: RESET
+}}
+ELSE:
+{{
+    PY: round += 1
+    S: <EXIT>
+}}
+
+?: GOODBYE
