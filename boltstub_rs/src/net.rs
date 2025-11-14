@@ -6,7 +6,7 @@ use std::sync::{atomic, Arc};
 
 use anyhow::{anyhow, Error, Result};
 use itertools::Itertools;
-use log::{debug, info, trace};
+use log::{debug, info};
 use tokio::io::BufStream;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::select;
@@ -196,7 +196,7 @@ impl Server {
                         return res;
                     }
                 } else {
-                    trace!("Non-WebSocket connection");
+                    debug!("Non-WebSocket connection");
                     if let Some(res) = execute_actor(ct, shutting_down, conn, script, handles).await
                     {
                         return res;

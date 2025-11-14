@@ -62,28 +62,41 @@ pub(super) use log;
 
 macro_rules! trace {
     ($actor:ident, $($arg:tt)+) => {
-        crate::net_actor::logging::log!(log::Level::Trace, $actor, $($arg)+)
+        crate::net_actor::logging::log!(::log::Level::Trace, $actor, $($arg)+)
     };
 }
 pub(super) use trace;
 
 macro_rules! debug {
     ($actor:ident, $($arg:tt)+) => {
-        crate::net_actor::logging::log!(log::Level::Debug, $actor, $($arg)+)
+        crate::net_actor::logging::log!(::log::Level::Debug, $actor, $($arg)+)
     };
 }
 pub(super) use debug;
 
 macro_rules! info {
     ($actor:ident, $($arg:tt)+) => {
-        crate::net_actor::logging::log!(log::Level::Info, $actor, $($arg)+)
+        crate::net_actor::logging::log!(::log::Level::Info, $actor, $($arg)+)
     };
 }
 pub(super) use info;
 
 macro_rules! error {
     ($actor:ident, $($arg:tt)+) => {
-        crate::net_actor::logging::log!(log::Level::Error, $actor, $($arg)+)
+        crate::net_actor::logging::log!(::log::Level::Error, $actor, $($arg)+)
     };
 }
 pub(super) use error;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    impl LoggingCtx {
+        pub fn new(peer_port: u16, local_port: u16) -> Self {
+            Self {
+                ports: (peer_port, local_port),
+            }
+        }
+    }
+}

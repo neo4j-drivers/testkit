@@ -1,8 +1,6 @@
 mod handshake;
 mod logging;
 
-use anyhow::{anyhow, Context as AnyhowContext};
-use logging::{debug, error, info};
 use std::borrow::Cow;
 use std::collections::{HashSet, VecDeque};
 use std::error::Error;
@@ -11,6 +9,9 @@ use std::future::Future;
 use std::io;
 use std::net::SocketAddr;
 use std::sync::{atomic, Arc};
+
+use anyhow::{anyhow, Context as AnyhowContext};
+use logging::{debug, error, info};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufStream};
 use tokio::net::TcpStream;
 use tokio::select;
@@ -185,7 +186,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
             }
             Err(err) => {
                 block.ensure_branched(self.logging_ctx(), &self.script.script)?;
-                if block.can_skip() {
+                if block.can_skip(self.logging_ctx()) {
                     debug!(
                         self,
                         "Ignoring NetActor error because script reached the end: {err:#}"
@@ -219,15 +220,16 @@ impl<'a, C: Connection> NetActor<'a, C> {
     async fn run_block(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<()> {
         loop {
             self.server_action(block).await?;
-            if block.done() {
+            if block.done(self.logging_ctx()) {
                 break;
             }
             let consume_res = match self.matches_bang_handler().await {
                 Err(e) => Err(e),
                 Ok(false) => self.try_consume(block).await,
                 Ok(true) => {
+                    let logging_ctx = self.logging_ctx();
                     let can_consume = Self::peek_message(
-                        self.logging_ctx(),
+                        logging_ctx,
                         &self.ct,
                         &mut self.conn,
                         &mut self.peeked_message,
@@ -235,7 +237,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     )
                     .await
                     .and_then(|peeked_message| {
-                        Self::can_consume(block, peeked_message, &self.script.script)
+                        Self::can_consume(logging_ctx, block, peeked_message, &self.script.script)
                     });
                     match can_consume {
                         Ok(true) => self.try_consume(block).await,
@@ -281,13 +283,14 @@ impl<'a, C: Connection> NetActor<'a, C> {
     /// # Returns
     /// bool indicates if a message could be consumed `true` or there was a script mismatch `false`
     async fn try_consume(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<bool> {
+        trace!(self, "try_consume: {block:?}");
         match block {
             BlockWithState::BlockList(ctx, blocks, initial_size) => loop {
                 let Some(block) = blocks.front_mut() else {
                     return Ok(false);
                 };
                 if Box::pin(self.try_consume(block)).await? {
-                    if block.done() {
+                    if block.done(self.logging_ctx()) {
                         blocks.pop_front();
                         debug!(
                             self,
@@ -298,7 +301,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     }
                     return Ok(true);
                 }
-                if !block.can_skip() {
+                if !block.can_skip(self.logging_ctx()) {
                     return Ok(false);
                 }
                 blocks.pop_front();
@@ -347,7 +350,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                         );
                             let mut body = Box::new(body.clone());
                             let res = Box::pin(self.try_consume(&mut body)).await;
-                            if body.done() {
+                            if body.done(self.logging_ctx()) {
                                 debug!(self, "conditional body ({ctx_b}) done: moving to Done");
                                 *state = ConditionState::Done
                             } else {
@@ -359,7 +362,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 }
                 ConditionState::Chosen(ctx, b) => {
                     let res = Box::pin(self.try_consume(b)).await;
-                    if b.done() {
+                    if b.done(self.logging_ctx()) {
                         debug!(self, "conditional body ({ctx}) done: moving to Done");
                         *state = ConditionState::Done
                     }
@@ -371,7 +374,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 BranchState::Init => {
                     for (i, block) in blocks.iter_mut().enumerate() {
                         if Box::pin(self.try_consume(block)).await? {
-                            if block.done() {
+                            if block.done(self.logging_ctx()) {
                                 debug!(
                                     self,
                                     "alt block ({ctx}) child {} started and done: moving to Done",
@@ -393,7 +396,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 }
                 BranchState::InBlock(i) => {
                     let res = Box::pin(self.try_consume(&mut blocks[*i])).await;
-                    if blocks[*i].done() {
+                    if blocks[*i].done(self.logging_ctx()) {
                         debug!(
                             self,
                             "alt block ({ctx}) child {} done: moving to Done",
@@ -411,7 +414,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 }
                 let mut matched = false;
                 for block in blocks.iter_mut() {
-                    if block.done() {
+                    if block.done(self.logging_ctx()) {
                         continue;
                     }
                     if Box::pin(self.try_consume(block)).await? {
@@ -419,7 +422,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                         break;
                     }
                 }
-                if blocks.iter().all(BlockWithState::done) {
+                if blocks.iter().all(|block| block.done(self.logging_ctx())) {
                     debug!(
                         self,
                         "parallel block ({ctx}) all children done: moving to Done"
@@ -438,7 +441,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                         );
                         *state = OptionalState::Started;
                     }
-                    if block.done() {
+                    if block.done(self.logging_ctx()) {
                         debug!(self, "optional block ({ctx}) child done: moving to Done");
                         *state = OptionalState::Done;
                     }
@@ -456,10 +459,11 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     state.in_block = true;
                     return Ok(true);
                 }
-                if state.in_block && block.can_skip() {
+                let logging_ctx = self.logging_ctx();
+                if state.in_block && block.can_skip(logging_ctx) {
                     // try form the top
                     let peeked_message = Self::peek_message(
-                        self.logging_ctx(),
+                        logging_ctx,
                         &self.ct,
                         &mut self.conn,
                         &mut self.peeked_message,
@@ -467,6 +471,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     )
                     .await?;
                     match Self::can_consume(
+                        logging_ctx,
                         state.initial_state.as_ref(),
                         peeked_message,
                         &self.script.script,
@@ -559,6 +564,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
 
     /// Progresses the state even if the call fails.
     async fn server_action(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<()> {
+        trace!(self, "server_action: {block:?}");
         match block {
             BlockWithState::BlockList(ctx, blocks, initial_size) => {
                 let mut error = None;
@@ -570,7 +576,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     if let Err(err) = res {
                         error.get_or_insert(err);
                     }
-                    if !block.done() {
+                    if !block.done(self.logging_ctx()) {
                         break;
                     }
                     blocks.pop_front();
@@ -634,7 +640,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                         );
                             let mut body = Box::new(body.clone());
                             let res = Box::pin(self.server_action(&mut body)).await;
-                            if body.done() {
+                            if body.done(self.logging_ctx()) {
                                 debug!(self, "conditional body ({ctx_b}) done: moving to Done");
                                 *state = ConditionState::Done
                             } else {
@@ -646,7 +652,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 }
                 ConditionState::Chosen(ctx, b) => {
                     let res = Box::pin(self.server_action(b)).await;
-                    if b.done() {
+                    if b.done(self.logging_ctx()) {
                         debug!(self, "conditional body ({ctx}) done: moving to Done");
                         *state = ConditionState::Done
                     }
@@ -658,13 +664,13 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 BranchState::Init => {
                     for block in blocks.iter_mut() {
                         Box::pin(self.server_action(block)).await?;
-                        assert!(!block.done())
+                        assert!(!block.done(self.logging_ctx()))
                     }
                     Ok(())
                 }
                 BranchState::InBlock(i) => {
                     let res = Box::pin(self.server_action(&mut blocks[*i])).await;
-                    if blocks[*i].done() {
+                    if blocks[*i].done(self.logging_ctx()) {
                         debug!(
                             self,
                             "alt block ({ctx}) child {} done: moving to Done",
@@ -682,7 +688,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     let mut error = None;
                     for block in blocks.iter_mut() {
                         block.ensure_branched(self.logging_ctx(), &self.script.script)?;
-                        if block.done() {
+                        if block.done(self.logging_ctx()) {
                             continue;
                         }
                         let res = Box::pin(self.server_action(block)).await;
@@ -690,7 +696,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                             error.get_or_insert(err);
                         }
                     }
-                    if blocks.iter().all(BlockWithState::done) {
+                    if blocks.iter().all(|block| block.done(self.logging_ctx())) {
                         debug!(
                             self,
                             "parallel block ({ctx}) all children done: moving to Done"
@@ -708,7 +714,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 OptionalState::Init => Ok(()),
                 OptionalState::Started => {
                     let res = Box::pin(self.server_action(block)).await;
-                    if block.done() {
+                    if block.done(self.logging_ctx()) {
                         debug!(self, "optional block ({ctx}) child done: moving to Done");
                         *state = OptionalState::Done;
                     }
@@ -719,7 +725,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
             BlockWithState::Repeat(state, ctx, block, count) => match state.in_block {
                 true => {
                     let res = Box::pin(self.server_action(block)).await;
-                    if block.done() {
+                    if block.done(self.logging_ctx()) {
                         *block = state.initial_state.clone();
                         state.in_block = false;
                         state.count += 1;
@@ -820,7 +826,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
             BlockWithState::BlockList(_, blocks, _) => {
                 for block in blocks.iter() {
                     self.current_verifiers(block, res)?;
-                    if !block.can_skip() {
+                    if !block.can_skip(self.logging_ctx()) {
                         break;
                     }
                 }
@@ -870,7 +876,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 }
                 let mut sub_res = Vec::new();
                 self.current_verifiers(block, &mut sub_res)?;
-                if !block.can_skip() {
+                if !block.can_skip(self.logging_ctx()) {
                     res.extend(sub_res);
                     return Ok(());
                 }
@@ -900,6 +906,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
     /// # Returns
     /// bool indicating the message can be consumed `true` or there was a script mismatch `false`
     fn can_consume(
+        logging_ctx: LoggingCtx,
         block: &BlockWithState<'_>,
         message: &BoltMessage,
         script: &Script,
@@ -907,10 +914,10 @@ impl<'a, C: Connection> NetActor<'a, C> {
         match block {
             BlockWithState::BlockList(_, blocks, _) => {
                 for block in blocks.iter() {
-                    if Self::can_consume(block, message, script)? {
+                    if Self::can_consume(logging_ctx, block, message, script)? {
                         return Ok(true);
                     }
-                    if !block.can_skip() {
+                    if !block.can_skip(logging_ctx) {
                         break;
                     }
                 }
@@ -922,37 +929,41 @@ impl<'a, C: Connection> NetActor<'a, C> {
             BlockWithState::Condition(state, _) => match state {
                 ConditionState::Init(state) => match state.choose_branch(script)? {
                     None => Ok(false),
-                    Some((_, block)) => Self::can_consume(block, message, script),
+                    Some((_, block)) => Self::can_consume(logging_ctx, block, message, script),
                 },
-                ConditionState::Chosen(_, block) => Self::can_consume(block, message, script),
+                ConditionState::Chosen(_, block) => {
+                    Self::can_consume(logging_ctx, block, message, script)
+                }
                 ConditionState::Done => Ok(false),
             },
             BlockWithState::Alt(state, _, child_blocks) => match state {
                 BranchState::Init => child_blocks
                     .iter()
-                    .map(|b| Self::can_consume(b, message, script))
+                    .map(|b| Self::can_consume(logging_ctx, b, message, script))
                     .find(|res| !matches!(res, Ok(false)))
                     .unwrap_or(Ok(false)),
-                BranchState::InBlock(i) => Self::can_consume(&child_blocks[*i], message, script),
+                BranchState::InBlock(i) => {
+                    Self::can_consume(logging_ctx, &child_blocks[*i], message, script)
+                }
                 BranchState::Done => Ok(false),
             },
             BlockWithState::Parallel(state, _, blocks) => Ok(!state.done
                 && blocks
                     .iter()
-                    .map(|b| Self::can_consume(b, message, script))
+                    .map(|b| Self::can_consume(logging_ctx, b, message, script))
                     .find(|res| !matches!(res, Ok(false)))
                     .unwrap_or(Ok(false))?),
             BlockWithState::Optional(state, _, block) => match state {
                 OptionalState::Init | OptionalState::Started => {
-                    Self::can_consume(block, message, script)
+                    Self::can_consume(logging_ctx, block, message, script)
                 }
                 OptionalState::Done => Ok(false),
             },
             BlockWithState::Repeat(state, _, block, _) => {
-                Ok(Self::can_consume(block, message, script)?
+                Ok(Self::can_consume(logging_ctx, block, message, script)?
                     || (state.in_block
-                        && block.can_skip()
-                        && Self::can_consume(&state.initial_state, message, script)?))
+                        && block.can_skip(logging_ctx)
+                        && Self::can_consume(logging_ctx, &state.initial_state, message, script)?))
             }
             BlockWithState::AutoMessage(state, _, handler) => {
                 Ok(!state.done && handler.client_validator.validate(message).is_ok())
@@ -1243,7 +1254,7 @@ impl BlockWithState<'_> {
             BlockWithState::BlockList(_, blocks, _) => {
                 for block in blocks.iter_mut() {
                     block.ensure_branched(logging_ctx, script)?;
-                    if !(block.done() || block.can_skip()) {
+                    if !(block.done(logging_ctx) || block.can_skip(logging_ctx)) {
                         break;
                     }
                 }
@@ -1440,23 +1451,30 @@ impl<'a> BlockWithState<'a> {
         }
     }
 
-    fn done(&self) -> bool {
-        match self {
+    fn done(&self, logging_ctx: LoggingCtx) -> bool {
+        self._done(logging_ctx, 0)
+    }
+
+    fn _done(&self, logging_ctx: LoggingCtx, depth: u64) -> bool {
+        let res = match self {
             BlockWithState::BlockList(_, blocks, _) => blocks.is_empty(),
             BlockWithState::Condition(state, _) => match state {
                 ConditionState::Init(_) => {
                     panic!("Should have called `ensure_branched` before `done` {state:?}")
                 }
-                ConditionState::Chosen(_, b) => b.done(),
+                ConditionState::Chosen(_, b) => b._done(logging_ctx, depth + 1),
                 ConditionState::Done => true,
             },
             BlockWithState::Alt(state, _, blocks) => match state {
                 BranchState::Init => false,
-                BranchState::InBlock(i) => blocks[*i].done(),
+                BranchState::InBlock(i) => blocks[*i]._done(logging_ctx, depth + 1),
                 BranchState::Done => true,
             },
             BlockWithState::Parallel(state, _, blocks) => {
-                state.done || blocks.iter().all(Self::done)
+                state.done
+                    || blocks
+                        .iter()
+                        .all(|block| block._done(logging_ctx, depth + 1))
             }
             BlockWithState::Optional(state, _, _) => matches!(state, OptionalState::Done),
             BlockWithState::Repeat(_, _, _, _) => false,
@@ -1466,33 +1484,53 @@ impl<'a> BlockWithState<'a> {
             | BlockWithState::Python(state, _, _)
             | BlockWithState::AutoMessage(state, _, _) => state.done,
             BlockWithState::NoOp(_) => true,
-        }
+        };
+        trace!(
+            logging_ctx,
+            "{:indent$}{} = done({:?})",
+            "",
+            res,
+            self,
+            indent = (depth * 2).try_into().unwrap_or(usize::MAX)
+        );
+        res
     }
 
-    fn can_skip(&self) -> bool {
-        match self {
-            BlockWithState::BlockList(_, blocks, _) => blocks.iter().all(Self::can_skip),
+    fn can_skip(&self, logging_ctx: LoggingCtx) -> bool {
+        self._can_skip(logging_ctx, 0)
+    }
+
+    fn _can_skip(&self, logging_ctx: LoggingCtx, depth: u64) -> bool {
+        let res = match self {
+            BlockWithState::BlockList(_, blocks, _) => blocks
+                .iter()
+                .all(|block| block._can_skip(logging_ctx, depth + 1)),
             BlockWithState::Condition(state, _) => match state {
                 ConditionState::Init(_) => {
                     panic!("Should have called `ensure_branched` before `can_skip` {state:?}")
                 }
-                ConditionState::Chosen(_, b) => b.can_skip(),
+                ConditionState::Chosen(_, b) => b._can_skip(logging_ctx, depth + 1),
                 ConditionState::Done => true,
             },
             BlockWithState::Alt(state, _, blocks) => match state {
-                BranchState::Init => blocks.iter().any(Self::can_skip),
-                BranchState::InBlock(i) => blocks[*i].can_skip(),
+                BranchState::Init => blocks
+                    .iter()
+                    .any(|block| block._can_skip(logging_ctx, depth + 1)),
+                BranchState::InBlock(i) => blocks[*i]._can_skip(logging_ctx, depth + 1),
                 BranchState::Done => true,
             },
             BlockWithState::Parallel(state, _, blocks) => {
-                state.done || blocks.iter().all(Self::can_skip)
+                state.done
+                    || blocks
+                        .iter()
+                        .all(|block| block._can_skip(logging_ctx, depth + 1))
             }
             BlockWithState::Optional(state, _, block) => match state {
                 OptionalState::Init | OptionalState::Done => true,
-                OptionalState::Started => block.can_skip(),
+                OptionalState::Started => block._can_skip(logging_ctx, depth + 1),
             },
             BlockWithState::Repeat(state, _, block, rep) => match state.in_block {
-                true => block.can_skip(),
+                true => block._can_skip(logging_ctx, depth + 1),
                 false => state.count >= *rep,
             },
             BlockWithState::ClientMessageValidate(state, _, _)
@@ -1501,7 +1539,16 @@ impl<'a> BlockWithState<'a> {
             | BlockWithState::ServerMessageSend(_, _, _)
             | BlockWithState::ServerActionLine(_, _, _)
             | BlockWithState::Python(_, _, _) => true,
-        }
+        };
+        trace!(
+            logging_ctx,
+            "{:indent$}{} = can_skip({:?})",
+            "",
+            res,
+            self,
+            indent = (depth * 2).try_into().unwrap_or(usize::MAX)
+        );
+        res
     }
 }
 
@@ -1640,6 +1687,10 @@ mod tests {
             }
         }
 
+        fn make_logging_ctx() -> LoggingCtx {
+            LoggingCtx::new(0, 0)
+        }
+
         #[test]
         fn should_ok() {
             let script = make_script();
@@ -1656,7 +1707,12 @@ mod tests {
 
             let test_block_stateful = BlockWithState::new(&test_block);
             let message = BoltMessage::new(0, vec![], BoltVersion::V4_4);
-            let res = NetActor::<TcpStream>::can_consume(&test_block_stateful, &message, &script);
+            let res = NetActor::<TcpStream>::can_consume(
+                make_logging_ctx(),
+                &test_block_stateful,
+                &message,
+                &script,
+            );
             let res = res.unwrap();
             assert!(res);
         }
@@ -1677,7 +1733,12 @@ mod tests {
 
             let test_block_stateful = BlockWithState::new(&test_block);
             let message = BoltMessage::new(0, vec![], BoltVersion::V4_4);
-            let res = NetActor::<TcpStream>::can_consume(&test_block_stateful, &message, &script);
+            let res = NetActor::<TcpStream>::can_consume(
+                make_logging_ctx(),
+                &test_block_stateful,
+                &message,
+                &script,
+            );
             let res = res.unwrap();
             assert!(!res);
         }
@@ -1722,7 +1783,12 @@ mod tests {
 
             let test_block_stateful = BlockWithState::new(&test_block);
             let message = BoltMessage::new(0, vec![], BoltVersion::V4_4);
-            let res = NetActor::<TcpStream>::can_consume(&test_block_stateful, &message, &script);
+            let res = NetActor::<TcpStream>::can_consume(
+                make_logging_ctx(),
+                &test_block_stateful,
+                &message,
+                &script,
+            );
             let res = res.unwrap();
             assert!(res);
         }
@@ -1767,7 +1833,12 @@ mod tests {
 
             let test_block_stateful = BlockWithState::new(&test_block);
             let message = BoltMessage::new(0, vec![], BoltVersion::V4_4);
-            let res = NetActor::<TcpStream>::can_consume(&test_block_stateful, &message, &script);
+            let res = NetActor::<TcpStream>::can_consume(
+                make_logging_ctx(),
+                &test_block_stateful,
+                &message,
+                &script,
+            );
             let res = res.unwrap();
             assert!(!res);
         }
