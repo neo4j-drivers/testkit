@@ -579,11 +579,11 @@ impl<'a, C: Connection> NetActor<'a, C> {
                         "list child block done: moving block list ({ctx}) to {}/{initial_size}",
                         initial_size.saturating_sub(blocks.len()),
                     );
+                    if error.is_some() {
+                        break;
+                    }
                 }
-                match error {
-                    None => Ok(()),
-                    Some(err) => Err(err),
-                }
+                error.map_or_else(|| Ok(()), Err)
             }
             BlockWithState::ServerMessageSend(state, ctx, sender) => match state.done {
                 true => Ok(()),
@@ -1496,11 +1496,11 @@ impl<'a> BlockWithState<'a> {
                 false => state.count >= *rep,
             },
             BlockWithState::ClientMessageValidate(state, _, _)
-            | BlockWithState::ServerMessageSend(state, _, _)
-            | BlockWithState::ServerActionLine(state, _, _)
-            | BlockWithState::Python(state, _, _)
             | BlockWithState::AutoMessage(state, _, _) => state.done,
-            BlockWithState::NoOp(_) => true,
+            BlockWithState::NoOp(_)
+            | BlockWithState::ServerMessageSend(_, _, _)
+            | BlockWithState::ServerActionLine(_, _, _)
+            | BlockWithState::Python(_, _, _) => true,
         }
     }
 }
