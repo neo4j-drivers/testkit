@@ -67,7 +67,7 @@ class _TestTemporalTypes(TestkitTestCase):
         self.assertEqual(len(records[0].values), 1)
         self.assertEqual(dt, records[0].values[0])
 
-    def _test_unknown_zoned_date_time(self, patched):
+    def _test_unknown_zoned_date_time(self, patched, nested=""):
         tx_count = 0
 
         def work(tx):
@@ -79,9 +79,9 @@ class _TestTemporalTypes(TestkitTestCase):
             self.assertIn("Europe/Neo4j", exc.exception.msg)
             raise exc.exception
 
-        script = "echo_unknown_zoned_date_time.script"
+        script = f"echo_unknown_zoned_date_time{nested}.script"
         if patched:
-            script = "echo_unknown_zoned_date_time_patched.script"
+            script = f"echo_unknown_zoned_date_time_{nested}patched.script"
         self._start_server(script)
         self._create_direct_driver()
         self._session = self._driver.session("w")
@@ -196,9 +196,23 @@ class TestTemporalTypesV4x4(_TestTemporalTypes):
     def test_unknown_zoned_date_time(self):
         super()._test_unknown_zoned_date_time(patched=False)
 
+    def test_unknown_zoned_date_time_nested_list(self):
+        super()._test_unknown_zoned_date_time(patched=False, nested="_list")
+
+    def test_unknown_zoned_date_time_nested_dict(self):
+        super()._test_unknown_zoned_date_time(patched=False, nested="_dict")
+
     @driver_feature(types.Feature.BOLT_PATCH_UTC)
     def test_unknown_zoned_date_time_patched(self):
         super()._test_unknown_zoned_date_time(patched=True)
+
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
+    def test_unknown_zoned_date_time_patched_nested_list(self):
+        super()._test_unknown_zoned_date_time(patched=True, nested="_list")
+
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
+    def test_unknown_zoned_date_time_patched_nested_dict(self):
+        super()._test_unknown_zoned_date_time(patched=True, nested="_dict")
 
     def test_unknown_then_known_zoned_date_time(self):
         super()._test_unknown_then_known_zoned_date_time(patched=False)
@@ -224,6 +238,12 @@ class TestTemporalTypesV5x0(_TestTemporalTypes):
 
     def test_unknown_zoned_date_time(self):
         super()._test_unknown_zoned_date_time(patched=False)
+
+    def test_unknown_zoned_date_time_nested_list(self):
+        super()._test_unknown_zoned_date_time(patched=False, nested="_list")
+
+    def test_unknown_zoned_date_time_nested_dict(self):
+        super()._test_unknown_zoned_date_time(patched=False, nested="_dict")
 
     def test_unknown_then_known_zoned_date_time(self):
         super()._test_unknown_then_known_zoned_date_time(patched=False)
