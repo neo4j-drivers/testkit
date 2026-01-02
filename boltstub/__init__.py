@@ -162,19 +162,23 @@ class BoltStubService:
         self.server.timeout = timeout or self.default_timeout
 
     def start(self):
-        if self.script.context.restarting or self.script.context.concurrent:
-            try:
+        try:
+            if (
+                self.script.context.restarting
+                or self.script.context.concurrent
+            ):
                 self.server.serve_forever()
-            except OSError as exc:
-                if not self._shutting_down:
-                    raise
-                # Specifically on Windows `serve_forever` might exit with an
-                # error when `self._close_socket` just pulls the plug.
-                # Other OSes might also raise an error in this case.
-                # This is fine and we can ignore it.
-                log.warning("Ignored OSError during shutdown", exc_info=exc)
-        else:
-            self.server.handle_request()
+            else:
+                self.server.handle_request()
+        except OSError as exc:
+            if not self._shutting_down:
+                raise
+            # Specifically on Windows `serve_forever` might exit with an
+            # error when `self._close_socket` just pulls the plug.
+            # Other OSes might also raise an error in this case.
+            # This is fine and we can ignore it.
+            log.warning("Ignored OSError during shutdown", exc_info=exc)
+        finally:
             self.server.server_close()
 
     def _close_socket(self):
