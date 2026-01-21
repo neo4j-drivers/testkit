@@ -34,7 +34,12 @@ class TestDataTypes(_TestTypesBase):
             types.CypherString("1"),
             types.CypherString("-17∂ßå®"),
             types.CypherString("String"),
+            types.CypherString("🐒💘🍌"),
             types.CypherString(""),
+            types.CypherString("é"),
+            types.CypherString("e\u0301"),  # 'e' + combining acute accent
+            types.CypherString("Å"),
+            types.CypherString("A\u030a"),  # 'A' + combining ring above
 
             types.CypherList([
                 types.CypherString("Hello"),
@@ -49,6 +54,7 @@ class TestDataTypes(_TestTypesBase):
             }),
 
             types.CypherBytes(bytearray([0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF])),
+            types.CypherBytes(bytearray([])),
         ]
 
         self._create_driver_and_session()

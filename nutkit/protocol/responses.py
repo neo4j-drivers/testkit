@@ -388,10 +388,13 @@ class Record:
         v = []
         for x in self.values:
             v.append(str(x))
-        return "Record, values {}".format(v)
+        return "Record, values {}".format(" ".join(v))
 
     def __repr__(self):
-        return self.__str__()
+        v = []
+        for x in self.values:
+            v.append(repr(x))
+        return "<Record values {}>".format(" ".join(v))
 
 
 class Field:

@@ -1,10 +1,9 @@
+from __future__ import annotations
+
 import nutkit.protocol as types
 from nutkit.frontend import ApplicationCodeError
 from tests.neo4j.shared import get_driver
 from tests.shared import TestkitTestCase
-
-MIN_INT64 = -(2 ** 63)
-MAX_INT64 = (2 ** 63) - 1
 
 
 class _TestTypesBase(TestkitTestCase):

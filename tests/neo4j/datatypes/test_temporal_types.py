@@ -4,11 +4,7 @@ from time import sleep
 import pytz
 
 import nutkit.protocol as types
-from tests.neo4j.datatypes._base import (
-    _TestTypesBase,
-    MAX_INT64,
-    MIN_INT64,
-)
+from tests.neo4j.datatypes._base import _TestTypesBase
 from tests.neo4j.datatypes._util import TZ_IDS
 from tests.neo4j.shared import (
     get_server_info,
@@ -17,6 +13,8 @@ from tests.neo4j.shared import (
 )
 from tests.shared import (
     get_driver_name,
+    MAX_INT64,
+    MIN_INT64,
     Potential,
 )
 

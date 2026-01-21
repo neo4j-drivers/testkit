@@ -141,6 +141,9 @@ class Feature(Enum):
     BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
+    # The driver support connecting to the HTTP/Query API
+    # using content type `application/vnd.neo4j.query.v1.0`
+    HTTP_QUERY_API_1_0 = "Feature:HTTP:QueryAPI:1.0"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.
@@ -230,7 +233,7 @@ class Feature(Enum):
     # The driver understands and follow the connection hint
     # connection.recv_timeout_seconds which tells it to close the connection
     # after not receiving an answer on any request for longer than the given
-    # time period. On timout, the driver should remove the server from its
+    # time period. On timeout, the driver should remove the server from its
     # routing table and assume all other connections to the server are dead
     # as well.
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
