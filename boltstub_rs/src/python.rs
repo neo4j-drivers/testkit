@@ -9,8 +9,8 @@ use crate::context::Context;
 use crate::error::script_excerpt;
 
 static SERVER_PY: LazyLock<Py<PyDict>> = LazyLock::new(|| {
-    pyo3::prepare_freethreaded_python();
-    Python::with_gil(|py| {
+    Python::initialize();
+    Python::attach(|py| {
         let sys = py.import("sys").unwrap();
         sys.setattr(
             "stdout",
@@ -44,7 +44,7 @@ pub fn run_python(script_text: &str) -> anyhow::Result<()> {
     let cstr = CString::new(script_text)?;
     let locals = &*SERVER_PY;
     // ctx, include script text
-    Python::with_gil(|py| py.run(&cstr, Some(locals.bind(py)), None))
+    Python::attach(|py| py.run(&cstr, Some(locals.bind(py)), None))
         .map_err(|error| anyhow!("failed to run python line: {error}, {script_text}"))
 }
 
@@ -52,7 +52,7 @@ pub fn condition_python(script_text: &str) -> anyhow::Result<bool> {
     let cstr = CString::new(script_text)?;
     let locals = &*SERVER_PY;
     // ctx, include script text
-    Python::with_gil(|py| py.eval(&cstr, Some(locals.bind(py)), None)?.is_truthy())
+    Python::attach(|py| py.eval(&cstr, Some(locals.bind(py)), None)?.is_truthy())
         .map_err(|error: PyErr| anyhow!("failed to evaluate condition: {error}, {script_text}"))
 }
 
