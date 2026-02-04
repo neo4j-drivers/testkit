@@ -580,7 +580,7 @@ impl<'a> PackStreamDecoder<'a> {
             STRING_8 => self.read_u8(),
             STRING_16 => self.read_u16(),
             STRING_32 => self.read_u32(),
-            _ => Err(anyhow!("Invalid string length marker: {}", marker)),
+            _ => Err(anyhow!("Invalid string length marker: {marker}")),
         }
     }
 

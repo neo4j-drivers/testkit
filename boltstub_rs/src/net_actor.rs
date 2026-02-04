@@ -1518,8 +1518,7 @@ fn parse_message(data: &[u8], bolt_version: BoltVersion) -> NetActorResult<BoltM
         value
     else {
         return Err(NetActorError::Anyhow(anyhow!(
-            "Expected a bolt message but got: {:?}.",
-            value
+            "Expected a bolt message but got: {value:?}."
         )));
     };
     let msg = BoltMessage::new(tag, fields, bolt_version);

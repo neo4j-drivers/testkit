@@ -1218,13 +1218,13 @@ fn build_field_validator(field: JsonValue, config: &ActorConfig) -> Result<Valid
         }),
         JsonValue::Bool(expected) => Box::new(move |msg| match msg {
             PackStreamValue::Boolean(received) if received == &expected => Ok(()),
-            _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+            _ => Err(anyhow!("Expected {expected:?} found {msg:?}")),
         }),
         JsonValue::Number(expected) if expected.is_i64() => {
             let expected = expected.as_i64().expect("checked in match arm");
             Box::new(move |msg| match msg {
                 PackStreamValue::Integer(received) if received == &expected => Ok(()),
-                _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+                _ => Err(anyhow!("Expected {expected:?} found {msg:?}")),
             })
         }
         JsonValue::Number(expected) if expected.is_f64() => {
@@ -1235,7 +1235,7 @@ fn build_field_validator(field: JsonValue, config: &ActorConfig) -> Result<Valid
             );
             Box::new(move |msg| match msg {
                 PackStreamValue::Float(received) if received == &expected => Ok(()),
-                _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+                _ => Err(anyhow!("Expected {expected:?} found {msg:?}")),
             })
         }
         JsonValue::Number(expected) => {
@@ -1246,7 +1246,7 @@ fn build_field_validator(field: JsonValue, config: &ActorConfig) -> Result<Valid
         JsonValue::String(expected) => Box::new(move |msg| match msg {
             _ if expected == "*" => Ok(()),
             PackStreamValue::String(received) => validate_str_field_eq(&expected, received),
-            _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+            _ => Err(anyhow!("Expected {expected:?} found {msg:?}")),
         }),
         JsonValue::Array(expected) => {
             let validators = expected
@@ -1255,7 +1255,7 @@ fn build_field_validator(field: JsonValue, config: &ActorConfig) -> Result<Valid
                 .collect::<Result<Vec<_>>>()?;
             Box::new(move |msg| {
                 let PackStreamValue::List(received) = msg else {
-                    return Err(anyhow!("Expected list, found {:?}", msg));
+                    return Err(anyhow!("Expected list, found {msg:?}"));
                 };
                 if validators.len() != received.len() {
                     return Err(anyhow!(
@@ -1305,7 +1305,7 @@ fn build_map_validator(
 
     Ok(Box::new(move |msg| {
         let PackStreamValue::Dict(received) = msg else {
-            return Err(anyhow!("Expected map, found {:?}", msg));
+            return Err(anyhow!("Expected map, found {msg:?}"));
         };
 
         let mut matched_keys = HashSet::new();
@@ -1361,7 +1361,7 @@ fn build_map_entry_validator(
                 .collect::<Result<Vec<_>>>()?;
             Box::new(move |msg| {
                 let PackStreamValue::List(received) = msg else {
-                    return Err(anyhow!("Expected list, found {:?}", msg));
+                    return Err(anyhow!("Expected list, found {msg:?}"));
                 };
                 if validators.len() != received.len() {
                     return Err(anyhow!(
@@ -1382,8 +1382,7 @@ fn build_map_entry_validator(
                         }
                     }
                     return Err(anyhow!(
-                        "Unexpected value in any order array: {:?}",
-                        value_received
+                        "Unexpected value in any order array: {value_received:?}"
                     ));
                 }
                 Ok(())
@@ -1478,7 +1477,7 @@ fn build_jolt_validator(
             IsJoltValidator::Yes(Box::new(move |msg| {
                 match msg == &PackStreamValue::Float(expected) {
                     true => Ok(()),
-                    false => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+                    false => Err(anyhow!("Expected {expected:?} found {msg:?}")),
                 }
             }))
         }
@@ -1571,7 +1570,7 @@ fn build_jolt_validator(
             let expected = PackStreamValue::Struct(bolt_point.as_struct());
             IsJoltValidator::Yes(Box::new(move |msg| match msg == &expected {
                 true => Ok(()),
-                false => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+                false => Err(anyhow!("Expected {expected:?} found {msg:?}")),
             }))
         }
         JoltSigil::Node => {
@@ -1867,13 +1866,11 @@ fn build_duration_validator(s: &str) -> Option<Result<ValidateValueFn>> {
             ) -> anyhow::Result<i64> {
                 match received.fields.get(i) {
                     None => Err(anyhow!(
-                        "Received invalid duration: {:?} (missing {name})",
-                        received
+                        "Received invalid duration: {received:?} (missing {name})"
                     )),
                     Some(PackStreamValue::Integer(value)) => Ok(*value),
                     Some(_) => Err(anyhow!(
-                        "Received invalid duration: {:?} ({name} not integer)",
-                        received
+                        "Received invalid duration: {received:?} ({name} not integer)"
                     )),
                 }
             }
@@ -1901,7 +1898,7 @@ fn build_duration_validator(s: &str) -> Option<Result<ValidateValueFn>> {
             }
             Ok(())
         }
-        _ => Err(anyhow!("Expected duration, found {:?}", msg)),
+        _ => Err(anyhow!("Expected duration, found {msg:?}")),
     })))
 }
 
@@ -1909,7 +1906,7 @@ fn build_struct_match_validator(expected: PackStreamStruct) -> ValidateValueFn {
     let expected = PackStreamValue::Struct(expected);
     Box::new(move |msg| match msg == &expected {
         true => Ok(()),
-        false => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
+        false => Err(anyhow!("Expected {expected:?} found {msg:?}")),
     })
 }
 
@@ -1958,7 +1955,7 @@ fn validate_str_field_eq(expected: &str, received: &str) -> anyhow::Result<()> {
     fn match_(expected: &str, received: &str) -> anyhow::Result<()> {
         match expected == received {
             true => Ok(()),
-            false => Err(anyhow!("Expected {:?} found {:?}", expected, received)),
+            false => Err(anyhow!("Expected {expected:?} found {received:?}")),
         }
     }
     if !expected.contains(r"\") {
