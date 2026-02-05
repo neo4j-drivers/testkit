@@ -238,7 +238,7 @@ impl<'a> BoltRelationship<'a> {
                         Debug::fmt(&element_id_ext.start_node_element_id, f)?;
                         f.write_str(", ")?;
                         Debug::fmt(&element_id_ext.end_node_element_id, f)?;
-                        f.write_str(r"]}")
+                        f.write_str("]}")
                     }
                 }
             }

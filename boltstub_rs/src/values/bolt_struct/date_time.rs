@@ -34,7 +34,7 @@ impl<'a> JoltDateTime<'a> {
     pub(crate) fn parse(s: &'a str) -> Option<Result<Self, ParseError>> {
         thread_local! {
             static DATE_TIME_RE: LazyCell<Regex> = LazyCell::new(|| {
-                Regex::new(r"^(.*?)T(.*)$").unwrap()
+                Regex::new("^(.*?)T(.*)$").unwrap()
             });
         }
         let captures = DATE_TIME_RE.with(|re| re.captures(s))?;

@@ -781,7 +781,7 @@ impl ParsedMapKey {
                 Regex::new(r"\\([\{\}\[\]\\])").unwrap()
             });
         }
-        let unescaped = UNESCAPE_RE.with(|re| re.replace_all(key, r"$1"));
+        let unescaped = UNESCAPE_RE.with(|re| re.replace_all(key, "$1"));
         let mut unescaped_ref = unescaped.as_ref();
 
         thread_local! {

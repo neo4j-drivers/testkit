@@ -135,7 +135,7 @@ impl BoltUnsupportedType {
                     f.write_str(message)?;
                     f.write_str(r#"""#)?;
                 }
-                f.write_str(r"]}")
+                f.write_str("]}")
             }
         }
 

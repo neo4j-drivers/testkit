@@ -34,7 +34,7 @@ struct LoggingStdout {
 impl LoggingStdout {
     fn write(&self, data: &str) {
         if self.err {
-            eprint!("{data}",);
+            eprint!("{data}");
         } else {
             print!("{data}");
         }
