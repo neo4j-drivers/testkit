@@ -22,16 +22,10 @@ pub(crate) struct JoltDuration {
 
 impl JoltDuration {
     pub(crate) fn parse(s: &str) -> Option<Result<Self, ParseError>> {
-        thread_local! {
-            static DURATION_RE: LazyCell<Regex> = LazyCell::new(|| {
-                Regex::new(concat!(
-                    r"^P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)?",
-                    r"(?:T(?:(-?\d+)H)?(?:(-?\d+)M)?(?:((-)?\d+|\d*)(?:\.(\d+))?S)?)?$"
-                )).unwrap()
-            });
-        }
-        let captures = DURATION_RE.with(|re| re.captures(s))?;
-
+        #[allow(
+            clippy::unnecessary_wraps,
+            reason = "Allows for using opt_res_ret => improved readability"
+        )]
         fn i64_capture(
             i: usize,
             name: &str,
@@ -48,28 +42,35 @@ impl JoltDuration {
             })
         }
 
+        thread_local! {
+            static DURATION_RE: LazyCell<Regex> = LazyCell::new(|| {
+                Regex::new(concat!(
+                    r"^P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)?",
+                    r"(?:T(?:(-?\d+)H)?(?:(-?\d+)M)?(?:((-)?\d+|\d*)(?:\.(\d+))?S)?)?$"
+                )).unwrap()
+            });
+        }
+        let captures = DURATION_RE.with(|re| re.captures(s))?;
+
         let years = opt_res_ret!(i64_capture(1, "years", &captures));
         let months = opt_res_ret!(i64_capture(2, "months", &captures));
         let days = opt_res_ret!(i64_capture(3, "days", &captures));
         let hours = opt_res_ret!(i64_capture(4, "hours", &captures));
         let minutes = opt_res_ret!(i64_capture(5, "minutes", &captures));
         let seconds = opt_res_ret!(i64_capture(6, "seconds", &captures));
-        let seconds_sign = captures.get(7).map(|_| -1).unwrap_or(1);
-        let mut nanos = opt_res_ret!(captures
-            .get(8)
-            .map(|m| {
-                let padded = format!("{:0<9}", m.as_str());
-                if padded.len() > 9 {
-                    return Some(Err(ParseError::new(
-                        "Duration has too many sub-seconds digits \
+        let seconds_sign = captures.get(7).map_or(1, |_| -1);
+        let mut nanos = opt_res_ret!(captures.get(8).map_or(Some(Ok(0)), |m| {
+            let padded = format!("{:0<9}", m.as_str());
+            if padded.len() > 9 {
+                return Some(Err(ParseError::new(
+                    "Duration has too many sub-seconds digits \
                         (only nanoseconds are allowed, up to 9 digits)",
-                    )));
-                }
-                Some(Ok(
-                    i64::from_str(&padded).expect("regex + length check enforce nanos to be i64")
-                ))
-            })
-            .unwrap_or(Some(Ok(0))));
+                )));
+            }
+            Some(Ok(
+                i64::from_str(&padded).expect("regex + length check enforce nanos to be i64")
+            ))
+        }));
         assert!(
             (0..=999_999_999).contains(&nanos),
             "regex enforces nanos to not overflow into seconds"
@@ -101,8 +102,8 @@ impl JoltDuration {
         }))
     }
 
-    pub(crate) fn as_struct(&self) -> Option<Result<PackStreamStruct, ParseError>> {
-        Some(Ok(PackStreamStruct {
+    pub(crate) fn as_struct(&self) -> PackStreamStruct {
+        PackStreamStruct {
             tag: TAG_DURATION,
             fields: vec![
                 PackStreamValue::Integer(self.months),
@@ -110,7 +111,7 @@ impl JoltDuration {
                 PackStreamValue::Integer(self.seconds),
                 PackStreamValue::Integer(self.nanos),
             ],
-        }))
+        }
     }
 }
 
@@ -206,6 +207,8 @@ impl BoltDuration {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unreadable_literal, reason = "Not readable either way")]
+
     use super::*;
     use rstest::rstest;
 
@@ -301,8 +304,7 @@ mod tests {
                 assert_eq!(parsed.seconds, seconds);
                 assert_eq!(parsed.nanos, nanos);
             }
-            (None, None) => {}
-            (Some(Err(_)), Some(Err(_))) => {}
+            (None, None) | (Some(Err(_)), Some(Err(()))) => {}
             (result, expected) => panic!(
                 "Unexpected result for input: {input}\nExpected: {expected:?}, Got: {result:?}"
             ),

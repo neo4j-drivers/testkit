@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use indexmap::IndexMap;
 use serde_json::Value as JsonValue;
 
@@ -7,7 +5,6 @@ use crate::parse_error::ParseError;
 use crate::parser::{transcode_field, ActorConfig};
 use crate::values::pack_stream_value::PackStreamValue;
 
-#[allow(private_bounds)]
 pub(in super::super) fn next_json_field<R: ExtractableField>(
     fields: &mut impl Iterator<Item = (usize, JsonValue)>,
     name: &str,
@@ -38,53 +35,61 @@ pub(in super::super) fn check_last_json_field(
             "Too many fields after sigil \"{sigil}\", expected {}",
             field_num + 1
         )));
-    };
+    }
     Ok(())
 }
 
-#[derive(Debug)]
-enum ExtractionFailure {
-    Expectation(String),
-    Nested(ParseError),
-}
+mod private {
+    use crate::parse_error::ParseError;
 
-impl ExtractionFailure {
-    fn into_parse_error(self, name: &str, field_num: usize, sigil: &str) -> ParseError {
-        match self {
-            Self::Expectation(expectation) => ParseError::new(format!(
-                "Expected {name} (field {field_num}) after sigil \"{sigil}\" {expectation}"
-            )),
-            Self::Nested(err) => err,
+    pub trait Sealed {}
+
+    #[derive(Debug)]
+    pub enum ExtractionFailure {
+        Expectation(String),
+        Nested(ParseError),
+    }
+
+    impl ExtractionFailure {
+        pub fn into_parse_error(self, name: &str, field_num: usize, sigil: &str) -> ParseError {
+            match self {
+                Self::Expectation(expectation) => ParseError::new(format!(
+                    "Expected {name} (field {field_num}) after sigil \"{sigil}\" {expectation}"
+                )),
+                Self::Nested(err) => err,
+            }
+        }
+    }
+
+    impl From<String> for ExtractionFailure {
+        fn from(expectation: String) -> Self {
+            Self::Expectation(expectation)
+        }
+    }
+
+    impl From<ParseError> for ExtractionFailure {
+        fn from(err: ParseError) -> Self {
+            Self::Nested(err)
         }
     }
 }
 
-impl From<String> for ExtractionFailure {
-    fn from(expectation: String) -> Self {
-        Self::Expectation(expectation)
-    }
+pub(in super::super) trait ExtractableField: private::Sealed + Sized {
+    fn extract(field: JsonValue, config: &ActorConfig) -> Result<Self, private::ExtractionFailure>;
 }
 
-impl From<ParseError> for ExtractionFailure {
-    fn from(err: ParseError) -> Self {
-        Self::Nested(err)
-    }
-}
-
-trait ExtractableField: Sized {
-    fn extract(field: JsonValue, config: &ActorConfig) -> Result<Self, ExtractionFailure>;
-}
-
+impl private::Sealed for i64 {}
 impl ExtractableField for i64 {
-    fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, ExtractionFailure> {
+    fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
         field
             .as_i64()
             .ok_or_else(|| format!("to be i64, but found {field:?}").into())
     }
 }
 
+impl private::Sealed for Vec<String> {}
 impl ExtractableField for Vec<String> {
-    fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, ExtractionFailure> {
+    fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
         let JsonValue::Array(field) = field else {
             return Err(format!("to be an array, but found {field:?}").into());
         };
@@ -105,8 +110,9 @@ impl ExtractableField for Vec<String> {
     }
 }
 
+impl private::Sealed for IndexMap<String, PackStreamValue> {}
 impl ExtractableField for IndexMap<String, PackStreamValue> {
-    fn extract(field: JsonValue, config: &ActorConfig) -> Result<Self, ExtractionFailure> {
+    fn extract(field: JsonValue, config: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
         let JsonValue::Object(field) = field else {
             return Err(format!("to be a map, but found {field:?}").into());
         };
@@ -118,8 +124,9 @@ impl ExtractableField for IndexMap<String, PackStreamValue> {
     }
 }
 
+impl private::Sealed for String {}
 impl ExtractableField for String {
-    fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, ExtractionFailure> {
+    fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
         let JsonValue::String(field) = field else {
             return Err(format!("to be string, but found {field:?}").into());
         };

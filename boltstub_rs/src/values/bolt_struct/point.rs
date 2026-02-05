@@ -78,7 +78,7 @@ impl JoltPoint {
             PackStreamValue::Float(self.y),
         ]);
         if let Some(z) = self.z {
-            fields.push(PackStreamValue::Float(z))
+            fields.push(PackStreamValue::Float(z));
         }
         let tag = match self.z {
             None => TAG_POINT_2D,

@@ -405,7 +405,7 @@ fn multi_message_vec<'a, 'b, 'c, N: 'a>(
             message(message_tag, &mut block, &mut message_name_matcher),
         ))
         .parse(input)?;
-        let (input, (tail, _)) = context(
+        let (input, (tail, ())) = context(
             "implicit line",
             map(
                 opt(many_till(
@@ -695,6 +695,10 @@ enum MessageNameType {
     Action,
 }
 
+#[allow(
+    clippy::needless_pass_by_value,
+    reason = "necessary to be a nom Parser"
+)]
 fn non_space<T, E: ParseError<T>>(input: T) -> nom::IResult<T, T, E>
 where
     T: nom::Input,
@@ -793,8 +797,8 @@ where
     }
 }
 
+#[allow(clippy::too_many_arguments, reason = "test code")]
 #[cfg(test)]
-#[allow(clippy::too_many_arguments)]
 mod tests {
     use super::*;
 
@@ -945,7 +949,7 @@ mod tests {
         let end_bytes = expected.ctx().end_byte;
         let bytes_count = end_bytes - start_bytes;
         assert_eq!(result.bang_lines.len(), repetition);
-        for (bl, line) in result.bang_lines.iter().zip(1..repetition + 1) {
+        for (bl, line) in result.bang_lines.iter().zip(1..=repetition) {
             if line > 1 {
                 expected.add_offset(1, bytes_count + 1);
             }

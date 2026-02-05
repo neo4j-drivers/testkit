@@ -167,37 +167,6 @@ pub(super) struct BoltDateTime<'a> {
 
 impl<'a> BoltDateTime<'a> {
     pub(super) fn from_struct(s: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
-        fn new(
-            date_time: NaiveDateTime,
-            utc_offset_seconds: Option<i64>,
-            time_zone_id: Option<&str>,
-        ) -> BoltDateTime<'_> {
-            let date = date_time.date();
-            let time = date_time.time();
-            BoltDateTime {
-                date: BoltDate(JoltDate { date }),
-                time: BoltTime {
-                    time,
-                    utc_offset_seconds,
-                    time_zone_id,
-                },
-            }
-        }
-
-        fn new_naive(date_time: NaiveDateTime) -> BoltDateTime<'static> {
-            new(date_time, None, None)
-        }
-
-        fn new_unknown_tz(date_time: NaiveDateTime, time_zone_id: &str) -> BoltDateTime<'_> {
-            new(date_time, Some(0), Some(time_zone_id))
-        }
-
-        fn new_tz<Tz: TimeZone>(date_time: DateTime<Tz>, time_zone_id: &str) -> BoltDateTime<'_> {
-            let local_date_time = date_time.naive_local();
-            let utc_offset = date_time.offset().fix().local_minus_utc();
-            new(local_date_time, Some(utc_offset.into()), Some(time_zone_id))
-        }
-
         let PackStreamStruct { tag, fields } = s;
         let mut fields = fields.iter();
         let this = match *tag {
@@ -212,15 +181,15 @@ impl<'a> BoltDateTime<'a> {
                     normalize_seconds_nanos(seconds_since_epoch, nanos)?;
                 let date_time = DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
                 let Ok(tz) = Tz::from_str(zone_id) else {
-                    return Some(new_unknown_tz(date_time, zone_id));
+                    return Some(Self::new_unknown_tz(date_time, zone_id));
                 };
                 let date_time = match tz.from_local_datetime(&date_time) {
                     MappedLocalTime::Single(d) => d,
                     MappedLocalTime::Ambiguous(_, _) | MappedLocalTime::None => {
-                        return Some(new_unknown_tz(date_time, zone_id))
+                        return Some(Self::new_unknown_tz(date_time, zone_id))
                     }
                 };
-                new_tz(date_time, zone_id)
+                Self::new_tz(&date_time, zone_id)
             }
             TAG_DATE_TIME_ZONE_ID_V2 if jolt_version == JoltVersion::V2 => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
@@ -234,9 +203,9 @@ impl<'a> BoltDateTime<'a> {
                 let utc_date_time =
                     DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
                 let Ok(tz) = Tz::from_str(zone_id) else {
-                    return Some(new_unknown_tz(utc_date_time, zone_id));
+                    return Some(Self::new_unknown_tz(utc_date_time, zone_id));
                 };
-                new_tz(tz.from_utc_datetime(&utc_date_time), zone_id)
+                Self::new_tz(&tz.from_utc_datetime(&utc_date_time), zone_id)
             }
             TAG_DATE_TIME_V1 if jolt_version == JoltVersion::V1 => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
@@ -248,7 +217,7 @@ impl<'a> BoltDateTime<'a> {
                 let (seconds_since_epoch, nanos) =
                     normalize_seconds_nanos(seconds_since_epoch, nanos)?;
                 let date_time = DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
-                new(date_time, Some(utc_offset_seconds), None)
+                Self::new(date_time, Some(utc_offset_seconds), None)
             }
             TAG_DATE_TIME_V2 if jolt_version == JoltVersion::V2 => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
@@ -264,7 +233,7 @@ impl<'a> BoltDateTime<'a> {
                 let utc_date_time = utc_date_time.checked_sub_signed(
                     TimeDelta::new(seconds_since_epoch, nanos).expect("input is normalized"),
                 )?;
-                new(utc_date_time, Some(utc_offset_seconds), None)
+                Self::new(utc_date_time, Some(utc_offset_seconds), None)
             }
             TAG_LOCAL_DATE_TIME => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
@@ -275,7 +244,7 @@ impl<'a> BoltDateTime<'a> {
                 let (seconds_since_epoch, nanos) =
                     normalize_seconds_nanos(seconds_since_epoch, nanos)?;
                 let date_time = UNIX_EPOCH_DATE_TIME + Duration::new(seconds_since_epoch, nanos)?;
-                new_naive(date_time.naive_local())
+                Self::new_naive(date_time.naive_local())
             }
             _ => return None,
         };
@@ -283,6 +252,37 @@ impl<'a> BoltDateTime<'a> {
             return None;
         }
         Some(this)
+    }
+
+    fn new(
+        date_time: NaiveDateTime,
+        utc_offset_seconds: Option<i64>,
+        time_zone_id: Option<&'a str>,
+    ) -> Self {
+        let date = date_time.date();
+        let time = date_time.time();
+        BoltDateTime {
+            date: BoltDate(JoltDate { date }),
+            time: BoltTime {
+                time,
+                utc_offset_seconds,
+                time_zone_id,
+            },
+        }
+    }
+
+    fn new_naive(date_time: NaiveDateTime) -> Self {
+        Self::new(date_time, None, None)
+    }
+
+    fn new_unknown_tz(date_time: NaiveDateTime, time_zone_id: &'a str) -> Self {
+        Self::new(date_time, Some(0), Some(time_zone_id))
+    }
+
+    fn new_tz<Tz: TimeZone>(date_time: &DateTime<Tz>, time_zone_id: &'a str) -> Self {
+        let local_date_time = date_time.naive_local();
+        let utc_offset = date_time.offset().fix().local_minus_utc();
+        Self::new(local_date_time, Some(utc_offset.into()), Some(time_zone_id))
     }
 }
 

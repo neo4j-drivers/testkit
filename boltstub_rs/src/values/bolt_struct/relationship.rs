@@ -30,6 +30,7 @@ impl PartialEq for JoltRelationship {
     }
 }
 
+#[allow(clippy::struct_field_names, reason = "for better readability")]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct JoltRelationshipElementIdExt {
     pub(crate) element_id: String,
@@ -137,6 +138,7 @@ impl PartialEq for BoltRelationship<'_> {
     }
 }
 
+#[allow(clippy::struct_field_names, reason = "for better readability")]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(super) struct BoltRelationshipElementIdExt<'a> {
     pub(super) element_id: &'a str,
@@ -228,7 +230,7 @@ impl<'a> BoltRelationship<'a> {
                 f.write_str(", {")?;
                 write_joined_entries(f, self.this.properties.iter(), self.jolt_version)?;
                 match self.this.element_id_ext.as_ref() {
-                    None => f.write_str(r#"}]}"#),
+                    None => f.write_str("}]}"),
                     Some(element_id_ext) => {
                         f.write_str("}, ")?;
                         Debug::fmt(&element_id_ext.element_id, f)?;
@@ -236,7 +238,7 @@ impl<'a> BoltRelationship<'a> {
                         Debug::fmt(&element_id_ext.start_node_element_id, f)?;
                         f.write_str(", ")?;
                         Debug::fmt(&element_id_ext.end_node_element_id, f)?;
-                        f.write_str(r#"]}"#)
+                        f.write_str(r"]}")
                     }
                 }
             }
