@@ -45,6 +45,10 @@ class Transaction:
         if self._closed:
             return
         if exc_type is not None:
+            print(
+                "Exception in transaction block, rolling back transaction "
+                f"{self._id}: {exc_value}"
+            )
             cm = contextlib.suppress(Exception)
         else:
             cm = contextlib.nullcontext()

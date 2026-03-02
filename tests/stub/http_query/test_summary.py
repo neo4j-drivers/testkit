@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import typing as t
 
 from nutkit import protocol as types
@@ -14,10 +15,13 @@ from tests.stub.http_query.shared.http_endpoints import (
     CountersMap,
     HttpEndpoint,
     HttpQueryEndpoint,
+    HttpSequenceEndpoint,
+    MaybeNull,
 )
 from tests.stub.http_query.shared.http_server import HandlerType
 
 if t.TYPE_CHECKING:
+    from tests.stub.http_query.shared.http_endpoints import TOptionalValue
     from tests.stub.http_query.shared.http_server import HTTPServer
 
     T = t.TypeVar("T")
@@ -25,8 +29,25 @@ if t.TYPE_CHECKING:
 
 DEFAULT_DB = "neo4j"
 AUTH = HttpTestCase.AUTH
-QUERY = "RETURN 1 AS n"
+DEFAULT_QUERY_TEXT = "RETURN 1 AS n"
 DEFAULT_COUNTERS = CountersMap()
+
+
+@dataclasses.dataclass
+class Query:
+    text: str
+    params: dict[str, t.Any] = dataclasses.field(default_factory=dict)
+    params_http: dict[str, http_types.HttpType] | None = None
+
+
+DEFAULT_QUERY = Query(DEFAULT_QUERY_TEXT)
+
+
+@dataclasses.dataclass
+class QueryResult:
+    keys: list[str]
+    records: list[types.Record]
+    summary: types.Summary
 
 
 class _SummaryTestBase(HttpTestCase):
@@ -34,7 +55,10 @@ class _SummaryTestBase(HttpTestCase):
         self,
         server_setup: t.Callable[[HTTPServer], None],
         db: str = DEFAULT_DB,
-    ) -> types.Summary:
+        queries: t.Iterable[Query] = (DEFAULT_QUERY,),
+    ) -> tuple[types.Summary, ...]:
+        results = []
+
         with self.server() as server:
             server.install_discovery_endpoint()
             server_setup(server)
@@ -42,22 +66,29 @@ class _SummaryTestBase(HttpTestCase):
                 self.driver(server, AUTH) as driver,
                 driver.session("w", database=db) as session,
             ):
-                result = session.run(QUERY)
-                keys = result.keys()
-                records = list(result)
-                summary = result.consume()
+                for query in queries:
+                    result = session.run(query.text, params=query.params)
+                    keys = result.keys()
+                    records = list(result)
+                    summary = result.consume()
+                    results.append(QueryResult(keys, records, summary))
 
-        self.assertEqual(keys, ["n"])
-        self.assertEqual(len(records), 1)
-        self.assertEqual(records[0].values, [types.CypherInt(1)])
-        self.assertIsInstance(summary, types.Summary)
-        return summary
+        for result in results:
+            self.assertEqual(result.keys, ["n"])
+            self.assertEqual(len(result.records), 1)
+            self.assertEqual(result.records[0].values, [types.CypherInt(1)])
+            self.assertIsInstance(result.summary, types.Summary)
+
+        return tuple(result.summary for result in results)
 
     def _get_summary_tx(
         self,
         server_setup: t.Callable[[HTTPServer], None],
         db: str = DEFAULT_DB,
-    ) -> types.Summary:
+        queries: t.Iterable[Query] = (DEFAULT_QUERY,),
+    ) -> tuple[types.Summary, ...]:
+        results = []
+
         with self.server() as server:
             server.install_discovery_endpoint()
             server_setup(server)
@@ -66,17 +97,21 @@ class _SummaryTestBase(HttpTestCase):
                 driver.session("w", database=db) as session,
                 session.begin_transaction() as tx,
             ):
-                result = tx.run(QUERY)
-                keys = result.keys()
-                records = list(result)
-                summary = result.consume()
+                for query in queries:
+                    result = tx.run(query.text, params=query.params)
+                    keys = result.keys()
+                    records = list(result)
+                    summary = result.consume()
+                    results.append(QueryResult(keys, records, summary))
                 tx.commit()
 
-        self.assertEqual(keys, ["n"])
-        self.assertEqual(len(records), 1)
-        self.assertEqual(records[0].values, [types.CypherInt(1)])
-        self.assertIsInstance(summary, types.Summary)
-        return summary
+        for result in results:
+            self.assertEqual(result.keys, ["n"])
+            self.assertEqual(len(result.records), 1)
+            self.assertEqual(result.records[0].values, [types.CypherInt(1)])
+            self.assertIsInstance(result.summary, types.Summary)
+
+        return tuple(result.summary for result in results)
 
 
 class TestSummaryCounters(_SummaryTestBase):
@@ -89,7 +124,7 @@ class TestSummaryCounters(_SummaryTestBase):
             HttpQueryEndpoint.RequestData(
                 db=DEFAULT_DB,
                 auth=AUTH,
-                query=QUERY,
+                query=DEFAULT_QUERY_TEXT,
                 include_counters=True,
             ),
             HttpQueryEndpoint.ResponseData(
@@ -107,7 +142,7 @@ class TestSummaryCounters(_SummaryTestBase):
         return (
             TxEndpointBuilder(DEFAULT_DB, AUTH)
             .with_query(
-                QUERY,
+                DEFAULT_QUERY_TEXT,
                 ["n"],
                 [[http_types.Int(1)]],
                 include_counters=True,
@@ -134,7 +169,6 @@ class TestSummaryCounters(_SummaryTestBase):
         counters: CountersMap,
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
-            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryCounters._make_tx_endpoint(counters),
                 handler_type=HandlerType.PERMANENT,
@@ -145,14 +179,20 @@ class TestSummaryCounters(_SummaryTestBase):
     def _get_summary_with_counters_session_run(
         self, counters: CountersMap
     ) -> types.Summary:
-        return super()._get_summary_session_run(
+        summaries = super()._get_summary_session_run(
             self._make_session_server_setup(counters)
         )
+        assert len(summaries) == 1
+        return summaries[0]
 
     def _get_summary_with_counters_tx(
         self, counters: CountersMap
     ) -> types.Summary:
-        return super()._get_summary_tx(self._make_tx_server_setup(counters))
+        summaries = super()._get_summary_tx(
+            self._make_tx_server_setup(counters)
+        )
+        assert len(summaries) == 1
+        return summaries[0]
 
     def _assert_counters(
         self,
@@ -249,8 +289,7 @@ class TestSummaryDatabase(_SummaryTestBase):
             HttpQueryEndpoint.RequestData(
                 db=db,
                 auth=AUTH,
-                query=QUERY,
-                include_counters=True,
+                query=DEFAULT_QUERY_TEXT,
             ),
             HttpQueryEndpoint.ResponseData(
                 fields=["n"],
@@ -266,10 +305,9 @@ class TestSummaryDatabase(_SummaryTestBase):
         return (
             TxEndpointBuilder(db, AUTH)
             .with_query(
-                QUERY,
+                DEFAULT_QUERY_TEXT,
                 ["n"],
                 [[http_types.Int(1)]],
-                include_counters=True,
             )
             .with_commit()
             .build()
@@ -292,7 +330,6 @@ class TestSummaryDatabase(_SummaryTestBase):
         db: str = DEFAULT_DB,
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
-            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryDatabase._make_tx_endpoint(db),
                 handler_type=HandlerType.PERMANENT,
@@ -303,18 +340,22 @@ class TestSummaryDatabase(_SummaryTestBase):
     def _get_summary_with_database_session_run(
         self, db: str = DEFAULT_DB
     ) -> types.Summary:
-        return super()._get_summary_session_run(
+        summaries = super()._get_summary_session_run(
             self._make_session_server_setup(db),
             db=db,
         )
+        assert len(summaries) == 1
+        return summaries[0]
 
     def _get_summary_with_database_tx(
         self, db: str = DEFAULT_DB
     ) -> types.Summary:
-        return super()._get_summary_tx(
+        summaries = super()._get_summary_tx(
             self._make_tx_server_setup(db),
             db=db,
         )
+        assert len(summaries) == 1
+        return summaries[0]
 
     def _assert_database(
         self,
@@ -332,3 +373,204 @@ class TestSummaryDatabase(_SummaryTestBase):
         db = "🦹🏼‍♀️ \t\n\x00%-db"
         summary = self._get_summary_with_database_tx(db)
         self._assert_database(summary, db)
+
+
+class TestSummaryQuery(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints(
+        queries: t.Collection[Query] = (DEFAULT_QUERY,),
+    ) -> HttpEndpoint:
+        assert len(queries) > 0
+        query_endpoints = []
+        for query in queries:
+            parameters: TOptionalValue[dict[str, http_types.HttpType]]
+            if query.params_http is None:
+                parameters = MaybeNull({})
+            else:
+                parameters = query.params_http
+            query_endpoints.append(
+                HttpQueryEndpoint(
+                    HttpQueryEndpoint.RequestData(
+                        db=DEFAULT_DB,
+                        auth=AUTH,
+                        query=query.text,
+                        parameters=parameters,
+                    ),
+                    HttpQueryEndpoint.ResponseData(
+                        fields=["n"],
+                        records=[[http_types.Int(1)]],
+                    ),
+                )
+            )
+
+        if len(query_endpoints) == 1:
+            return query_endpoints[0]
+        return HttpSequenceEndpoint(*query_endpoints)
+
+    @staticmethod
+    def _make_tx_endpoint(
+        queries: t.Collection[Query] = (DEFAULT_QUERY,),
+    ) -> HttpEndpoint:
+        assert len(queries) > 0
+
+        builder = TxEndpointBuilder(DEFAULT_DB, AUTH)
+
+        for query in queries:
+            parameters: TOptionalValue[dict[str, http_types.HttpType]]
+            if query.params_http is None:
+                parameters = MaybeNull({})
+            else:
+                parameters = query.params_http
+            builder = builder.with_query(
+                query.text,
+                ["n"],
+                [[http_types.Int(1)]],
+                parameters=parameters,
+            )
+
+        return builder.with_commit().build()
+
+    @staticmethod
+    def _make_session_server_setup(
+        queries: t.Collection[Query] = (DEFAULT_QUERY,),
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_endpoint(
+                TestSummaryQuery._make_query_endpoints(queries),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        queries: t.Collection[Query] = (DEFAULT_QUERY,),
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_endpoint(
+                TestSummaryQuery._make_tx_endpoint(queries),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_queries_session_run(
+        self,
+        queries: t.Collection[Query] = (DEFAULT_QUERY,),
+    ) -> tuple[types.Summary, ...]:
+        return super()._get_summary_session_run(
+            self._make_session_server_setup(queries),
+            queries=queries,
+        )
+
+    def _get_summary_with_queries_tx(
+        self,
+        queries: t.Collection[Query] = (DEFAULT_QUERY,),
+    ) -> tuple[types.Summary, ...]:
+        return super()._get_summary_tx(
+            self._make_tx_server_setup(queries),
+            queries=queries,
+        )
+
+    def _assert_queries(
+        self,
+        summaries: t.Collection[types.Summary],
+        expected: t.Collection[Query],
+    ) -> None:
+        self.assertEqual(len(summaries), len(expected))
+        for summary, expected_query in zip(summaries, expected, strict=True):
+            summary_query: types.SummaryQuery = summary.query
+            self.assertEqual(summary_query.text, expected_query.text)
+            self.assertEqual(summary_query.parameters, expected_query.params)
+
+    def test_session_run_single(self):
+        queries = (Query(" \t\n \x00%🔍 query"),)
+        summary = self._get_summary_with_queries_session_run(queries)
+        self._assert_queries(summary, queries)
+
+    def test_session_run_multiple(self):
+        queries = (
+            Query(" \t\n \x00%🔍 query"),
+            Query("RETURN 1 AS n"),
+            Query("Cypher🥷"),
+        )
+        summary = self._get_summary_with_queries_session_run(queries)
+        self._assert_queries(summary, queries)
+
+    def test_session_run_params_single(self):
+        queries = (
+            Query(
+                " \t\n \x00%🔍 query",
+                params={"x": types.CypherInt(1)},
+                params_http={"x": http_types.Int(1)},
+            ),
+        )
+        summary = self._get_summary_with_queries_session_run(queries)
+        self._assert_queries(summary, queries)
+
+    def test_session_run_params_multiple(self):
+        queries = (
+            Query(
+                " \t\n \x00%🔍 query",
+                params={"x": types.CypherInt(1)},
+                params_http={"x": http_types.Int(1)},
+            ),
+            Query(
+                "RETURN 1 AS n",
+                params={"x": types.CypherInt(2)},
+                params_http={"x": http_types.Int(2)},
+            ),
+            Query(
+                "Cypher🥷",
+                params={"x": types.CypherInt(3)},
+                params_http={"x": http_types.Int(3)},
+            ),
+        )
+        summary = self._get_summary_with_queries_session_run(queries)
+        self._assert_queries(summary, queries)
+
+    def test_tx_single(self):
+        queries = (Query(" \t\n \x00%🔍 query"),)
+        summary = self._get_summary_with_queries_tx(queries)
+        self._assert_queries(summary, queries)
+
+    def test_tx_multiple(self):
+        queries = (
+            Query(" \t\n \x00%🔍 query"),
+            Query("RETURN 1 AS n"),
+            Query("Cypher🥷"),
+        )
+        summary = self._get_summary_with_queries_tx(queries)
+        self._assert_queries(summary, queries)
+
+    def test_tx_params_single(self):
+        queries = (
+            Query(
+                " \t\n \x00%🔍 query",
+                params={"x": types.CypherInt(1)},
+                params_http={"x": http_types.Int(1)},
+            ),
+        )
+        summary = self._get_summary_with_queries_tx(queries)
+        self._assert_queries(summary, queries)
+
+    def test_tx_params_multiple(self):
+        queries = (
+            Query(
+                " \t\n \x00%🔍 query",
+                params={"x": types.CypherInt(1)},
+                params_http={"x": http_types.Int(1)},
+            ),
+            Query(
+                "RETURN 1 AS n",
+                params={"x": types.CypherInt(2)},
+                params_http={"x": http_types.Int(2)},
+            ),
+            Query(
+                "Cypher🥷",
+                params={"x": types.CypherInt(3)},
+                params_http={"x": http_types.Int(3)},
+            ),
+        )
+        summary = self._get_summary_with_queries_tx(queries)
+        self._assert_queries(summary, queries)

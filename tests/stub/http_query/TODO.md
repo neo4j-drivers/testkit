@@ -20,7 +20,7 @@
   * [x] db selection
   * [ ] summary
     * [x] db
-    * [ ] query
+    * [x] query & parameters
     * [x] counters
     * [ ] profile
     * [ ] plan
