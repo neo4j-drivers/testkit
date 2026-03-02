@@ -19,7 +19,7 @@
   * [ ] retires
   * [x] db selection
   * [ ] summary
-    * [ ] db
+    * [x] db
     * [ ] query
     * [x] counters
     * [ ] profile

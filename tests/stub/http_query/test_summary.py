@@ -18,53 +18,142 @@ from tests.stub.http_query.shared.http_endpoints import (
 from tests.stub.http_query.shared.http_server import HandlerType
 
 if t.TYPE_CHECKING:
+    from tests.stub.http_query.shared.http_server import HTTPServer
+
     T = t.TypeVar("T")
 
 
-DB = "neo4j"
+DEFAULT_DB = "neo4j"
 AUTH = HttpTestCase.AUTH
 QUERY = "RETURN 1 AS n"
 DEFAULT_COUNTERS = CountersMap()
 
 
-def _make_query_endpoint(
-    counters: CountersMap | None = DEFAULT_COUNTERS,
-) -> HttpQueryEndpoint:
+class _SummaryTestBase(HttpTestCase):
+    def _get_summary_session_run(
+        self,
+        server_setup: t.Callable[[HTTPServer], None],
+        db: str = DEFAULT_DB,
+    ) -> types.Summary:
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            server_setup(server)
+            with (
+                self.driver(server, AUTH) as driver,
+                driver.session("w", database=db) as session,
+            ):
+                result = session.run(QUERY)
+                keys = result.keys()
+                records = list(result)
+                summary = result.consume()
 
-    return HttpQueryEndpoint(
-        HttpQueryEndpoint.RequestData(
-            db=DB,
-            auth=AUTH,
-            query=QUERY,
-            include_counters=True,
-        ),
-        HttpQueryEndpoint.ResponseData(
-            fields=["n"],
-            records=[[http_types.Int(1)]],
-            counters=counters,
-        ),
-    )
+        self.assertEqual(keys, ["n"])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].values, [types.CypherInt(1)])
+        self.assertIsInstance(summary, types.Summary)
+        return summary
+
+    def _get_summary_tx(
+        self,
+        server_setup: t.Callable[[HTTPServer], None],
+        db: str = DEFAULT_DB,
+    ) -> types.Summary:
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            server_setup(server)
+            with (
+                self.driver(server, AUTH) as driver,
+                driver.session("w", database=db) as session,
+                session.begin_transaction() as tx,
+            ):
+                result = tx.run(QUERY)
+                keys = result.keys()
+                records = list(result)
+                summary = result.consume()
+                tx.commit()
+
+        self.assertEqual(keys, ["n"])
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0].values, [types.CypherInt(1)])
+        self.assertIsInstance(summary, types.Summary)
+        return summary
 
 
-def _make_tx_endpoint(
-    counters: CountersMap | None = DEFAULT_COUNTERS,
-) -> HttpEndpoint:
+class TestSummaryCounters(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoint(
+        counters: CountersMap | None = DEFAULT_COUNTERS,
+    ) -> HttpQueryEndpoint:
 
-    return (
-        TxEndpointBuilder(DB, AUTH)
-        .with_query(
-            QUERY,
-            ["n"],
-            [[http_types.Int(1)]],
-            include_counters=True,
-            counters=counters,
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                db=DEFAULT_DB,
+                auth=AUTH,
+                query=QUERY,
+                include_counters=True,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+                counters=counters,
+            ),
         )
-        .with_commit()
-        .build()
-    )
 
+    @staticmethod
+    def _make_tx_endpoint(
+        counters: CountersMap | None = DEFAULT_COUNTERS,
+    ) -> HttpEndpoint:
 
-class TestSummaryCounters(HttpTestCase):
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                QUERY,
+                ["n"],
+                [[http_types.Int(1)]],
+                include_counters=True,
+                counters=counters,
+            )
+            .with_commit()
+            .build()
+        )
+
+    @staticmethod
+    def _make_session_server_setup(
+        counters: CountersMap,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_endpoint(
+                TestSummaryCounters._make_query_endpoint(counters),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        counters: CountersMap,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryCounters._make_tx_endpoint(counters),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_counters_session_run(
+        self, counters: CountersMap
+    ) -> types.Summary:
+        return super()._get_summary_session_run(
+            self._make_session_server_setup(counters)
+        )
+
+    def _get_summary_with_counters_tx(
+        self, counters: CountersMap
+    ) -> types.Summary:
+        return super()._get_summary_tx(self._make_tx_server_setup(counters))
+
     def _assert_counters(
         self,
         summary: types.Summary,
@@ -99,60 +188,14 @@ class TestSummaryCounters(HttpTestCase):
             counters.contains_system_updates, expected.contains_system_updates
         )
 
-    def _get_summary_session_run(self, counters: CountersMap) -> types.Summary:
-        query_endpoint = _make_query_endpoint(counters)
-        with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.ONESHOT
-            )
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=DB) as session,
-            ):
-                result = session.run(QUERY)
-                keys = result.keys()
-                records = list(result)
-                summary = result.consume()
-
-        self.assertEqual(keys, ["n"])
-        self.assertEqual(len(records), 1)
-        self.assertEqual(records[0].values, [types.CypherInt(1)])
-        self.assertIsInstance(summary, types.Summary)
-        return summary
-
-    def _get_summary_tx(self, counters: CountersMap) -> types.Summary:
-        tx_endpoint = _make_tx_endpoint(counters)
-        with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                tx_endpoint, handler_type=HandlerType.PERMANENT
-            )
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=DB) as session,
-                session.begin_transaction() as tx,
-            ):
-                result = tx.run(QUERY)
-                keys = result.keys()
-                records = list(result)
-                summary = result.consume()
-                tx.commit()
-
-        self.assertEqual(keys, ["n"])
-        self.assertEqual(len(records), 1)
-        self.assertEqual(records[0].values, [types.CypherInt(1)])
-        self.assertIsInstance(summary, types.Summary)
-        return summary
-
     def test_empty_default_session_run(self):
         counters = DEFAULT_COUNTERS
-        summary = self._get_summary_session_run(counters)
+        summary = self._get_summary_with_counters_session_run(counters)
         self._assert_counters(summary, counters)
 
     def test_empty_default_tx(self):
         counters = DEFAULT_COUNTERS
-        summary = self._get_summary_tx(counters)
+        summary = self._get_summary_with_counters_tx(counters)
         self._assert_counters(summary, counters)
 
     def test_full_summary_session_run(self):
@@ -172,7 +215,7 @@ class TestSummaryCounters(HttpTestCase):
             contains_updates=True,
             contains_system_updates=True,
         )
-        summary = self._get_summary_session_run(counters)
+        summary = self._get_summary_with_counters_session_run(counters)
         self._assert_counters(summary, counters)
 
     def test_full_summary_tx(self):
@@ -192,5 +235,100 @@ class TestSummaryCounters(HttpTestCase):
             contains_updates=True,
             contains_system_updates=True,
         )
-        summary = self._get_summary_tx(counters)
+        summary = self._get_summary_with_counters_tx(counters)
         self._assert_counters(summary, counters)
+
+
+class TestSummaryDatabase(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoint(
+        db: str = DEFAULT_DB,
+    ) -> HttpQueryEndpoint:
+
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                db=db,
+                auth=AUTH,
+                query=QUERY,
+                include_counters=True,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint(
+        db: str = DEFAULT_DB,
+    ) -> HttpEndpoint:
+
+        return (
+            TxEndpointBuilder(db, AUTH)
+            .with_query(
+                QUERY,
+                ["n"],
+                [[http_types.Int(1)]],
+                include_counters=True,
+            )
+            .with_commit()
+            .build()
+        )
+
+    @staticmethod
+    def _make_session_server_setup(
+        db: str = DEFAULT_DB,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_endpoint(
+                TestSummaryDatabase._make_query_endpoint(db),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        db: str = DEFAULT_DB,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryDatabase._make_tx_endpoint(db),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_database_session_run(
+        self, db: str = DEFAULT_DB
+    ) -> types.Summary:
+        return super()._get_summary_session_run(
+            self._make_session_server_setup(db),
+            db=db,
+        )
+
+    def _get_summary_with_database_tx(
+        self, db: str = DEFAULT_DB
+    ) -> types.Summary:
+        return super()._get_summary_tx(
+            self._make_tx_server_setup(db),
+            db=db,
+        )
+
+    def _assert_database(
+        self,
+        summary: types.Summary,
+        expected: str,
+    ) -> None:
+        self.assertEqual(summary.database, expected)
+
+    def test_session_run(self):
+        db = "🦹🏼‍♀️ \t\n\x00%-db"
+        summary = self._get_summary_with_database_session_run(db)
+        self._assert_database(summary, db)
+
+    def test_tx(self):
+        db = "🦹🏼‍♀️ \t\n\x00%-db"
+        summary = self._get_summary_with_database_tx(db)
+        self._assert_database(summary, db)
