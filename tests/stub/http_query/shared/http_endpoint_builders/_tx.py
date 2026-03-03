@@ -18,6 +18,8 @@ from ..http_endpoints import (
     HttpTxQueryEndpoint,
     HttpTxRollbackEndpoint,
     MaybeNull,
+    Plan,
+    Profile,
 )
 
 if t.TYPE_CHECKING:
@@ -81,6 +83,8 @@ class TxEndpointBuilder:
         ) = _DEFAULT_PARAMETERS,
         include_counters: TOptionalValue[bool] | AnyValue | None = _ANY_VALUE,
         counters: CountersMap | AutoRespond | None = _AUTO_RESPOND,
+        plan: Plan | None = None,
+        profile: Profile | None = None,
     ) -> t.Self:
         if self._pipeline_begin in {Potential.YES, Potential.MAYBE}:
             if not self._pipelined_handlers:
@@ -95,6 +99,8 @@ class TxEndpointBuilder:
                         parameters,
                         include_counters,
                         counters,
+                        plan,
+                        profile,
                     )
                 )
             else:
@@ -106,6 +112,8 @@ class TxEndpointBuilder:
                         parameters,
                         include_counters,
                         counters,
+                        plan,
+                        profile,
                     )
                 )
         if self._pipeline_begin in {Potential.NO, Potential.MAYBE}:
@@ -117,6 +125,8 @@ class TxEndpointBuilder:
                     parameters,
                     include_counters,
                     counters,
+                    plan,
+                    profile,
                 )
             )
         return self
@@ -179,6 +189,8 @@ class TxEndpointBuilder:
         ) = None,
         include_counters: TOptionalValue[bool] | AnyValue | None = None,
         counters: CountersMap | AutoRespond | None = None,
+        plan: Plan | None = None,
+        profile: Profile | None = None,
     ) -> HttpEndpoint:
         if bookmarks is None:
             bookmarks = []
@@ -199,6 +211,8 @@ class TxEndpointBuilder:
                     fields=fields,
                     records=records,
                     counters=counters,
+                    plan=plan,
+                    profile=profile,
                 ),
             )
         else:
@@ -223,6 +237,8 @@ class TxEndpointBuilder:
         parameters: TOptionalValue[dict[str, http_types.HttpType]] | None,
         include_counters: TOptionalValue[bool] | AnyValue | None,
         counters: CountersMap | AutoRespond | None,
+        plan: Plan | None = None,
+        profile: Profile | None = None,
     ) -> HttpEndpoint:
         return HttpTxQueryEndpoint(
             HttpTxQueryEndpoint.RequestData(
@@ -238,6 +254,8 @@ class TxEndpointBuilder:
                 fields=fields,
                 records=records,
                 counters=counters,
+                plan=plan,
+                profile=profile,
             ),
         )
 

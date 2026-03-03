@@ -23,6 +23,8 @@ from ._base import (
     HttpEndpoint,
     is_str_dict,
     MaybeNull,
+    Plan,
+    Profile,
 )
 
 if t.TYPE_CHECKING:
@@ -134,7 +136,9 @@ class HttpQueryEndpoint(HttpEndpoint):
         records: list[list[HttpType]] | None = None
         bookmarks: list[str] | None = None
         counters: CountersMap | AutoRespond | None = AutoRespond()
-        # TODO: notifications, profile, plan
+        plan: Plan | None = None
+        profile: Profile | None = None
+        # TODO: notifications
 
         def _get_counters(self, req: Request) -> t.Any:
             if isinstance(self.counters, AutoRespond):
@@ -282,6 +286,16 @@ class HttpQueryEndpoint(HttpEndpoint):
             counters = self._res._get_counters(req)
             if counters is not None:
                 body["counters"] = counters
+
+            if self._res.plan is not None:
+                body["queryPlan"] = self._res.plan.json_dict(
+                    self._protocol_version
+                )
+
+            if self._res.profile is not None:
+                body["profiledQueryPlan"] = self._res.profile.json_dict(
+                    self._protocol_version
+                )
 
             return Response(
                 json.dumps(body),

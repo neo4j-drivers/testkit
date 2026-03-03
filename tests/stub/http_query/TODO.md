@@ -22,12 +22,12 @@
     * [x] db
     * [x] query & parameters
     * [x] counters
-    * [ ] profile
-    * [ ] plan
+    * [x] profile
+    * [x] plan
+    * [ ] notifications
     * [x] server
       * [x] agent string
       * [x] address
-    * [ ] query type
   * [ ] verify connectivity
   * [ ] errors
   * [ ] auth manager
@@ -42,3 +42,11 @@
   * [ ] vectors
   * [ ] unsupported type
   * [ ] support `+jsonl` content type
+* [ ] features to be implemented server-side
+  * [ ] notification filtering
+  * [ ] Transaction config
+    * [ ] meta data
+    * [ ] tx timeout
+  * [ ] summary
+    * [ ] query type
+    * [ ] timers

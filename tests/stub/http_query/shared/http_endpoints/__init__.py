@@ -9,6 +9,8 @@ from ._base import (
     CustomAuthToken,
     HttpEndpoint,
     MaybeNull,
+    Plan,
+    Profile,
     ProtocolVersion,
 )
 from ._either import HttpEitherEndpoint
@@ -33,6 +35,8 @@ __all__: tuple[str, ...] = (
     "HttpTxQueryEndpoint",
     "HttpTxRollbackEndpoint",
     "MaybeNull",
+    "Plan",
+    "Profile",
     "ProtocolVersion",
 )
 

@@ -18,6 +18,8 @@ from tests.stub.http_query.shared.http_endpoints import (
     HttpQueryEndpoint,
     HttpSequenceEndpoint,
     MaybeNull,
+    Plan,
+    Profile,
 )
 from tests.stub.http_query.shared.http_server import HandlerType
 
@@ -704,3 +706,346 @@ class TestSummaryServer(_SummaryTestBase):
             version="🐒 <3 🍌"
         )
         self._assert_summary_server(summary, "🐒 <3 🍌", server_address)
+
+
+class TestSummaryPlan(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints(plan: Plan) -> HttpQueryEndpoint:
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                query=DEFAULT_QUERY_TEXT,
+                db=DEFAULT_DB,
+                auth=AUTH,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+                plan=plan,
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint(plan: Plan) -> HttpEndpoint:
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                DEFAULT_QUERY_TEXT,
+                ["n"],
+                [[http_types.Int(1)]],
+                plan=plan,
+            )
+            .with_commit()
+            .build()
+        )
+
+    @staticmethod
+    def _make_session_server_setup(
+        plan: Plan,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryPlan._make_query_endpoints(plan),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        plan: Plan,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryPlan._make_tx_endpoint(plan),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_plan_session_run(
+        self,
+        plan: Plan,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_session_server_setup(plan)(server)
+            summaries = super()._get_summary_session_run(server)
+            assert len(summaries) == 1
+            return summaries[0]
+
+    def _get_summary_with_plan_tx(
+        self,
+        plan: Plan,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_tx_server_setup(plan)(server)
+            summaries = super()._get_summary_tx(server)
+            assert len(summaries) == 1
+            server._server.port
+            return summaries[0]
+
+    def _test_plan_1(
+        self,
+        get_summary: t.Callable[[Plan], types.Summary],
+    ) -> None:
+        summary = get_summary(
+            Plan(
+                arguments={
+                    "planner-impl": http_types.Str("IDP"),
+                    "Details": http_types.Str("n"),
+                    "PipelineInfo": http_types.Str("Fused in Pipeline 0"),
+                    "planner-version": http_types.Str("4.3"),
+                    "runtime-version": http_types.Str("4.3"),
+                    "runtime": http_types.Str("PIPELINED"),
+                    "runtime-impl": http_types.Str("PIPELINED"),
+                    "version": http_types.Str("CYPHER 4.3"),
+                    "EstimatedRows": http_types.Float(1.5),
+                    "planner": http_types.Str("COST"),
+                },
+                operator_type="ProduceResults@neo4j",
+                identifiers=["n"],
+                children=[
+                    Plan(
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "EstimatedRows": http_types.Float(1.5),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                        },
+                        operator_type="Create@neo4j",
+                        children=[],
+                        identifiers=["n"],
+                    ),
+                ],
+            )
+        )
+        plan = summary.plan
+        self.assertEqual(
+            plan,
+            {
+                "args": {
+                    "planner-impl": "IDP",
+                    "Details": "n",
+                    "PipelineInfo": "Fused in Pipeline 0",
+                    "planner-version": "4.3",
+                    "runtime-version": "4.3",
+                    "runtime": "PIPELINED",
+                    "runtime-impl": "PIPELINED",
+                    "version": "CYPHER 4.3",
+                    "EstimatedRows": 1.5,
+                    "planner": "COST",
+                },
+                "operatorType": "ProduceResults@neo4j",
+                "identifiers": ["n"],
+                "children": [
+                    {
+                        "args": {
+                            "Details": "(n)",
+                            "EstimatedRows": 1.5,
+                            "PipelineInfo": "Fused in Pipeline 0",
+                        },
+                        "operatorType": "Create@neo4j",
+                        "identifiers": ["n"],
+                    },
+                ],
+            },
+        )
+
+    def test_session_plan_1(self):
+        self._test_plan_1(self._get_summary_with_plan_session_run)
+
+    def test_tx_plan_1(self):
+        self._test_plan_1(self._get_summary_with_plan_tx)
+
+
+class TestSummaryProfile(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints(profile: Profile) -> HttpQueryEndpoint:
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                query=DEFAULT_QUERY_TEXT,
+                db=DEFAULT_DB,
+                auth=AUTH,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+                profile=profile,
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint(profile: Profile) -> HttpEndpoint:
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                DEFAULT_QUERY_TEXT,
+                ["n"],
+                [[http_types.Int(1)]],
+                profile=profile,
+            )
+            .with_commit()
+            .build()
+        )
+
+    @staticmethod
+    def _make_session_server_setup(
+        profile: Profile,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryProfile._make_query_endpoints(profile),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        profile: Profile,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryProfile._make_tx_endpoint(profile),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_profile_session_run(
+        self,
+        profile: Profile,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_session_server_setup(profile)(server)
+            summaries = super()._get_summary_session_run(server)
+            assert len(summaries) == 1
+            return summaries[0]
+
+    def _get_summary_with_profile_tx(
+        self,
+        profile: Profile,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_tx_server_setup(profile)(server)
+            summaries = super()._get_summary_tx(server)
+            assert len(summaries) == 1
+            server._server.port
+            return summaries[0]
+
+    def _test_profile_1(
+        self,
+        get_summary: t.Callable[[Profile], types.Summary],
+    ) -> None:
+        summary = get_summary(
+            Profile(
+                db_hits=1,
+                records=1,
+                has_page_cache_stats=False,
+                page_cache_hits=0,
+                page_cache_misses=0,
+                page_cache_hit_ratio=0.0,
+                time=0,
+                identifiers=["n"],
+                operator_type="ProduceResults@neo4j",
+                arguments={
+                    "GlobalMemory": http_types.Int(136),
+                    "planner-impl": http_types.Str("IDP"),
+                    "runtime": http_types.Str("PIPELINED"),
+                    "runtime-impl": http_types.Str("PIPELINED"),
+                    "version": http_types.Str("CYPHER 4.3"),
+                    "DbHits": http_types.Int(1),
+                    "Details": http_types.Str("n"),
+                    "PipelineInfo": http_types.Str("Fused in Pipeline 0"),
+                    "planner-version": http_types.Str("4.3"),
+                    "runtime-version": http_types.Str("4.3"),
+                    "EstimatedRows": http_types.Float(1.1),
+                    "planner": http_types.Str("COST"),
+                    "Rows": http_types.Int(1),
+                },
+                children=[
+                    Profile(
+                        db_hits=1,
+                        records=1,
+                        has_page_cache_stats=True,
+                        page_cache_hits=0,
+                        page_cache_misses=1,
+                        page_cache_hit_ratio=0.1,
+                        time=0,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                ],
+            )
+        )
+        profile = summary.profile
+        self.assertEqual(
+            profile,
+            {
+                "dbHits": 1,
+                "rows": 1,
+                "time": 0,
+                "identifiers": ["n"],
+                "operatorType": "ProduceResults@neo4j",
+                "args": {
+                    "GlobalMemory": 136,
+                    "planner-impl": "IDP",
+                    "runtime": "PIPELINED",
+                    "runtime-impl": "PIPELINED",
+                    "version": "CYPHER 4.3",
+                    "DbHits": 1,
+                    "Details": "n",
+                    "PipelineInfo": "Fused in Pipeline 0",
+                    "planner-version": "4.3",
+                    "runtime-version": "4.3",
+                    "EstimatedRows": 1.1,
+                    "planner": "COST",
+                    "Rows": 1,
+                },
+                "children": [
+                    {
+                        "dbHits": 1,
+                        "rows": 1,
+                        "pageCacheHits": 0,
+                        "pageCacheMisses": 1,
+                        "pageCacheHitRatio": 0.1,
+                        "time": 0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                ],
+            },
+        )
+
+    def test_session_profile_1(self):
+        self._test_profile_1(self._get_summary_with_profile_session_run)
+
+    def test_tx_profile_1(self):
+        self._test_profile_1(self._get_summary_with_profile_tx)

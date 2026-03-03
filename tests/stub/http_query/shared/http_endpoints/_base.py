@@ -8,7 +8,10 @@ import typing as t
 import typing_extensions as te
 from pytest_httpserver.httpserver import HandlerType
 
-from ..http_types import ProtocolVersion
+from ..http_types import (
+    HttpType,
+    ProtocolVersion,
+)
 
 if t.TYPE_CHECKING:
     from pytest_httpserver import (
@@ -33,6 +36,8 @@ __all__: tuple[str, ...] = (
     "CustomAuthToken",
     "HttpEndpoint",
     "MaybeNull",
+    "Plan",
+    "Profile",
     "ProtocolVersion",
 )
 
@@ -91,6 +96,68 @@ class CountersMap:
             "constraintsRemoved": self.constraints_removed,
             "containsSystemUpdates": self.contains_system_updates,
             "systemUpdates": self.system_updates,
+        }
+
+
+@dataclasses.dataclass
+class Plan:
+    identifiers: list[str] = dataclasses.field(default_factory=list)
+    operator_type: str = "ProduceResults@neo4j"
+    arguments: dict[str, HttpType] = dataclasses.field(default_factory=dict)
+    children: list[Plan] = dataclasses.field(default_factory=list)
+
+    def json_dict(
+        self,
+        protocol_version: ProtocolVersion,
+    ) -> dict[str, object]:
+        return {
+            "identifiers": self.identifiers,
+            "operatorType": self.operator_type,
+            "arguments": {
+                k: v.serialize(protocol_version)
+                for k, v in self.arguments.items()
+            },
+            "children": [
+                child.json_dict(protocol_version) for child in self.children
+            ],
+        }
+
+
+@dataclasses.dataclass
+class Profile:
+    db_hits: int = 0
+    records: int = 0
+    has_page_cache_stats: bool = False
+    page_cache_hits: int = 0
+    page_cache_misses: int = 0
+    page_cache_hit_ratio: float = 0.0
+    time: int = 0
+    identifiers: list[str] = dataclasses.field(default_factory=list)
+    operator_type: str = "ProduceResults@neo4j"
+    arguments: dict[str, HttpType] = dataclasses.field(default_factory=dict)
+    children: list[Profile] = dataclasses.field(default_factory=list)
+
+    def json_dict(
+        self,
+        protocol_version: ProtocolVersion,
+    ) -> dict[str, object]:
+        return {
+            "dbHits": self.db_hits,
+            "records": self.records,
+            "hasPageCacheStats": self.has_page_cache_stats,
+            "pageCacheHits": self.page_cache_hits,
+            "pageCacheMisses": self.page_cache_misses,
+            "pageCacheHitRatio": self.page_cache_hit_ratio,
+            "time": self.time,
+            "identifiers": self.identifiers,
+            "operatorType": self.operator_type,
+            "arguments": {
+                k: v.serialize(protocol_version)
+                for k, v in self.arguments.items()
+            },
+            "children": [
+                child.json_dict(protocol_version) for child in self.children
+            ],
         }
 
 
