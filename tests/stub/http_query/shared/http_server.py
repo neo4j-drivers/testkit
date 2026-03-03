@@ -35,6 +35,14 @@ class HTTPServer:
     def url_for(self, prefix: str) -> str:
         return self._server.url_for(prefix)
 
+    @property
+    def host(self) -> str:
+        return self._server.host
+
+    @property
+    def port(self) -> int:
+        return self._server.port
+
     def install_discovery_endpoint(
         self,
         version: str = "2025.10.1",

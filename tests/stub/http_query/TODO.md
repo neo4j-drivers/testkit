@@ -24,7 +24,9 @@
     * [x] counters
     * [ ] profile
     * [ ] plan
-    * [ ] server agent string
+    * [x] server
+      * [x] agent string
+      * [x] address
     * [ ] query type
   * [ ] verify connectivity
   * [ ] errors

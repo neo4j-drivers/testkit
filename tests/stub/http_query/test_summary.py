@@ -4,6 +4,7 @@ import dataclasses
 import typing as t
 
 from nutkit import protocol as types
+from tests.shared import get_dns_resolved_server_address
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -31,6 +32,7 @@ DEFAULT_DB = "neo4j"
 AUTH = HttpTestCase.AUTH
 DEFAULT_QUERY_TEXT = "RETURN 1 AS n"
 DEFAULT_COUNTERS = CountersMap()
+DEFAULT_VERSION = "2025.10.1"
 
 
 @dataclasses.dataclass
@@ -53,25 +55,23 @@ class QueryResult:
 class _SummaryTestBase(HttpTestCase):
     def _get_summary_session_run(
         self,
-        server_setup: t.Callable[[HTTPServer], None],
+        server: HTTPServer,
+        # server_setup: t.Callable[[HTTPServer], None],
         db: str = DEFAULT_DB,
         queries: t.Iterable[Query] = (DEFAULT_QUERY,),
     ) -> tuple[types.Summary, ...]:
         results = []
 
-        with self.server() as server:
-            server.install_discovery_endpoint()
-            server_setup(server)
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=db) as session,
-            ):
-                for query in queries:
-                    result = session.run(query.text, params=query.params)
-                    keys = result.keys()
-                    records = list(result)
-                    summary = result.consume()
-                    results.append(QueryResult(keys, records, summary))
+        with (
+            self.driver(server, AUTH) as driver,
+            driver.session("w", database=db) as session,
+        ):
+            for query in queries:
+                result = session.run(query.text, params=query.params)
+                keys = result.keys()
+                records = list(result)
+                summary = result.consume()
+                results.append(QueryResult(keys, records, summary))
 
         for result in results:
             self.assertEqual(result.keys, ["n"])
@@ -83,27 +83,25 @@ class _SummaryTestBase(HttpTestCase):
 
     def _get_summary_tx(
         self,
-        server_setup: t.Callable[[HTTPServer], None],
+        server: HTTPServer,
+        # server_setup: t.Callable[[HTTPServer], None],
         db: str = DEFAULT_DB,
         queries: t.Iterable[Query] = (DEFAULT_QUERY,),
     ) -> tuple[types.Summary, ...]:
         results = []
 
-        with self.server() as server:
-            server.install_discovery_endpoint()
-            server_setup(server)
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=db) as session,
-                session.begin_transaction() as tx,
-            ):
-                for query in queries:
-                    result = tx.run(query.text, params=query.params)
-                    keys = result.keys()
-                    records = list(result)
-                    summary = result.consume()
-                    results.append(QueryResult(keys, records, summary))
-                tx.commit()
+        with (
+            self.driver(server, AUTH) as driver,
+            driver.session("w", database=db) as session,
+            session.begin_transaction() as tx,
+        ):
+            for query in queries:
+                result = tx.run(query.text, params=query.params)
+                keys = result.keys()
+                records = list(result)
+                summary = result.consume()
+                results.append(QueryResult(keys, records, summary))
+            tx.commit()
 
         for result in results:
             self.assertEqual(result.keys, ["n"])
@@ -157,6 +155,7 @@ class TestSummaryCounters(_SummaryTestBase):
         counters: CountersMap,
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryCounters._make_query_endpoint(counters),
                 handler_type=HandlerType.ONESHOT,
@@ -169,6 +168,7 @@ class TestSummaryCounters(_SummaryTestBase):
         counters: CountersMap,
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryCounters._make_tx_endpoint(counters),
                 handler_type=HandlerType.PERMANENT,
@@ -179,18 +179,20 @@ class TestSummaryCounters(_SummaryTestBase):
     def _get_summary_with_counters_session_run(
         self, counters: CountersMap
     ) -> types.Summary:
-        summaries = super()._get_summary_session_run(
-            self._make_session_server_setup(counters)
-        )
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            self._make_session_server_setup(counters)(server)
+            summaries = super()._get_summary_session_run(server)
         assert len(summaries) == 1
         return summaries[0]
 
     def _get_summary_with_counters_tx(
         self, counters: CountersMap
     ) -> types.Summary:
-        summaries = super()._get_summary_tx(
-            self._make_tx_server_setup(counters)
-        )
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            self._make_tx_server_setup(counters)(server)
+            summaries = super()._get_summary_tx(server)
         assert len(summaries) == 1
         return summaries[0]
 
@@ -318,6 +320,7 @@ class TestSummaryDatabase(_SummaryTestBase):
         db: str = DEFAULT_DB,
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryDatabase._make_query_endpoint(db),
                 handler_type=HandlerType.ONESHOT,
@@ -330,6 +333,7 @@ class TestSummaryDatabase(_SummaryTestBase):
         db: str = DEFAULT_DB,
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryDatabase._make_tx_endpoint(db),
                 handler_type=HandlerType.PERMANENT,
@@ -340,20 +344,20 @@ class TestSummaryDatabase(_SummaryTestBase):
     def _get_summary_with_database_session_run(
         self, db: str = DEFAULT_DB
     ) -> types.Summary:
-        summaries = super()._get_summary_session_run(
-            self._make_session_server_setup(db),
-            db=db,
-        )
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            self._make_session_server_setup(db)(server)
+            summaries = super()._get_summary_session_run(server, db=db)
         assert len(summaries) == 1
         return summaries[0]
 
     def _get_summary_with_database_tx(
         self, db: str = DEFAULT_DB
     ) -> types.Summary:
-        summaries = super()._get_summary_tx(
-            self._make_tx_server_setup(db),
-            db=db,
-        )
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            self._make_tx_server_setup(db)(server)
+            summaries = super()._get_summary_tx(server, db=db)
         assert len(summaries) == 1
         return summaries[0]
 
@@ -435,6 +439,7 @@ class TestSummaryQuery(_SummaryTestBase):
         queries: t.Collection[Query] = (DEFAULT_QUERY,),
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryQuery._make_query_endpoints(queries),
                 handler_type=HandlerType.PERMANENT,
@@ -447,6 +452,7 @@ class TestSummaryQuery(_SummaryTestBase):
         queries: t.Collection[Query] = (DEFAULT_QUERY,),
     ) -> t.Callable[[HTTPServer], None]:
         def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
             server.install_endpoint(
                 TestSummaryQuery._make_tx_endpoint(queries),
                 handler_type=HandlerType.PERMANENT,
@@ -458,19 +464,19 @@ class TestSummaryQuery(_SummaryTestBase):
         self,
         queries: t.Collection[Query] = (DEFAULT_QUERY,),
     ) -> tuple[types.Summary, ...]:
-        return super()._get_summary_session_run(
-            self._make_session_server_setup(queries),
-            queries=queries,
-        )
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            self._make_session_server_setup(queries)(server)
+            return super()._get_summary_session_run(server, queries=queries)
 
     def _get_summary_with_queries_tx(
         self,
         queries: t.Collection[Query] = (DEFAULT_QUERY,),
     ) -> tuple[types.Summary, ...]:
-        return super()._get_summary_tx(
-            self._make_tx_server_setup(queries),
-            queries=queries,
-        )
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            self._make_tx_server_setup(queries)(server)
+            return super()._get_summary_tx(server, queries=queries)
 
     def _assert_queries(
         self,
@@ -574,3 +580,127 @@ class TestSummaryQuery(_SummaryTestBase):
         )
         summary = self._get_summary_with_queries_tx(queries)
         self._assert_queries(summary, queries)
+
+
+class Address(t.NamedTuple):
+    host: str
+    port: int
+
+
+class TestSummaryServer(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints() -> HttpQueryEndpoint:
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                query=DEFAULT_QUERY_TEXT,
+                db=DEFAULT_DB,
+                auth=AUTH,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint() -> HttpEndpoint:
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                DEFAULT_QUERY_TEXT,
+                ["n"],
+                [[http_types.Int(1)]],
+            )
+            .with_commit()
+            .build()
+        )
+
+    @staticmethod
+    def _make_session_server_setup(
+        version: str = DEFAULT_VERSION,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint(version=version)
+            server.install_endpoint(
+                TestSummaryQuery._make_query_endpoints(),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        version: str = DEFAULT_VERSION,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint(version=version)
+            server.install_endpoint(
+                TestSummaryQuery._make_tx_endpoint(),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_version_session_run(
+        self,
+        version: str = DEFAULT_VERSION,
+    ) -> tuple[types.Summary, Address]:
+        with self.server() as server:
+            self._make_session_server_setup(version)(server)
+            summaries = super()._get_summary_session_run(server)
+            assert len(summaries) == 1
+            return summaries[0], Address(server.host, server.port)
+
+    def _get_summary_with_version_tx(
+        self,
+        version: str = DEFAULT_VERSION,
+    ) -> tuple[types.Summary, Address]:
+        with self.server() as server:
+            self._make_tx_server_setup(version)(server)
+            summaries = super()._get_summary_tx(server)
+            assert len(summaries) == 1
+            server._server.port
+            return summaries[0], Address(server.host, server.port)
+
+    def _assert_summary_server(
+        self,
+        summary: types.Summary,
+        expected_version: str,
+        server_address: Address,
+    ) -> None:
+        self.assertEqual(
+            summary.server_info.agent,
+            f"Neo4j/{expected_version}",
+        )
+        get_dns_resolved_server_address(server_address)
+        self.assertIn(
+            summary.server_info.address,
+            [
+                get_dns_resolved_server_address(server_address),
+                f"{server_address.host}:{server_address.port}",
+            ],
+        )
+
+    def test_session_run(self):
+        summary, server_address = self._get_summary_with_version_session_run(
+            version=DEFAULT_VERSION
+        )
+        self._assert_summary_server(summary, DEFAULT_VERSION, server_address)
+
+    def test_session_run_custom_version(self):
+        summary, server_address = self._get_summary_with_version_session_run(
+            version="🐒 <3 🍌"
+        )
+        self._assert_summary_server(summary, "🐒 <3 🍌", server_address)
+
+    def test_tx(self):
+        summary, server_address = self._get_summary_with_version_tx(
+            version=DEFAULT_VERSION
+        )
+        self._assert_summary_server(summary, DEFAULT_VERSION, server_address)
+
+    def test_tx_custom_version(self):
+        summary, server_address = self._get_summary_with_version_tx(
+            version="🐒 <3 🍌"
+        )
+        self._assert_summary_server(summary, "🐒 <3 🍌", server_address)
