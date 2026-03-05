@@ -33,9 +33,10 @@ struct LoggingStdout {
 #[pymethods]
 impl LoggingStdout {
     fn write(&self, data: &str) {
-        match self.err {
-            true => eprint!("{data}",),
-            false => print!("{data}"),
+        if self.err {
+            eprint!("{data}");
+        } else {
+            print!("{data}");
         }
     }
 }

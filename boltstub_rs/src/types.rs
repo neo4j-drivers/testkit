@@ -28,14 +28,14 @@ pub enum ScanBlock {
     ConditionPart(Context, Branch, Option<(Context, String)>, Box<ScanBlock>),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum Branch {
     If,
     ElseIf,
     Else,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum BoolIsh {
     True,
     False,

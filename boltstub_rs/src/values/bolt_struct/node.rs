@@ -158,7 +158,7 @@ impl<'a> BoltNode<'a> {
                 f.write_str("], {")?;
                 write_joined_entries(f, self.this.properties.iter(), self.jolt_version)?;
 
-                f.write_str(r#"}]}"#)
+                f.write_str("}]}")
             }
         }
 

@@ -175,17 +175,16 @@ impl<'a> BoltTime<'a> {
         if let Some(utc_offset_seconds) = self.utc_offset_seconds {
             if utc_offset_seconds == 0 {
                 return f.write_str("Z");
-            } else {
-                let sign = if utc_offset_seconds < 0 { "-" } else { "+" };
-                let utc_offset_seconds = utc_offset_seconds.abs();
-                let utc_offset_hours = utc_offset_seconds / (60 * 60);
-                let utc_offset_minutes = (utc_offset_hours % (60 * 60)) / 60;
-                let utc_offset_seconds = utc_offset_seconds % 60;
-                write!(f, "{sign}{utc_offset_hours:02}:{utc_offset_minutes:02}")?;
-                if utc_offset_seconds != 0 {
-                    // not actually ISO compliant :/
-                    write!(f, ":{utc_offset_seconds:02}")?;
-                }
+            }
+            let sign = if utc_offset_seconds < 0 { "-" } else { "+" };
+            let utc_offset_seconds = utc_offset_seconds.abs();
+            let utc_offset_hours = utc_offset_seconds / (60 * 60);
+            let utc_offset_minutes = (utc_offset_hours % (60 * 60)) / 60;
+            let utc_offset_seconds = utc_offset_seconds % 60;
+            write!(f, "{sign}{utc_offset_hours:02}:{utc_offset_minutes:02}")?;
+            if utc_offset_seconds != 0 {
+                // not actually ISO compliant :/
+                write!(f, ":{utc_offset_seconds:02}")?;
             }
         }
         if let Some(zone_id) = &self.time_zone_id {

@@ -23,7 +23,6 @@ pub(crate) fn parse_stubscript_hex_string(byte_str: &str) -> anyhow::Result<Vec<
         match u8::from_str_radix(&clean[i..i + 2], 16) {
             Ok(val) => {
                 res.push(val);
-                continue;
             }
             Err(e) => return Err(anyhow!(e)),
         }
