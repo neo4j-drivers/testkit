@@ -18,7 +18,9 @@ from tests.stub.http_query.shared.http_endpoints import (
     HttpQueryEndpoint,
     HttpSequenceEndpoint,
     MaybeNull,
+    Notification,
     Plan,
+    Position,
     Profile,
 )
 from tests.stub.http_query.shared.http_server import HandlerType
@@ -1049,3 +1051,369 @@ class TestSummaryProfile(_SummaryTestBase):
 
     def test_tx_profile_1(self):
         self._test_profile_1(self._get_summary_with_profile_tx)
+
+
+class TestSummaryNotifications(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints(
+        notifications: list[Notification] | None,
+    ) -> HttpQueryEndpoint:
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                query=DEFAULT_QUERY_TEXT,
+                db=DEFAULT_DB,
+                auth=AUTH,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+                notifications=notifications,
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint(
+        notifications: list[Notification] | None,
+    ) -> HttpEndpoint:
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                DEFAULT_QUERY_TEXT,
+                ["n"],
+                [[http_types.Int(1)]],
+                notifications=notifications,
+            )
+            .with_commit()
+            .build()
+        )
+
+    @staticmethod
+    def _make_session_server_setup(
+        notifications: list[Notification] | None,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryNotifications._make_query_endpoints(notifications),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        notifications: list[Notification] | None,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryNotifications._make_tx_endpoint(notifications),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_notifications_session_run(
+        self,
+        notifications: list[Notification] | None,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_session_server_setup(notifications)(server)
+            summaries = super()._get_summary_session_run(server)
+            assert len(summaries) == 1
+            return summaries[0]
+
+    def _get_summary_with_notifications_tx(
+        self,
+        notifications: list[Notification] | None,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_tx_server_setup(notifications)(server)
+            summaries = super()._get_summary_tx(server)
+            assert len(summaries) == 1
+            server._server.port
+            return summaries[0]
+
+    @staticmethod
+    def _parsed_severity(severity_level: str) -> str:
+        severity_mapping = {
+            "INFORMATION": "INFORMATION",
+            "WARNING": "WARNING",
+        }
+        return severity_mapping.get(severity_level, "UNKNOWN")
+
+    @staticmethod
+    def _parsed_category(category: str) -> str:
+        category_mapping = {
+            "HINT": "HINT",
+            "UNRECOGNIZED": "UNRECOGNIZED",
+            "UNSUPPORTED": "UNSUPPORTED",
+            "PERFORMANCE": "PERFORMANCE",
+            "DEPRECATION": "DEPRECATION",
+            "GENERIC": "GENERIC",
+            "SECURITY": "SECURITY",
+            "TOPOLOGY": "TOPOLOGY",
+            "SCHEMA": "SCHEMA",
+        }
+        return category_mapping.get(category, "UNKNOWN")
+
+    def _assert_notification(
+        self,
+        summary: types.Summary,
+        expected: Notification,
+        position: int,
+    ) -> None:
+        notification = summary.notifications[position]
+        self.assertEqual(
+            notification.get("title"),
+            expected.title or "",
+        )
+        self.assertEqual(
+            notification.get("code"),
+            expected.code or "",
+        )
+        self.assertEqual(
+            notification.get("description"),
+            expected.description or "",
+        )
+        self.assertEqual(
+            notification.get("severityLevel"),
+            self._parsed_severity(expected.severity or "UNKNOWN"),
+        )
+        self.assertEqual(
+            notification.get("category"),
+            self._parsed_category(expected.category or "UNKNOWN"),
+        )
+        self.assertEqual(
+            notification.get("rawSeverityLevel"),
+            expected.severity or "",
+        )
+        self.assertEqual(
+            notification.get("rawCategory"),
+            expected.category or "",
+        )
+        expected_keys = {
+            "title",
+            "code",
+            "description",
+            "severityLevel",
+            "category",
+            "rawSeverityLevel",
+            "rawCategory",
+        }
+        if expected.position is not None:
+            self.assertIn("position", notification)
+            self.assertEqual(
+                notification["position"],
+                {
+                    "offset": expected.position.offset,
+                    "line": expected.position.line,
+                    "column": expected.position.column,
+                },
+            )
+            expected_keys.add("position")
+        self.assertEqual(set(notification.keys()), expected_keys)
+
+    def _assert_notification_as_gql_status(
+        self,
+        summary: types.Summary,
+        expected: Notification,
+        position: int,
+    ) -> None:
+        expected_diagnostic_record: dict[str, t.Any] = {
+            "OPERATION": types.CypherString(""),
+            "OPERATION_CODE": types.CypherString("0"),
+            "CURRENT_SCHEMA": types.CypherString("/"),
+        }
+        is_warning = expected.severity == "WARNING"
+
+        status = summary.gql_status_objects[position]
+        self.assertTrue(status.is_notification)
+        expected_status = "01N42" if is_warning else "03N42"
+        self.assertEqual(
+            status.gql_status,
+            expected_status,
+        )
+        expected_description = expected.description or (
+            "warn: unknown warning"
+            if is_warning
+            else "info: unknown notification"
+        )
+        self.assertEqual(
+            status.status_description,
+            expected_description,
+        )
+        if expected.category:
+            expected_diagnostic_record["_classification"] = (
+                types.as_cypher_type(expected.category)
+            )
+        self.assertEqual(
+            status.raw_classification,
+            expected.category or "",
+        )
+        self.assertEqual(
+            status.classification,
+            self._parsed_category(expected.category or "UNKNOWN"),
+        )
+        if expected.severity:
+            expected_diagnostic_record["_severity"] = types.as_cypher_type(
+                expected.severity
+            )
+        self.assertEqual(
+            status.raw_severity,
+            expected.severity or "",
+        )
+        self.assertEqual(
+            status.severity,
+            self._parsed_severity(expected.severity or "UNKNOWN"),
+        )
+        if expected.position is None:
+            self.assertIs(
+                status.position,
+                None,
+            )
+        else:
+            position_dict = {
+                "column": expected.position.column,
+                "line": expected.position.line,
+                "offset": expected.position.offset,
+            }
+            expected_diagnostic_record["_position"] = types.as_cypher_type(
+                position_dict
+            )
+            self.assertEqual(
+                status.position,
+                position_dict,
+            )
+        self.assertEqual(
+            status.diagnostic_record,
+            expected_diagnostic_record,
+        )
+
+    def _test_notification_1(
+        self,
+        get_summary: t.Callable[[list[Notification]], types.Summary],
+    ) -> None:
+        # testing WARNING severity without position
+        notification = Notification(
+            code="Neo.ClientNotification.Statement.JoinHintUnfulfillableWarning",  # noqa: E501
+            description="The hinted join was not planned. This could happen because no generated plan contained the join key, please try using a different join key or restructure your query. (hinted join key identifier is: a)",  # noqa: E501
+            severity="WARNING",
+            title="The database was unable to plan a hinted join.",
+            position=None,
+            category="HINT",
+        )
+
+        summary = get_summary([notification])
+        self.assertEqual(len(summary.notifications), 1)
+        self.assertEqual(len(summary.gql_status_objects), 2)
+        self._assert_notification(
+            summary,
+            notification,
+            position=0,
+        )
+        self._assert_notification_as_gql_status(
+            summary,
+            notification,
+            position=0,
+        )
+
+    def _test_notification_2(
+        self,
+        get_summary: t.Callable[[list[Notification]], types.Summary],
+    ) -> None:
+        # testing INFORMATION severity with position
+        notification = Notification(
+            code="Neo.ClientNotification.Statement.UnboundedVariableLengthPattern",  # noqa: E501
+            description="Using shortest path with an unbounded pattern will likely result in long execution times. It is recommended to use an upper limit to the number of node hops in your pattern.",  # noqa: E501
+            severity="INFORMATION",
+            title="The provided pattern is unbounded, consider adding an upper limit to the number of node hops.",  # noqa: E501
+            position=Position(offset=21, line=1, column=22),
+            category="PERFORMANCE",
+        )
+        summary = get_summary([notification])
+        self.assertEqual(len(summary.notifications), 1)
+        self.assertEqual(len(summary.gql_status_objects), 2)
+        self._assert_notification(
+            summary,
+            notification,
+            position=0,
+        )
+        self._assert_notification_as_gql_status(
+            summary,
+            notification,
+            position=1,
+        )
+
+    def _test_notification_3(
+        self,
+        get_summary: t.Callable[[list[Notification]], types.Summary],
+    ) -> None:
+        # testing multiple notifications
+        notification_info = Notification(
+            code="Neo.ClientNotification.Foo.Bar",
+            description="Description",
+            severity="INFORMATION",
+            title="Title",
+            position=Position(offset=-2, line=0, column=-1),
+            category="MadeUp",
+        )
+        notification_warning = Notification(
+            code="Neo.OhBoi.Foo.BaZ",
+            description="Description2",
+            severity="WARNING",
+            title="Title2",
+            position=Position(offset=-1, line=-1, column=-1),
+            category="SECURITY",
+        )
+
+        summary = get_summary([notification_info, notification_warning])
+
+        self.assertEqual(len(summary.notifications), 2)
+        self.assertEqual(len(summary.gql_status_objects), 3)
+
+        self._assert_notification(
+            summary,
+            notification_info,
+            position=0,
+        )
+        self._assert_notification(
+            summary,
+            notification_warning,
+            position=1,
+        )
+
+        self._assert_notification_as_gql_status(
+            summary,
+            notification_warning,
+            position=0,
+        )
+        self._assert_notification_as_gql_status(
+            summary,
+            notification_info,
+            position=2,
+        )
+
+    def test_session_notification_1(self):
+        self._test_notification_1(
+            self._get_summary_with_notifications_session_run
+        )
+
+    def test_tx_notification_1(self):
+        self._test_notification_1(self._get_summary_with_notifications_tx)
+
+    def test_session_notification_2(self):
+        self._test_notification_2(
+            self._get_summary_with_notifications_session_run
+        )
+
+    def test_tx_notification_2(self):
+        self._test_notification_2(self._get_summary_with_notifications_tx)
+
+    def test_session_notification_3(self):
+        self._test_notification_3(
+            self._get_summary_with_notifications_session_run
+        )
+
+    def test_tx_notification_3(self):
+        self._test_notification_3(self._get_summary_with_notifications_tx)

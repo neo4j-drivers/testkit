@@ -9,7 +9,9 @@ from ._base import (
     CustomAuthToken,
     HttpEndpoint,
     MaybeNull,
+    Notification,
     Plan,
+    Position,
     Profile,
     ProtocolVersion,
 )
@@ -35,6 +37,7 @@ __all__: tuple[str, ...] = (
     "HttpTxQueryEndpoint",
     "HttpTxRollbackEndpoint",
     "MaybeNull",
+    "Notification",
     "Plan",
     "Profile",
     "ProtocolVersion",

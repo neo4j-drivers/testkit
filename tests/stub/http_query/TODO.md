@@ -24,7 +24,7 @@
     * [x] counters
     * [x] profile
     * [x] plan
-    * [ ] notifications
+    * [x] notifications
     * [x] server
       * [x] agent string
       * [x] address

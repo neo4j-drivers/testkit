@@ -18,6 +18,7 @@ from ..http_endpoints import (
     HttpTxQueryEndpoint,
     HttpTxRollbackEndpoint,
     MaybeNull,
+    Notification,
     Plan,
     Profile,
 )
@@ -85,6 +86,7 @@ class TxEndpointBuilder:
         counters: CountersMap | AutoRespond | None = _AUTO_RESPOND,
         plan: Plan | None = None,
         profile: Profile | None = None,
+        notifications: list[Notification] | None = None,
     ) -> t.Self:
         if self._pipeline_begin in {Potential.YES, Potential.MAYBE}:
             if not self._pipelined_handlers:
@@ -101,6 +103,7 @@ class TxEndpointBuilder:
                         counters,
                         plan,
                         profile,
+                        notifications,
                     )
                 )
             else:
@@ -114,6 +117,7 @@ class TxEndpointBuilder:
                         counters,
                         plan,
                         profile,
+                        notifications,
                     )
                 )
         if self._pipeline_begin in {Potential.NO, Potential.MAYBE}:
@@ -127,6 +131,7 @@ class TxEndpointBuilder:
                     counters,
                     plan,
                     profile,
+                    notifications,
                 )
             )
         return self
@@ -191,6 +196,7 @@ class TxEndpointBuilder:
         counters: CountersMap | AutoRespond | None = None,
         plan: Plan | None = None,
         profile: Profile | None = None,
+        notifications: list[Notification] | None = None,
     ) -> HttpEndpoint:
         if bookmarks is None:
             bookmarks = []
@@ -213,6 +219,7 @@ class TxEndpointBuilder:
                     counters=counters,
                     plan=plan,
                     profile=profile,
+                    notifications=notifications,
                 ),
             )
         else:
@@ -239,6 +246,7 @@ class TxEndpointBuilder:
         counters: CountersMap | AutoRespond | None,
         plan: Plan | None = None,
         profile: Profile | None = None,
+        notifications: list[Notification] | None = None,
     ) -> HttpEndpoint:
         return HttpTxQueryEndpoint(
             HttpTxQueryEndpoint.RequestData(
@@ -256,6 +264,7 @@ class TxEndpointBuilder:
                 counters=counters,
                 plan=plan,
                 profile=profile,
+                notifications=notifications,
             ),
         )
 

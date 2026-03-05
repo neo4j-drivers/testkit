@@ -37,6 +37,7 @@ __all__: tuple[str, ...] = (
     "HttpEndpoint",
     "MaybeNull",
     "Plan",
+    "Position",
     "Profile",
     "ProtocolVersion",
 )
@@ -44,6 +45,13 @@ __all__: tuple[str, ...] = (
 
 @dataclasses.dataclass(frozen=True)
 class MaybeNull(t.Generic[T]):
+    """
+    Instruct a matcher to accept requests with this value missing/bein None.
+
+    E.g., ``MaybeNull({})`` is supposed to match json values ``null``, ``{}``,
+    and omission of the key-value if inside an object.
+    """
+
     value: T
 
 
@@ -159,6 +167,43 @@ class Profile:
                 child.json_dict(protocol_version) for child in self.children
             ],
         }
+
+
+@dataclasses.dataclass
+class Position:
+    offset: int = -1
+    line: int = -1
+    column: int = -1
+
+    def json_dict(self) -> dict[str, object]:
+        return {
+            "offset": self.offset,
+            "line": self.line,
+            "column": self.column,
+        }
+
+
+@dataclasses.dataclass
+class Notification:
+    code: str | None = "Neo.DatabaseError.General.UnknownError"
+    description: str | None = "An unknown error occurred"
+    severity: str = "N/A"
+    title: str | None = "UnknownError"
+    position: Position | None = dataclasses.field(default_factory=Position)
+    category: str | None = None
+
+    def json_dict(self) -> dict[str, object]:
+        position = None if self.position is None else self.position.json_dict()
+        result: dict[str, object] = {
+            "code": self.code,
+            "description": self.description,
+            "severity": self.severity,
+            "title": self.title,
+            "position": position,
+        }
+        if self.category is not None:
+            result["category"] = self.category
+        return result
 
 
 class HttpEndpoint(abc.ABC):

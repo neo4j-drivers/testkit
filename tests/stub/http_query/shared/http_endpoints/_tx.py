@@ -28,6 +28,7 @@ from ._base import (
     HttpEndpoint,
     is_str_dict,
     MaybeNull,
+    Notification,
     Plan,
     Profile,
 )
@@ -144,7 +145,7 @@ class HttpTxEndpoint(HttpEndpoint):
         counters: CountersMap | AutoRespond | None = AutoRespond()
         plan: Plan | None = None
         profile: Profile | None = None
-        # TODO: notifications
+        notifications: list[Notification] | None = None
 
         @dataclass(frozen=True)
         class Tx:
@@ -320,6 +321,12 @@ class HttpTxEndpoint(HttpEndpoint):
 
             if self._res.affinity_header is not None:
                 headers["neo4j-cluster-affinity"] = self._res.affinity_header
+
+            if self._res.notifications is not None:
+                body["notifications"] = [
+                    notification.json_dict()
+                    for notification in self._res.notifications
+                ]
 
             return Response(
                 json.dumps(body),
