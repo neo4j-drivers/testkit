@@ -16,7 +16,7 @@ itertools = "0.14.0"
 log = "0.4.29"
 nom = "8.0.0"
 nom_locate = "5.0.0"
-pyo3 = "0.28.0"
+pyo3 = "0.28.2"
 regex = "1.12.3"
 serde = "1.0.228"
 serde_json = { version = "1.0.149", features = ["default", "preserve_order"] }
