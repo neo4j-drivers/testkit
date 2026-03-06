@@ -47,7 +47,11 @@ class HTTPServer:
         self,
         version: str = "2025.10.1",
         edition: str = "enterprise",
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
+        if extra_headers is None:
+            extra_headers = {}
+
         query_url = self._server.url_for("/db/{databaseName}/query/v2")
         dbms_cluster_url = self._server.url_for("/dbms/cluster")
         db_cluster_url = self._server.url_for("/db/{databaseName}/cluster")
@@ -57,7 +61,7 @@ class HTTPServer:
             "/",
             method="GET",
             data="",
-            headers={"Accept": "application/json"},
+            headers={"Accept": "application/json", **extra_headers},
         )
         request_expectation.respond_with_json(
             {
