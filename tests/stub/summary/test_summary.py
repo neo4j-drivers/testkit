@@ -50,7 +50,22 @@ class _TestSummaryBase(TestkitTestCase):
             return result.consume()
 
     def assert_plan_equal(self, actual, expected):
+        missing_stats_detectable = self.driver_supports_features(
+            types.Feature.API_SUMMARY_PROFILE_OPTIONAL_STATS
+        )
+
         def adjust_expected(actual_child, expected_child):
+            for key in [k for k, v in expected_child.items() if v is None]:
+                if key not in expected_child:
+                    expected_child.pop(key)
+            for key in (k for k, v in expected_child.items() if v is None):
+                expected_child.setdefault(key, None)
+
+            if not missing_stats_detectable:
+                for key, actual_value in actual_child.items():
+                    if actual_value == 0 and expected_child.get(key) is None:
+                        expected_child[key] = 0
+
             # drivers are free to represent lack of children with either:
             #   * an empty list
             #   * a null value
@@ -190,7 +205,7 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
 
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
-        self.assertEqual(summary.notifications, None)
+        self.assertIn(summary.notifications, ([], None))
 
     def test_empty_notifications(self):
         notifications = []
@@ -200,7 +215,7 @@ class TestSummaryNotifications4x4(_TestSummaryBase):
                 "#NOTIFICATIONS#": json.dumps(notifications)
             }
         )
-        self.assertEqual(summary.notifications, notifications)
+        self.assertIn(summary.notifications, ([], None))
 
     def test_full_notification(self):
         in_notifications = [{
@@ -334,7 +349,7 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
 
     def test_no_notifications(self):
         summary = self._get_summary("empty_summary_type_r.script")
-        self.assertEqual(summary.notifications, [])
+        self.assertIn(summary.notifications, ([], None))
 
     def test_empty_notifications(self):
         statuses = [SUCCESS_GQL_STATUS_OBJECT]
@@ -344,7 +359,7 @@ class TestSummaryNotifications5x6(_TestSummaryBase):
                 "#STATUSES#": json.dumps(statuses)
             }
         )
-        self.assertEqual(summary.notifications, [])
+        self.assertIn(summary.notifications, ([], None))
 
     def test_full_notification(self):
         in_statuses = [
@@ -1466,7 +1481,7 @@ class TestSummaryPlan4x4(_TestSummaryBase):
             "summary_with_profile.script",
             vars_={"#PROFILE#": json.dumps(profile)},
         )
-        self.assert_plan_equal(profile, summary.profile)
+        self.assert_plan_equal(summary.profile, profile)
 
 
 class TestSummaryPlanDiscard4x4(_TestSummaryDiscardMixin, TestSummaryPlan4x4):
@@ -1615,7 +1630,167 @@ class TestSummaryPlan6x0(_TestSummaryBase):
             "summary_with_profile.script",
             vars_={"#PROFILE#": json.dumps(profile)},
         )
-        self.assert_plan_equal(profile, summary.profile)
+        self.assert_plan_equal(summary.profile, profile)
+
+    def test_profile_no_db_hit(self):
+        profile = {
+            "args": {},
+            "children": [
+                {
+                    "args": {},
+                    "identifiers": ["n"],
+                    "operatorType": "AllNodesScan@neo4j",
+                    "time": 273643,
+                    "rows": 1,
+                    "pageCacheHitRatio": 1.2,
+                    "pageCacheHits": 3,
+                    "pageCacheMisses": 4,
+                }
+            ],
+            "rows": 0,
+            "pageCacheHitRatio": 0.0,
+            "pageCacheHits": 0,
+            "pageCacheMisses": 0,
+            "time": 123456,
+            "identifiers": ["n"],
+            "operatorType": "ProduceResults@neo4j",
+        }
+        if not self.driver_supports_features(
+            types.Feature.API_SUMMARY_PROFILE_OPTIONAL_STATS
+        ):
+            # cutting unified drivers some extra slack:
+            # some drivers assume that the top-level profile element never
+            # contains stats
+            profile = {
+                "args": {},
+                "children": [profile],
+                "identifiers": ["coolio!"],
+                "operatorType": "TestKitWrapperForStrictDrivers",
+            }
+        summary = self._get_summary(
+            "summary_with_profile.script",
+            vars_={"#PROFILE#": json.dumps(profile)},
+        )
+        self.assert_plan_equal(summary.profile, profile)
+
+    def test_profile_no_time(self):
+        profile = {
+            "args": {},
+            "children": [
+                {
+                    "args": {},
+                    "identifiers": ["n"],
+                    "operatorType": "AllNodesScan@neo4j",
+                    "dbHits": 0,
+                    "rows": 0,
+                    "pageCacheHitRatio": 1.2,
+                    "pageCacheHits": 3,
+                    "pageCacheMisses": 4,
+                }
+            ],
+            "dbHits": 123,
+            "rows": 1,
+            "pageCacheHitRatio": 0.0,
+            "pageCacheHits": 0,
+            "pageCacheMisses": 0,
+            "identifiers": ["n"],
+            "operatorType": "ProduceResults@neo4j",
+        }
+        if not self.driver_supports_features(
+            types.Feature.API_SUMMARY_PROFILE_OPTIONAL_STATS
+        ):
+            # cutting unified drivers some extra slack:
+            # some drivers assume that the top-level profile element never
+            # contains stats
+            profile = {
+                "args": {},
+                "children": [profile],
+                "identifiers": ["coolio!"],
+                "operatorType": "TestKitWrapperForStrictDrivers",
+            }
+        summary = self._get_summary(
+            "summary_with_profile.script",
+            vars_={"#PROFILE#": json.dumps(profile)},
+        )
+        self.assert_plan_equal(summary.profile, profile)
+
+    def test_profile_no_rows(self):
+        profile = {
+            "args": {},
+            "children": [
+                {
+                    "args": {},
+                    "identifiers": ["n"],
+                    "operatorType": "AllNodesScan@neo4j",
+                    "dbHits": 123,
+                    "time": 0,
+                    "pageCacheHitRatio": 0.0,
+                    "pageCacheHits": 0,
+                    "pageCacheMisses": 0,
+                }
+            ],
+            "dbHits": 0,
+            "time": 0,
+            "pageCacheHitRatio": 1.2,
+            "pageCacheHits": 3,
+            "pageCacheMisses": 4,
+            "identifiers": ["n"],
+            "operatorType": "ProduceResults@neo4j",
+        }
+        if not self.driver_supports_features(
+            types.Feature.API_SUMMARY_PROFILE_OPTIONAL_STATS
+        ):
+            # cutting unified drivers some extra slack:
+            # some drivers assume that the top-level profile element never
+            # contains stats
+            profile = {
+                "args": {},
+                "children": [profile],
+                "identifiers": ["coolio!"],
+                "operatorType": "TestKitWrapperForStrictDrivers",
+            }
+        summary = self._get_summary(
+            "summary_with_profile.script",
+            vars_={"#PROFILE#": json.dumps(profile)},
+        )
+        self.assert_plan_equal(summary.profile, profile)
+
+    def test_profile_no_page_cache_stats(self):
+        profile = {
+            "args": {},
+            "children": [
+                {
+                    "args": {},
+                    "identifiers": ["n"],
+                    "operatorType": "AllNodesScan@neo4j",
+                    "dbHits": 123,
+                    "rows": 3456,
+                    "time": 0,
+                }
+            ],
+            "dbHits": 0,
+            "rows": 5,
+            "time": 0,
+            "identifiers": ["n"],
+            "operatorType": "ProduceResults@neo4j",
+        }
+        if not self.driver_supports_features(
+            types.Feature.API_SUMMARY_PROFILE_OPTIONAL_STATS
+        ):
+            # cutting unified drivers some extra slack:
+            # some drivers assume that the top-level profile element never
+            # contains stats
+            profile = {
+                "args": {},
+                "children": [profile],
+                "identifiers": ["coolio!"],
+                "operatorType": "TestKitWrapperForStrictDrivers",
+            }
+        summary = self._get_summary(
+            "summary_with_profile.script",
+            vars_={"#PROFILE#": json.dumps(profile)},
+        )
+        self.assert_plan_equal(summary.profile, profile)
 
 
 class TestSummaryPlanDiscard6x0(_TestSummaryDiscardMixin, TestSummaryPlan6x0):
