@@ -16,9 +16,11 @@
     * [x] session auth
     * [x] access mode
   * [x] bookmarks + session bookmark chaining
-  * [ ] retires
-  * [x] db selection
-  * [ ] summary
+  * [ ] retries
+  * [ ] db selection
+    * [x] basic case
+    * [ ] driver rejects any DB name that doesn't match `^[a-zA-Z0-9.-]{3,}$`
+  * [x] summary
     * [x] db
     * [x] query & parameters
     * [x] counters
@@ -29,11 +31,15 @@
       * [x] agent string
       * [x] address
   * [ ] verify connectivity
-  * [ ] errors
+  * [x] errors
+    * [x] via all APIs
+    * [x] different failure modes (only after some records)
+    * [x] Only last error in list is raised
   * [ ] auth manager
-  * [x] Auth schemes
+  * [ ] Auth schemes
     * [x] basic and bearer
     * [x] (failing) kerberos, custom, basic with realm
+    * [ ] driver rejects basic auth with usernames containing `:`
   * [ ] client agent string
     * TODO: clarify how to handle incompatible values (HTTP header value limitations)
 * [ ] Test cluster affinity header (must be optional)

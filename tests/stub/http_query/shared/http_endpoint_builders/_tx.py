@@ -44,6 +44,7 @@ class TxEndpointBuilder:
     _impersonated_user: str | None
     _access_mode: TOptionalValue[str] | AnyValue
     _bookmarks: list[str]
+    _tx_errors: list[dict[str, object]] | None
 
     def __init__(
         self,
@@ -54,6 +55,7 @@ class TxEndpointBuilder:
         impersonated_user: str | None = None,
         access_mode: TOptionalValue[str] | AnyValue = _ANY_VALUE,
         bookmarks: list[str] | None = None,
+        tx_errors: list[dict[str, object]] | None = None,
     ) -> None:
         if bookmarks is None:
             bookmarks = []
@@ -67,18 +69,20 @@ class TxEndpointBuilder:
                 impersonated_user=impersonated_user,
                 access_mode=access_mode,
                 bookmarks=bookmarks,
+                errors=tx_errors,
             ),
         ]
         self._finishing_handler = None
         self._impersonated_user = impersonated_user
         self._access_mode = access_mode
         self._bookmarks = bookmarks
+        self._tx_errors = tx_errors
 
     def with_query(
         self,
         query: str,
-        fields: list[str],
-        records: list[list[http_types.HttpType]],
+        fields: list[str] | None,
+        records: list[list[http_types.HttpType]] | None,
         parameters: (  # noqa: PAR001
             TOptionalValue[dict[str, http_types.HttpType]] | None
         ) = _DEFAULT_PARAMETERS,
@@ -87,7 +91,13 @@ class TxEndpointBuilder:
         plan: Plan | None = None,
         profile: Profile | None = None,
         notifications: list[Notification] | None = None,
+        query_errors: list[dict[str, object]] | None = None,
     ) -> t.Self:
+        if self._tx_errors is not None and query_errors is not None:
+            raise ValueError(
+                "Cannot set query errors when transaction errors are already "
+                "set"
+            )
         if self._pipeline_begin in {Potential.YES, Potential.MAYBE}:
             if not self._pipelined_handlers:
                 self._pipelined_handlers.append(
@@ -104,6 +114,7 @@ class TxEndpointBuilder:
                         plan,
                         profile,
                         notifications,
+                        errors=self._tx_errors,
                     )
                 )
             else:
@@ -118,6 +129,7 @@ class TxEndpointBuilder:
                         plan,
                         profile,
                         notifications,
+                        errors=query_errors,
                     )
                 )
         if self._pipeline_begin in {Potential.NO, Potential.MAYBE}:
@@ -132,6 +144,7 @@ class TxEndpointBuilder:
                     plan,
                     profile,
                     notifications,
+                    errors=query_errors,
                 )
             )
         return self
@@ -197,9 +210,13 @@ class TxEndpointBuilder:
         plan: Plan | None = None,
         profile: Profile | None = None,
         notifications: list[Notification] | None = None,
+        errors: list[dict[str, object]] | None = None,
     ) -> HttpEndpoint:
         if bookmarks is None:
             bookmarks = []
+        tx_data = None
+        if not errors:
+            tx_data = HttpTxEndpoint.ResponseData.Tx(id=self._tx_id)
         if query is not None:
             return HttpTxEndpoint(
                 HttpTxEndpoint.RequestData(
@@ -213,13 +230,14 @@ class TxEndpointBuilder:
                     include_counters=include_counters,
                 ),
                 HttpTxEndpoint.ResponseData(
-                    HttpTxEndpoint.ResponseData.Tx(id=self._tx_id),
+                    tx_data,
                     fields=fields,
                     records=records,
                     counters=counters,
                     plan=plan,
                     profile=profile,
                     notifications=notifications,
+                    errors=errors,
                 ),
             )
         else:
@@ -232,22 +250,27 @@ class TxEndpointBuilder:
                     bookmarks=bookmarks,
                 ),
                 HttpTxEndpoint.ResponseData(
-                    HttpTxEndpoint.ResponseData.Tx(id=self._tx_id),
+                    tx_data,
+                    errors=errors,
                 ),
             )
 
     def _make_query_handler(
         self,
         query: str,
-        fields: list[str],
-        records: list[list[http_types.HttpType]],
+        fields: list[str] | None,
+        records: list[list[http_types.HttpType]] | None,
         parameters: TOptionalValue[dict[str, http_types.HttpType]] | None,
         include_counters: TOptionalValue[bool] | AnyValue | None,
         counters: CountersMap | AutoRespond | None,
         plan: Plan | None = None,
         profile: Profile | None = None,
         notifications: list[Notification] | None = None,
+        errors: list[dict[str, object]] | None = None,
     ) -> HttpEndpoint:
+        tx_data = None
+        if not errors:
+            tx_data = HttpTxQueryEndpoint.ResponseData.Tx(id=self._tx_id)
         return HttpTxQueryEndpoint(
             HttpTxQueryEndpoint.RequestData(
                 db=self._db,
@@ -258,13 +281,14 @@ class TxEndpointBuilder:
                 include_counters=include_counters,
             ),
             HttpTxQueryEndpoint.ResponseData(
-                HttpTxQueryEndpoint.ResponseData.Tx(id=self._tx_id),
+                tx_data,
                 fields=fields,
                 records=records,
                 counters=counters,
                 plan=plan,
                 profile=profile,
                 notifications=notifications,
+                errors=errors,
             ),
         )
 

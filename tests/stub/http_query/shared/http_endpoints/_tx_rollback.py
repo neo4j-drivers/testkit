@@ -11,6 +11,7 @@ from ..http_types import ProtocolVersion
 from ._base import (
     CustomAuthToken,
     HttpEndpoint,
+    url_encode,
 )
 
 if t.TYPE_CHECKING:
@@ -21,7 +22,7 @@ if t.TYPE_CHECKING:
 
 
 class HttpTxRollbackEndpoint(HttpEndpoint):
-    @dataclass(frozen=True)
+    @dataclass
     class RequestData:
         db: str
         tx_id: str
@@ -67,7 +68,10 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
             return True
 
         return TxRollbackMatcher(
-            f"/db/{self._req.db}/query/v2/tx/{self._req.tx_id}",
+            (  # noqa: PAR001
+                f"/db/{url_encode(self._req.db)}/query/v2/tx/"
+                f"{url_encode(self._req.tx_id)}"
+            ),
             method="DELETE",
             headers=self._auth_to_header(self._req.auth),
         )

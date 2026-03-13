@@ -26,6 +26,8 @@ from ._base import (
     Notification,
     Plan,
     Profile,
+    serialize_any,
+    url_encode,
 )
 
 if t.TYPE_CHECKING:
@@ -38,16 +40,22 @@ if t.TYPE_CHECKING:
 
 
 class HttpQueryEndpoint(HttpEndpoint):
-    @dataclass(frozen=True)
+    @dataclass
     class RequestData:
         db: str
         auth: types.AuthorizationToken | CustomAuthToken
         query: str | re.Pattern
         impersonated_user: str | re.Pattern | None = None
-        access_mode: TOptionalValue[str] | AnyValue | None = AnyValue()
-        parameters: TOptionalValue[dict[str, HttpType]] | None = MaybeNull({})
+        access_mode: TOptionalValue[str] | AnyValue | None = field(
+            default_factory=AnyValue
+        )
+        parameters: TOptionalValue[dict[str, HttpType]] | None = field(
+            default_factory=lambda: MaybeNull(t.cast(dict[str, HttpType], {}))
+        )
         bookmarks: list[str] = field(default_factory=list)
-        include_counters: TOptionalValue[bool] | AnyValue | None = AnyValue()
+        include_counters: TOptionalValue[bool] | AnyValue | None = field(
+            default_factory=AnyValue
+        )
 
         def _match_query(self, query: object) -> bool:
             return self._match_str_or_pattern(query, self.query, "query")
@@ -131,15 +139,19 @@ class HttpQueryEndpoint(HttpEndpoint):
             typ = type(expected)
             raise TypeError(f"Unsupported {name} match type {typ}")
 
-    @dataclass(frozen=True)
+    @dataclass
     class ResponseData:
         fields: list[str] | None = None
         records: list[list[HttpType]] | None = None
         bookmarks: list[str] | None = None
-        counters: CountersMap | AutoRespond | None = AutoRespond()
+        counters: CountersMap | AutoRespond | None = field(
+            default_factory=AutoRespond
+        )
         plan: Plan | None = None
         profile: Profile | None = None
         notifications: list[Notification] | None = None
+        errors: list[dict[str, object]] | None = None
+        status_code: int | None = None
 
         def _get_counters(self, req: Request) -> t.Any:
             if isinstance(self.counters, AutoRespond):
@@ -258,7 +270,7 @@ class HttpQueryEndpoint(HttpEndpoint):
         this: HttpQueryEndpoint = self
 
         return QueryMatcher(
-            f"/db/{self._req.db}/query/v2",
+            f"/db/{url_encode(self._req.db)}/query/v2",
             method="POST",
             headers=self._auth_to_header(self._req.auth),
         )
@@ -268,7 +280,6 @@ class HttpQueryEndpoint(HttpEndpoint):
             body: dict[str, t.Any] = {}
 
             data: dict[str, t.Any] = {}
-            body["data"] = data
             if self._res.fields is not None:
                 data["fields"] = self._res.fields
             if self._res.records is not None:
@@ -279,7 +290,8 @@ class HttpQueryEndpoint(HttpEndpoint):
                     )
                     for record in self._res.records
                 )
-            body["data"] = data
+            if data:
+                body["data"] = data
 
             if self._res.bookmarks is not None:
                 body["bookmarks"] = self._res.bookmarks
@@ -304,9 +316,23 @@ class HttpQueryEndpoint(HttpEndpoint):
                     for notification in self._res.notifications
                 ]
 
+            if self._res.errors is not None:
+                body["errors"] = [
+                    {
+                        k: serialize_any(v, self._protocol_version)
+                        for k, v in error.items()
+                    }
+                    for error in self._res.errors
+                ]
+
+            if self._res.status_code is None:
+                status_code = 400 if self._res.errors else 202
+            else:
+                status_code = self._res.status_code
+
             return Response(
                 json.dumps(body),
-                status=202,
+                status=status_code,
                 headers=self._version_as_header(self._protocol_version),
             )
 

@@ -234,17 +234,17 @@ class TestSummaryCounters(_SummaryTestBase):
             counters.contains_system_updates, expected.contains_system_updates
         )
 
-    def test_empty_default_session_run(self):
+    def test_empty_default_session_run(self) -> None:
         counters = DEFAULT_COUNTERS
         summary = self._get_summary_with_counters_session_run(counters)
         self._assert_counters(summary, counters)
 
-    def test_empty_default_tx(self):
+    def test_empty_default_tx(self) -> None:
         counters = DEFAULT_COUNTERS
         summary = self._get_summary_with_counters_tx(counters)
         self._assert_counters(summary, counters)
 
-    def test_full_summary_session_run(self):
+    def test_full_summary_session_run(self) -> None:
         counters = CountersMap(
             constraints_added=1001,
             constraints_removed=1002,
@@ -264,7 +264,7 @@ class TestSummaryCounters(_SummaryTestBase):
         summary = self._get_summary_with_counters_session_run(counters)
         self._assert_counters(summary, counters)
 
-    def test_full_summary_tx(self):
+    def test_full_summary_tx(self) -> None:
         counters = CountersMap(
             constraints_added=1001,
             constraints_removed=1002,
@@ -493,12 +493,12 @@ class TestSummaryQuery(_SummaryTestBase):
             self.assertEqual(summary_query.text, expected_query.text)
             self.assertEqual(summary_query.parameters, expected_query.params)
 
-    def test_session_run_single(self):
+    def test_session_run_single(self) -> None:
         queries = (Query(" \t\n \x00%🔍 query"),)
         summary = self._get_summary_with_queries_session_run(queries)
         self._assert_queries(summary, queries)
 
-    def test_session_run_multiple(self):
+    def test_session_run_multiple(self) -> None:
         queries = (
             Query(" \t\n \x00%🔍 query"),
             Query("RETURN 1 AS n"),
@@ -507,7 +507,7 @@ class TestSummaryQuery(_SummaryTestBase):
         summary = self._get_summary_with_queries_session_run(queries)
         self._assert_queries(summary, queries)
 
-    def test_session_run_params_single(self):
+    def test_session_run_params_single(self) -> None:
         queries = (
             Query(
                 " \t\n \x00%🔍 query",
@@ -518,7 +518,7 @@ class TestSummaryQuery(_SummaryTestBase):
         summary = self._get_summary_with_queries_session_run(queries)
         self._assert_queries(summary, queries)
 
-    def test_session_run_params_multiple(self):
+    def test_session_run_params_multiple(self) -> None:
         queries = (
             Query(
                 " \t\n \x00%🔍 query",
@@ -539,12 +539,12 @@ class TestSummaryQuery(_SummaryTestBase):
         summary = self._get_summary_with_queries_session_run(queries)
         self._assert_queries(summary, queries)
 
-    def test_tx_single(self):
+    def test_tx_single(self) -> None:
         queries = (Query(" \t\n \x00%🔍 query"),)
         summary = self._get_summary_with_queries_tx(queries)
         self._assert_queries(summary, queries)
 
-    def test_tx_multiple(self):
+    def test_tx_multiple(self) -> None:
         queries = (
             Query(" \t\n \x00%🔍 query"),
             Query("RETURN 1 AS n"),
@@ -553,7 +553,7 @@ class TestSummaryQuery(_SummaryTestBase):
         summary = self._get_summary_with_queries_tx(queries)
         self._assert_queries(summary, queries)
 
-    def test_tx_params_single(self):
+    def test_tx_params_single(self) -> None:
         queries = (
             Query(
                 " \t\n \x00%🔍 query",
@@ -564,7 +564,7 @@ class TestSummaryQuery(_SummaryTestBase):
         summary = self._get_summary_with_queries_tx(queries)
         self._assert_queries(summary, queries)
 
-    def test_tx_params_multiple(self):
+    def test_tx_params_multiple(self) -> None:
         queries = (
             Query(
                 " \t\n \x00%🔍 query",
@@ -685,25 +685,25 @@ class TestSummaryServer(_SummaryTestBase):
             ],
         )
 
-    def test_session_run(self):
+    def test_session_run(self) -> None:
         summary, server_address = self._get_summary_with_version_session_run(
             version=DEFAULT_VERSION
         )
         self._assert_summary_server(summary, DEFAULT_VERSION, server_address)
 
-    def test_session_run_custom_version(self):
+    def test_session_run_custom_version(self) -> None:
         summary, server_address = self._get_summary_with_version_session_run(
             version="🐒 <3 🍌"
         )
         self._assert_summary_server(summary, "🐒 <3 🍌", server_address)
 
-    def test_tx(self):
+    def test_tx(self) -> None:
         summary, server_address = self._get_summary_with_version_tx(
             version=DEFAULT_VERSION
         )
         self._assert_summary_server(summary, DEFAULT_VERSION, server_address)
 
-    def test_tx_custom_version(self):
+    def test_tx_custom_version(self) -> None:
         summary, server_address = self._get_summary_with_version_tx(
             version="🐒 <3 🍌"
         )
@@ -855,10 +855,10 @@ class TestSummaryPlan(_SummaryTestBase):
             },
         )
 
-    def test_session_plan_1(self):
+    def test_session_plan_1(self) -> None:
         self._test_plan_1(self._get_summary_with_plan_session_run)
 
-    def test_tx_plan_1(self):
+    def test_tx_plan_1(self) -> None:
         self._test_plan_1(self._get_summary_with_plan_tx)
 
 
@@ -1046,10 +1046,10 @@ class TestSummaryProfile(_SummaryTestBase):
             },
         )
 
-    def test_session_profile_1(self):
+    def test_session_profile_1(self) -> None:
         self._test_profile_1(self._get_summary_with_profile_session_run)
 
-    def test_tx_profile_1(self):
+    def test_tx_profile_1(self) -> None:
         self._test_profile_1(self._get_summary_with_profile_tx)
 
 
@@ -1394,26 +1394,26 @@ class TestSummaryNotifications(_SummaryTestBase):
             position=2,
         )
 
-    def test_session_notification_1(self):
+    def test_session_notification_1(self) -> None:
         self._test_notification_1(
             self._get_summary_with_notifications_session_run
         )
 
-    def test_tx_notification_1(self):
+    def test_tx_notification_1(self) -> None:
         self._test_notification_1(self._get_summary_with_notifications_tx)
 
-    def test_session_notification_2(self):
+    def test_session_notification_2(self) -> None:
         self._test_notification_2(
             self._get_summary_with_notifications_session_run
         )
 
-    def test_tx_notification_2(self):
+    def test_tx_notification_2(self) -> None:
         self._test_notification_2(self._get_summary_with_notifications_tx)
 
-    def test_session_notification_3(self):
+    def test_session_notification_3(self) -> None:
         self._test_notification_3(
             self._get_summary_with_notifications_session_run
         )
 
-    def test_tx_notification_3(self):
+    def test_tx_notification_3(self) -> None:
         self._test_notification_3(self._get_summary_with_notifications_tx)

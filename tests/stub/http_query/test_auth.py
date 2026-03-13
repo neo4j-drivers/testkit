@@ -101,13 +101,13 @@ class TestAuth(HttpTestCase):
                 exc.errorType, "<class 'neo4j.exceptions.ConfigurationError'>"
             )
 
-    def test_basic_auth(self):
+    def test_basic_auth(self) -> None:
         auth = types.AuthorizationToken(
             "basic", principal="neo4j", credentials="pass 🔐"
         )
         self._test_auth(auth)
 
-    def test_basic_auth_with_realm(self):
+    def test_basic_auth_with_realm(self) -> None:
         auth = types.AuthorizationToken(
             "basic", principal="neo4j", credentials="pass", realm="myRealm"
         )
@@ -117,13 +117,13 @@ class TestAuth(HttpTestCase):
         self.assertIn("realm", exc.msg.lower())
         self._assert_invalid_auth_error(exc)
 
-    def test_bearer_auth(self):
+    def test_bearer_auth(self) -> None:
         auth = types.AuthorizationToken(
             "bearer", credentials="mySuperCoolSecretToken 🤫"
         )
         self._test_auth(auth)
 
-    def test_kerberos_auth(self):
+    def test_kerberos_auth(self) -> None:
         auth = types.AuthorizationToken(
             "kerberos", credentials="corporateTicket4U! 🎟️️"
         )
@@ -133,7 +133,7 @@ class TestAuth(HttpTestCase):
         self.assertIn("kerberos", exc.msg.lower())
         self._assert_invalid_auth_error(exc)
 
-    def test_custom(self):
+    def test_custom(self) -> None:
         auth = types.AuthorizationToken(
             "magic_auth", principal="neo4j", credentials="pass", realm="realm"
         )

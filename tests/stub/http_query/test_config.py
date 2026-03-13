@@ -47,16 +47,13 @@ def _make_query_endpoint(
 
 
 class TestUserAgent(HttpTestCase):
-    def test_session_run(self):
+    def test_session_run(self) -> None:
         # We expect the client not to send the configured user agent string,
         # because HTTP limits the characters that can be used in header values.
         #
         #     USER_AGENT = "BestDriverInTheWorld: '\"\t\x00\n\n\r\n\r\n🔥"
         #
         # for instance would totally break.
-
-        # TODO: waiting for decision from PM, whether a technical solution
-        #       needs to be found for transmitting arbitrary user agent strings
 
         query_endpoint = _make_query_endpoint(USER_AGENT)
 

@@ -4,6 +4,7 @@ import abc
 import base64
 import dataclasses
 import typing as t
+import urllib.parse
 
 import typing_extensions as te
 from pytest_httpserver.httpserver import HandlerType
@@ -40,10 +41,12 @@ __all__: tuple[str, ...] = (
     "Position",
     "Profile",
     "ProtocolVersion",
+    "serialize_any",
+    "url_encode",
 )
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class MaybeNull(t.Generic[T]):
     """
     Instruct a matcher to accept requests with this value missing/bein None.
@@ -61,12 +64,12 @@ if t.TYPE_CHECKING:
     __all__ += ("TOptionalValue",)
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class AnyValue:
     pass
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class AutoRespond:
     pass
 
@@ -292,7 +295,7 @@ class HttpEndpointStateful(HttpEndpoint, abc.ABC):
     def done(self) -> bool: ...
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass
 class CustomAuthToken:
     expected_headers: dict[str, str] = dataclasses.field(
         default_factory=dict, kw_only=True
@@ -301,3 +304,20 @@ class CustomAuthToken:
 
 def is_str_dict(value: object) -> te.TypeGuard[dict[str, object]]:
     return isinstance(value, dict) and all(isinstance(k, str) for k in value)
+
+
+def serialize_any(value: object, protocol_version: ProtocolVersion) -> object:
+    if isinstance(value, HttpType):
+        return value.serialize(protocol_version)
+    elif isinstance(value, list):
+        return [serialize_any(v, protocol_version) for v in value]
+    elif isinstance(value, dict):
+        return {
+            k: serialize_any(v, protocol_version) for k, v in value.items()
+        }
+    else:
+        return value
+
+
+def url_encode(s: str) -> str:
+    return urllib.parse.quote(s, safe="")

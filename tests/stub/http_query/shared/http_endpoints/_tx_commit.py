@@ -11,6 +11,7 @@ from ..http_types import ProtocolVersion
 from ._base import (
     CustomAuthToken,
     HttpEndpoint,
+    url_encode,
 )
 
 if t.TYPE_CHECKING:
@@ -21,13 +22,13 @@ if t.TYPE_CHECKING:
 
 
 class HttpTxCommitEndpoint(HttpEndpoint):
-    @dataclass(frozen=True)
+    @dataclass
     class RequestData:
         db: str
         tx_id: str
         auth: types.AuthorizationToken | CustomAuthToken
 
-    @dataclass(frozen=True)
+    @dataclass
     class ResponseData:
         bookmarks: list[str] | None = None
 
@@ -85,7 +86,10 @@ class HttpTxCommitEndpoint(HttpEndpoint):
         this: HttpTxCommitEndpoint = self
 
         return TxCommitMatcher(
-            f"/db/{self._req.db}/query/v2/tx/{self._req.tx_id}/commit",
+            (  # noqa: PAR001
+                f"/db/{url_encode(self._req.db)}/query/v2/tx/"
+                f"{url_encode(self._req.tx_id)}/commit"
+            ),
             method="POST",
             headers=self._auth_to_header(self._req.auth),
         )
