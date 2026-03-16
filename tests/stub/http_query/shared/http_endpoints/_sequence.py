@@ -9,6 +9,7 @@ from werkzeug import Response
 from ._base import (
     HttpEndpoint,
     HttpEndpointStateful,
+    TestKitRequestMatcher,
 )
 
 if t.TYPE_CHECKING:
@@ -32,7 +33,7 @@ class HttpSequenceEndpoint(HttpEndpointStateful):
         self._handlers = tuple(endpoint._handler() for endpoint in endpoints)
 
     def _matcher(self) -> RequestMatcher:
-        class SequenceMatcher(RequestMatcher):
+        class SequenceMatcher(TestKitRequestMatcher):
             def match(self, request: Request) -> bool:
                 if this._idx >= len(this._matchers):
                     return False
@@ -44,6 +45,19 @@ class HttpSequenceEndpoint(HttpEndpointStateful):
                     f"<{self.__class__.__name__} {this._matchers!r} "
                     f"@{this._idx}>"
                 )
+
+            def pprint(self, prefix: str | None) -> str:
+                prefix = prefix or ""
+                top_state = " (DONE)" if this.done() else ""
+                lines = [f"{prefix}{self.__class__.__name__}{top_state}:"]
+                for i, matcher in enumerate(this._matchers):
+                    matcher_prefix = "√ " if i < this._idx else "  "
+                    lines.append(
+                        TestKitRequestMatcher.format_matcher(
+                            matcher, f"{prefix}{matcher_prefix}"
+                        )
+                    )
+                return "\n".join(lines)
 
         this: HttpSequenceEndpoint = self
 

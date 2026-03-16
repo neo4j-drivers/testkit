@@ -14,6 +14,7 @@ from ._base import (
     Position,
     Profile,
     ProtocolVersion,
+    TestKitRequestMatcher,
 )
 from ._either import HttpEitherEndpoint
 from ._query import HttpQueryEndpoint
@@ -39,8 +40,10 @@ __all__: tuple[str, ...] = (
     "MaybeNull",
     "Notification",
     "Plan",
+    "Position",
     "Profile",
     "ProtocolVersion",
+    "TestKitRequestMatcher",
 )
 
 if _t.TYPE_CHECKING:

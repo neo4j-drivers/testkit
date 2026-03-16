@@ -6,21 +6,74 @@ import typing as t
 
 from pytest_httpserver import HTTPServer as _HTTPServer
 from pytest_httpserver.httpserver import HandlerType
+from werkzeug import Response
+
+from tests.stub.http_query.shared.http_endpoints import TestKitRequestMatcher
 
 if t.TYPE_CHECKING:
-    from werkzeug import (
-        Request,
-        Response,
-    )
+    from pytest_httpserver.httpserver import RequestHandler
+    from werkzeug import Request
 
-    from .http_endpoints import HttpEndpoint
+    from tests.stub.http_query.shared.http_endpoints import HttpEndpoint
+
+
+class _CustomHttpServer(_HTTPServer):
+    def respond_nohandler(
+        self,
+        request: Request,
+        extra_message: str = "",
+    ) -> Response:
+        super().respond_nohandler(request, extra_message)
+
+        content_type = request.headers.getlist("Accept")
+        if any(
+            (
+                ct == "application/json"
+                or ct.startswith("application/vnd.neo4j.query")
+            )
+            for ct in content_type
+        ):
+            response = Response(
+                '{"error": "no handler for this request"}' + extra_message,
+                self.no_handler_status_code,
+                mimetype="application/json",
+            )
+        else:
+            response = Response(
+                "no handler for this request" + extra_message,
+                self.no_handler_status_code,
+            )
+        return response
+
+    def format_matchers(self) -> str:
+        lines: list[str] = []
+        lines.append("Ordered matchers:")
+        lines.extend(_format_handlers(self.ordered_handlers))
+        lines.append("")
+        lines.append("Oneshot matchers:")
+        lines.extend(_format_handlers(self.oneshot_handlers))
+        lines.append("")
+        lines.append("Persistent matchers:")
+        lines.extend(_format_handlers(self.handlers))
+
+        return "\n".join(lines)
+
+
+def _format_handlers(handlers: list[RequestHandler]) -> list[str]:
+    if handlers:
+        return [
+            TestKitRequestMatcher.format_matcher(handler.matcher, "  ")
+            for handler in handlers
+        ]
+    else:
+        return ["  none"]
 
 
 class HTTPServer:
-    _server: _HTTPServer
+    _server: _CustomHttpServer
 
     def __init__(self) -> None:
-        self._server = _HTTPServer()
+        self._server = _CustomHttpServer()
         self._server.handlers
 
     def start(self) -> None:

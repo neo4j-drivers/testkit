@@ -7,7 +7,10 @@ import typing as t
 import urllib.parse
 
 import typing_extensions as te
-from pytest_httpserver.httpserver import HandlerType
+from pytest_httpserver.httpserver import (
+    HandlerType,
+    RequestMatcher,
+)
 
 from ..http_types import (
     HttpType,
@@ -15,10 +18,7 @@ from ..http_types import (
 )
 
 if t.TYPE_CHECKING:
-    from pytest_httpserver import (
-        HTTPServer,
-        RequestMatcher,
-    )
+    from pytest_httpserver import HTTPServer
     from werkzeug import (
         Request,
         Response,
@@ -42,6 +42,7 @@ __all__: tuple[str, ...] = (
     "Profile",
     "ProtocolVersion",
     "serialize_any",
+    "TestKitRequestMatcher",
     "url_encode",
 )
 
@@ -207,6 +208,17 @@ class Notification:
         if self.category is not None:
             result["category"] = self.category
         return result
+
+
+class TestKitRequestMatcher(RequestMatcher, abc.ABC):
+    @abc.abstractmethod
+    def pprint(self, prefix: str | None) -> str: ...
+
+    @staticmethod
+    def format_matcher(handler: RequestMatcher, prefix: str | None) -> str:
+        if isinstance(handler, TestKitRequestMatcher):
+            return handler.pprint(prefix)
+        return f"{prefix or ''}{handler!r}"
 
 
 class HttpEndpoint(abc.ABC):

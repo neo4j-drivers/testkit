@@ -9,6 +9,7 @@ from werkzeug import Response
 from ._base import (
     HttpEndpoint,
     HttpEndpointStateful,
+    TestKitRequestMatcher,
 )
 
 if t.TYPE_CHECKING:
@@ -51,7 +52,7 @@ class HttpEitherEndpoint(HttpEndpointStateful):
         return result
 
     def _matcher(self) -> RequestMatcher:
-        class EitherMatcher(RequestMatcher):
+        class EitherMatcher(TestKitRequestMatcher):
             def match(self, request: Request) -> bool:
                 if this._done:
                     return False
@@ -68,6 +69,19 @@ class HttpEitherEndpoint(HttpEndpointStateful):
                 else:
                     state = ""
                 return f"<{self.__class__.__name__} {this._matchers!r}{state}>"
+
+            def pprint(self, prefix: str | None) -> str:
+                prefix = prefix or ""
+                top_state = " (DONE)" if this._done else ""
+                lines = [f"{prefix}{self.__class__.__name__}{top_state}:"]
+                for i, matcher in enumerate(this._matchers):
+                    matcher_prefix = "  " if i != this._selected else "> "
+                    lines.append(
+                        TestKitRequestMatcher.format_matcher(
+                            matcher, f"{prefix}{matcher_prefix}"
+                        )
+                    )
+                return "\n".join(lines)
 
         this: HttpEitherEndpoint = self
 
