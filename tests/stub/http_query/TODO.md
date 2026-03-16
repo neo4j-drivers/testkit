@@ -36,10 +36,10 @@
     * [x] different failure modes (only after some records)
     * [x] Only last error in list is raised
   * [ ] auth manager
-  * [ ] Auth schemes
+  * [x] Auth schemes
     * [x] basic and bearer
     * [x] (failing) kerberos, custom, basic with realm
-    * [ ] driver rejects basic auth with usernames containing `:`
+    * [x] driver rejects basic auth with usernames containing `:`
   * [x] client agent string is not transmitted
 * [ ] Test cluster affinity header (must be optional)
 * [ ] Basic ITs (probably only types and basic APIs)

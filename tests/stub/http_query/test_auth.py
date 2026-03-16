@@ -102,10 +102,36 @@ class TestAuth(HttpTestCase):
             )
 
     def test_basic_auth(self) -> None:
+        for principal in (
+            "neo4j",
+            "🪪",
+            "nu\x00ll",
+            "§ß;.,-~`!@#$%^&*()_=+][{}\\|'\"/?><óòμñíìçáàäè°øüýæœöïª¡€º”„^€˚",
+        ):
+            with self.subTest(principal=principal):
+                auth = types.AuthorizationToken(
+                    "basic", principal="neo4j", credentials="pass 🔐:/?!#"
+                )
+                self._test_auth(auth)
+
+    def test_basic_auth_with_colon(self) -> None:
+        # Driver must reject basic auth with colon (`:`) in the username.
+        # - Such usernames are invalid in neo4j either way
+        # - The way basic authentication is encoded makes it such that the
+        #   server cannot discern ("user:1", "password") from
+        #   ("user", "1:password"). We therefore must protect users that are
+        #   passing unsanitized usernames to the driver from accidentally
+        #   successfully logging in with wrong credentials.
+        #
+        # !!! THIS IS A SECURITY RELEVANT TEST - don't skip !!!
         auth = types.AuthorizationToken(
-            "basic", principal="neo4j", credentials="pass 🔐"
+            "basic", principal="neo:4j", credentials="password"
         )
-        self._test_auth(auth)
+        exc = self._test_auth(auth, expected_failure=types.DriverError)
+        self.assertTrue(
+            "username" in exc.msg.lower() or "principal" in exc.msg.lower()
+        )
+        self._assert_invalid_auth_error(exc)
 
     def test_basic_auth_with_realm(self) -> None:
         auth = types.AuthorizationToken(
