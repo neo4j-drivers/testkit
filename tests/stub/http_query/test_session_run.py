@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import typing as t
 
 from nutkit import protocol as types
@@ -19,12 +20,13 @@ if t.TYPE_CHECKING:
     T = t.TypeVar("T")
 
     from tests.stub.http_query.shared.http_endpoints import TOptionalValue
+    from tests.stub.http_query.shared.http_server import HTTPServer
 
 _ANY_VALUE = AnyValue()
 
 
 def _make_query_endpoint(
-    db: str,
+    db: str | re.Pattern[str],
     auth: types.AuthorizationToken,
     query: str,
     fields: list[str],
@@ -116,6 +118,112 @@ class TestSessionRun(HttpTestCase):
         self.assertEqual(keys, fields)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
+
+    def test_database(self) -> None:
+        # Drivers must limit the set of database names transmitted via HTTP.
+        #
+        # - This mitigates URL injections such as /query/v2/../
+        # - The server does not react friendly to some encoded URLs such as
+        #   `/` and `..` (even when URL encoded, even when multiple times).
+        #   E.g., `%2F` (`%252F`) and `%2E%2E` (`%252E%252E`).
+        #
+        # The driver MUST reject any db name not matching `[a-zA-Z0-9-.]{3,}`
+        # before the request hits the network.
+        with self.server() as server:
+            for db, match_db_in_err in (
+                ("aaa", True),
+                ("aaaaa", True),
+                ("-----", True),
+                (".....", True),
+                ("a-.AzZ", True),
+                ("AabcdefghijklmnopqrstuvwxyzZ", True),
+                ("aABCDEFGHIJKLMNOPQRSTUVWXYZz", True),
+                ("aa_aa", True),
+                ("aa/aa", True),
+                ("aa~aa", True),
+                ("aa,aa", True),
+                ("aa,aa", True),
+                ("aa;aa", True),
+                ("aa=aa", True),
+                ("aa+aa", True),
+                ("aa?aa", True),
+                ("aa!aa", True),
+                ("aa'aa", False),
+                ('aa"aa', False),
+                ("aa`aa", False),
+                ("aa%61aa", True),
+                ("aa\\aa", False),
+                ("aa\naa", False),
+                ("aa\taa", False),
+                ("aa\x00aa", False),
+                ("aa aa", True),
+                ("aa🔥aa", True),
+                ("aaäaa", True),
+                ("aa", True),
+                ("a", True),
+                (None, False),
+            ):
+                with (
+                    self.subTest(db=db),
+                    self.server_session(server),
+                ):
+                    self._test_database(server, db, match_db_in_err)
+
+    ACCEPTED_DB_NAMES = re.compile(r"[a-zA-Z0-9.-]{3,}")
+
+    def _test_database(
+        self, server: HTTPServer, db: str | None, match_db_in_err: bool
+    ) -> None:
+        fails = db is None or not self.ACCEPTED_DB_NAMES.fullmatch(db)
+
+        query = "RETURN 1 AS n"
+        fields = ["n"]
+
+        query_endpoint = _make_query_endpoint(
+            re.compile(r".*"),
+            self.AUTH,
+            query,
+            fields,
+            [[http_types.Int(1)]],
+            access_mode="Read",
+        )
+        server.install_discovery_endpoint()
+        server.install_endpoint(
+            query_endpoint,
+            handler_type=HandlerType.PERMANENT
+            if fails
+            else HandlerType.ONESHOT,
+        )
+
+        with (
+            self.driver(server, self.AUTH) as driver,
+            driver.session("r", database=db) as session,
+        ):
+            if fails:
+                with self.assertRaises(types.DriverError) as exc:
+                    session.run(query).consume()
+                self._assert_invalid_database_name_error(
+                    exc.exception,
+                    db if match_db_in_err else None,
+                )
+            else:
+                result = session.run(query)
+                keys = result.keys()
+                records = list(result)
+
+                self.assertEqual(keys, fields)
+                self.assertEqual(len(records), 1)
+                self.assertEqual(records[0].values, [types.CypherInt(1)])
+
+    def _assert_invalid_database_name_error(
+        self,
+        exc: types.DriverError,
+        db: str | None,
+    ) -> None:
+        self.assertFalse(exc.retryable)
+        self.assertIn("database name", str(exc).lower())
+        if db is not None:
+            self.assertIn(db, str(exc))
 
     def test_impersonation(self) -> None:
         db = "dba"

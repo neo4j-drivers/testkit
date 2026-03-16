@@ -47,10 +47,10 @@ if t.TYPE_CHECKING:
 class HttpTxQueryEndpoint(HttpEndpoint):
     @dataclass
     class RequestData:
-        db: str
-        tx_id: str
+        db: str | re.Pattern[str]
+        tx_id: str | re.Pattern[str]
         auth: types.AuthorizationToken | CustomAuthToken
-        query: str | re.Pattern
+        query: str | re.Pattern[str]
         parameters: TOptionalValue[dict[str, HttpType]] | None = field(
             default_factory=lambda: MaybeNull(t.cast(dict[str, HttpType], {}))
         )
@@ -228,11 +228,35 @@ class HttpTxQueryEndpoint(HttpEndpoint):
 
         this: HttpTxQueryEndpoint = self
 
+        db_re = not isinstance(self._req.db, str)
+        tx_id_re = not isinstance(self._req.tx_id, str)
+        url_re = db_re or tx_id_re
+        if not isinstance(self._req.db, str):
+            db = self._req.db.pattern
+        else:
+            db = url_encode(self._req.db)
+            if url_re:
+                db = re.escape(db)
+        if not isinstance(self._req.tx_id, str):
+            if (
+                self._res.transaction is not None
+                and self._res.transaction.id is None
+            ):
+                raise ValueError(
+                    "If request tx_id is a regex, responses transaction id "
+                    "must be specified"
+                )
+            tx_id = self._req.tx_id.pattern
+        else:
+            tx_id = url_encode(self._req.tx_id)
+            if url_re:
+                tx_id = re.escape(tx_id)
+        url: str | re.Pattern[str] = f"/db/{db}/query/v2/tx/{tx_id}"
+        if url_re:
+            url = re.compile(f"^{url}$")
+
         return TxQueryMatcher(
-            (  # noqa: PAR001
-                f"/db/{url_encode(self._req.db)}/query/v2/tx/"
-                f"{url_encode(self._req.tx_id)}"
-            ),
+            url,
             method="POST",
             headers=self._auth_to_header(self._req.auth),
         )
@@ -244,6 +268,7 @@ class HttpTxQueryEndpoint(HttpEndpoint):
             if self._res.transaction is not None:
                 tx_id = self._res.transaction.id
                 if tx_id is None:
+                    assert isinstance(self._req.tx_id, str)
                     tx_id = self._req.tx_id
                 transaction: dict[str, t.Any] = {"id": tx_id}
                 if self._res.transaction.expires is not None:

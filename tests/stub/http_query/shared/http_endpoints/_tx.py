@@ -47,10 +47,10 @@ if t.TYPE_CHECKING:
 class HttpTxEndpoint(HttpEndpoint):
     @dataclass
     class RequestData:
-        db: str
+        db: str | re.Pattern[str]
         auth: types.AuthorizationToken | CustomAuthToken
-        query: str | re.Pattern | None = None
-        impersonated_user: str | re.Pattern | None = None
+        query: str | re.Pattern[str] | None = None
+        impersonated_user: str | re.Pattern[str] | None = None
         access_mode: TOptionalValue[str] | AnyValue | None = field(
             default_factory=AnyValue
         )
@@ -286,8 +286,14 @@ class HttpTxEndpoint(HttpEndpoint):
 
         this: HttpTxEndpoint = self
 
+        url: str | re.Pattern[str]
+        if isinstance(self._req.db, str):
+            url = f"/db/{url_encode(self._req.db)}/query/v2/tx"
+        else:
+            url = re.compile(f"/db/{self._req.db.pattern}/query/v2/tx")
+
         return TxMatcher(
-            f"/db/{url_encode(self._req.db)}/query/v2/tx",
+            url,
             method="POST",
             headers=self._auth_to_header(self._req.auth),
         )

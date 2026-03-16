@@ -17,9 +17,9 @@
     * [x] access mode
   * [x] bookmarks + session bookmark chaining
   * [ ] retries
-  * [ ] db selection
+  * [x] db selection
     * [x] basic case
-    * [ ] driver rejects any DB name that doesn't match `^[a-zA-Z0-9.-]{3,}$`
+    * [x] driver rejects any DB name that doesn't match `^[a-zA-Z0-9.-]{3,}$`
   * [x] summary
     * [x] db
     * [x] query & parameters
