@@ -24,6 +24,10 @@ from ..http_endpoints import (
 )
 
 if t.TYPE_CHECKING:
+    import re
+
+    from werkzeug.datastructures import Headers
+
     from ..http_endpoints import TOptionalValue
 
 
@@ -33,7 +37,7 @@ _AUTO_RESPOND = AutoRespond()
 
 
 class TxEndpointBuilder:
-    _db: str
+    _db: str | re.Pattern[str]
     _auth: types.AuthorizationToken
     _pipeline_begin: Potential
     _tx_id: str
@@ -45,10 +49,12 @@ class TxEndpointBuilder:
     _access_mode: TOptionalValue[str] | AnyValue
     _bookmarks: list[str]
     _tx_errors: list[dict[str, object]] | None
+    _extra_body_verification: tuple[t.Callable[[dict[str, object]], bool], ...]
+    _extra_header_verification: tuple[t.Callable[[Headers], bool], ...]
 
     def __init__(
         self,
-        db: str,
+        db: str | re.Pattern[str],
         auth: types.AuthorizationToken,
         pipeline_begin: Potential = Potential.MAYBE,
         tx_id: str = "txid123",
@@ -56,6 +62,12 @@ class TxEndpointBuilder:
         access_mode: TOptionalValue[str] | AnyValue = _ANY_VALUE,
         bookmarks: list[str] | None = None,
         tx_errors: list[dict[str, object]] | None = None,
+        extra_body_verification: tuple[
+            t.Callable[[dict[str, object]], bool], ...
+        ] = (),
+        extra_header_verification: tuple[
+            t.Callable[[Headers], bool], ...
+        ] = (),
     ) -> None:
         if bookmarks is None:
             bookmarks = []
@@ -77,6 +89,8 @@ class TxEndpointBuilder:
         self._access_mode = access_mode
         self._bookmarks = bookmarks
         self._tx_errors = tx_errors
+        self._extra_body_verification = extra_body_verification
+        self._extra_header_verification = extra_header_verification
 
     def with_query(
         self,
@@ -92,6 +106,12 @@ class TxEndpointBuilder:
         profile: Profile | None = None,
         notifications: list[Notification] | None = None,
         query_errors: list[dict[str, object]] | None = None,
+        extra_body_verification: tuple[
+            t.Callable[[dict[str, object]], bool], ...
+        ] = (),
+        extra_header_verification: tuple[
+            t.Callable[[Headers], bool], ...
+        ] = (),
     ) -> t.Self:
         if self._tx_errors is not None and query_errors is not None:
             raise ValueError(
@@ -115,6 +135,14 @@ class TxEndpointBuilder:
                         profile,
                         notifications,
                         errors=self._tx_errors,
+                        extra_body_verification=(
+                            self._extra_body_verification
+                            + extra_body_verification
+                        ),
+                        extra_header_verification=(
+                            self._extra_header_verification
+                            + extra_header_verification
+                        ),
                     )
                 )
             else:
@@ -130,6 +158,14 @@ class TxEndpointBuilder:
                         profile,
                         notifications,
                         errors=query_errors,
+                        extra_body_verification=(
+                            self._extra_body_verification
+                            + extra_body_verification
+                        ),
+                        extra_header_verification=(
+                            self._extra_header_verification
+                            + extra_header_verification
+                        ),
                     )
                 )
         if self._pipeline_begin in {Potential.NO, Potential.MAYBE}:
@@ -145,6 +181,13 @@ class TxEndpointBuilder:
                     profile,
                     notifications,
                     errors=query_errors,
+                    extra_body_verification=(
+                        self._extra_body_verification + extra_body_verification
+                    ),
+                    extra_header_verification=(
+                        self._extra_header_verification
+                        + extra_header_verification
+                    ),
                 )
             )
         return self
@@ -211,6 +254,12 @@ class TxEndpointBuilder:
         profile: Profile | None = None,
         notifications: list[Notification] | None = None,
         errors: list[dict[str, object]] | None = None,
+        extra_body_verification: tuple[
+            t.Callable[[dict[str, object]], bool], ...
+        ] = (),
+        extra_header_verification: tuple[
+            t.Callable[[Headers], bool], ...
+        ] = (),
     ) -> HttpEndpoint:
         if bookmarks is None:
             bookmarks = []
@@ -239,6 +288,8 @@ class TxEndpointBuilder:
                     notifications=notifications,
                     errors=errors,
                 ),
+                extra_body_verification=extra_body_verification,
+                extra_header_verification=extra_header_verification,
             )
         else:
             return HttpTxEndpoint(
@@ -253,6 +304,8 @@ class TxEndpointBuilder:
                     tx_data,
                     errors=errors,
                 ),
+                extra_body_verification=extra_body_verification,
+                extra_header_verification=extra_header_verification,
             )
 
     def _make_query_handler(
@@ -267,6 +320,12 @@ class TxEndpointBuilder:
         profile: Profile | None = None,
         notifications: list[Notification] | None = None,
         errors: list[dict[str, object]] | None = None,
+        extra_body_verification: tuple[
+            t.Callable[[dict[str, object]], bool], ...
+        ] = (),
+        extra_header_verification: tuple[
+            t.Callable[[Headers], bool], ...
+        ] = (),
     ) -> HttpEndpoint:
         tx_data = None
         if not errors:
@@ -290,6 +349,8 @@ class TxEndpointBuilder:
                 notifications=notifications,
                 errors=errors,
             ),
+            extra_body_verification=extra_body_verification,
+            extra_header_verification=extra_header_verification,
         )
 
     @classmethod

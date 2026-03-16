@@ -40,8 +40,7 @@
     * [x] basic and bearer
     * [x] (failing) kerberos, custom, basic with realm
     * [ ] driver rejects basic auth with usernames containing `:`
-  * [ ] client agent string
-    * TODO: clarify how to handle incompatible values (HTTP header value limitations)
+  * [x] client agent string is not transmitted
 * [ ] Test cluster affinity header (must be optional)
 * [ ] Basic ITs (probably only types and basic APIs)
 * [ ] v1.1
