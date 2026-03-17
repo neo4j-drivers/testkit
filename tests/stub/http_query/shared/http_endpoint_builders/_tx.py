@@ -49,6 +49,7 @@ class TxEndpointBuilder:
     _access_mode: TOptionalValue[str] | AnyValue
     _bookmarks: list[str]
     _tx_errors: list[dict[str, object]] | None
+    _affinity_header: str | None
     _extra_body_verification: tuple[t.Callable[[dict[str, object]], bool], ...]
     _extra_header_verification: tuple[t.Callable[[Headers], bool], ...]
 
@@ -62,6 +63,7 @@ class TxEndpointBuilder:
         access_mode: TOptionalValue[str] | AnyValue = _ANY_VALUE,
         bookmarks: list[str] | None = None,
         tx_errors: list[dict[str, object]] | None = None,
+        affinity_header: str | None = None,
         extra_body_verification: tuple[
             t.Callable[[dict[str, object]], bool], ...
         ] = (),
@@ -75,6 +77,14 @@ class TxEndpointBuilder:
         self._auth = auth
         self._pipeline_begin = pipeline_begin
         self._tx_id = tx_id
+        self._finishing_handler = None
+        self._impersonated_user = impersonated_user
+        self._access_mode = access_mode
+        self._bookmarks = bookmarks
+        self._affinity_header = affinity_header
+        self._tx_errors = tx_errors
+        self._extra_body_verification = extra_body_verification
+        self._extra_header_verification = extra_header_verification
         self._pipelined_handlers = []
         self._sequential_handlers = [
             self._make_tx_handler(
@@ -84,13 +94,6 @@ class TxEndpointBuilder:
                 errors=tx_errors,
             ),
         ]
-        self._finishing_handler = None
-        self._impersonated_user = impersonated_user
-        self._access_mode = access_mode
-        self._bookmarks = bookmarks
-        self._tx_errors = tx_errors
-        self._extra_body_verification = extra_body_verification
-        self._extra_header_verification = extra_header_verification
 
     def with_query(
         self,
@@ -136,12 +139,12 @@ class TxEndpointBuilder:
                         notifications,
                         errors=self._tx_errors,
                         extra_body_verification=(
-                            self._extra_body_verification
-                            + extra_body_verification
+                            *self._extra_body_verification,
+                            *extra_body_verification,
                         ),
                         extra_header_verification=(
-                            self._extra_header_verification
-                            + extra_header_verification
+                            *self._extra_header_verification,
+                            *extra_header_verification,
                         ),
                     )
                 )
@@ -159,12 +162,13 @@ class TxEndpointBuilder:
                         notifications,
                         errors=query_errors,
                         extra_body_verification=(
-                            self._extra_body_verification
-                            + extra_body_verification
+                            *self._extra_body_verification,
+                            *extra_body_verification,
                         ),
                         extra_header_verification=(
-                            self._extra_header_verification
-                            + extra_header_verification
+                            self._verify_affinity_header,
+                            *self._extra_header_verification,
+                            *extra_header_verification,
                         ),
                     )
                 )
@@ -182,11 +186,13 @@ class TxEndpointBuilder:
                     notifications,
                     errors=query_errors,
                     extra_body_verification=(
-                        self._extra_body_verification + extra_body_verification
+                        *self._extra_body_verification,
+                        *extra_body_verification,
                     ),
                     extra_header_verification=(
-                        self._extra_header_verification
-                        + extra_header_verification
+                        self._verify_affinity_header,
+                        *self._extra_header_verification,
+                        *extra_header_verification,
                     ),
                 )
             )
@@ -282,6 +288,7 @@ class TxEndpointBuilder:
                     tx_data,
                     fields=fields,
                     records=records,
+                    affinity_header=self._affinity_header,
                     counters=counters,
                     plan=plan,
                     profile=profile,
@@ -302,6 +309,7 @@ class TxEndpointBuilder:
                 ),
                 HttpTxEndpoint.ResponseData(
                     tx_data,
+                    affinity_header=self._affinity_header,
                     errors=errors,
                 ),
                 extra_body_verification=extra_body_verification,
@@ -360,3 +368,9 @@ class TxEndpointBuilder:
             return endpoints[0]
         else:
             return HttpSequenceEndpoint(*endpoints)
+
+    def _verify_affinity_header(self, headers: Headers) -> bool:
+        affinity_values = headers.getlist("neo4j-cluster-affinity")
+        if self._affinity_header is None:
+            return not affinity_values
+        return [self._affinity_header] == affinity_values

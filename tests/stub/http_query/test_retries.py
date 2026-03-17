@@ -144,7 +144,7 @@ class TestRetries(HttpTestCase):
             handler_type=HandlerType.PERMANENT,
         )
         with (
-            self.driver(server, self.AUTH) as driver,
+            self.driver(server, AUTH) as driver,
             driver.session("w", database=DB) as session,
         ):
             keys, records = session.execute_write(work)

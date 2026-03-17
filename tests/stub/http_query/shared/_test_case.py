@@ -41,7 +41,7 @@ class HttpTestCase(TestkitTestCase):
 
     @classmethod
     @contextmanager
-    def server_session(cls, server: HTTPServer):
+    def server_session(cls, server: HTTPServer) -> t.Generator[None]:
         server.clear()
         try:
             yield

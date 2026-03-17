@@ -41,7 +41,7 @@
     * [x] (failing) kerberos, custom, basic with realm
     * [x] driver rejects basic auth with usernames containing `:`
   * [x] client agent string is not transmitted
-* [ ] Test cluster affinity header (must be optional)
+* [x] Test cluster affinity header (must be optional)
 * [ ] Basic ITs (probably only types and basic APIs)
 * [ ] v1.1
   * [ ] test new types
