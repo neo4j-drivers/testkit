@@ -1,4 +1,5 @@
 import os
+import subprocess
 
 import docker
 
@@ -77,23 +78,51 @@ class Container:
             ["python3", "-m", "tests.tls.suites"]
         )
 
+    def should_run_neo4j_tests(self, neo4j_config):
+        self._update_neo4j_tests_env_config(neo4j_config)
+        try:
+            self._container.exec(
+                ["python3", "-m", "tests.neo4j.version_check"],
+                env_map=self._env
+            )
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 99:
+                print(
+                    "Neo4j tests will be skipped due to incompatible protocol "
+                    "versions between driver and server."
+                )
+                return True
+            raise
+        return False
+
     def run_neo4j_tests(self, suite, hostname, username, password,
                         neo4j_config):
+        self._update_neo4j_tests_env(
+            hostname, username, password, neo4j_config
+        )
+        self._container.exec(
+            ["python3", "-m", "tests.neo4j.suites", suite, neo4j_config.name],
+            env_map=self._env
+        )
+
+    def _update_neo4j_tests_env(self, hostname, username, password,
+                                neo4j_config):
+        self._update_neo4j_tests_env_config(neo4j_config)
         self._env.update({
             # Hostname of Docker container running db
             "TEST_NEO4J_HOST": hostname,
             "TEST_NEO4J_USER": username,
             "TEST_NEO4J_PASS": password,
+            "TEST_NEO4J_DEFAULT_DB": "neo4j",
+        })
+
+    def _update_neo4j_tests_env_config(self, neo4j_config):
+        self._env.update({
             "TEST_NEO4J_SCHEME": neo4j_config.scheme,
             "TEST_NEO4J_VERSION": neo4j_config.version,
             "TEST_NEO4J_EDITION": neo4j_config.edition,
             "TEST_NEO4J_CLUSTER": neo4j_config.cluster,
-            "TEST_NEO4J_DEFAULT_DB": "neo4j",
         })
-        self._container.exec(
-            ["python3", "-m", "tests.neo4j.suites", suite, neo4j_config.name],
-            env_map=self._env
-        )
 
     def run_neo4j_tests_env_config(self):
         for key in ("TEST_NEO4J_HOST",
