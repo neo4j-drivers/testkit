@@ -9,6 +9,7 @@ from tests.neo4j.datatypes._util import TZ_IDS
 from tests.neo4j.shared import (
     get_server_info,
     has_min_bolt_version,
+    has_utc_patch,
     QueryBuilder,
 )
 from tests.shared import (
@@ -377,7 +378,7 @@ class TestDataTypes(_TestTypesBase):
 
         self._create_driver_and_session()
 
-        server_supports_utc = get_server_info().has_utc_patch
+        server_supports_utc = has_utc_patch
         tz_ids = []
         for tz_id in self._server_supported_tz_ids():
             if self.should_run_subtest(tz_id=tz_id):

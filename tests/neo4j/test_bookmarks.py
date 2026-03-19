@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import nutkit.protocol as types
 from tests.neo4j.shared import (
+    get_auto_resolved_db,
     get_driver,
     with_retries,
 )
@@ -22,6 +23,11 @@ class TestBookmarks(TestkitTestCase):
             self._session.close()
         self._driver.close()
         super().tearDown()
+
+    def _get_session(self, access_mode, bookmarks=None):
+        return self._driver.session(
+            access_mode, bookmarks, database=get_auto_resolved_db()
+        )
 
     def test_can_obtain_bookmark_after_commit(self):
         def work(session):
@@ -47,7 +53,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return session.last_bookmarks()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         bookmarks = with_retries(create, self._session)
         self._session.close()
         self.assertEqual(len(bookmarks), 1)
@@ -61,7 +67,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return records
 
-        self._session = self._driver.session("r", bookmarks)
+        self._session = self._get_session("r", bookmarks)
         records = with_retries(read, self._session)
         self.assertEqual(len(records), 1)
         thing = records[0]
@@ -77,7 +83,7 @@ class TestBookmarks(TestkitTestCase):
             tx.rollback()
             return session.last_bookmarks()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         bookmarks = with_retries(work, self._session)
         self.assertEqual(len(bookmarks), 0)
 
@@ -91,7 +97,7 @@ class TestBookmarks(TestkitTestCase):
             result = tx.run("RETURN 1")
             result.next()
 
-        self._session = self._driver.session(
+        self._session = self._get_session(
             "w", ["hi, this is an invalid bookmark"]
         )
         with self.assertRaises(types.DriverError) as exc:
@@ -121,7 +127,7 @@ class TestBookmarks(TestkitTestCase):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript"]:
             self.skipTest("Times out when invoking the transaction function")
-        self._session = self._driver.session(
+        self._session = self._get_session(
             "w", ["hi, this is an invalid bookmark"]
         )
 
@@ -162,13 +168,13 @@ class TestBookmarks(TestkitTestCase):
             result.consume()
 
         for _ in range(expected_node_count):
-            self._session = self._driver.session("w")
+            self._session = self._get_session("w")
             self._session.execute_write(create_node)
             bookmarks.append(self._session.last_bookmarks())
             self._session.close()
 
         bookmarks = [bookmark for sublist in bookmarks for bookmark in sublist]
-        self._session = self._driver.session("r", bookmarks)
+        self._session = self._get_session("r", bookmarks)
 
         def get_node_count(tx):
             result = tx.run(
@@ -195,7 +201,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return self._session.last_bookmarks()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         bookmarks = with_retries(create, self._session)
         self._session.close()
 
@@ -211,7 +217,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return node_count
 
-        self._session = self._driver.session("w", bookmarks)
+        self._session = self._get_session("w", bookmarks)
         node_count = with_retries(read, self._session)
         self.assertEqual(types.CypherInt(1), node_count)
 
@@ -228,7 +234,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return session.last_bookmarks()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         bookmarks = with_retries(create1, self._session)
         self._session.close()
 
@@ -244,7 +250,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return session.last_bookmarks(), node_count
 
-        self._session = self._driver.session("r", bookmarks)
+        self._session = self._get_session("r", bookmarks)
         bookmarks, node_count1 = with_retries(read, self._session)
         self._session.close()
 
@@ -258,11 +264,11 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return session.last_bookmarks()
 
-        self._session = self._driver.session("w", bookmarks)
+        self._session = self._get_session("w", bookmarks)
         bookmarks = with_retries(create2, self._session)
         self._session.close()
 
-        self._session = self._driver.session("r", bookmarks)
+        self._session = self._get_session("r", bookmarks)
         _, node_count2 = with_retries(read, self._session)
 
         self.assertEqual(types.CypherInt(1), node_count1)

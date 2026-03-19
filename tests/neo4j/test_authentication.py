@@ -5,6 +5,7 @@ from tests.neo4j.shared import (
     env_neo4j_pass,
     env_neo4j_user,
     get_authorization,
+    get_auto_resolved_db,
     get_driver,
     with_retries,
 )
@@ -29,7 +30,9 @@ class TestAuthenticationBasic(TestkitTestCase):
 
     def create_driver_and_session(self, token):
         self._driver = get_driver(self._backend, auth=token)
-        self._session = self._driver.session("r")
+        self._session = self._driver.session(
+            "r", database=get_auto_resolved_db()
+        )
 
     def verify_connectivity(self, auth_token, use_tx=False):
         def dummy_query(tx_or_session):

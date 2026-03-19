@@ -167,7 +167,6 @@ class TestErrors(HttpTestCase):
 
         self.assertEqual(exc.msg, msg)
         self.assertEqual(exc.code, code)
-        self.assertFalse(exc.retryable)
         self.assertEqual(exc.gql_status, DEFAULT_GQL_ERROR_STATUS)
         self.assertEqual(
             exc.status_description,

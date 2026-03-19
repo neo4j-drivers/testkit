@@ -1,6 +1,9 @@
 import nutkit.protocol as types
 from tests.neo4j.shared import (
+    get_auto_resolved_db,
     get_driver,
+    requires_tx_metadata_support,
+    requires_tx_timeout_support,
     with_retries,
 )
 from tests.shared import (
@@ -23,6 +26,14 @@ class TestSessionRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    def _get_session(self, access_mode, fetch_size=None, bookmarks=None):
+        return self._driver.session(
+            access_mode,
+            bookmarks=bookmarks,
+            database=get_auto_resolved_db(),
+            fetch_size=fetch_size,
+        )
+
     def test_iteration_smaller_than_fetch_size(self):
         def work():
             # Verifies that correct number of records are retrieved
@@ -43,7 +54,7 @@ class TestSessionRun(TestkitTestCase):
                 rec = result.next()
                 self.assertEqual(rec, exp)
 
-        self._session1 = self._driver.session("r", fetch_size=1000)
+        self._session1 = self._get_session("r", fetch_size=1000)
         with_retries(work)
 
     def test_can_return_node(self):
@@ -67,7 +78,7 @@ class TestSessionRun(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
             self.assertIsInstance(result.next(), types.NullRecord)
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
     def test_can_return_relationship(self):
@@ -87,7 +98,7 @@ class TestSessionRun(TestkitTestCase):
             self.assertIsInstance(result.next(), types.NullRecord)
             self.assertIsInstance(result.next(), types.NullRecord)
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
     def test_can_return_path(self):
@@ -132,9 +143,10 @@ class TestSessionRun(TestkitTestCase):
 
             self.assertIsInstance(result.next(), types.NullRecord)
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_metadata_support
     def test_autocommit_transactions_should_support_metadata(self):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
@@ -146,16 +158,17 @@ class TestSessionRun(TestkitTestCase):
             )
             return result.next()
 
-        self._session1 = self._driver.session("r")
+        self._session1 = self._get_session("r")
         record = with_retries(work)
         self.assertIsInstance(record, types.Record)
         self.assertEqual(record.values, [types.CypherMap(metadata)])
 
+    @requires_tx_timeout_support
     def test_autocommit_transactions_should_support_timeout(self):
         def work():
-            with self._driver.session("w") as session1:
+            with self._get_session("w") as session1:
                 session1.run("MERGE (:Node)").consume()
-                with self._driver.session(
+                with self._get_session(
                     "w", bookmarks=session1.last_bookmarks()
                 ) as session2:
                     with session1.begin_transaction() as tx:
@@ -193,7 +206,7 @@ class TestSessionRun(TestkitTestCase):
                 [types.CypherString("A B C")],
             ])
 
-        self._session1 = self._driver.session("r")
+        self._session1 = self._get_session("r")
         with_retries(work)
 
     def test_regex_inline(self):
@@ -210,7 +223,7 @@ class TestSessionRun(TestkitTestCase):
                 [types.CypherString("A B C")],
             ])
 
-        self._session1 = self._driver.session("r")
+        self._session1 = self._get_session("r")
         with_retries(work)
 
     def test_iteration_larger_than_fetch_size(self):
@@ -232,13 +245,13 @@ class TestSessionRun(TestkitTestCase):
                 rec = result.next()
                 self.assertEqual(rec, exp)
 
-        self._session1 = self._driver.session("r", fetch_size=fetch_size)
+        self._session1 = self._get_session("r", fetch_size=fetch_size)
         with_retries(work)
 
     def test_partial_iteration(self):
         def work():
             # Verifies that not consuming all records works
-            with self._driver.session("r", fetch_size=2) as session:
+            with self._get_session("r", fetch_size=2) as session:
                 result = session.run(
                     "UNWIND RANGE(0, 1000) AS x RETURN x"
                 )
@@ -248,7 +261,7 @@ class TestSessionRun(TestkitTestCase):
                     self.assertEqual(rec, exp)
 
             # not consumed all records & starting a new session
-            with self._driver.session("r", fetch_size=2) as session:
+            with self._get_session("r", fetch_size=2) as session:
                 result = session.run(
                     "UNWIND RANGE(2000, 3000) AS x RETURN x"
                 )
@@ -284,7 +297,7 @@ class TestSessionRun(TestkitTestCase):
 
             self._driver.close()
             self._driver = get_driver(self._backend, user_agent="test")
-            with self._driver.session("r", fetch_size=2) as session:
+            with self._get_session("r", fetch_size=2) as session:
                 with_retries(work, session)
 
         for consume in (True, False):
@@ -308,7 +321,7 @@ class TestSessionRun(TestkitTestCase):
                 summary = result.consume()
                 self.assertIsInstance(summary, types.Summary)
 
-            with self._driver.session("r", fetch_size=2) as session:
+            with self._get_session("r", fetch_size=2) as session:
                 with_retries(work, session)
 
         for consume in (True, False):
@@ -331,7 +344,7 @@ class TestSessionRun(TestkitTestCase):
                     params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
                 )
 
-            with self._driver.session("r", fetch_size=2) as session:
+            with self._get_session("r", fetch_size=2) as session:
                 i0 = 0
                 n0 = 6
                 res0 = run(session, i0, n0)
@@ -369,7 +382,7 @@ class TestSessionRun(TestkitTestCase):
         # Verifies that an error is returned on an invalid query and that
         # the session can function with a valid query afterwards.
         def work():
-            with self._driver.session("r") as session:
+            with self._get_session("r") as session:
                 with self.assertRaises(types.DriverError):
                     # DEVIATION
                     # Go   - error trigger upon run
@@ -389,7 +402,7 @@ class TestSessionRun(TestkitTestCase):
 
     def test_recover_from_fail_on_streaming(self):
         def work():
-            with self._driver.session("r") as session:
+            with self._get_session("r") as session:
                 result = session.run(
                     "UNWIND [1, 0, 2] AS x RETURN 10 / x"
                 )
@@ -411,14 +424,14 @@ class TestSessionRun(TestkitTestCase):
 
     def test_updates_last_bookmark(self):
         def work():
-            with self._driver.session("w") as session:
+            with self._get_session("w") as session:
                 result = session.run("CREATE (n:SessionNode) RETURN n")
                 result.consume()
                 bookmarks = session.last_bookmarks()
                 self.assertEqual(len(bookmarks), 1)
                 self.assertGreater(len(bookmarks[0]), 3)
 
-            with self._driver.session("w", bookmarks=bookmarks) as session:
+            with self._get_session("w", bookmarks=bookmarks) as session:
                 result = session.run("CREATE (n:SessionNode) RETURN n")
                 result.consume()
                 new_bookmarks = session.last_bookmarks()
@@ -428,14 +441,14 @@ class TestSessionRun(TestkitTestCase):
         with_retries(work)
 
     def test_fails_on_bad_syntax(self):
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with self.assertRaises(types.DriverError) as e:
             with_retries(lambda: self._session1.run("X").consume())
         self.assertEqual(e.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
 
     def test_fails_on_missing_parameter(self):
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with self.assertRaises(types.DriverError) as e:
             with_retries(lambda: self._session1.run("RETURN $x").consume())
         self.assertEqual(e.exception.code,
@@ -445,7 +458,7 @@ class TestSessionRun(TestkitTestCase):
         string = "A" * 2 ** 20
         query = "RETURN '{}'".format(string)
         for _ in range(6):
-            with self._driver.session("r") as session:
+            with self._get_session("r") as session:
                 records = with_retries(lambda s: list(s.run(query)), session)
             self.assertEqual(
                 list(map(lambda r: r.values, records)),

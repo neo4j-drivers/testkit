@@ -45,7 +45,7 @@ test_flags = {
 def initialise_configurations(settings):
     def generate_config(version, enterprise, cluster, scheme, stress_test):
         assert (cluster and scheme == "neo4j"
-                or not cluster and scheme in ("neo4j", "bolt"))
+                or not cluster and scheme in {"neo4j", "bolt", "http"})
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
@@ -122,6 +122,13 @@ def initialise_configurations(settings):
             # Bolt 6.0
             # TODO: uncomment when server is released
             # ("2025.10",   True,        True,     "neo4j",  0),
+
+            # HTTP Query API
+            # first iteration - broken >.<
+            # ("5.19",      True,        False,     "http",   0),
+            # application/vnd.neo4j.query.v1.1
+            # ("2025.11",   True,        False,     "http",   0),
+            ("2026.02",   True,        False,     "http",   0),
         )
     ]
     configurations += [

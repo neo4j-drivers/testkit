@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import nutkit.protocol as types
 from nutkit.frontend import ApplicationCodeError
-from tests.neo4j.shared import get_driver
+from tests.neo4j.shared import (
+    get_auto_resolved_db,
+    get_driver,
+)
 from tests.shared import TestkitTestCase
 
 
@@ -25,7 +28,9 @@ class _TestTypesBase(TestkitTestCase):
         if self._driver is not None:
             self._driver.close()
         self._driver = get_driver(self._backend)
-        self._session = self._driver.session("w")
+        self._session = self._driver.session(
+            "w", database=get_auto_resolved_db()
+        )
 
     def _verify_can_echo(self, val):
         def work(tx):

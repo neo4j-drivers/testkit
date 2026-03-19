@@ -69,6 +69,16 @@ class Standalone:
 
         if self._edition != "community":
             env_map["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
+
+        if (5, 19) <= self._version < (5, 25):
+            # these version need explicit enabling of the HTTP Query API
+            env_map.update({
+                "NEO4J_server_http__enabled__modules": (  # noqa: PAR001
+                    "TRANSACTIONAL_ENDPOINTS,UNMANAGED_EXTENSIONS,BROWSER,"
+                    "ENTERPRISE_MANAGEMENT_ENDPOINTS,QUERY_API_ENDPOINTS"
+                )
+            })
+
         logs_path = join(self._artifacts_path, "logs")
         self._container = docker.run(
             self._image, self._hostname,
