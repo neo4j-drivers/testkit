@@ -484,9 +484,12 @@ class Summary:
         # TODO: remove block when all drivers support the address field
         # ---------------------------------------------------------------------
         class AnyAddress:
-            """Fake address that will match anything."""
+            """Fake address that will compare true anything (== and !=)."""
 
             def __eq__(self, _):
+                return True
+
+            def __ne__(self, _):
                 return True
 
         from tests.shared import get_driver_name
@@ -503,7 +506,7 @@ class Summary:
         # TODO: remove block when all drivers support the fields
         # ---------------------------------------------------------------------
         from tests.shared import get_driver_name
-        if get_driver_name() in ["go", "javascript"]:
+        if get_driver_name() in ["go"]:
             for field in (
                 "queryType", "resultAvailableAfter", "resultConsumedAfter"
             ):

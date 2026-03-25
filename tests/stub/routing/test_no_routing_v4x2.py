@@ -155,10 +155,6 @@ class NoRoutingV4x2(TestkitTestCase):
         self._server.done()
 
     def test_should_error_on_rollback_failure_using_tx_rollback(self):
-        # TODO There is a pending unification task to fix this.
-        # Once fixed, this block should be removed.
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("There is a pending unification task to fix this.")
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(
@@ -224,11 +220,6 @@ class NoRoutingV4x2(TestkitTestCase):
     def test_should_error_on_rollback_failure_using_session_close(
         self
     ):
-        # TODO There is a pending unification task to fix this.
-        # Once fixed, this block should be removed.
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("There is a pending unification task to fix this.")
-
         uri = "bolt://%s" % self._server.address
         self._server.start(
             path=self.script_path(

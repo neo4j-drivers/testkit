@@ -100,8 +100,6 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driver_name in ["javascript"]:
-            expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
     def test_disconnect_after_hello(self):
@@ -119,7 +117,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driver_name in ["dotnet", "javascript"]:
+        if self._driver_name in ["dotnet"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
@@ -134,7 +132,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driver_name in ["dotnet", "javascript"]:
+        if self._driver_name in ["dotnet"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 
@@ -195,7 +193,7 @@ class TestDisconnects(TestkitTestCase):
         self._server.done()
 
         expected_step = "after run"
-        if self._driver_name in ["javascript", "dotnet"]:
+        if self._driver_name in ["dotnet"]:
             expected_step = "after first next"
         self.assertEqual(step, expected_step)
 

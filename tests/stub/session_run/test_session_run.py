@@ -27,9 +27,6 @@ class TestSessionRun(TestkitTestCase):
         super().tearDown()
 
     def test_discard_on_session_close_untouched_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver requires result.next() to send PULL")
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
@@ -41,9 +38,6 @@ class TestSessionRun(TestkitTestCase):
         self._server.done()
 
     def test_discard_on_session_close_unfinished_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
@@ -56,9 +50,6 @@ class TestSessionRun(TestkitTestCase):
         self._server.done()
 
     def test_discard_on_session_close_consumed_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Test makes backend/driver hang")
         self._server.start(
             path=self.script_path("session_discard_result.script")
         )
@@ -85,7 +76,7 @@ class TestSessionRun(TestkitTestCase):
 
     def test_raises_error_on_session_run(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript", "dotnet"]:
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Driver reports error too late.")
         self._server.start(
             path=self.script_path("session_error_on_run.script")

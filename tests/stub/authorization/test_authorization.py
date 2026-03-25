@@ -508,9 +508,6 @@ class TestAuthorizationV4x3(AuthorizationBase):
 
     @driver_feature(types.Feature.OPT_AUTHORIZATION_EXPIRED_TREATMENT)
     def test_should_fail_with_auth_expired_on_begin_using_tx_run(self):
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Fails on sending RESET after auth-error and "
-                          "surfaces SessionExpired instead.")
         self._fail_on_begin_using_tx_run(
             self._AUTH_EXPIRED, self.assert_is_authorization_error
         )
@@ -537,7 +534,7 @@ class TestAuthorizationV4x3(AuthorizationBase):
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 AS n")
             # TODO remove consume() once all drivers report the error on run
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["dotnet"]:
                 result.consume()
 
         error_assertion(exc.exception)

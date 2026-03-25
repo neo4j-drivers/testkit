@@ -259,9 +259,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_fail_when_reading_from_unexpectedly_interrupting_reader_on_run_using_session_run(  # noqa: E501
         self
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("requires investigation")
         self._should_fail_when_reading_from_unexpectedly_interrupting_reader_using_session_run(  # noqa: E501
             "reader_with_unexpected_interruption_on_run.script"
         )
@@ -365,9 +362,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_fail_when_reading_from_unexpectedly_interrupting_readers_on_run_using_tx_function(  # noqa: E501
         self
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("requires investigation")
         self._should_fail_when_reading_from_unexpectedly_interrupting_readers_using_tx_function(  # noqa: E501
             "reader_tx_with_unexpected_interruption_on_run.script"
         )
@@ -587,9 +581,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_retry_write_until_success_with_leader_change_on_run_using_tx_function(  # noqa: E501
         self
     ):
-        # TODO remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("requires investigation")
         self._should_retry_write_until_success_with_leader_change_using_tx_function(  # noqa: E501
             "writer_tx_with_unexpected_interruption_on_run.script"
         )
@@ -2573,7 +2564,7 @@ class RoutingV5x0(RoutingBase):
 
     def test_should_fail_when_driver_closed_using_session_run(self):
         # TODO remove this block once fixed
-        if get_driver_name() in ["dotnet", "javascript"]:
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Skipped because it needs investigation")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
@@ -2711,9 +2702,6 @@ class RoutingV5x0(RoutingBase):
         self
     ):
         driver_name = get_driver_name()
-        # TODO remove this block once fixed
-        if driver_name in ["javascript"]:
-            self.skipTest("write_session result consumption times out")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -2801,9 +2789,6 @@ class RoutingV5x0(RoutingBase):
     def test_should_succeed_when_another_conn_fails_and_discover_using_tx_run(
         self
     ):
-        # TODO remove this block once fixed
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Transaction result consumption times out")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
@@ -2888,7 +2873,9 @@ class RoutingV5x0(RoutingBase):
     ):
         # TODO remove this block once fixed
         if get_driver_name() in ["javascript"]:
-            self.skipTest("Requires investigation")
+            self.skipTest(
+                "Driver is less resilient: gives up after 1st failure"
+            )
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(self._routingServer1, "router_adb.script")
@@ -3026,7 +3013,7 @@ class RoutingV5x0(RoutingBase):
 
     def test_does_not_use_read_connection_for_write(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript", "dotnet", "ruby"]:
+        if get_driver_name() in ["dotnet", "ruby"]:
             self.skipTest("Requires address field in summary")
 
         def read(tx):

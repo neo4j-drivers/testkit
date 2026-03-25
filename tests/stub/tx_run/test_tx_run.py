@@ -45,9 +45,6 @@ class TestTxRun(TestkitTestCase):
                                                        credentials=""))
 
     def test_rollback_tx_on_session_close_untouched_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver requires result.next() to send PULL")
         self._create_direct_driver()
         self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
@@ -61,9 +58,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_rollback_tx_on_session_close_unfinished_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Sends RESET instead of ROLLBACK.")
         self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
@@ -78,9 +72,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_rollback_tx_on_session_close_consumed_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._server1.start(
             path=self.script_path("tx_discard_then_rollback.script")
         )
@@ -96,9 +87,6 @@ class TestTxRun(TestkitTestCase):
         self._server1.done()
 
     def test_rollback_tx_on_session_close_finished_result(self):
-        # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript"]:
-            self.skipTest("Driver sends RESET instead of ROLLBACK")
         self._create_direct_driver()
         self._server1.start(
             path=self.script_path("tx_pull_then_rollback.script")
@@ -197,7 +185,7 @@ class TestTxRun(TestkitTestCase):
 
     def test_raises_error_on_tx_run(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript", "dotnet"]:
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Driver reports error too late.")
         self._server1.start(
             path=self.script_path("tx_error_on_run.script")
@@ -212,7 +200,7 @@ class TestTxRun(TestkitTestCase):
 
     def test_raises_error_on_tx_func_run(self):
         # TODO: remove this block once all languages work
-        if get_driver_name() in ["javascript", "dotnet"]:
+        if get_driver_name() in ["dotnet"]:
             self.skipTest("Driver reports error too late.")
         work_call_count = 0
 
@@ -247,7 +235,7 @@ class TestTxRun(TestkitTestCase):
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 AS n")
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["dotnet"]:
                 result.next()
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
         if rollback:
@@ -275,7 +263,7 @@ class TestTxRun(TestkitTestCase):
             # initiate another stream that fails on RUN
             with self.assertRaises(types.DriverError) as exc:
                 result = tx.run("invalid")
-                if get_driver_name() in ["javascript", "dotnet"]:
+                if get_driver_name() in ["dotnet"]:
                     result.next()
             self.assertEqual(exc.exception.code,
                              "Neo.ClientError.Statement.SyntaxError")
@@ -285,7 +273,7 @@ class TestTxRun(TestkitTestCase):
             original_exception = exc
             with self.assertRaises(types.DriverError) as exc:
                 if iterate:
-                    for _i in range(0, 3):
+                    for _i in range(0, 5):
                         res.next()
                 else:
                     fetch_all = types.Feature.OPT_RESULT_LIST_FETCH_ALL
@@ -318,7 +306,7 @@ class TestTxRun(TestkitTestCase):
         # initiate another stream that fails on RUN
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("invalid")
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["dotnet"]:
                 result.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.Statement.SyntaxError")
@@ -342,7 +330,7 @@ class TestTxRun(TestkitTestCase):
         tx = self._session.begin_transaction()
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("invalid")
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["dotnet"]:
                 result.next()
         self.assertEqual(exc.exception.code,
                          "Neo.ClientError.MadeUp.Code")
@@ -350,7 +338,7 @@ class TestTxRun(TestkitTestCase):
 
         with self.assertRaises(types.DriverError) as exc:
             result = tx.run("RETURN 1 AS n")
-            if get_driver_name() in ["javascript", "dotnet"]:
+            if get_driver_name() in ["dotnet"]:
                 result.next()
         # new actions on the transaction result in a tx terminated
         # exception, a subclass of the client exception
@@ -389,7 +377,7 @@ class TestTxRun(TestkitTestCase):
 
             with self.assertRaises(types.DriverError) as exc2:
                 result = tx.run("invalid")
-                if get_driver_name() in ["javascript", "dotnet"]:
+                if get_driver_name() in ["dotnet"]:
                     result.next()
             self._assert_is_tx_terminated_exception(exc2)
 
@@ -423,7 +411,7 @@ class TestTxRun(TestkitTestCase):
             # there must be no further PULL and an exception must be raised
             with self.assertRaises(types.DriverError):
                 if iterate == "true":
-                    for _i in range(0, 3):
+                    for _i in range(0, 5):
                         res.next()
                 else:
                     fetch_all = types.Feature.OPT_RESULT_LIST_FETCH_ALL

@@ -16,6 +16,16 @@ S: SUCCESS {"fields": ["n"], "qid": 1}
     S: RECORD [1]
        RECORD [2]
        SUCCESS {"has_more": true}
+    {?
+        {{
+            C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+        ----
+            C: PULL {"n": {"Z": "*"}, "qid": 1}
+        }}
+        S: RECORD [3]
+           RECORD [4]
+           SUCCESS {"has_more": true}
+    ?}
 ?}
 C: RUN "failing on pull" {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"], "qid": 2}

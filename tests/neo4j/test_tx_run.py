@@ -169,10 +169,7 @@ class TestTxRun(TestkitTestCase):
         def work():
             with self._session1.begin_transaction() as tx:
                 with self.assertRaises(types.responses.DriverError):
-                    result = tx.run("RETURN")
-                    # TODO: remove this block once all languages work
-                    if get_driver_name() in ["javascript"]:
-                        result.next()
+                    tx.run("RETURN")
                 tx.close()
 
         self._session1 = self._driver.session("w")
@@ -240,10 +237,7 @@ class TestTxRun(TestkitTestCase):
                 tx.run("CREATE (:TXNode1)").consume()
                 tx.commit()
                 with self.assertRaises(types.responses.DriverError):
-                    result = tx.run("RETURN 1")
-                    # TODO: remove this block once all languages work
-                    if get_driver_name() in ["javascript"]:
-                        result.next()
+                    tx.run("RETURN 1")
 
         self._session1 = self._driver.session("w")
         with_retries(work)
@@ -254,10 +248,7 @@ class TestTxRun(TestkitTestCase):
                 tx.run("CREATE (:TXNode1)").consume()
                 tx.rollback()
                 with self.assertRaises(types.responses.DriverError):
-                    result = tx.run("RETURN 1")
-                    # TODO: remove this block once all languages work
-                    if get_driver_name() in ["javascript"]:
-                        result.next()
+                    tx.run("RETURN 1")
 
         self._session1 = self._driver.session("w")
         with_retries(work)
@@ -326,10 +317,7 @@ class TestTxRun(TestkitTestCase):
             with self._driver.session("r") as session:
                 tx = session.begin_transaction()
                 with self.assertRaises(types.DriverError):
-                    result = tx.run("NOT CYPHER")
-                    # TODO: remove this block once all languages work
-                    if get_driver_name() in ["javascript"]:
-                        result.next()
+                    tx.run("NOT CYPHER")
                 # TODO: remove this block once all languages work
                 if get_driver_name() in ["java", "ruby"]:
                     # requires explicit rollback on a failed transaction

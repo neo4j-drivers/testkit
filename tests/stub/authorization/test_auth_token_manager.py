@@ -372,7 +372,7 @@ class TestAuthTokenManager5x1(AuthorizationBase):
                 result = tx.run("RETURN 1 AS n")
                 # TODO:
                 #   remove consume() once all drivers report the error on run
-                if get_driver_name() in ["javascript", "dotnet"]:
+                if get_driver_name() in ["dotnet"]:
                     result.consume()
             return exc
 
