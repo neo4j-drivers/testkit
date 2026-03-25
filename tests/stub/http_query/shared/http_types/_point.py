@@ -22,11 +22,11 @@ FLOAT_RE = re.compile(
     r"|[-+]?(?i:inf(?:inity)?)"
 )
 POINT_RE = re.compile(
-    r"^SRID=(\d+);"
-    r"\s*POINT\s*\("
-    rf"\s*({FLOAT_RE.pattern})"
-    rf"\s+({FLOAT_RE.pattern})"
-    rf"(?:\s+({FLOAT_RE.pattern}))?"
+    r"^SRID=(?P<srid>\d+);"
+    r"\s*POINT(?:\s+(?P<type>Z))?\s*\("
+    rf"\s*(?P<x>{FLOAT_RE.pattern})"
+    rf"\s+(?P<y>{FLOAT_RE.pattern})"
+    rf"(?:\s+(?P<z>{FLOAT_RE.pattern}))?"
     rf"\)$"
 )
 
@@ -58,10 +58,12 @@ class Point(HttpType):
     def _str(self) -> str:
         if self.z is None:
             coords = map(self._float_str, (self.x, self.y))
+            point_type = "POINT"
         else:
             coords = map(self._float_str, (self.x, self.y, self.z))
+            point_type = "POINT Z"
 
-        return f"SRID={self.srid};POINT ({' '.join(coords)})"
+        return f"SRID={self.srid};{point_type} ({' '.join(coords)})"
 
     @staticmethod
     def _float_str(v: float) -> str:
@@ -90,11 +92,18 @@ class Point(HttpType):
             vd.invalid_value(f"didn't match point regex: {v!r}")
             return None
 
-        srid = int(match.group(1))
-        x = float(match.group(2))
-        y = float(match.group(3))
-        z_str = match.group(4)
+        srid = int(match.group("srid"))
+        x = float(match.group("x"))
+        y = float(match.group("y"))
+        z_str = match.group("z")
         z = float(z_str) if z_str is not None else None
+        type_ = match.group("type")
+        if type_ == "Z" and z is None:
+            vd.invalid_value("missing z coordinate for POINT Z")
+            return None
+        if not type_ and z is not None:
+            vd.invalid_value("unexpected z coordinate for POINT")
+            return None
 
         return cls(srid=srid, x=x, y=y, z=z)
 
