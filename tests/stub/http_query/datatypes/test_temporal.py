@@ -75,6 +75,22 @@ class TestTemporal(HttpTestCase):
                     types.CypherTime(13, 45, 30, 123456789, -3661),
                     http_types.ZonedTime(13, 45, 30, 123456789, -3661),
                 ),
+                (
+                    types.CypherTime(0, 0, 0, 0, -60),
+                    http_types.ZonedTime(0, 0, 0, 0, -60),
+                ),
+                (
+                    types.CypherTime(0, 0, 0, 0, 60),
+                    http_types.ZonedTime(0, 0, 0, 0, 60),
+                ),
+                (
+                    types.CypherTime(0, 0, 0, 0, -64920),
+                    http_types.ZonedTime(0, 0, 0, 0, -64920),
+                ),
+                (
+                    types.CypherTime(0, 0, 0, 0, 64920),
+                    http_types.ZonedTime(0, 0, 0, 0, 64920),
+                ),
             ):
                 with self.subTest(x=cypher_value):
                     self._echo_session_run(
@@ -421,6 +437,10 @@ class TestTemporal(HttpTestCase):
                 (
                     types.CypherDuration(-1, 2, -3, -4),
                     http_types.Duration(0, -1, 0, 2, 0, 0, -3, -4),
+                ),
+                (
+                    types.CypherDuration(0, 0, 0, -999999999),
+                    http_types.Duration(0, 0, 0, 0, 0, 0, 0, -999999999),
                 ),
                 (
                     types.CypherDuration(max_months, 0, 0, 0),

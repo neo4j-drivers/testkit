@@ -144,7 +144,7 @@ class ZonedTime(HttpType):
         if len(parts) < 3:
             parts.append(0)
         hours, minutes, seconds = parts
-        return sign * hours * 3600 + minutes * 60 + seconds
+        return sign * (hours * 3600 + minutes * 60 + seconds)
 
     @classmethod
     def _from_native(

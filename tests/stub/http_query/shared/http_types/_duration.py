@@ -104,11 +104,12 @@ class Duration(HttpType):
         self._validate()
 
     def _validate(self) -> None:
-        if self.nanoseconds != 0 and self.seconds == 0:
-            if self.nanoseconds > 0 != self.seconds > 0:
-                raise ValueError(
-                    "nanoseconds and seconds must have the same sign"
-                )
+        if (
+            self.nanoseconds != 0
+            and self.seconds != 0
+            and (self.nanoseconds > 0) != (self.seconds > 0)
+        ):
+            raise ValueError("nanoseconds and seconds must have the same sign")
         if not (-1_000_000_000 < self.nanoseconds < 1_000_000_000):
             raise ValueError(
                 "nanoseconds must be in range -999,999,999..999,999,999"
@@ -250,10 +251,11 @@ class Duration(HttpType):
         with_seconds = match.group(8) is not None
         seconds = int(match.group(8) or 0)
         nanoseconds = int((match.group(9) or "000000000").ljust(9, "0"))
-        if seconds < 0:
+        if match.group(8) and match.group(8).startswith("-"):
             nanoseconds *= -1
 
         if with_time and not (with_hours or with_minutes or with_seconds):
+            value_dict.invalid_value(f"duration with empty time: {v!r}")
             return None
 
         return cls(
