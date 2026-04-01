@@ -36,7 +36,7 @@ class TestBookmarks(TestkitTestCase):
             tx.commit()
             return self._session.last_bookmarks()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         bookmarks = with_retries(work, self._session)
         self.assertTrue(bookmarks)
 

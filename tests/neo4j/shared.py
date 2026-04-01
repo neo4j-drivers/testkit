@@ -56,9 +56,17 @@ env_neo4j_client_key = "TEST_NEO4J_SSL_CLIENT_KEY"
 
 def get_authorization():
     """Return default authorization for tests that do not test this aspect."""
-    user = os.environ.get(env_neo4j_user, "neo4j")
-    passw = os.environ.get(env_neo4j_pass, "pass")
-    return AuthorizationToken("basic", principal=user, credentials=passw)
+    return AuthorizationToken(
+        "basic", principal=get_user(), credentials=get_password()
+    )
+
+
+def get_user():
+    return os.environ.get(env_neo4j_user, "neo4j")
+
+
+def get_password():
+    return os.environ.get(env_neo4j_pass, "pass")
 
 
 def get_neo4j_host_and_port():
@@ -102,7 +110,7 @@ def get_default_db():
 
 
 def get_auto_resolved_db():
-    if get_neo4j_scheme() in {"http", "https"}:
+    if get_neo4j_scheme() == "http":
         # Via HTTP Query API, a database name *must* be specified
         return get_default_db()
     # Via Bolt, the driver can omit the database name.
@@ -222,7 +230,7 @@ class ServerInfo:
 
     @property
     def is_http(self):
-        return self.scheme in {"http", "https"}
+        return self.scheme == "http"
 
     @property
     def is_bolt(self):
@@ -278,7 +286,7 @@ def requires_multi_db_support(func):
 def has_multi_db_support(test_case):
     server_info = get_server_info()
     return (
-        has_min_bolt_version((4, 0), test_case)
+        has_min_bolt_version(test_case, (4, 0))
         and server_info.edition == "enterprise"
     )
 
@@ -376,16 +384,16 @@ def has_utc_patch(test_case):
     server_info = get_server_info()
     if server_info.is_http:
         return Potential.YES
-    if has_min_bolt_version((5, 0), test_case):
+    if has_min_bolt_version(test_case, (5, 0)):
         return Potential.YES
-    if has_min_bolt_version((4, 3), test_case):
+    if has_min_bolt_version(test_case, (4, 3)):
         return Potential.MAYBE
     return Potential.NO
 
 
 def requires_min_bolt_version(min_version):
     def check(test_case):
-        require_min_bolt_version(min_version, test_case)
+        require_min_bolt_version(test_case, min_version)
 
     def bolt_version_decorator(func):
         return _make_skip_decorator(func, check)
@@ -393,18 +401,18 @@ def requires_min_bolt_version(min_version):
     return bolt_version_decorator
 
 
-def require_min_bolt_version(min_version, test_case):
+def require_min_bolt_version(test_case, min_version):
     if not isinstance(test_case, TestkitTestCase):
         raise TypeError("test_case should be a TestkitTestCase")
-    reason = _skip_reason_min_bolt_version(min_version, test_case)
+    reason = _skip_reason_min_bolt_version(test_case, min_version)
     if reason:
         test_case.skipTest(reason)
 
 
-def has_min_bolt_version(min_version, test_case):
+def has_min_bolt_version(test_case, min_version):
     if not isinstance(test_case, TestkitTestCase):
         raise TypeError("test_case should be a TestkitTestCase")
-    return not _skip_reason_min_bolt_version(min_version, test_case)
+    return not _skip_reason_min_bolt_version(test_case, min_version)
 
 
 def bolt_versions_in_features(features):
@@ -415,13 +423,14 @@ def bolt_versions_in_features(features):
     )
 
 
-def _skip_reason_min_bolt_version(min_version, test_case):
+def _skip_reason_min_bolt_version(test_case, min_version):
     if isinstance(min_version, str):
         min_version = parse_version(min_version)
     server_max_version = get_server_info().max_protocol_version
     all_version_features = bolt_versions_in_features(protocol.Feature)
     all_viable_versions = [
-        feature for (version, feature) in all_version_features
+        feature
+        for (version, feature) in all_version_features
         if min_version <= version <= server_max_version
     ]
 
@@ -442,7 +451,7 @@ def _skip_reason_min_bolt_version(min_version, test_case):
 
 def requires_min_query_api_version(min_version):
     def check(test_case):
-        require_min_query_api_version(min_version, test_case)
+        require_min_query_api_version(test_case, min_version)
 
     def query_api_version_decorator(func):
         return _make_skip_decorator(func, check)
@@ -450,18 +459,18 @@ def requires_min_query_api_version(min_version):
     return query_api_version_decorator
 
 
-def require_min_query_api_version(min_version, test_case):
+def require_min_query_api_version(test_case, min_version):
     if not isinstance(test_case, TestkitTestCase):
         raise TypeError("test_case should be a TestkitTestCase")
-    reason = _skip_reason_min_query_api_version(min_version, test_case)
+    reason = _skip_reason_min_query_api_version(test_case, min_version)
     if reason:
         test_case.skipTest(reason)
 
 
-def has_min_query_api_version(min_version, test_case):
+def has_min_query_api_version(test_case, min_version):
     if not isinstance(test_case, TestkitTestCase):
         raise TypeError("test_case should be a TestkitTestCase")
-    return not _skip_reason_min_query_api_version(min_version, test_case)
+    return not _skip_reason_min_query_api_version(test_case, min_version)
 
 
 def query_api_versions_in_features(features):
@@ -472,7 +481,7 @@ def query_api_versions_in_features(features):
     )
 
 
-def _skip_reason_min_query_api_version(min_version, test_case):
+def _skip_reason_min_query_api_version(test_case, min_version):
     if isinstance(min_version, str):
         min_version = parse_version(min_version)
     server_max_version = get_server_info().max_protocol_version

@@ -44,7 +44,7 @@
     * [x] driver rejects basic auth with usernames containing `:`
   * [x] client agent string is not transmitted
 * [x] Test cluster affinity header (must be optional)
-* [ ] Basic ITs (probably only types and basic APIs)
+* [x] Basic ITs (probably only types and basic APIs)
 * [ ] v1.1
   * [ ] test new types
   * [ ] vectors

@@ -48,6 +48,7 @@ class TestDirectDriver(TestkitTestCase):
         if get_driver_name() in ["go", "java"]:
             self.skipTest("Does not call resolver for direct connections")
 
+        scheme = get_neo4j_scheme()
         host, port = get_neo4j_host_and_port()
         host = dns_resolve_single(host)
         resolved_addresses = []
@@ -60,7 +61,7 @@ class TestDirectDriver(TestkitTestCase):
                 "%s:%d" % (host, port),  # should succeed
             )
 
-        self._driver = get_driver(self._backend, uri="bolt://*",
+        self._driver = get_driver(self._backend, uri=f"{scheme}://*",
                                   resolver_fn=my_resolver,
                                   connection_timeout_ms=200)
         self._session = self._get_session("r")

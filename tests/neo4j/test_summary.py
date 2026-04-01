@@ -45,11 +45,12 @@ class TestSummary(TestkitTestCase):
             result = tx.run("MATCH (n) DETACH DELETE n")
             result.consume()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         try:
             return self._session.execute_write(work)
         finally:
             self._session.close()
+            self._session = None
 
     def get_summary(self, query, params=None, **kwargs):
         def work(tx):
@@ -58,6 +59,7 @@ class TestSummary(TestkitTestCase):
                 pass
             summary = result.consume()
             return summary
+
         params = {} if params is None else params
         self._session = self._get_session("w")
         return self._session.execute_write(work)

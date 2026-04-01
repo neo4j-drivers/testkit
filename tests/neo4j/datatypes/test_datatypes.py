@@ -202,7 +202,7 @@ class TestDataTypes(_TestTypesBase):
 
         # TODO: will need to test elementId instead, once all drivers and
         #       backends support it.
-        self.assertNotEqual(a.id, b.id)
+        self.assertNotEqual(a.elementId, b.elementId)
 
         self.assertEqual(a.id, r.startNodeId)
         self.assertEqual(b.id, r.endNodeId)
@@ -238,9 +238,9 @@ class TestDataTypes(_TestTypesBase):
 
         # TODO: will need to test elementId instead, once all drivers and
         #       backends support it.
-        self.assertNotEqual(a.id, b.id)
-        self.assertNotEqual(a.id, c.id)
-        self.assertNotEqual(b.id, c.id)
+        self.assertNotEqual(a.elementId, b.elementId)
+        self.assertNotEqual(a.elementId, c.elementId)
+        self.assertNotEqual(b.elementId, c.elementId)
 
         self.assertEqual(ab, types.CypherRelationship(
             ab.id, a.id, b.id, types.CypherString("X"), types.CypherMap({}),
@@ -292,7 +292,6 @@ class TestDataTypes(_TestTypesBase):
                                   "c": types.CypherFloat(3.3),
                                   "d": types.CypherString("Hello World"),
                                   "e": types.CypherNull(None)}),
-
         }
 
         self._create_driver_and_session()

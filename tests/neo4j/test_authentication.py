@@ -1,12 +1,11 @@
-import os
-
 import nutkit.protocol as types
 from tests.neo4j.shared import (
-    env_neo4j_pass,
-    env_neo4j_user,
+    bolt_only_test,
     get_authorization,
     get_auto_resolved_db,
     get_driver,
+    get_password,
+    get_user,
     with_retries,
 )
 from tests.shared import (
@@ -70,19 +69,20 @@ class TestAuthenticationBasic(TestkitTestCase):
                              "<class 'neo4j.exceptions.AuthError'>")
 
     # Tests both basic with realm specified and also custom auth token. All
+    @bolt_only_test  # realm not supported via HTTP Query API
     def test_success_on_provide_realm_with_basic_token(self):
         auth_token = types.AuthorizationToken(
             "basic",
             realm="native",
-            principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass")
+            principal=get_user(),
+            credentials=get_password(),
         )
         self.verify_connectivity(auth_token)
 
     def test_success_on_basic_token(self):
         auth_token = types.AuthorizationToken(
             "basic",
-            principal=os.environ.get(env_neo4j_user, "neo4j"),
-            credentials=os.environ.get(env_neo4j_pass, "pass")
+            principal=get_user(),
+            credentials=get_password(),
         )
         self.verify_connectivity(auth_token)
