@@ -49,6 +49,7 @@ class TxEndpointBuilder:
     _access_mode: TOptionalValue[str] | AnyValue
     _bookmarks: list[str]
     _tx_errors: list[dict[str, object]] | None
+    _tx_status_code: int | None
     _affinity_header: str | None
     _extra_body_verification: tuple[t.Callable[[dict[str, object]], bool], ...]
     _extra_header_verification: tuple[t.Callable[[Headers], bool], ...]
@@ -63,6 +64,7 @@ class TxEndpointBuilder:
         access_mode: TOptionalValue[str] | AnyValue = _ANY_VALUE,
         bookmarks: list[str] | None = None,
         tx_errors: list[dict[str, object]] | None = None,
+        tx_status_code: int | None = None,
         affinity_header: str | None = None,
         extra_body_verification: tuple[
             t.Callable[[dict[str, object]], bool], ...
@@ -83,6 +85,7 @@ class TxEndpointBuilder:
         self._bookmarks = bookmarks
         self._affinity_header = affinity_header
         self._tx_errors = tx_errors
+        self._tx_status_code = tx_status_code
         self._extra_body_verification = extra_body_verification
         self._extra_header_verification = extra_header_verification
         self._pipelined_handlers = []
@@ -92,6 +95,7 @@ class TxEndpointBuilder:
                 access_mode=access_mode,
                 bookmarks=bookmarks,
                 errors=tx_errors,
+                status_code=tx_status_code,
             ),
         ]
 
@@ -115,11 +119,17 @@ class TxEndpointBuilder:
         extra_header_verification: tuple[
             t.Callable[[Headers], bool], ...
         ] = (),
+        query_status_code: int | None = None,
     ) -> t.Self:
         if self._tx_errors is not None and query_errors is not None:
             raise ValueError(
                 "Cannot set query errors when transaction errors are already "
                 "set"
+            )
+        if self._tx_status_code is not None and query_status_code is not None:
+            raise ValueError(
+                "Cannot set query status code when transaction status code "
+                "is already set"
             )
         if self._pipeline_begin in {Potential.YES, Potential.MAYBE}:
             if not self._pipelined_handlers:
@@ -146,6 +156,7 @@ class TxEndpointBuilder:
                             *self._extra_header_verification,
                             *extra_header_verification,
                         ),
+                        status_code=self._tx_status_code,
                     )
                 )
             else:
@@ -170,6 +181,7 @@ class TxEndpointBuilder:
                             *self._extra_header_verification,
                             *extra_header_verification,
                         ),
+                        status_code=query_status_code,
                     )
                 )
         if self._pipeline_begin in {Potential.NO, Potential.MAYBE}:
@@ -194,6 +206,7 @@ class TxEndpointBuilder:
                         *self._extra_header_verification,
                         *extra_header_verification,
                     ),
+                    status_code=query_status_code,
                 )
             )
         return self
@@ -266,6 +279,7 @@ class TxEndpointBuilder:
         extra_header_verification: tuple[
             t.Callable[[Headers], bool], ...
         ] = (),
+        status_code: int | None = None,
     ) -> HttpEndpoint:
         if bookmarks is None:
             bookmarks = []
@@ -294,6 +308,7 @@ class TxEndpointBuilder:
                     profile=profile,
                     notifications=notifications,
                     errors=errors,
+                    status_code=status_code,
                 ),
                 extra_body_verification=extra_body_verification,
                 extra_header_verification=extra_header_verification,
@@ -334,6 +349,7 @@ class TxEndpointBuilder:
         extra_header_verification: tuple[
             t.Callable[[Headers], bool], ...
         ] = (),
+        status_code: int | None = None,
     ) -> HttpEndpoint:
         tx_data = None
         if not errors:
@@ -356,6 +372,7 @@ class TxEndpointBuilder:
                 profile=profile,
                 notifications=notifications,
                 errors=errors,
+                status_code=status_code,
             ),
             extra_body_verification=extra_body_verification,
             extra_header_verification=extra_header_verification,

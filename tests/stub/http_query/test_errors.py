@@ -48,8 +48,12 @@ def _make_query_endpoint(
     errors: list[dict[str, object]],
     send_header: bool = False,
     send_records: bool = False,
+    status_code: int | None = None,
 ) -> HttpQueryEndpoint:
-    response = HttpQueryEndpoint.ResponseData(errors=errors)
+    response = HttpQueryEndpoint.ResponseData(
+        errors=errors,
+        status_code=status_code,
+    )
     if send_header:
         response.fields = FIELDS
     if send_records:
@@ -72,9 +76,12 @@ def _make_tx_endpoint(
     fail_tx_creation: bool = False,
     send_query_header: bool = False,
     send_query_records: bool = False,
+    status_code: int | None = None,
 ) -> HttpEndpoint:
     tx_errors = errors if fail_tx_creation else None
+    tx_status_code = status_code if fail_tx_creation else None
     query_errors = None if fail_tx_creation else errors
+    query_status_code = None if fail_tx_creation else status_code
     fields = FIELDS if send_query_header else None
     records = RECORDS if send_query_records else None
 
@@ -84,10 +91,26 @@ def _make_tx_endpoint(
             auth=AUTH,
             pipeline_begin=pipeline_begin,
             tx_errors=tx_errors,
+            tx_status_code=tx_status_code,
         )
-        .with_query(QUERY, fields, records, query_errors=query_errors)
+        .with_query(
+            QUERY,
+            fields,
+            records,
+            query_errors=query_errors,
+            query_status_code=query_status_code,
+        )
         .build()
     )
+
+
+STATUS_CODES = [
+    None,  # auto
+    # Some early server versions sometimes return errors with 2xx status codes.
+    # Drivers should pick up the error anyway and throw.
+    200,
+    400,
+]
 
 
 class TestErrors(HttpTestCase):
@@ -105,25 +128,32 @@ class TestErrors(HttpTestCase):
             raise ValueError("Cannot send records without sending header")
 
         error: dict[str, object] = {"code": code, "message": msg}
-        query_endpoint = _make_query_endpoint(
-            [error],
-            send_header=send_header,
-            send_records=send_records,
-        )
         with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.ONESHOT
-            )
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=DB) as session,
-            ):
-                exc = self._get_session_run_exception(
-                    send_header, send_records, session
-                )
+            for status_code in STATUS_CODES:
+                with (
+                    self.subTest(status_code=status_code),
+                    self.server_session(server),
+                ):
+                    query_endpoint = _make_query_endpoint(
+                        [error],
+                        send_header=send_header,
+                        send_records=send_records,
+                        status_code=status_code,
+                    )
+                    server.install_discovery_endpoint()
+                    server.install_endpoint(
+                        query_endpoint,
+                        handler_type=HandlerType.ONESHOT,
+                    )
+                    with (
+                        self.driver(server, AUTH) as driver,
+                        driver.session("w", database=DB) as session,
+                    ):
+                        exc = self._get_session_run_exception(
+                            send_header, send_records, session
+                        )
 
-        self._assert_error(exc, msg, code, is_retryable)
+                    self._assert_error(exc, msg, code, is_retryable)
 
     def _get_session_run_exception(
         self,
@@ -207,7 +237,7 @@ class TestErrors(HttpTestCase):
             is_retryable=True,
         )
 
-    def test_only_last_error_is_respected(self) -> None:
+    def test_only_last_error_is_considered(self) -> None:
         errors: list[dict[str, object]] = [
             {"code": "Neo.ClientError.Oh.Err1", "message": "Error message 1"},
             {"code": "Neo.ClientError.Oh.Err2", "message": "Error message 2"},
@@ -216,19 +246,31 @@ class TestErrors(HttpTestCase):
         shuffle(errors)
         msg = t.cast(str, errors[-1]["message"])
         code = t.cast(str, errors[-1]["code"])
-        query_endpoint = _make_query_endpoint(errors)
         with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.ONESHOT
-            )
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=DB) as session,
-            ):
-                exc = self._get_session_run_exception(False, False, session)
+            for status_code in STATUS_CODES:
+                with (
+                    self.subTest(status_code=status_code),
+                    self.server_session(server),
+                ):
+                    query_endpoint = _make_query_endpoint(
+                        errors, status_code=status_code
+                    )
+                    server.install_discovery_endpoint()
+                    server.install_endpoint(
+                        query_endpoint,
+                        handler_type=HandlerType.ONESHOT,
+                    )
+                    with (
+                        self.driver(server, AUTH) as driver,
+                        driver.session("w", database=DB) as session,
+                    ):
+                        exc = self._get_session_run_exception(
+                            send_header=False,
+                            send_records=False,
+                            session=session,
+                        )
 
-        self._assert_error(exc, msg, code, retryable=False)
+                    self._assert_error(exc, msg, code, retryable=False)
 
     def _test_explicit_tx(
         self,
@@ -247,30 +289,37 @@ class TestErrors(HttpTestCase):
         msg = "/ by zero"
 
         error: dict[str, object] = {"code": code, "message": msg}
-        query_endpoint = _make_tx_endpoint(
-            [error],
-            pipeline_begin=Potential.NO,
-            fail_tx_creation=fail_tx_creation,
-            send_query_header=send_query_header,
-            send_query_records=send_query_records,
-        )
         with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.PERMANENT
-            )
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=DB) as session,
-            ):
-                exc = self._get_explicit_tx_exception(
-                    fail_tx_creation,
-                    send_query_header,
-                    send_query_records,
-                    session,
-                )
+            for status_code in STATUS_CODES:
+                with (
+                    self.subTest(status_code=status_code),
+                    self.server_session(server),
+                ):
+                    query_endpoint = _make_tx_endpoint(
+                        [error],
+                        pipeline_begin=Potential.NO,
+                        fail_tx_creation=fail_tx_creation,
+                        send_query_header=send_query_header,
+                        send_query_records=send_query_records,
+                        status_code=status_code,
+                    )
+                    server.install_discovery_endpoint()
+                    server.install_endpoint(
+                        query_endpoint,
+                        handler_type=HandlerType.PERMANENT,
+                    )
+                    with (
+                        self.driver(server, AUTH) as driver,
+                        driver.session("w", database=DB) as session,
+                    ):
+                        exc = self._get_explicit_tx_exception(
+                            fail_tx_creation,
+                            send_query_header,
+                            send_query_records,
+                            session,
+                        )
 
-        self._assert_error(exc, msg, code, retryable=False)
+                    self._assert_error(exc, msg, code, retryable=False)
 
     def _get_explicit_tx_exception(
         self,
@@ -365,30 +414,39 @@ class TestErrors(HttpTestCase):
         msg = "/ by zero"
 
         error: dict[str, object] = {"code": code, "message": msg}
-        query_endpoint = _make_tx_endpoint(
-            [error],
-            pipeline_begin=Potential.NO if eager_begin else Potential.MAYBE,
-            fail_tx_creation=fail_tx_creation,
-            send_query_header=send_query_header,
-            send_query_records=send_query_records,
-        )
         with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.PERMANENT
-            )
-            with (
-                self.driver(server, AUTH) as driver,
-                driver.session("w", database=DB) as session,
-            ):
-                exc = self._get_tx_func_exception(
-                    fail_tx_creation,
-                    send_query_header,
-                    send_query_records,
-                    session,
-                )
+            for status_code in STATUS_CODES:
+                with (
+                    self.subTest(status_code=status_code),
+                    self.server_session(server),
+                ):
+                    query_endpoint = _make_tx_endpoint(
+                        [error],
+                        pipeline_begin=(
+                            Potential.NO if eager_begin else Potential.MAYBE
+                        ),
+                        fail_tx_creation=fail_tx_creation,
+                        send_query_header=send_query_header,
+                        send_query_records=send_query_records,
+                        status_code=status_code,
+                    )
+                    server.install_discovery_endpoint()
+                    server.install_endpoint(
+                        query_endpoint,
+                        handler_type=HandlerType.PERMANENT,
+                    )
+                    with (
+                        self.driver(server, AUTH) as driver,
+                        driver.session("w", database=DB) as session,
+                    ):
+                        exc = self._get_tx_func_exception(
+                            fail_tx_creation,
+                            send_query_header,
+                            send_query_records,
+                            session,
+                        )
 
-        self._assert_error(exc, msg, code, retryable=False)
+                    self._assert_error(exc, msg, code, retryable=False)
 
     def _get_tx_func_exception(
         self,
@@ -538,22 +596,29 @@ class TestErrors(HttpTestCase):
         msg = "/ by zero"
 
         error: dict[str, object] = {"code": code, "message": msg}
-        query_endpoint = _make_tx_endpoint(
-            [error],
-            pipeline_begin=Potential.MAYBE,
-            fail_tx_creation=fail_tx_creation,
-            send_query_header=send_query_header,
-            send_query_records=send_query_records,
-        )
         with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.PERMANENT
-            )
-            with self.driver(server, AUTH) as driver:
-                exc = self._get_execute_query_exception(driver)
+            for status_code in STATUS_CODES:
+                with (
+                    self.subTest(status_code=status_code),
+                    self.server_session(server),
+                ):
+                    query_endpoint = _make_tx_endpoint(
+                        [error],
+                        pipeline_begin=Potential.MAYBE,
+                        fail_tx_creation=fail_tx_creation,
+                        send_query_header=send_query_header,
+                        send_query_records=send_query_records,
+                        status_code=status_code,
+                    )
+                    server.install_discovery_endpoint()
+                    server.install_endpoint(
+                        query_endpoint,
+                        handler_type=HandlerType.PERMANENT,
+                    )
+                    with self.driver(server, AUTH) as driver:
+                        exc = self._get_execute_query_exception(driver)
 
-        self._assert_error(exc, msg, code, retryable=False)
+                    self._assert_error(exc, msg, code, retryable=False)
 
     def _get_execute_query_exception(
         self,

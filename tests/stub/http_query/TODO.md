@@ -31,11 +31,11 @@
       * [x] agent string
       * [x] address
   * [ ] verify connectivity
-  * [ ] errors
+  * [x] errors
     * [x] via all APIs
     * [x] different failure modes (only after some records)
     * [x] Only last error in list is raised
-    * [ ] Clients must be ready to handle 2xx status codes with errors
+    * [x] Clients must be ready to handle 2xx status codes with errors
   * [ ] TX rollback resulting in empty body with no content-type header
   * [ ] auth manager
   * [x] Auth schemes
