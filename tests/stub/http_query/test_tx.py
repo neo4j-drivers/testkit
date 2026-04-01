@@ -121,29 +121,39 @@ class _TxTestCase(abc.ABC, HttpTestCase):
 
             return keys, records
 
-        tx_endpoint = (
-            TxEndpointBuilder(db=db, auth=self.AUTH, tx_id="Ab1l7kUOk3")
-            .with_query(query, fields, [[http_types.Str("hello world")]])
-            .with_rollback()
-            .build()
-        )
-
         with self.server() as server:
-            server.install_discovery_endpoint()
-            server.install_endpoint(
-                tx_endpoint, handler_type=HandlerType.PERMANENT
-            )
-            with (
-                self.driver(server, self.AUTH) as driver,
-                driver.session("w", database=db) as session,
-            ):
-                keys, records = self._run_in_tx(session, work, commit=False)
+            for legacy_response in (True, False):
+                with (
+                    self.subTest(legacy_response=legacy_response),
+                    self.server_session(server),
+                ):
+                    tx_endpoint = (
+                        TxEndpointBuilder(
+                            db=db, auth=self.AUTH, tx_id="Ab1l7kUOk3"
+                        )
+                        .with_query(
+                            query, fields, [[http_types.Str("hello world")]]
+                        )
+                        .with_rollback(legacy_response=legacy_response)
+                        .build()
+                    )
+                    server.install_discovery_endpoint()
+                    server.install_endpoint(
+                        tx_endpoint, handler_type=HandlerType.PERMANENT
+                    )
+                    with (
+                        self.driver(server, self.AUTH) as driver,
+                        driver.session("w", database=db) as session,
+                    ):
+                        keys, records = self._run_in_tx(
+                            session, work, commit=False
+                        )
 
-        self.assertEqual(keys, fields)
-        self.assertEqual(len(records), 1)
-        self.assertEqual(
-            records[0].values, [types.CypherString("hello world")]
-        )
+                    self.assertEqual(keys, fields)
+                    self.assertEqual(len(records), 1)
+                    self.assertEqual(
+                        records[0].values, [types.CypherString("hello world")]
+                    )
 
     def _test_transaction_multi_query(self) -> None:
         db = "dba"

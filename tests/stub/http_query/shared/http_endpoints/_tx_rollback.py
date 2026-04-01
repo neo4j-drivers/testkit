@@ -33,6 +33,7 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
     _protocol_version: ProtocolVersion
     _extra_body_verification: tuple[t.Callable[[dict[str, object]], bool], ...]
     _extra_header_verification: tuple[t.Callable[[Headers], bool], ...]
+    _legacy_response: bool
 
     def __init__(
         self,
@@ -42,11 +43,15 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
         extra_header_verification: t.Iterable[
             t.Callable[[Headers], bool]
         ] = (),
+        # Some older servers (e.g., 2025.11) respond with an empty body and no
+        # Content-Type header set.
+        legacy_response: bool = False,
     ) -> None:
         self._req = request
         self._protocol_version = protocol_version
         self._extra_body_verification = tuple(extra_body_verification)
         self._extra_header_verification = tuple(extra_header_verification)
+        self._legacy_response = legacy_response
 
     def _matcher(self) -> RequestMatcher:
         class TxRollbackMatcher(RequestMatcher):
@@ -94,6 +99,9 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
         )
 
     def _handler(self) -> t.Callable[[Request], Response]:
+        if self._legacy_response:
+            return self._legacy_handler()
+
         def handler(req: Request) -> Response:
             body: dict[str, t.Any] = {}
             return Response(
@@ -101,5 +109,11 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
                 status=200,
                 headers=self._version_as_header(self._protocol_version),
             )
+
+        return handler
+
+    def _legacy_handler(self) -> t.Callable[[Request], Response]:
+        def handler(req: Request) -> Response:
+            return Response(b"", status=200)
 
         return handler

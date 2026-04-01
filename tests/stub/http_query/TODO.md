@@ -36,7 +36,7 @@
     * [x] different failure modes (only after some records)
     * [x] Only last error in list is raised
     * [x] Clients must be ready to handle 2xx status codes with errors
-  * [ ] TX rollback resulting in empty body with no content-type header
+  * [x] TX rollback resulting in empty body with no content-type header
   * [ ] auth manager
   * [x] Auth schemes
     * [x] basic and bearer

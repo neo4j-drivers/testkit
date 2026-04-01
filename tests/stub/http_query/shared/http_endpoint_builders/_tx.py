@@ -223,11 +223,12 @@ class TxEndpointBuilder:
         )
         return self
 
-    def with_rollback(self) -> t.Self:
+    def with_rollback(self, *, legacy_response: bool = False) -> t.Self:
         self._finishing_handler = HttpTxRollbackEndpoint(
             HttpTxRollbackEndpoint.RequestData(
                 db=self._db, tx_id=self._tx_id, auth=self._auth
             ),
+            legacy_response=legacy_response,
         )
         return self
 
