@@ -109,11 +109,6 @@ class TestIterationSessionRun(TestkitTestCase):
                                 ("v4x4", "pull_2_then_discard.script")):
             if not self.driver_supports_bolt(version):
                 continue
-            # TODO: remove this block once all drivers work
-            if version == "v4x4" and get_driver_name() in ["javascript"]:
-                # driver would eagerly pull all available results in the
-                # background
-                continue
             for mode in ("write", "read"):
                 with self.subTest(version=version, mode=mode):
                     test(version, script)
