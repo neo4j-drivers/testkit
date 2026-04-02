@@ -28,7 +28,10 @@ if t.TYPE_CHECKING:
 
     from werkzeug.datastructures import Headers
 
-    from ..http_endpoints import TOptionalValue
+    from ..http_endpoints import (
+        CustomAuthToken,
+        TOptionalValue,
+    )
 
 
 _ANY_VALUE = AnyValue()
@@ -38,7 +41,7 @@ _AUTO_RESPOND = AutoRespond()
 
 class TxEndpointBuilder:
     _db: str | re.Pattern[str]
-    _auth: types.AuthorizationToken
+    _auth: types.AuthorizationToken | CustomAuthToken
     _pipeline_begin: Potential
     _tx_id: str
     _pipelined_handlers: list[HttpEndpoint]
@@ -57,7 +60,7 @@ class TxEndpointBuilder:
     def __init__(
         self,
         db: str | re.Pattern[str],
-        auth: types.AuthorizationToken,
+        auth: types.AuthorizationToken | CustomAuthToken,
         pipeline_begin: Potential = Potential.MAYBE,
         tx_id: str = "txid123",
         impersonated_user: str | None = None,
@@ -214,21 +217,35 @@ class TxEndpointBuilder:
     def with_commit(
         self,
         bookmarks: list[str] | None = None,
+        errors: list[dict[str, object]] | None = None,
+        status_code: int | None = None,
     ) -> t.Self:
         self._finishing_handler = HttpTxCommitEndpoint(
             HttpTxCommitEndpoint.RequestData(
                 db=self._db, tx_id=self._tx_id, auth=self._auth
             ),
-            HttpTxCommitEndpoint.ResponseData(bookmarks=bookmarks),
+            HttpTxCommitEndpoint.ResponseData(
+                bookmarks=bookmarks, errors=errors, status_code=status_code
+            ),
         )
         return self
 
-    def with_rollback(self, *, legacy_response: bool = False) -> t.Self:
+    def with_rollback(
+        self,
+        *,
+        legacy_response: bool = False,
+        errors: list[dict[str, object]] | None = None,
+        status_code: int | None = None,
+    ) -> t.Self:
         self._finishing_handler = HttpTxRollbackEndpoint(
             HttpTxRollbackEndpoint.RequestData(
                 db=self._db, tx_id=self._tx_id, auth=self._auth
             ),
-            legacy_response=legacy_response,
+            HttpTxRollbackEndpoint.ResponseData(
+                legacy=legacy_response,
+                errors=errors,
+                status_code=status_code,
+            ),
         )
         return self
 

@@ -12,6 +12,7 @@ from ..http_types import ProtocolVersion
 from ._base import (
     CustomAuthToken,
     HttpEndpoint,
+    serialize_any,
     url_encode,
 )
 
@@ -29,7 +30,16 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
         tx_id: str | re.Pattern[str]
         auth: types.AuthorizationToken | CustomAuthToken
 
+    @dataclass
+    class ResponseData:
+        # Some older servers (e.g., 2025.11) respond with an empty body and no
+        # Content-Type header set.
+        legacy: bool = False
+        errors: list[dict[str, object]] | None = None
+        status_code: int | None = None
+
     _req: RequestData
+    _res: ResponseData
     _protocol_version: ProtocolVersion
     _extra_body_verification: tuple[t.Callable[[dict[str, object]], bool], ...]
     _extra_header_verification: tuple[t.Callable[[Headers], bool], ...]
@@ -38,20 +48,18 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
     def __init__(
         self,
         request: RequestData,
+        response: ResponseData,
         protocol_version: ProtocolVersion = ProtocolVersion.V1_0,
         extra_body_verification: t.Iterable[t.Callable[[object], bool]] = (),
         extra_header_verification: t.Iterable[
             t.Callable[[Headers], bool]
         ] = (),
-        # Some older servers (e.g., 2025.11) respond with an empty body and no
-        # Content-Type header set.
-        legacy_response: bool = False,
     ) -> None:
         self._req = request
+        self._res = response
         self._protocol_version = protocol_version
         self._extra_body_verification = tuple(extra_body_verification)
         self._extra_header_verification = tuple(extra_header_verification)
-        self._legacy_response = legacy_response
 
     def _matcher(self) -> RequestMatcher:
         class TxRollbackMatcher(RequestMatcher):
@@ -99,14 +107,29 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
         )
 
     def _handler(self) -> t.Callable[[Request], Response]:
-        if self._legacy_response:
+        if self._res.legacy:
             return self._legacy_handler()
 
         def handler(req: Request) -> Response:
             body: dict[str, t.Any] = {}
+
+            if self._res.errors is not None:
+                body["errors"] = [
+                    {
+                        k: serialize_any(v, self._protocol_version)
+                        for k, v in error.items()
+                    }
+                    for error in self._res.errors
+                ]
+
+            if self._res.status_code is None:
+                status_code = 400 if self._res.errors else 200
+            else:
+                status_code = self._res.status_code
+
             return Response(
                 json.dumps(body),
-                status=200,
+                status=status_code,
                 headers=self._version_as_header(self._protocol_version),
             )
 

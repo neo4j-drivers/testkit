@@ -153,6 +153,14 @@ class AuthorizationToken:
             return NotImplemented
         return vars(self) == vars(other)
 
+    def __repr__(self):
+        vars_repr = ", ".join(
+            f"{k}={v!r}" for k, v in vars(self).items() if k != "scheme"
+        )
+        if vars_repr:
+            vars_repr = f", {vars_repr}"
+        return f"AuthorizationToken({self.scheme!r}{vars_repr})"
+
 
 class AuthTokenAndExpiration:
     """Not a request; used in `ExpirationBasedAuthTokenProviderCompleted`."""

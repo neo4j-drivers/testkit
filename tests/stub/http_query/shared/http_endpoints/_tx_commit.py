@@ -12,6 +12,7 @@ from ..http_types import ProtocolVersion
 from ._base import (
     CustomAuthToken,
     HttpEndpoint,
+    serialize_any,
     url_encode,
 )
 
@@ -32,6 +33,8 @@ class HttpTxCommitEndpoint(HttpEndpoint):
     @dataclass
     class ResponseData:
         bookmarks: list[str] | None = None
+        errors: list[dict[str, object]] | None = None
+        status_code: int | None = None
 
     _req: RequestData
     _res: ResponseData
@@ -113,14 +116,28 @@ class HttpTxCommitEndpoint(HttpEndpoint):
 
     def _handler(self) -> t.Callable[[Request], Response]:
         def handler(req: Request) -> Response:
-            body = {}
+            body: dict[str, t.Any] = {}
 
             if self._res.bookmarks is not None:
                 body["bookmarks"] = self._res.bookmarks
 
+            if self._res.errors is not None:
+                body["errors"] = [
+                    {
+                        k: serialize_any(v, self._protocol_version)
+                        for k, v in error.items()
+                    }
+                    for error in self._res.errors
+                ]
+
+            if self._res.status_code is None:
+                status_code = 400 if self._res.errors else 202
+            else:
+                status_code = self._res.status_code
+
             return Response(
                 json.dumps(body),
-                status=202,
+                status=status_code,
                 headers=self._version_as_header(self._protocol_version),
             )
 

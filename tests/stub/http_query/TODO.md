@@ -33,11 +33,12 @@
   * [ ] verify connectivity
   * [x] errors
     * [x] via all APIs
+      * [ ] amend: tx commit & rollback
     * [x] different failure modes (only after some records)
     * [x] Only last error in list is raised
     * [x] Clients must be ready to handle 2xx status codes with errors
   * [x] TX rollback resulting in empty body with no content-type header
-  * [ ] auth manager
+  * [x] auth manager
   * [x] Auth schemes
     * [x] basic and bearer
     * [x] (failing) kerberos, custom, basic with realm

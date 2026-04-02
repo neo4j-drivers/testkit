@@ -28,6 +28,7 @@ import ifaddr
 from nutkit import protocol
 from nutkit.backend import Backend
 from nutkit.frontend import FakeTime
+from nutkit.protocol.feature import Feature
 
 MIN_INT64: t.Final[int] = -(2**63)
 MAX_INT64: t.Final[int] = (2**63) - 1
@@ -156,7 +157,7 @@ def get_driver_name():
 
 class TestkitTestCase(unittest.TestCase):
 
-    required_features = ()
+    required_features: tuple[Feature, ...] = ()
 
     def setUp(self):
         super().setUp()

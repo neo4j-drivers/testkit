@@ -7,11 +7,11 @@ from nutkit.frontend import (
     Driver,
 )
 from tests.shared import driver_feature
-from tests.stub.authorization.test_authorization import AuthorizationBase
+from tests.stub.authorization.base import AuthorizationBaseBolt
 from tests.stub.shared import StubServer
 
 
-class _TestTokenExpiredRetryBase(AuthorizationBase):
+class _TestTokenExpiredRetryBase(AuthorizationBaseBolt):
 
     required_features = types.Feature.API_DRIVER_VERIFY_AUTHENTICATION,
 
