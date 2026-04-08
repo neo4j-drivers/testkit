@@ -57,9 +57,9 @@ class _TestSummaryBase(TestkitTestCase):
 
         def adjust_expected(actual_child, expected_child):
             for key in [k for k, v in expected_child.items() if v is None]:
-                if key not in expected_child:
+                if key not in actual_child:
                     expected_child.pop(key)
-            for key in (k for k, v in expected_child.items() if v is None):
+            for key in (k for k, v in actual_child.items() if v is None):
                 expected_child.setdefault(key, None)
 
             if not missing_stats_detectable:
