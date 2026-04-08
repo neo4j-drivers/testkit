@@ -1433,7 +1433,7 @@ class TestSummaryPlan4x4(_TestSummaryBase):
             "summary_with_plan.script",
             vars_={"#PLAN#": json.dumps(plan)},
         )
-        self.assert_plan_equal(plan, summary.plan)
+        self.assert_plan_equal(summary.plan, plan)
 
     def test_profile(self):
         profile = {
@@ -1556,7 +1556,7 @@ class TestSummaryPlan6x0(_TestSummaryBase):
             "summary_with_plan.script",
             vars_={"#PLAN#": json.dumps(plan)},
         )
-        self.assert_plan_equal(plan, summary.plan)
+        self.assert_plan_equal(summary.plan, plan)
 
     def test_profile(self):
         profile = {
