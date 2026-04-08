@@ -1,3 +1,4 @@
+import copy
 import json
 from contextlib import contextmanager
 
@@ -86,6 +87,8 @@ class _TestSummaryBase(TestkitTestCase):
                 for ac, ec in zip(actual_children, expected_children):
                     adjust_expected(ac, ec)
 
+        actual = copy.deepcopy(actual)
+        expected = copy.deepcopy(expected)
         adjust_expected(actual, expected)
         self.assertEqual(actual, expected)
 
