@@ -150,6 +150,7 @@ def get_driver_name():
 class TestkitTestCase(unittest.TestCase):
 
     required_features = ()
+    maxDiff = None
 
     def setUp(self):
         super().setUp()

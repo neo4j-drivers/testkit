@@ -76,7 +76,7 @@ class TestSummary(TestkitTestCase):
     def test_no_notification_info(self):
         summary = self.get_summary("CREATE (n) RETURN n")
         notifications = summary.notifications
-        self.assertTrue(notifications is None or summary.notifications == [])
+        self.assertIn(notifications, (None, []))
 
     def _test_status(self, query, expected_code):
         summary = self.get_summary(query)
