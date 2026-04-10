@@ -72,13 +72,15 @@ class _TestSummaryBase(TestkitTestCase):
             #   * a null value
             #   * lack of the key
             expected_children = expected_child.get("children")
-            expected_has_children = expected_children not in (None, [])
+            expected_has_no_children = expected_children in (None, [])
             actual_children = actual_child.get("children")
-            actual_has_children = actual_children not in (None, [])
+            actual_has_no_children = actual_children in (None, [])
 
-            if not expected_has_children and not actual_has_children:
-                expected_child.pop("children", None)
-                actual_child.pop("children", None)
+            if expected_has_no_children and actual_has_no_children:
+                if "children" in actual_child:
+                    expected_child["children"] = actual_children
+                else:
+                    expected_child.pop("children", None)
                 return
 
             expected_children = expected_children or []
