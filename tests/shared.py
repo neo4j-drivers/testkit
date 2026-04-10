@@ -121,7 +121,7 @@ class MemoizedSupplier:
 
 
 @MemoizedSupplier
-def get_driver_features(backend):
+def get_driver_features(backend, silence_error=True):
     try:
         response = backend.send_and_receive(protocol.GetFeatures())
         if not isinstance(response, protocol.FeatureList):
@@ -135,9 +135,10 @@ def get_driver_features(backend):
         if get_driver_name() in ["go"]:
             assert protocol.Feature.API_SSL_SCHEMES not in features
             features.add(protocol.Feature.API_SSL_SCHEMES)
-        print("features", features)
         return features
     except (OSError, protocol.BaseError) as e:
+        if not silence_error:
+            raise
         warnings.warn(f"Could not fetch FeatureList: {e}")  # noqa: B028
         return set()
 
