@@ -95,3 +95,17 @@ class TestSessionRun(TestkitTestCase):
             self._session.run("RETURN 1 AS n")
         self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
         self._server.done()
+
+    def test_retries_idempotent_error_on_session_run(self):
+        self._server.start(
+            path=self.script_path("session_idempotent_error_on_run.script")
+        )
+        self._session = self._driver.session("r")
+        with self.assertRaises(types.DriverError) as exc:
+            # TODO: remove this block once all languages work
+            if get_driver_name() in ["javascript", "dotnet"]:
+                self._session.run("RETURN 1 AS n").next()
+            else:
+                self._session.run("RETURN 1 AS n")
+        self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
+        self._server.done()
