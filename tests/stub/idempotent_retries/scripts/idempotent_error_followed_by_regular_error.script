@@ -1,11 +1,9 @@
 !: BOLT 6.0
 
 C: HELLO {"{}": "*"}
-S: SUCCESS {"server": "Neo4j/2026.0.0", "connection_id": "bolt-1", "hints": {"telemetry.enabled": true}}
+S: SUCCESS {"server": "Neo4j/2026.0.0", "connection_id": "bolt-1"}
 *: RESET
 A: LOGON {"{}": "*"}
-C: TELEMETRY {"Z": "2"}
-S: SUCCESS {}
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Idempotent", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true} }
 {?
