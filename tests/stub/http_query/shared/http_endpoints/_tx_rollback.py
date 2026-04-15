@@ -96,7 +96,9 @@ class HttpTxRollbackEndpoint(HttpEndpoint):
             tx_id = url_encode(self._req.tx_id)
             if url_re:
                 tx_id = re.escape(tx_id)
-        url: str | re.Pattern[str] = f"/db/{db}/query/v2/tx/{tx_id}"
+        url: str | re.Pattern[str] = self._server.prefix_path(
+            f"/db/{db}/query/v2/tx/{tx_id}"
+        )
         if url_re:
             url = re.compile(f"^{url}$")
 

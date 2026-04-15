@@ -15,6 +15,8 @@ from ._base import (
 if t.TYPE_CHECKING:
     from werkzeug import Request
 
+    from ..http_server import TestKitStubHttpServer
+
     _T_Handler: t.TypeAlias = t.Callable[[Request], Response]
 
 
@@ -32,6 +34,12 @@ class HttpEitherEndpoint(HttpEndpointStateful):
         *endpoints: HttpEndpoint,
     ) -> None:
         self._endpoints = endpoints
+
+    def _set_server(self, server: TestKitStubHttpServer) -> None:
+        super()._set_server(server)
+        endpoints = self._endpoints
+        for endpoint in endpoints:
+            endpoint._set_server(server)
         self._matchers = tuple(endpoint._matcher() for endpoint in endpoints)
         self._handlers = tuple(endpoint._handler() for endpoint in endpoints)
 

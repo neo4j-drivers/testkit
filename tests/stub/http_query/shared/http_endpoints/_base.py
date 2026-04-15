@@ -18,7 +18,6 @@ from ..http_types import (
 )
 
 if t.TYPE_CHECKING:
-    from pytest_httpserver import HTTPServer
     from werkzeug import (
         Request,
         Response,
@@ -26,6 +25,8 @@ if t.TYPE_CHECKING:
     from werkzeug.datastructures import Headers
 
     from nutkit import protocol as types
+
+    from ..http_server import TestKitStubHttpServer
 
 T = t.TypeVar("T")
 
@@ -222,6 +223,12 @@ class TestKitRequestMatcher(RequestMatcher, abc.ABC):
 
 
 class HttpEndpoint(abc.ABC):
+    _server: TestKitStubHttpServer
+
+    def _set_server(self, server: TestKitStubHttpServer) -> None:
+        """Must be called before calling _matcher() or __handler()."""
+        self._server = server
+
     @abc.abstractmethod
     def _matcher(self) -> RequestMatcher: ...
 
@@ -230,9 +237,10 @@ class HttpEndpoint(abc.ABC):
 
     def install(
         self,
-        server: HTTPServer,
+        server: TestKitStubHttpServer,
         handler_type: HandlerType = HandlerType.ORDERED,
     ) -> None:
+        self._set_server(server)
         handler = server.expect(
             self._matcher(),
             handler_type=handler_type,

@@ -271,9 +271,15 @@ class HttpQueryEndpoint(HttpEndpoint):
 
         url: str | re.Pattern[str]
         if isinstance(self._req.db, str):
-            url = f"/db/{url_encode(self._req.db)}/query/v2"
+            url = self._server.prefix_path(
+                f"/db/{url_encode(self._req.db)}/query/v2"
+            )
         else:
-            url = re.compile(f"/db/{self._req.db.pattern}/query/v2")
+            url = re.compile(
+                self._server.prefix_path(
+                    f"/db/{self._req.db.pattern}/query/v2"
+                )
+            )
 
         return QueryMatcher(
             url,

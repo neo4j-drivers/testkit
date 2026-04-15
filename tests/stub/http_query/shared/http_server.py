@@ -17,7 +17,28 @@ if t.TYPE_CHECKING:
     from tests.stub.http_query.shared.http_endpoints import HttpEndpoint
 
 
-class _CustomHttpServer(_HTTPServer):
+class TestKitStubHttpServer(_HTTPServer):
+    _path_prefix: str = ""
+
+    @property
+    def path_prefix(self) -> str:
+        return self._path_prefix
+
+    @path_prefix.setter
+    def path_prefix(self, value: str) -> None:
+        if value.endswith("/"):
+            value = value[:-1]
+        self._path_prefix = value
+
+    def prefix_path(self, path: str) -> str:
+        if path and not path.startswith("/"):
+            path = f"/{path}"
+        return self.path_prefix + path
+
+    def clear(self):
+        super().clear()
+        self._path_prefix = type(self)._path_prefix
+
     def respond_nohandler(
         self,
         request: Request,
@@ -70,10 +91,10 @@ def _format_handlers(handlers: list[RequestHandler]) -> list[str]:
 
 
 class HTTPServer:
-    _server: _CustomHttpServer
+    _server: TestKitStubHttpServer
 
     def __init__(self) -> None:
-        self._server = _CustomHttpServer()
+        self._server = TestKitStubHttpServer()
         self._server.handlers
 
     def start(self) -> None:
@@ -85,8 +106,16 @@ class HTTPServer:
     def check_assertions(self) -> None:
         self._server.check_assertions()
 
-    def url_for(self, prefix: str) -> str:
-        return self._server.url_for(prefix)
+    @property
+    def path_prefix(self) -> str:
+        return self._server.path_prefix
+
+    @path_prefix.setter
+    def path_prefix(self, value: str) -> None:
+        self._server.path_prefix = value
+
+    def url_for(self, suffix: str) -> str:
+        return self._server.url_for(self._server.prefix_path(suffix))
 
     @property
     def host(self) -> str:
@@ -111,7 +140,7 @@ class HTTPServer:
         tx_url = self._server.url_for("/db/{databaseName}/tx")
 
         request_expectation = self._server.expect_request(
-            "/",
+            self._server.prefix_path("/"),
             method="GET",
             data="",
             headers={"Accept": "application/json", **extra_headers},

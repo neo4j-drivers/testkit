@@ -56,9 +56,10 @@ class HttpTestCase(TestkitTestCase):
         self,
         server: HTTPServer,
         auth: t.Any,
+        relative_path: str = "",
         **driver_kwargs: t.Any,
     ) -> t.Generator[Driver]:
-        url = server.url_for("")
+        url = server.url_for(relative_path)
         driver = Driver(self._backend, url, auth, **driver_kwargs)
         try:
             yield driver
