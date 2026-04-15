@@ -23,7 +23,8 @@ class Driver:
                  notifications_min_severity=None,
                  notifications_disabled_categories=None,
                  telemetry_disabled=None,
-                 client_certificate=None):
+                 client_certificate=None,
+                 disable_auto_commit_retries=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -69,6 +70,7 @@ class Driver:
             telemetry_disabled=telemetry_disabled,
             client_certificate=client_certificate_,
             client_certificate_provider_id=client_certificate_provider_id_,
+            disable_auto_commit_retries=disable_auto_commit_retries
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -200,7 +202,8 @@ class Driver:
                 bookmark_manager=None,
                 auth_token=None,
                 notifications_min_severity=None,
-                notifications_disabled_categories=None):
+                notifications_disabled_categories=None,
+                disable_auto_commit_retries=None):
         req = protocol.NewSession(
             self._driver.id, access_mode, bookmarks=bookmarks,
             database=database, fetchSize=fetch_size,
@@ -208,7 +211,8 @@ class Driver:
             bookmark_manager=bookmark_manager,
             auth_token=auth_token,
             notifications_min_severity=notifications_min_severity,
-            notifications_disabled_categories=notifications_disabled_categories
+            notifications_disabled_categories=notifications_disabled_categories,  # noqa: E501
+            disable_auto_commit_retries=disable_auto_commit_retries
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):

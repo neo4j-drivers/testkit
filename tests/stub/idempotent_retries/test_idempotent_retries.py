@@ -81,3 +81,62 @@ class TestIdempotentRetries(TestkitTestCase):
                     session.run("RETURN 1 AS n")
             self.assertEqual(exc.exception.code, "Neo.ClientError.MadeUp.Code")
         self._server.done()
+
+    def test_session_config_reenables_retries(self):
+        for (driver_config, session_config, should_retry) in (
+            (True, None, False),
+            (True, False, True),
+            (True, True, False),
+            (None, None, True),
+            (None, False, True),
+            (None, True, False),
+            (False, None, True),
+            (False, False, True),
+            (False, True, False),
+        ):
+            with self.subTest(
+                driver_config=driver_config,
+                session_config=session_config,
+                should_retry=should_retry
+            ):
+                if should_retry:
+                    self._server.start(
+                        path=self.script_path("idempotent_error_on_run.script")
+                    )
+                else:
+                    self._server.start(
+                        path=self.script_path("idempotent_error.script")
+                    )
+                uri = "bolt://%s" % self._server.address
+                with Driver(
+                    self._backend, uri,
+                    types.AuthorizationToken(
+                        "basic", principal="", credentials=""
+                    ),
+                    disable_auto_commit_retries=driver_config
+                ) as driver:
+                    with driver.session(
+                        "r", disable_auto_commit_retries=session_config
+                    ) as session:
+                        if should_retry:
+                            result = session.run("RETURN 1 AS n")
+                            records = result.list()
+                            self.assertEqual(
+                                types.Record(values=[types.CypherInt(1)]),
+                                records[0]
+                            )
+                        else:
+                            with self.assertRaises(types.DriverError) as exc:
+                                # TODO: remove this block once js and .net work
+                                if get_driver_name() in [
+                                    "javascript",
+                                    "dotnet"
+                                ]:
+                                    session.run("RETURN 1 AS n").next()
+                                else:
+                                    session.run("RETURN 1 AS n")
+                            self.assertEqual(
+                                exc.exception.code,
+                                "Neo.ClientError.MadeUp.Idempotent"
+                            )
+                self._server.done()
