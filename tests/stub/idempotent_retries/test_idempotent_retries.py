@@ -140,3 +140,4 @@ class TestIdempotentRetries(TestkitTestCase):
                                 "Neo.ClientError.MadeUp.Idempotent"
                             )
                 self._server.done()
+            self._server.reset()
