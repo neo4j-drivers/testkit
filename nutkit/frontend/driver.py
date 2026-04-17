@@ -70,7 +70,7 @@ class Driver:
             telemetry_disabled=telemetry_disabled,
             client_certificate=client_certificate_,
             client_certificate_provider_id=client_certificate_provider_id_,
-            disable_auto_commit_retries=disable_auto_commit_retries
+            disable_auto_commit_retries=disable_auto_commit_retries,
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -212,7 +212,7 @@ class Driver:
             auth_token=auth_token,
             notifications_min_severity=notifications_min_severity,
             notifications_disabled_categories=notifications_disabled_categories,  # noqa: E501
-            disable_auto_commit_retries=disable_auto_commit_retries
+            disable_auto_commit_retries=disable_auto_commit_retries,
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.Session):

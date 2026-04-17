@@ -78,7 +78,7 @@ class NewDriver:
         notifications_disabled_categories=None,
         telemetry_disabled=None,
         client_certificate=None, client_certificate_provider_id=None,
-        disable_auto_commit_retries=None
+        disable_auto_commit_retries=None,
     ):
         # Neo4j URI to connect to
         self.uri = uri
