@@ -41,7 +41,7 @@ class TestIdempotentRetries(TestkitTestCase):
 
     def _run_return_one(
         self, should_succeed, error_code="", driver_config=None,
-        session_config=None
+        session_config=None, error_on_pull=False,
     ):
         with self._driver(
             disable_auto_commit_retries=driver_config
@@ -63,7 +63,7 @@ class TestIdempotentRetries(TestkitTestCase):
                         if get_driver_name() in [
                             "javascript",
                             "dotnet"
-                        ]:
+                        ] or error_on_pull:
                             session.run("RETURN 1 AS n").next()
                         else:
                             session.run("RETURN 1 AS n")
@@ -123,6 +123,7 @@ class TestIdempotentRetries(TestkitTestCase):
         self._run_return_one(
             False,
             "Neo.ClientError.MadeUp.Idempotent",
+            error_on_pull=True,
         )
         self._server.done()
 
