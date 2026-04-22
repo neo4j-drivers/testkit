@@ -2,8 +2,8 @@
 
 C: HELLO {"{}": "*"}
 S: SUCCESS {"server": "Neo4j/2026.0.0", "connection_id": "bolt-1", "hints": {"telemetry.enabled": true}}
-*: RESET
 A: LOGON {"{}": "*"}
+*: RESET
 C: TELEMETRY {"Z": "*"}
 S: SUCCESS {}
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}

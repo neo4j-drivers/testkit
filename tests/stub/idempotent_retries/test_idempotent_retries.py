@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-
 from nutkit import protocol as types
 from nutkit.frontend import Driver
 from tests.shared import (
@@ -24,20 +22,13 @@ class TestIdempotentRetries(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    @contextmanager
     def _driver(self, disable_auto_commit_retries=None):
         uri = "bolt://%s" % self._server.address
-        driver = Driver(
-            self._backend, uri,
-            types.AuthorizationToken(
-                "basic", principal="", credentials=""
-            ),
+        auth = types.AuthorizationToken("basic", principal="", credentials="")
+        return Driver(
+            self._backend, uri, auth,
             disable_auto_commit_retries=disable_auto_commit_retries,
         )
-        try:
-            yield driver
-        finally:
-            driver.close()
 
     def _run_return_one(
         self, should_succeed, error_code="", driver_config=None,
@@ -59,7 +50,7 @@ class TestIdempotentRetries(TestkitTestCase):
                     self.assertEqual(1, len(records))
                 else:
                     with self.assertRaises(types.DriverError) as exc:
-                        # TODO: remove this block once js and .net work
+                        # TODO: remove driver name check once js and .net work
                         if get_driver_name() in [
                             "javascript",
                             "dotnet"

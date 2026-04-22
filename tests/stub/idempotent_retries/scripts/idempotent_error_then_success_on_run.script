@@ -1,8 +1,8 @@
 !: BOLT 6.0
 
 A: HELLO {"{}": "*"}
-*: RESET
 A: LOGON {"{}": "*"}
+*: RESET
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Quick", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true} }
 {?
