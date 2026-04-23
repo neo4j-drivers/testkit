@@ -35,15 +35,10 @@ class TestUnsupportedTypes(TestkitTestCase):
         finally:
             server.reset()
 
-    @contextmanager
     def _driver(self, server):
         uri = "bolt://%s" % server.address
         auth = types.AuthorizationToken("basic", principal="", credentials="")
-        driver = Driver(self._backend, uri, auth)
-        try:
-            yield driver
-        finally:
-            driver.close()
+        return Driver(self._backend, uri, auth)
 
     @contextmanager
     def _session(self, driver):
