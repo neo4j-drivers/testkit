@@ -40,14 +40,6 @@ class TestVectorTypes(TestkitTestCase):
         auth = types.AuthorizationToken("basic", principal="", credentials="")
         return Driver(self._backend, uri, auth)
 
-    @contextmanager
-    def _session(self, driver):
-        session = driver.session("r")
-        try:
-            yield session
-        finally:
-            session.close()
-
     def test_vector(self):
         script = "echo_vector.script"
         for (dtype, data) in (
@@ -132,7 +124,7 @@ class TestVectorTypes(TestkitTestCase):
                     },
                 ):
                     with self._driver(self._server) as driver:
-                        with self._session(driver) as session:
+                        with driver.session("r") as session:
                             vec = types.CypherVector(dtype, data)
                             result = session.run(
                                 "RETURN $vec AS vec",

@@ -40,14 +40,6 @@ class TestUnsupportedTypes(TestkitTestCase):
         auth = types.AuthorizationToken("basic", principal="", credentials="")
         return Driver(self._backend, uri, auth)
 
-    @contextmanager
-    def _session(self, driver):
-        session = driver.session("r")
-        try:
-            yield session
-        finally:
-            session.close()
-
     def test_unsupported_type(self):
 
         script = "echo_unsupported.script"
@@ -77,7 +69,7 @@ class TestUnsupportedTypes(TestkitTestCase):
                     },
                 ):
                     with self._driver(self._server) as driver:
-                        with self._session(driver) as session:
+                        with driver.session("r") as session:
                             unsupported = types.CypherUnsupportedType(
                                 name,
                                 str(minimum_protocol_major)
@@ -121,7 +113,7 @@ class TestUnsupportedTypes(TestkitTestCase):
                     },
                 ):
                     with self._driver(self._server) as driver:
-                        with self._session(driver) as session:
+                        with driver.session("r") as session:
                             unsupported = types.CypherUnsupportedType(
                                 name,
                                 str(minimum_protocol_major)
