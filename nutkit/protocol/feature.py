@@ -145,6 +145,8 @@ class Feature(Enum):
     BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
+    # The driver retries idempotent errors on session run
+    IDEMPOTENT_RETRIES = "Feature:IdempotentRetries"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.

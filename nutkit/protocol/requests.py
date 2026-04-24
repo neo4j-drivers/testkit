@@ -78,6 +78,7 @@ class NewDriver:
         notifications_disabled_categories=None,
         telemetry_disabled=None,
         client_certificate=None, client_certificate_provider_id=None,
+        disable_auto_commit_retries=None,
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -107,6 +108,8 @@ class NewDriver:
             self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
         if telemetry_disabled is not None:
             self.telemetryDisabled = telemetry_disabled
+        if disable_auto_commit_retries is not None:
+            self.disableAutoCommitRetries = disable_auto_commit_retries
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -499,7 +502,8 @@ class NewSession:
                  database=None, fetchSize=None, impersonatedUser=None,
                  bookmark_manager=None, auth_token=None,
                  notifications_min_severity=None,
-                 notifications_disabled_categories=None):
+                 notifications_disabled_categories=None,
+                 disable_auto_commit_retries=None):
         # Id of driver on backend that session should be created on
         self.driverId = driverId
         # Session accessmode: 'r' for read access and 'w' for write access.
@@ -513,6 +517,8 @@ class NewSession:
             self.notificationsMinSeverity = notifications_min_severity
         if notifications_disabled_categories is not None:
             self.notificationsDisabledCategories = notifications_disabled_categories  # noqa: E501
+        if disable_auto_commit_retries is not None:
+            self.disableAutoCommitRetries = disable_auto_commit_retries
 
         if bookmark_manager is not None:
             self.bookmarkManagerId = bookmark_manager.id
