@@ -59,7 +59,24 @@ class _TestTemporalTypes(TestkitTestCase):
         self._session = self._driver.session("w")
         dt = types.CypherDateTime(
             2022, 6, 7, 11, 52, 5, 0,
-            utc_offset_s=7200, timezone_id="Europe/Stockholm"
+            utc_offset_s=7200, timezone_id="Europe/Stockholm",
+        )
+        result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
+        records = list(result)
+        self.assertEqual(len(records), 1)
+        self.assertEqual(len(records[0].values), 1)
+        self.assertEqual(dt, records[0].values[0])
+
+    def _test_zoned_date_time_dst(self, patched):
+        script = "echo_zoned_date_time_dst.script"
+        if patched:
+            script = "echo_zoned_date_time_dst_patched.script"
+        self._start_server(script)
+        self._create_direct_driver()
+        self._session = self._driver.session("w")
+        dt = types.CypherDateTime(
+            2025, 10, 26, 2, 30, 0, 0,
+            utc_offset_s=3600, timezone_id="Europe/Stockholm",
         )
         result = self._session.run("RETURN $dt AS dt", params={"dt": dt})
         records = list(result)
@@ -193,6 +210,10 @@ class TestTemporalTypesV4x4(_TestTemporalTypes):
     def test_zoned_date_time_with_patch(self):
         super()._test_zoned_date_time(patched=True)
 
+    @driver_feature(types.Feature.BOLT_PATCH_UTC)
+    def test_zoned_date_time_dst_with_patch(self):
+        super()._test_zoned_date_time_dst(patched=True)
+
     def test_unknown_zoned_date_time(self):
         super()._test_unknown_zoned_date_time(patched=False)
 
@@ -221,6 +242,9 @@ class TestTemporalTypesV5x0(_TestTemporalTypes):
 
     def test_zoned_date_time(self):
         super()._test_zoned_date_time(patched=False)
+
+    def test_zoned_date_time_dst(self):
+        super()._test_zoned_date_time_dst(patched=False)
 
     def test_unknown_zoned_date_time(self):
         super()._test_unknown_zoned_date_time(patched=False)
