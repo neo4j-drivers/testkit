@@ -5,7 +5,7 @@ A: LOGON {"{}": "*"}
 *: RESET
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"], "qid": 1}
-C: PULL {"n": {"Z": "*"}}
-S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Idempotent", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true} }
+C: PULL {"n": {"Z": "*"}, "[qid]": 1}
+S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Idempotent", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true}, "gql_status": "gql_status", "description": "description" }
 +: RESET
 ?: GOODBYE

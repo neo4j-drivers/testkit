@@ -5,7 +5,7 @@ A: LOGON {"{}": "*"}
 *: RESET
 A: BEGIN {"{}": {"mode": "r"}}
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
-S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Idempotent", "message": "Something went wrong, but nothing's broken", "diagnostic_record": {"_idempotent": true}}
+S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Idempotent", "message": "Something went wrong, but nothing's broken", "diagnostic_record": {"_idempotent": true}, "gql_status": "gql_status", "description": "description" }
 {?
     # For drivers that pipeline a PULL after RUN
     C: PULL {"n": {"Z": "*"}}
