@@ -4,7 +4,7 @@ A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
 *: RESET
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
-S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Quick", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true} }
+S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Quick", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true}, "gql_status": "gql_status", "description": "description" }
 {?
     # For drivers that pipeline a PULL after RUN
     C: PULL {"n": {"Z": "*"}}
@@ -12,7 +12,7 @@ S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Quick", "message": "Something 
 ?}
 +: RESET
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
-S: SUCCESS {"fields": ["n"], "qid": 1}
+S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": {"Z": "*"}}
 S: RECORD [1]
    SUCCESS {"type": "r"}
