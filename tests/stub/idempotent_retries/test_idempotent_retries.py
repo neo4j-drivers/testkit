@@ -166,7 +166,10 @@ class TestIdempotentRetries(TestkitTestCase):
             with driver.session("r") as session:
                 with self.assertRaises(types.DriverError) as exc:
                     tx = session.begin_transaction()
-                    tx.run("RETURN 1")
+                    if get_driver_name() in ["javascript"]:
+                        tx.run("RETURN 1").next()
+                    else:
+                        tx.run("RETURN 1")
                     tx.commit()
                 self.assertEqual(
                     exc.exception.code,
