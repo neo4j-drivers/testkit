@@ -74,8 +74,11 @@ class TestUuid(TestkitTestCase):
     def test_uuid_in_list(self):
         script = "echo_uuid_list.script"
         uuid_pairs = [
-            (uuid.UUID(bytes=b"\x00" * 16), uuid.UUID(bytes=b"\xff" * 16)),
-            (uuid.UUID("01020304-0506-0708-090a-0b0c0d0e0f10"), uuid.uuid4()),
+            (
+                uuid.UUID("00000000000000000000000000000000"), 
+                uuid.UUID("ffffffffffffffffffffffffffffffff")
+            ),
+            (uuid.UUID("0102030405060708090a0b0c0d0e0f10"), uuid.uuid4()),
         ]
         for a, b in uuid_pairs:
             with self.subTest(a=str(a), b=str(b)):
@@ -106,8 +109,9 @@ class TestUuid(TestkitTestCase):
     def test_uuid_as_node_property(self):
         script = "uuid_node_property.script"
         for value in (
-            uuid.UUID("00000000-0000-0000-0000-000000000000"),
-            uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+            uuid.UUID("00000000000000000000000000000000"),
+            uuid.UUID("ffffffffffffffffffffffffffffffff"),
+            uuid.UUID("0102030405060708090a0b0c0d0e0f10"),
             uuid.uuid4(),
         ):
             with self.subTest(value=str(value)):
@@ -125,5 +129,5 @@ class TestUuid(TestkitTestCase):
                             node = records[0].values[0]
                             self.assertIsInstance(node, types.CypherNode)
                             self.assertEqual(
-                                node.props.value["uid"], types.CypherUUID(value)
+                                node.props["uid"], types.CypherUUID(value)
                             )
