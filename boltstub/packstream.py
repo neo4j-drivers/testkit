@@ -99,11 +99,10 @@ class StructTagV3(StructTagV2):
     unsupported = b"\x3F"
 
 
-UUID_MARKER = 0xE0
+UUID_MARKER = b"\xE0"
 
 
 class Uuid:
-    """Represents a UUID value: marker byte 0xE0 followed by 16 big-endian bytes."""
 
     def __init__(self, data: bytes):
         if len(data) != 16:
@@ -135,7 +134,7 @@ class Structure:
         self.fields = list(fields)
         self._packstream_version = packstream_version
         self._verified = verified
-        if packstream_version not in (None, 1, 2, 3):
+        if packstream_version not in (None, 1, 2, 3, 4):
             raise ValueError("Unknown packstream version: %s"
                              % packstream_version)
 
@@ -153,6 +152,8 @@ class Structure:
             PackstreamV2StructureValidator.verify_fields(self)
         elif self._packstream_version == 3:
             PackstreamV3StructureValidator.verify_fields(self)
+        elif self._packstream_version == 4:
+            PackstreamV4StructureValidator.verify_fields(self)
 
     @property
     def verified(self):
@@ -616,6 +617,9 @@ class Structure:
             )
         raise TypeError("Unsupported struct type: {}".format(self.tag))
 
+    def _to_jolt_v4_type(self):
+        return self._to_jolt_v3_type()
+
     def to_jolt_type(self):
         if not self._verified:
             raise ValueError("Can only convert verified struct to jolt type")
@@ -625,9 +629,11 @@ class Structure:
             return self._to_jolt_v2_type()
         elif self._packstream_version == 3:
             return self._to_jolt_v3_type()
+        elif self._packstream_version == 4:
+            return self._to_jolt_v4_type()
         raise ValueError(
-            "JOLT encoding is only defined for packstream_version 1 and 2, "
-            "not {}".format(self._packstream_version)
+            "JOLT encoding is not defined for packstream_version "
+            "{}".format(self._packstream_version)
         )
 
     def fields_to_jolt_types(self):
@@ -874,6 +880,10 @@ class PackstreamV3StructureValidator(PackstreamV2StructureValidator):
         if tag in field_validator:
             field_validator[tag](structure, fields)
         return True
+
+
+class PackstreamV4StructureValidator(PackstreamV3StructureValidator):
+    packstream_version = 4
 
 
 class Packer:
@@ -1402,6 +1412,12 @@ class UnpackableBuffer:
         else:
             return -1
 
+    def peek(self, n=1):
+        old_p = self.p
+        buf = self.read(n)
+        self.p = old_p
+        return buf
+
     def pop_u16(self):
         """Remove and return last 2 bytes as big-endian 16 bit unsigned int."""
         if self.used >= 2:
@@ -1421,6 +1437,28 @@ class UnpackableBuffer:
             if n == 0:
                 raise OSError("No data")
             self.used += n
+
+
+class UnpackerV4(Unpacker):
+    def _unpack(self, verify_struct=True):
+        marker = self.peek()
+        if marker == UUID_MARKER:
+            self.read_u8()  
+            return Uuid(self.read(16).tobytes())
+        return super()._unpack(verify_struct)
+
+
+class PackerV4(Packer):
+    def _pack(self, value):
+        if isinstance(value, Uuid):
+            self._write(UUID_MARKER)
+            self._write(value.data)
+        else:
+            super()._pack(value)
+
+
+_PACKERS = {1: Packer, 2: Packer, 3: Packer, 4: PackerV4}
+_UNPACKERS = {1: Unpacker, 2: Unpacker, 3: Unpacker, 4: UnpackerV4}
 
 
 class PackStream:
@@ -1450,7 +1488,8 @@ class PackStream:
                 break
         buffer = UnpackableBuffer(b"".join(self.data_buffer))
         self.data_buffer = []
-        unpacker = Unpacker(buffer, self.packstream_version)
+        unpacker_cls = _UNPACKERS[self.packstream_version]
+        unpacker = unpacker_cls(buffer, self.packstream_version)
         return unpacker.unpack_message()
 
     def write_message(self, message):
@@ -1462,7 +1501,8 @@ class PackStream:
         if not isinstance(message, Structure):
             raise TypeError("Message must be a Structure instance")
         b = BytesIO()
-        packer = Packer(b)
+        packer_cls = _PACKERS[self.packstream_version]
+        packer = packer_cls(b)
         packer.pack(message)
         data = b.getvalue()
         while len(data) > 65535:

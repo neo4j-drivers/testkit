@@ -650,7 +650,7 @@ class Bolt6x1Protocol(Bolt6x0Protocol):
     version_aliases = set()
     equivalent_versions = set()
 
-    packstream_version = 3
+    packstream_version = 4
     handshake_minor_support = True
     handshake_range_support = True
     max_handshake_manifest_version = 1

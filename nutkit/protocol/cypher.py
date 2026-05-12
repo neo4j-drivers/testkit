@@ -17,6 +17,7 @@ All cypher types are sent from backend as:
 
 import datetime
 import math
+import uuid
 
 
 class CypherNull:
@@ -621,6 +622,8 @@ def as_cypher_type(value):
         return CypherString(value)
     if isinstance(value, (bytes, bytearray)):
         return CypherBytes(value)
+    if isinstance(value, uuid.UUID):
+        return CypherUUID(value)
     if isinstance(
         value,
         (
