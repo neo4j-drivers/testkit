@@ -1456,13 +1456,16 @@ class UnpackerV4(Unpacker):
         marker = self.peek()
         if marker == UUID_MARKER:
             self.read_u8()
-            return Uuid(self.read(16).tobytes())
+            return UUID(bytes=self.read(16).tobytes())
         return super()._unpack(verify_struct)
 
 
 class PackerV4(Packer):
     def _pack(self, value):
-        if isinstance(value, Uuid):
+        if isinstance(value, UUID):
+            self._write(UUID_MARKER)
+            self._write(value.bytes)
+        elif isinstance(value, Uuid):
             self._write(UUID_MARKER)
             self._write(value.data)
         else:

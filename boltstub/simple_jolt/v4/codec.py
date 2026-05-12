@@ -17,6 +17,7 @@
 
 
 import inspect
+from uuid import UUID
 
 from ..common.errors import (
     JOLTValueError,
@@ -48,12 +49,8 @@ from ..v2.codec import JoltTypeTransformer
 from ..v3.codec import JoltVectorTransformer  # noqa: F401
 from ..v3.codec import JoltUnsupportedTypeTransformer   # noqa: F401
 
-from .jolt_types import (
-    JoltUuid,
-)
-
 class JoltUuidTransformer(JoltTypeTransformer):
-    _supported_types = (JoltUuid,)
+    _supported_types = (UUID,)
     sigil = "UU"
 
     @staticmethod
@@ -64,7 +61,7 @@ class JoltUuidTransformer(JoltTypeTransformer):
     def _decode_full(value, decode_cb):
         if not isinstance(value, str):
             raise JOLTValueError(f'Expecting UUID string after sigil {JoltUuidTransformer.sigil}')
-        return JoltUuid(value)
+        return UUID(value)
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
@@ -72,7 +69,7 @@ class JoltUuidTransformer(JoltTypeTransformer):
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
-        return {cls.sigil: value.value}
+        return {cls.sigil: str(value)}
 
 class Codec(_Codec):
     sigil_to_type = {
