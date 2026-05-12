@@ -64,6 +64,26 @@ class JoltVector(JoltV3VectorMixin, JoltType):
         super().__init__(dtype, data)
 
 
+class JoltUuid(JoltType):
+    """
+    Represents a UUID value in JOLT v3.
+
+    :param value: The UUID as a standard hyphenated string,
+        e.g. "550e8400-e29b-41d4-a716-446655440000".
+    """
+
+    def __init__(self, value):
+        self.value = str(value)
+
+    def __eq__(self, other):
+        if not isinstance(other, JoltUuid):
+            return NotImplemented
+        return self.value == other.value
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}<{self.value!r}>"
+
+
 class JoltUnsupportedType(JoltType):
     """
     Represents an Unsupported Type object in Jolt v3.
@@ -110,5 +130,6 @@ class JoltUnsupportedType(JoltType):
 __all__ = [
     JoltType,
     JoltUnsupportedType,
+    JoltUuid,
     JoltVector,
 ]

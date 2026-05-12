@@ -22,6 +22,7 @@ from codecs import decode
 from io import BytesIO
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
+from uuid import UUID
 
 from .simple_jolt.common import jolt_types as jolt_common_types
 from .simple_jolt.v1 import jolt_types as jolt_v1_types
@@ -96,6 +97,35 @@ class StructTagV2(StructTagV1):
 class StructTagV3(StructTagV2):
     vector = b"\x56"
     unsupported = b"\x3F"
+
+
+UUID_MARKER = 0xE0
+
+
+class Uuid:
+    """Represents a UUID value: marker byte 0xE0 followed by 16 big-endian bytes."""
+
+    def __init__(self, data: bytes):
+        if len(data) != 16:
+            raise ValueError(
+                "UUID data must be exactly 16 bytes, got %d" % len(data)
+            )
+        self.data = data
+
+    def to_jolt_type(self):
+        uuid = UUID(bytes=self.data)
+        return jolt_v3_types.JoltUuid(str(uuid))
+
+    @classmethod
+    def from_jolt_type(cls, jolt):
+        uuid = UUID(jolt.value)
+        return cls(uuid.bytes)
+
+    def __repr__(self):
+        return "Uuid(%s)" % UUID(bytes=self.data)
+    
+    def __eq__(self, other):
+        return isinstance(other, Uuid) and self.data == other.data
 
 
 class Structure:
@@ -441,6 +471,8 @@ class Structure:
 
     @classmethod
     def from_jolt_type(cls, jolt: jolt_common_types.JoltType):
+        if isinstance(jolt, jolt_v3_types.JoltUuid):
+            return Uuid.from_jolt_type(jolt)
         if isinstance(jolt, jolt_v1_types.JoltType):
             return cls._from_jolt_v1_type(jolt)
         elif isinstance(jolt, jolt_v2_types.JoltType):
@@ -605,6 +637,8 @@ class Structure:
             if isinstance(field, list):
                 return list(map(transform_field, field))
             if isinstance(field, Structure):
+                return field.to_jolt_type()
+            if isinstance(field, Uuid):
                 return field.to_jolt_type()
             return field
 
@@ -921,6 +955,11 @@ class Packer:
         # Structure
         elif isinstance(value, Structure):
             self.pack_struct(value.tag, value.fields)
+
+        # UUID
+        elif isinstance(value, Uuid):
+            write(bytes([UUID_MARKER]))
+            write(value.data)
 
         # Other
         else:
@@ -1239,6 +1278,9 @@ class Unpacker:
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
+
+            elif marker == UUID_MARKER:
+                return Uuid(self.read(16).tobytes())
 
             else:
                 raise ValueError("Unknown PackStream marker %02X" % marker)

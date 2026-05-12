@@ -515,6 +515,30 @@ class CypherVector:
                    for attr in ("dtype", "data"))
 
 
+class CypherUUID:
+    """
+    A Cypher UUID value.
+
+    :param value: The UUID as a standard hyphenated string,
+        e.g. "550e8400-e29b-41d4-a716-446655440000".
+    """
+
+    def __init__(self, value):
+        self.value = str(value)
+
+    def __str__(self):
+        return "CypherUUID({})".format(self.value)
+
+    def __repr__(self):
+        return "<{}({})>".format(self.__class__.__name__, self.value)
+
+    def __eq__(self, other):
+        if not isinstance(other, type(self)):
+            return False
+            
+        return self.value == other.value
+
+
 class CypherUnsupportedType:
     r"""
     A cypher unsupported type.
@@ -610,6 +634,7 @@ def as_cypher_type(value):
             CypherDuration,
             CypherVector,
             CypherUnsupportedType,
+            CypherUUID,
         )
     ):
         return value

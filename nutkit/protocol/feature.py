@@ -94,6 +94,8 @@ class Feature(Enum):
     API_TYPE_TEMPORAL = "Feature:API:Type.Temporal"
     # The driver supports sending and receiving the unsupported type data type.
     API_TYPE_UNSUPPORTED_TYPE = "Feature:API:Type.UnsupportedType"
+    # The driver supports sending and receiving UUID data types.
+    API_TYPE_UUID = "Feature:API:Type.UUID"
     # The driver supports sending and receiving vector data types.
     API_TYPE_VECTOR = "Feature:API:Type.Vector"
     # The driver supports single-sign-on (SSO) by providing a bearer auth token
@@ -140,6 +142,8 @@ class Feature(Enum):
     BOLT_5_8 = "Feature:Bolt:5.8"
     # The driver supports Bolt protocol version 6.0
     BOLT_6_0 = "Feature:Bolt:6.0"
+    # The driver supports Bolt protocol version 6.1
+    BOLT_6_1 = "Feature:Bolt:6.1"
     # The driver supports negotiating the Bolt protocol version with the server
     # using handshake manifest v1.
     BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"

@@ -645,4 +645,17 @@ class Bolt6x0Protocol(Bolt5x8Protocol):
     server_agent = "Neo4j/2025.08.0"
 
 
+class Bolt6x1Protocol(Bolt6x0Protocol):
+    protocol_version = (6, 1)
+    version_aliases = set()
+    equivalent_versions = set()
+
+    packstream_version = 3
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 1
+
+    server_agent = "Neo4j/2025.08.0"
+
+
 # [stub-bolt-change] search tag when adding/removing bolt version support
