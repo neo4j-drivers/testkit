@@ -47,7 +47,7 @@ class TestUuid(TestkitTestCase):
             uuid.UUID(bytes=b"\xff" * 16),
             uuid.UUID("01020304-0506-0708-090a-0b0c0d0e0f10"),
             uuid.uuid4(),
-        )[:1]:
+        ):
             with self.subTest(value=str(value)):
                 with self._started_server(
                     self._server,
