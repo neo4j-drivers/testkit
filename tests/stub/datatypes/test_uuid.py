@@ -75,7 +75,7 @@ class TestUuid(TestkitTestCase):
         script = "echo_uuid_list.script"
         uuid_pairs = [
             (
-                uuid.UUID("00000000000000000000000000000000"), 
+                uuid.UUID("00000000000000000000000000000000"),
                 uuid.UUID("ffffffffffffffffffffffffffffffff")
             ),
             (uuid.UUID("0102030405060708090a0b0c0d0e0f10"), uuid.uuid4()),
@@ -106,6 +106,35 @@ class TestUuid(TestkitTestCase):
                             self.assertEqual(len(fields), 1)
                             self.assertEqual(cypher_uuids, fields[0])
 
+    def test_uuid_in_map(self):
+        script = "echo_uuid_map.script"
+        for value in (
+            uuid.UUID("00000000000000000000000000000000"),
+            uuid.UUID("ffffffffffffffffffffffffffffffff"),
+            uuid.UUID("0102030405060708090a0b0c0d0e0f10"),
+            uuid.uuid4(),
+        ):
+            with self.subTest(value=str(value)):
+                with self._started_server(
+                    self._server,
+                    script,
+                    vars_={"#UUID#": json.dumps({"UU": str(value)})},
+                ):
+                    with self._driver(self._server) as driver:
+                        with driver.session("r") as session:
+                            cypher_uuid = types.CypherUUID(value)
+                            container = types.CypherMap({"key": cypher_uuid})
+                            result = session.run(
+                                "RETURN $container AS container",
+                                params={"container": container},
+                            )
+                            records = list(result)
+                            self._server.done()
+                            self.assertEqual(len(records), 1)
+                            fields = records[0].values
+                            self.assertEqual(len(fields), 1)
+                            self.assertEqual(container, fields[0])
+
     def test_uuid_as_node_property(self):
         script = "uuid_node_property.script"
         for value in (
@@ -129,5 +158,5 @@ class TestUuid(TestkitTestCase):
                             node = records[0].values[0]
                             self.assertIsInstance(node, types.CypherNode)
                             self.assertEqual(
-                                node.props["uid"], types.CypherUUID(value)
+                                node.props.value["uid"], types.CypherUUID(value)
                             )
