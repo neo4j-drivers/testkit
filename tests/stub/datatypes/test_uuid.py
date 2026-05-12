@@ -43,8 +43,8 @@ class TestUuid(TestkitTestCase):
     def test_uuid(self):
         script = "echo_uuid.script"
         for value in (
-            uuid.UUID(bytes=b"\x00" * 16),
-            uuid.UUID(bytes=b"\xff" * 16),
+            uuid.UUID("00000000-0000-0000-0000-000000000000"),
+            uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
             uuid.UUID("01020304-0506-0708-090a-0b0c0d0e0f10"),
             uuid.uuid4(),
         ):
