@@ -102,3 +102,28 @@ class TestUuid(TestkitTestCase):
                             fields = records[0].values
                             self.assertEqual(len(fields), 1)
                             self.assertEqual(cypher_uuids, fields[0])
+
+    def test_uuid_as_node_property(self):
+        script = "uuid_node_property.script"
+        for value in (
+            uuid.UUID("00000000-0000-0000-0000-000000000000"),
+            uuid.UUID("550e8400-e29b-41d4-a716-446655440000"),
+            uuid.uuid4(),
+        ):
+            with self.subTest(value=str(value)):
+                with self._started_server(
+                    self._server,
+                    script,
+                    vars_={"#UUID#": json.dumps({"UU": str(value)})},
+                ):
+                    with self._driver(self._server) as driver:
+                        with driver.session("r") as session:
+                            result = session.run("MATCH (n:Thing) RETURN n")
+                            records = list(result)
+                            self._server.done()
+                            self.assertEqual(len(records), 1)
+                            node = records[0].values[0]
+                            self.assertIsInstance(node, types.CypherNode)
+                            self.assertEqual(
+                                node.props.value["uid"], types.CypherUUID(value)
+                            )
