@@ -956,11 +956,6 @@ class Packer:
         elif isinstance(value, Structure):
             self.pack_struct(value.tag, value.fields)
 
-        # UUID
-        elif isinstance(value, Uuid):
-            write(bytes([UUID_MARKER]))
-            write(value.data)
-
         # Other
         else:
             raise ValueError("Values of type %s are not supported"
@@ -1278,9 +1273,6 @@ class Unpacker:
 
             elif marker == 0xDF:  # END_OF_STREAM:
                 return EndOfStream
-
-            elif marker == UUID_MARKER:
-                return Uuid(self.read(16).tobytes())
 
             else:
                 raise ValueError("Unknown PackStream marker %02X" % marker)
