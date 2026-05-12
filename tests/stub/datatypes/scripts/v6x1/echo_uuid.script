@@ -1,0 +1,16 @@
+!: BOLT 6.1
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN {"U": "RETURN $uuid AS uuid"} {"uuid": #UUID#} {"{}": "*"}
+S: SUCCESS {"fields": ["uuid"], "qid": 1}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+----
+    C: PULL {"n": {"Z": "*"}, "qid": 1}
+}}
+S: RECORD [#UUID#]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE
