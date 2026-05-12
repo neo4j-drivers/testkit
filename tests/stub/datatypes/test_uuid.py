@@ -61,11 +61,11 @@ class TestUuid(TestkitTestCase):
                             cypher_uuid = types.CypherUUID(value)
                             result = session.run(
                                 "RETURN $uuid AS uuid",
-                                params={"uuid": uuid},
+                                params={"uuid": cypher_uuid},
                             )
                             records = list(result)
                             self._server.done()
                             self.assertEqual(len(records), 1)
                             fields = records[0].values
                             self.assertEqual(len(fields), 1)
-                            self.assertEqual(cypher_uuid, fields[0].value)
+                            self.assertEqual(cypher_uuid, fields[0])

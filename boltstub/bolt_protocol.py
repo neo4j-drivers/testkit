@@ -25,10 +25,12 @@ from .errors import (
     BoltUnknownVersionError,
     ServerExit,
 )
+
 from .packstream import Structure
 from .simple_jolt import v1 as jolt_v1
 from .simple_jolt import v2 as jolt_v2
 from .simple_jolt import v3 as jolt_v3
+from .simple_jolt import v4 as jolt_v4
 from .util import (
     hex_repr,
     recursive_subclasses,
@@ -38,6 +40,7 @@ jolt_package = {
     1: jolt_v1,
     2: jolt_v2,
     3: jolt_v3,
+    4: jolt_v4,
 }
 
 auto_bolt_id = 0

@@ -46,7 +46,6 @@ from ..v2.codec import JoltStrTransformer  # noqa: F401
 from ..v2.codec import JoltTypeTransformer
 from .jolt_types import (
     JoltUnsupportedType,
-    JoltUuid,
     JoltVector,
 )
 
@@ -95,29 +94,6 @@ class JoltVectorTransformer(JoltTypeTransformer):
     def _encode_full(cls, value, encode_cb, human_readable):
         data = encode_bytes(value.data, human_readable=human_readable)
         return {cls.sigil: [value.dtype, data]}
-
-
-class JoltUuidTransformer(JoltTypeTransformer):
-    _supported_types = (JoltUuid,)
-    sigil = "UU"
-
-    @staticmethod
-    def _decode_simple(value, decode_cb):
-        raise NoSimpleRepresentation()
-
-    @staticmethod
-    def _decode_full(value, decode_cb):
-        if not isinstance(value, str):
-            raise JOLTValueError(f'Expecting UUID string after sigil {JoltUuidTransformer.sigil}')
-        return JoltUuid(value)
-
-    @staticmethod
-    def _encode_simple(value, encode_cb, human_readable):
-        raise NoSimpleRepresentation()
-
-    @classmethod
-    def _encode_full(cls, value, encode_cb, human_readable):
-        return {cls.sigil: value.value}
 
 
 class JoltUnsupportedTypeTransformer(JoltTypeTransformer):

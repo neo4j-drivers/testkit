@@ -28,11 +28,12 @@ from .simple_jolt.common import jolt_types as jolt_common_types
 from .simple_jolt.v1 import jolt_types as jolt_v1_types
 from .simple_jolt.v2 import jolt_types as jolt_v2_types
 from .simple_jolt.v3 import jolt_types as jolt_v3_types
-
+from .simple_jolt.v4 import jolt_types as jolt_v4_types
 _jolt_types = {
     1: jolt_v1_types,
     2: jolt_v2_types,
     3: jolt_v3_types,
+    4: jolt_v4_types
 }
 
 
@@ -113,7 +114,7 @@ class Uuid:
 
     def to_jolt_type(self):
         uuid = UUID(bytes=self.data)
-        return jolt_v3_types.JoltUuid(str(uuid))
+        return jolt_v4_types.JoltUuid(str(uuid))
 
     @classmethod
     def from_jolt_type(cls, jolt):
@@ -122,7 +123,7 @@ class Uuid:
 
     def __repr__(self):
         return "Uuid(%s)" % UUID(bytes=self.data)
-    
+
     def __eq__(self, other):
         return isinstance(other, Uuid) and self.data == other.data
 
@@ -471,15 +472,23 @@ class Structure:
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
+    def _from_jolt_v4_type(cls, jolt: jolt_v3_types.JoltType):
+        # jolt v4 does not include new structure types, just the UUID
+        # type, which is a packstream primitive, so this function should
+        # never be called.
+        pass
+
+
+    @classmethod
     def from_jolt_type(cls, jolt: jolt_common_types.JoltType):
-        if isinstance(jolt, jolt_v3_types.JoltUuid):
-            return Uuid.from_jolt_type(jolt)
         if isinstance(jolt, jolt_v1_types.JoltType):
             return cls._from_jolt_v1_type(jolt)
         elif isinstance(jolt, jolt_v2_types.JoltType):
             return cls._from_jolt_v2_type(jolt)
         elif isinstance(jolt, jolt_v3_types.JoltType):
             return cls._from_jolt_v3_type(jolt)
+        elif isinstance(jolt, jolt_v4_types.JoltType):
+            return cls._from_jolt_v4_type(jolt)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     def _to_jolt_v1_type(self):
@@ -1188,6 +1197,9 @@ class Unpacker:
     def read(self, n=1):
         return self.unpackable.read(n)
 
+    def peek(self, n=1):
+        return self.unpackable.peek(n)
+
     def read_u8(self):
         return self.unpackable.read_u8()
 
@@ -1443,7 +1455,7 @@ class UnpackerV4(Unpacker):
     def _unpack(self, verify_struct=True):
         marker = self.peek()
         if marker == UUID_MARKER:
-            self.read_u8()  
+            self.read_u8()
             return Uuid(self.read(16).tobytes())
         return super()._unpack(verify_struct)
 
