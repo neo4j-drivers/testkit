@@ -133,11 +133,11 @@ def initialise_configurations(settings):
             ("5.26",     "5",      True,        False,    "neo4j",  0),
             ("5.26",     "5",      True,        True,     "neo4j", 60),
             # nightly build of matching version(s)
-            ("2025.dev", "2025",   False,       False,    "bolt",   0),
-            ("2025.dev", "2025",   False,       False,    "neo4j",  0),
-            ("2025.dev", "2025",   True,        False,    "bolt",  90),
-            ("2025.dev", "2025",   True,        False,    "neo4j",  0),
-            ("2025.dev", "2025",   True,        True,     "neo4j", 90),
+            ("2026.dev", "2026",   False,       False,    "bolt",   0),
+            ("2026.dev", "2026",   False,       False,    "neo4j",  0),
+            ("2026.dev", "2026",   True,        False,    "bolt",  90),
+            ("2026.dev", "2026",   True,        False,    "neo4j",  0),
+            ("2026.dev", "2026",   True,        True,     "neo4j", 90),
         )
     ]
 
