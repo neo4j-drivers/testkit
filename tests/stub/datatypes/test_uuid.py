@@ -45,7 +45,7 @@ class TestUuid(TestkitTestCase):
         for value in (
             uuid.UUID("00000000000000000000000000000000"),
             uuid.UUID("ffffffffffffffffffffffffffffffff"),
-            uuid.UUID("0102030405060708090a0b0c0d0e0f10"),
+            uuid.UUID("0102030405060708090a0b0c0d0e0f12"),
             uuid.uuid4(),
         ):
             with self.subTest(value=str(value)):
@@ -78,7 +78,7 @@ class TestUuid(TestkitTestCase):
                 uuid.UUID("00000000000000000000000000000000"),
                 uuid.UUID("ffffffffffffffffffffffffffffffff")
             ),
-            (uuid.UUID("0102030405060708090a0b0c0d0e0f10"), uuid.uuid4()),
+            (uuid.UUID("0102030405060708090a0b0c0d0e0f12"), uuid.uuid4()),
         ]
         for a, b in uuid_pairs:
             with self.subTest(a=str(a), b=str(b)):
@@ -111,7 +111,7 @@ class TestUuid(TestkitTestCase):
         for value in (
             uuid.UUID("00000000000000000000000000000000"),
             uuid.UUID("ffffffffffffffffffffffffffffffff"),
-            uuid.UUID("0102030405060708090a0b0c0d0e0f10"),
+            uuid.UUID("0102030405060708090a0b0c0d0e0f12"),
             uuid.uuid4(),
         ):
             with self.subTest(value=str(value)):
@@ -140,7 +140,7 @@ class TestUuid(TestkitTestCase):
         for value in (
             uuid.UUID("00000000000000000000000000000000"),
             uuid.UUID("ffffffffffffffffffffffffffffffff"),
-            uuid.UUID("0102030405060708090a0b0c0d0e0f10"),
+            uuid.UUID("0102030405060708090a0b0c0d0e0f12"),
             uuid.uuid4(),
         ):
             with self.subTest(value=str(value)):
