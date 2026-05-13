@@ -56,6 +56,7 @@ UNPACKED_MARKERS.update({bytes(bytearray([z])): z for z in range(0x00, 0x80)})
 UNPACKED_MARKERS.update({bytes(bytearray([z + 256])): z
                          for z in range(-0x10, 0x00)})
 
+UUID_MARKER = b"\xE0"
 
 INT64_MIN = -(2 ** 63)
 INT64_MAX = 2 ** 63
@@ -98,34 +99,6 @@ class StructTagV2(StructTagV1):
 class StructTagV3(StructTagV2):
     vector = b"\x56"
     unsupported = b"\x3F"
-
-
-UUID_MARKER = b"\xE0"
-
-
-class Uuid:
-
-    def __init__(self, data: bytes):
-        if len(data) != 16:
-            raise ValueError(
-                "UUID data must be exactly 16 bytes, got %d" % len(data)
-            )
-        self.data = data
-
-    def to_jolt_type(self):
-        uuid = UUID(bytes=self.data)
-        return jolt_v4_types.JoltUuid(str(uuid))
-
-    @classmethod
-    def from_jolt_type(cls, jolt):
-        uuid = UUID(jolt.value)
-        return cls(uuid.bytes)
-
-    def __repr__(self):
-        return "Uuid(%s)" % UUID(bytes=self.data)
-
-    def __eq__(self, other):
-        return isinstance(other, Uuid) and self.data == other.data
 
 
 class Structure:
@@ -1465,9 +1438,6 @@ class PackerV4(Packer):
         if isinstance(value, UUID):
             self._write(UUID_MARKER)
             self._write(value.bytes)
-        elif isinstance(value, Uuid):
-            self._write(UUID_MARKER)
-            self._write(value.data)
         else:
             super()._pack(value)
 

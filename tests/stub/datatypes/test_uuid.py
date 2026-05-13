@@ -1,19 +1,20 @@
 import json
 import uuid
-from contextlib import contextmanager
 
 from nutkit import protocol as types
-from nutkit.frontend import Driver
-from tests.shared import TestkitTestCase
+from nutkit.protocol import as_cypher_type
+from tests.stub.datatypes.echo_test_case import EchoTestCase
 from tests.stub.shared import StubServer
 
 
-class TestUuid(TestkitTestCase):
+class TestUuid(EchoTestCase):
+    def _bolt_version(self):
+        return "6.1"
+
     required_features = (
         types.Feature.API_TYPE_UUID,
         types.Feature.BOLT_6_1,
     )
-    bolt_version = "6.1"
 
     def setUp(self):
         super().setUp()
@@ -23,25 +24,7 @@ class TestUuid(TestkitTestCase):
         self._server.reset()
         super().tearDown()
 
-    @contextmanager
-    def _started_server(self, server, script, vars_=None):
-        version_folder = "v{}".format(self.bolt_version.replace(".", "x"))
-        server.start(
-            path=self.script_path(version_folder, script),
-            vars_=vars_,
-        )
-        try:
-            yield
-        finally:
-            server.reset()
-
-    def _driver(self, server):
-        uri = "bolt://%s" % server.address
-        auth = types.AuthorizationToken("basic", principal="", credentials="")
-        return Driver(self._backend, uri, auth)
-
     def test_uuid(self):
-        script = "echo_uuid.script"
         for value in (
             uuid.UUID("00000000000000000000000000000000"),
             uuid.UUID("ffffffffffffffffffffffffffffffff"),
@@ -49,65 +32,31 @@ class TestUuid(TestkitTestCase):
             uuid.uuid4(),
         ):
             with self.subTest(value=str(value)):
-                with self._started_server(
-                    self._server,
-                    script,
-                    vars_={
-                        "#UUID#": json.dumps({"UU": str(value)}),
-                    },
-                ):
-                    with self._driver(self._server) as driver:
-                        with driver.session("r") as session:
-                            cypher_uuid = types.CypherUUID(value)
-                            result = session.run(
-                                "RETURN $uuid AS uuid",
-                                params={"uuid": cypher_uuid},
-                            )
-                            records = list(result)
-                            self._server.done()
-                            self.assertEqual(len(records), 1)
-                            fields = records[0].values
-                            self.assertEqual(len(fields), 1)
-                            self.assertEqual(cypher_uuid, fields[0])
-
+                cypher_value = as_cypher_type(value)
+                jolt_value = json.dumps({"UU": str(value)})
+                self._test_echo(self._server, jolt_value, cypher_value)
+            self._server.reset()
 
     def test_uuid_in_list(self):
-        script = "echo_uuid_list.script"
+        script = "echo_value.script"
         uuid_pairs = [
-            (
+            [
                 uuid.UUID("00000000000000000000000000000000"),
                 uuid.UUID("ffffffffffffffffffffffffffffffff")
-            ),
-            (uuid.UUID("0102030405060708090a0b0c0d0e0f12"), uuid.uuid4()),
+            ],
+            [uuid.UUID("0102030405060708090a0b0c0d0e0f12"), uuid.uuid4()],
         ]
-        for a, b in uuid_pairs:
-            with self.subTest(a=str(a), b=str(b)):
-                jolt_list = json.dumps(
-                    [{"UU": str(a)}, {"UU": str(b)}]
+        for pair in uuid_pairs:
+            cypher_value = as_cypher_type(pair)
+            with self.subTest(values=cypher_value):
+                jolt_value = json.dumps(
+                    [{"UU": str(x)} for x in pair]
                 )
-                with self._started_server(
-                    self._server,
-                    script,
-                    vars_={"#UUIDS#": jolt_list},
-                ):
-                    with self._driver(self._server) as driver:
-                        with driver.session("r") as session:
-                            cypher_uuids = types.CypherList(
-                                [types.CypherUUID(a), types.CypherUUID(b)]
-                            )
-                            result = session.run(
-                                "RETURN $uuids AS uuids",
-                                params={"uuids": cypher_uuids},
-                            )
-                            records = list(result)
-                            self._server.done()
-                            self.assertEqual(len(records), 1)
-                            fields = records[0].values
-                            self.assertEqual(len(fields), 1)
-                            self.assertEqual(cypher_uuids, fields[0])
+                self._test_echo(self._server, jolt_value, cypher_value)
+            self._server.reset()
 
     def test_uuid_in_map(self):
-        script = "echo_uuid_map.script"
+        script = "echo_value.script"
         for value in (
             uuid.UUID("00000000000000000000000000000000"),
             uuid.UUID("ffffffffffffffffffffffffffffffff"),
@@ -115,25 +64,10 @@ class TestUuid(TestkitTestCase):
             uuid.uuid4(),
         ):
             with self.subTest(value=str(value)):
-                with self._started_server(
-                    self._server,
-                    script,
-                    vars_={"#UUID#": json.dumps({"UU": str(value)})},
-                ):
-                    with self._driver(self._server) as driver:
-                        with driver.session("r") as session:
-                            cypher_uuid = types.CypherUUID(value)
-                            container = types.CypherMap({"key": cypher_uuid})
-                            result = session.run(
-                                "RETURN $container AS container",
-                                params={"container": container},
-                            )
-                            records = list(result)
-                            self._server.done()
-                            self.assertEqual(len(records), 1)
-                            fields = records[0].values
-                            self.assertEqual(len(fields), 1)
-                            self.assertEqual(container, fields[0])
+                cypher_value = as_cypher_type({"key": value})
+                jolt_value = json.dumps({"key": {"UU": str(value)}})
+                self._test_echo(self._server, jolt_value, cypher_value)
+            self._server.reset()
 
     def test_uuid_as_node_property(self):
         script = "uuid_node_property.script"
@@ -160,3 +94,4 @@ class TestUuid(TestkitTestCase):
                             self.assertEqual(
                                 node.props.value["uid"], types.CypherUUID(value)
                             )
+                            self.assertEqual(len(node.props.value), 1)
