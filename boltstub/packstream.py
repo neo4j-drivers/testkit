@@ -29,6 +29,7 @@ from .simple_jolt.v1 import jolt_types as jolt_v1_types
 from .simple_jolt.v2 import jolt_types as jolt_v2_types
 from .simple_jolt.v3 import jolt_types as jolt_v3_types
 from .simple_jolt.v4 import jolt_types as jolt_v4_types
+
 _jolt_types = {
     1: jolt_v1_types,
     2: jolt_v2_types,
@@ -445,12 +446,11 @@ class Structure:
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
-    def _from_jolt_v4_type(cls, jolt: jolt_v3_types.JoltType):
+    def _from_jolt_v4_type(cls, jolt: jolt_v4_types.JoltType):
         # jolt v4 does not include new structure types, just the UUID
         # type, which is a packstream primitive, so this function should
         # never be called.
-        pass
-
+        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
     def from_jolt_type(cls, jolt: jolt_common_types.JoltType):
@@ -626,7 +626,7 @@ class Structure:
                 return list(map(transform_field, field))
             if isinstance(field, Structure):
                 return field.to_jolt_type()
-            if isinstance(field, Uuid):
+            if isinstance(field, UUID):
                 return field.to_jolt_type()
             return field
 
