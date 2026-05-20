@@ -641,8 +641,7 @@ class Bolt6x0Protocol(Bolt5x8Protocol):
     handshake_range_support = True
     max_handshake_manifest_version = 1
 
-    # TODO: finalize server version
-    server_agent = "Neo4j/2025.08.0"
+    server_agent = "Neo4j/2025.10.0"
 
 
 # [stub-bolt-change] search tag when adding/removing bolt version support
