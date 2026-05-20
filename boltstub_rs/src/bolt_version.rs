@@ -334,8 +334,7 @@ impl BoltVersion {
             BoltVersion::V5_6 => "Neo4j/5.23.0",
             BoltVersion::V5_7 => "Neo4j/5.26.0",
             BoltVersion::V5_8 => "Neo4j/5.26.0",
-            // TODO: Finalize when Bolt 6.0 support has been released in the server.
-            BoltVersion::V6_0 => "Neo4j/2025.08.0",
+            BoltVersion::V6_0 => "Neo4j/2025.10.0",
         }
     }
 }
