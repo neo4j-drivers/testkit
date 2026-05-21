@@ -25,7 +25,6 @@ from .errors import (
     BoltUnknownVersionError,
     ServerExit,
 )
-
 from .packstream import Structure
 from .simple_jolt import v1 as jolt_v1
 from .simple_jolt import v2 as jolt_v2

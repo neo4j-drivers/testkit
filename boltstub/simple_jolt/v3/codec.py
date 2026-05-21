@@ -187,8 +187,8 @@ encode_full = Codec.encode_full
 
 
 __all__ = [
-    Codec,
-    decode,
-    encode_simple,
-    encode_full,
+    "Codec",
+    "decode",
+    "encode_simple",
+    "encode_full",
 ]
