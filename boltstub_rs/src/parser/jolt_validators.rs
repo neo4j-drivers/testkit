@@ -17,10 +17,11 @@ use crate::parse_error::ParseError;
 use crate::util::opt_res_ret;
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltDurationData, JoltPoint, JoltTime, JoltVector,
-    JoltVectorType, TAG_DATE, TAG_DURATION, TAG_LOCAL_TIME, TAG_POINT_2D, TAG_POINT_3D, TAG_TIME,
-    TAG_VECTOR,
+    JoltVectorType, TAG_DATE, TAG_DATE_TIME_V1, TAG_DATE_TIME_V2, TAG_DATE_TIME_ZONE_ID_V1,
+    TAG_DATE_TIME_ZONE_ID_V2, TAG_DURATION, TAG_LOCAL_DATE_TIME, TAG_LOCAL_TIME, TAG_POINT_2D,
+    TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
 };
-use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue, PackStreamVersion};
+use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 pub type ValidateValueFn =
     Box<dyn Fn(&PackStreamValue) -> anyhow::Result<()> + 'static + Send + Sync>;
@@ -363,8 +364,10 @@ fn build_vector(
 }
 
 fn build_uuid(expected: JsonValue, config: &ActorConfig) -> Result<IsJoltValidator> {
+    const SIGIL: &str = JoltSigil::Uuid.str();
+
     let packstream_version = config.bolt_version.packstream_version();
-    if packstream_version < PackStreamVersion::V2 {
+    if !packstream_version.supports_uuid() {
         return Err(ParseError::new(format!(
             "UUID is not supported in {packstream_version}"
         )));
@@ -379,12 +382,12 @@ fn build_uuid(expected: JsonValue, config: &ActorConfig) -> Result<IsJoltValidat
 
     let JsonValue::String(expected) = expected else {
         return Err(ParseError::new(format!(
-            "Expected string after sigil \"UU\", but found {expected:?}",
+            "Expected string after sigil \"{SIGIL}\", but found {expected:?}",
         )));
     };
     let uuid = Uuid::parse_str(&expected).map_err(|e| {
         ParseError::new(format!(
-            "Failed to parse UUID string after sigil \"UU\": {expected:?}: {e}",
+            "Failed to parse UUID string after sigil \"{SIGIL}\": {expected:?}: {e}",
         ))
     })?;
     let expected = PackStreamValue::Uuid(uuid);
@@ -684,27 +687,29 @@ fn build_date_time_validator(
                 match (jolt_version, tag, fields.as_slice()) {
                     (
                         JoltVersion::V1,
-                        0x66,
+                        &TAG_DATE_TIME_ZONE_ID_V1,
                         [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::String(_)],
                     )
                     | (
                         JoltVersion::V2,
-                        0x69,
+                        &TAG_DATE_TIME_ZONE_ID_V2,
                         [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::String(_)],
                     )
                     | (
                         JoltVersion::V1,
-                        0x46,
+                        &TAG_DATE_TIME_V1,
                         [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::Integer(_)],
                     )
                     | (
                         JoltVersion::V2,
-                        0x49,
+                        &TAG_DATE_TIME_V2,
                         [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::Integer(_)],
                     )
-                    | (_, 0x64, [PackStreamValue::Integer(_), PackStreamValue::Integer(_)]) => {
-                        Ok(())
-                    }
+                    | (
+                        _,
+                        &TAG_LOCAL_DATE_TIME,
+                        [PackStreamValue::Integer(_), PackStreamValue::Integer(_)],
+                    ) => Ok(()),
                     _ => Err(anyhow!("Expected any date time struct found {msg:?}")),
                 }
             }

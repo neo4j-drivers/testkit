@@ -55,6 +55,15 @@ pub struct PackStreamStruct {
     pub fields: Vec<PackStreamValue>,
 }
 
+impl PackStreamVersion {
+    pub(crate) fn supports_uuid(self) -> bool {
+        match self {
+            PackStreamVersion::V1 => false,
+            PackStreamVersion::V2 => true,
+        }
+    }
+}
+
 impl PackStreamValue {
     pub(crate) fn from_data_consume_all(
         data: &[u8],

@@ -108,7 +108,7 @@ class JoltUnsupportedType(JoltType):
 
 
 __all__ = [
-    JoltType,
-    JoltUnsupportedType,
-    JoltVector,
+    "JoltType",
+    "JoltUnsupportedType",
+    "JoltVector",
 ]

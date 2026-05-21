@@ -56,6 +56,6 @@ class _JoltParsedType(JoltType):
 
 
 __all__ = [
-    JoltType,
-    JoltWildcard,
+    "JoltType",
+    "JoltWildcard",
 ]

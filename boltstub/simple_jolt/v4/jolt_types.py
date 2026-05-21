@@ -44,6 +44,6 @@ class JoltUuid(JoltType):
 
 
 __all__ = [
-    JoltType,
-    JoltUuid
+    "JoltType",
+    "JoltUuid"
 ]
