@@ -13,25 +13,15 @@ mod vector;
 
 use std::fmt::{Debug, Display, Formatter};
 
-use date::BoltDate;
 pub(crate) use date::JoltDate;
-use date_time::BoltDateTime;
 pub(crate) use date_time::JoltDateTime;
-use duration::BoltDuration;
-pub(crate) use duration::JoltDuration;
-use node::BoltNode;
+pub(crate) use duration::{JoltDuration, JoltDurationData};
 pub(crate) use node::JoltNode;
-use path::BoltPath;
 pub(crate) use path::JoltPath;
-use point::BoltPoint;
 pub(crate) use point::JoltPoint;
-use relationship::BoltRelationship;
 pub(crate) use relationship::JoltRelationship;
-use time::BoltTime;
 pub(crate) use time::JoltTime;
-use unsupported_type::BoltUnsupportedType;
 pub(crate) use unsupported_type::JoltUnsupportedType;
-use vector::BoltVector;
 pub(crate) use vector::JoltVector;
 pub(crate) use vector::JoltVectorType;
 
@@ -69,21 +59,33 @@ impl<'a> From<BoltStructType<'a>> for BoltStruct<'a> {
 
 #[derive(Debug)]
 enum BoltStructType<'a> {
-    Node(BoltNode<'a>),
-    Relationship(BoltRelationship<'a>),
-    Path(BoltPath<'a>),
-    Point(BoltPoint),
-    Date(BoltDate),
-    Time(BoltTime<'a>),
-    DateTime(BoltDateTime<'a>),
-    Duration(BoltDuration),
-    Vector(BoltVector),
-    UnsupportedType(BoltUnsupportedType),
+    Node(JoltNode<'a>),
+    Relationship(JoltRelationship<'a>),
+    Path(JoltPath<'a>),
+    Point(JoltPoint),
+    Date(JoltDate),
+    Time(JoltTime<'a>),
+    DateTime(JoltDateTime<'a>),
+    Duration(JoltDuration),
+    Vector(JoltVector),
+    UnsupportedType(JoltUnsupportedType),
 }
 
 impl<'a> BoltStruct<'a> {
     pub(crate) fn read(value: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
         BoltStructType::read(value, jolt_version).map(Into::into)
+    }
+
+    pub(crate) fn read_other_jolt_version(
+        value: &'a PackStreamStruct,
+        jolt_version: JoltVersion,
+    ) -> Option<(Self, JoltVersion)> {
+        for jolt_version in jolt_version.proximity_iter() {
+            if let Some(struct_type) = BoltStructType::read(value, jolt_version) {
+                return Some((struct_type.into(), jolt_version));
+            }
+        }
+        None
     }
 
     pub(crate) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
@@ -93,18 +95,18 @@ impl<'a> BoltStruct<'a> {
 
 impl<'a> BoltStructType<'a> {
     pub(crate) fn read(value: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
-        BoltNode::from_struct(value, jolt_version)
+        JoltNode::from_struct(value, jolt_version)
             .map(Self::Node)
-            .or_else(|| BoltRelationship::from_struct(value, jolt_version).map(Self::Relationship))
-            .or_else(|| BoltPath::from_struct(value, jolt_version).map(Self::Path))
-            .or_else(|| BoltPoint::from_struct(value, jolt_version).map(Self::Point))
-            .or_else(|| BoltDate::from_struct(value, jolt_version).map(Self::Date))
-            .or_else(|| BoltTime::from_struct(value, jolt_version).map(Self::Time))
-            .or_else(|| BoltDateTime::from_struct(value, jolt_version).map(Self::DateTime))
-            .or_else(|| BoltDuration::from_struct(value, jolt_version).map(Self::Duration))
-            .or_else(|| BoltVector::from_struct(value, jolt_version).map(Self::Vector))
+            .or_else(|| JoltRelationship::from_struct(value, jolt_version).map(Self::Relationship))
+            .or_else(|| JoltPath::from_struct(value, jolt_version).map(Self::Path))
+            .or_else(|| JoltPoint::from_struct(value, jolt_version).map(Self::Point))
+            .or_else(|| JoltDate::from_struct(value, jolt_version).map(Self::Date))
+            .or_else(|| JoltTime::from_struct(value, jolt_version).map(Self::Time))
+            .or_else(|| JoltDateTime::from_struct(value, jolt_version).map(Self::DateTime))
+            .or_else(|| JoltDuration::from_struct(value, jolt_version).map(Self::Duration))
+            .or_else(|| JoltVector::from_struct(value, jolt_version).map(Self::Vector))
             .or_else(|| {
-                BoltUnsupportedType::from_struct(value, jolt_version).map(Self::UnsupportedType)
+                JoltUnsupportedType::from_struct(value, jolt_version).map(Self::UnsupportedType)
             })
     }
 
@@ -116,17 +118,18 @@ impl<'a> BoltStructType<'a> {
 
         impl Display for Repr<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                let version = self.jolt_version;
                 match self.type_ {
-                    BoltStructType::Node(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Relationship(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Path(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Point(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Date(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Time(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::DateTime(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Duration(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::Vector(v) => v.jolt_fmt(self.jolt_version).fmt(f),
-                    BoltStructType::UnsupportedType(v) => v.jolt_fmt(self.jolt_version).fmt(f),
+                    BoltStructType::Node(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Relationship(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Path(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Point(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Date(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Time(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::DateTime(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Duration(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::Vector(v) => v.jolt_fmt(version).fmt(f),
+                    BoltStructType::UnsupportedType(v) => v.jolt_fmt(version).fmt(f),
                 }
             }
         }

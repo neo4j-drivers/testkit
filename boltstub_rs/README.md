@@ -127,13 +127,19 @@ Client and server lines consist of three parts:
    Note, that Stubscript took the liberty to support a simple representation of dictionaries (whenever unambiguous) for improved backwards compatibility, brevity, and readability of Stubscripts.
    Further, Stubscript's JOLT implementation added support for vector types (non-existent in the original JOLT specification).
    A full JOLT specification of Stubscript's implementation can be found [below](#jolt-in-stubscript).
-   * By default, the Stubserver derives the appropriate PackStream version to use from the specified Bolt version.
+   * By default, the Stubserver derives the appropriate Jolt version to use from the specified Bolt version.
      However, you can manually overwrite this by appending a version to the JOLT object keys.
-     Given some JOLT key `"T"`, you can append a `"vX"` giving `"TvX"`, where `X` is the version of PackStream you wish to overwrite.
-     E.g., assume the specified Bolt version dictates PackStream version 123, then `{"Z": "1"}` would be encoded as integer in the way PackStream version 123 specifies.
-     `{"Zv10": "1"}` would alter the encoding of that one element to follow PackStream version 10's specification.
-   * Jolt has been extended for vector types, e.g., `{"V": ["i8", "FF 00 12"]}`.  
-     The first string in the list is the inner type of the vector, the second the vector data (same syntax as for Jolt bytes).
+     Given some JOLT key `"T"`, you can append a `"vX"` giving `"TvX"`, where `X` is the version of Jolt you wish to overwrite.
+     **N.B.** This does *not* affect the used PackStream version.
+     * Example 1: Jolt 3 introduced the Unsupported Type `{"UT": ...}` which translates to a PackStream `Struct[0x3F]{...}`.
+       Assume we're in a Bolt version 100.42 script, and PackStream version 123 belongs to that Bolt version.
+       The script may contain `{"UTv3": ...}` to denote an UnsupportedType as in Jolt 3, meaning `Struct[0x3F]{...}`.
+       However, how this Struct will be serialized, follows the rules of PackStream version 123.
+     * Example 2: PackStream 2 (corresponds to Bolt 6.1+ and Jolt 4+) introduced UUIDs.
+       Therefore, writing `{"UUv4": ["12345678-1234-1234-1234-123456789012"]}` in a Bolt 6.0 script makes no sense because PackStream 1 has no UUID representation.
+     * Therefore, this feature is only useful for expressing Structures (their tag and field contents) from future or past Bolt versions, not, however, for expressing primitive PackStream types that are non-native to the current Bolt version.
+   * Jolt has been extended to support newer types such as Vectors and UUIDs.  
+     More details can be found in the [JOLT in Stubscript](#jolt-in-stubscript) section below.
 
 Example:
 ```
@@ -177,17 +183,17 @@ There are server lines that contain instructions to the bolt server rather than 
    E.g., `S: <RAW> 00 00` is equivalent to `S: <NOOP>`.
  * `S: <SLEEP> ${SECONDS}` will make the server wait for the specified amount of time.  
    E.g. `S: <SLEEP> 0.5`.
-* `S: <ASSERT ORDER> [${SECONDS}]` will make the server wait for the specified amount of time and then check that no data was received from the client in the meantime.
-  This is helpful to assert that the following message was not pipelined.  
-  The argument is optional and defaults to `1`.  
-  Example:
-  ```
-  C: MSG1
-  S: <ASSERT ORDER> 1
-     RESPONSE_MSG
-  # MSG2 shall not be pipelined
-  C: MSG2
-  ```
+ * `S: <ASSERT ORDER> [${SECONDS}]` will make the server wait for the specified amount of time and then check that no data was received from the client in the meantime.
+   This is helpful to assert that the following message was not pipelined.  
+   The argument is optional and defaults to `1`.  
+   Example:
+   ```
+   C: MSG1
+   S: <ASSERT ORDER> 1
+      RESPONSE_MSG
+   # MSG2 shall not be pipelined
+   C: MSG2
+   ```
 
 
 ### Python Lines
@@ -557,8 +563,8 @@ In contrast, standard JOLT only encodes either the element ids or the legacy ids
 
 **Full**:
 ```json lines
-{"node packstream v1": {"()": [node_id, [node_labels], {properties}]}}
-{"node packstream v2+": {"()": [node_id, [node_labels], {properties}, node_element_id]}}
+{"node v1": {"()": [node_id, [node_labels], {properties}]}}
+{"node v2+": {"()": [node_id, [node_labels], {properties}, node_element_id]}}
 ```
 
 Example:
@@ -620,9 +626,9 @@ Example:
       "KNOWS",
       20,
       {"since": 1991, "prop2": true},
-      rel_element_id,
-      "foo-10",
-      "foo-20"
+      "element_id_123",
+      "element_id_10",
+      "element_id_20"
     ]
   }
 }
@@ -634,9 +640,9 @@ Example:
       "KNOWS",
       10,
       {"since": 1991, "prop2": true},
-      rel_element_id,
-      "foo-20",
-      "foo-10"
+      "element_id_123",
+      "element_id_20",
+      "element_id_10"
     ]
   }
 }
@@ -679,7 +685,8 @@ Example:
 
 ### JOLT vector
 *NOTE*:  
-Standard JOLT does not support vectors.
+Standard JOLT does not support vectors.  
+Requires JOLT version 3+.
 
 **Simple**: **not supported**
 
@@ -695,11 +702,12 @@ Example:
 
 ### JOLT UnsupportedType
 *NOTE*:  
-Standard JOLT does not support Unsupported Types.
+Standard JOLT does not support Unsupported Types.  
+Requires JOLT version 3+.
 
 **Simple**: **not supported**
 
-**Full**: `{"UT": ["<type name>", minimum_protocol_major, minimum_protocol_minor, #, "<optional message>"]}`
+**Full**: `{"UT": ["<type name>", minimum_protocol_major, minimum_protocol_minor, "<optional message>"]}`
 
 Example:
 ```json lines
@@ -707,26 +715,45 @@ Example:
 {"UT": ["Quantum Integer", 11, 3]}
 ```
 
+### JOLT UUID
+*NOTE*:  
+Standard JOLT does not support UUIDs.  
+Requires JOLT version 4+.
 
-## PackStream Versions
-Some types require a certain PackStream version to be available.
+**Simple**: **not supported**
+
+**Full**: `{"UU": "<string encoded UUID>"}`
+
+Example:
+```json lines
+{"UU": "12345678-1234-1234-1234-123456789012"}
+```
+
+
+## JOLT Versions
+Some types require a certain JOLT version to be available.
 Others change the required fields or their representation with different PackStream versions.
 
-N.B.: 7687.org conceptualizes PackStream versions different from Stubscript.
-7687.org currently documents only a single PackStream version and makes Structure representations dependent on the negotiated Bolt version.
-Stubscript in contrast considers each change, regardless whether to a Structure type or a primitive type, to be a new PackStream version.
+N.B.: The JOLT version does not affect the used PackStream version.
+The PackStream version is automatically chosen to match the bolt version specified in the `BOLT` bang line.
 
-### Stubscript's PackStream Version 1
+
+### Stubscript's JOLT Version 1
  * Default for Bolt versions: 1 - 4.4
 
-### Stubscript's PackStream Version 2
+### Stubscript's JOLT Version 2
  * Default for Bolt versions: 5.0 - 5.8
  * Changes:
    * `element_id` field(s) added to types `Node`, `Relationship`, and `Path`
    * Changed structure representation on the wire for types `DateTime`, `DateTimeZoneId`, and `LocalDateTime`.
 
-### Stubscript's PackStream Version 3
+### Stubscript's JOLT Version 3
  * Default for Bolt versions: 6.0+
  * Changes:
    * Add `Vector` type
    * Add `UnsupportedType` type
+
+### Stubscript's JOLT Version 4
+ * Default for Bolt versions: 6.1+
+ * Changes:
+   * Add `UUID` type

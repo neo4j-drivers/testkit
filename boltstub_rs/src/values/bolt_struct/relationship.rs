@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fmt::{Debug, Display, Formatter};
 use std::mem;
 
@@ -8,167 +9,196 @@ use super::_parsing::{
     check_last_json_field, check_last_pack_stream_field, next_json_field, next_pack_stream_field,
 };
 use crate::bolt_version::JoltVersion;
+use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
+use crate::values::bolt_struct::_common::element_id::ElementIdExt;
+use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::{TAG_RELATIONSHIP, TAG_UNBOUND_RELATIONSHIP};
 use crate::values::pack_stream_value::{write_joined_entries, PackStreamStruct, PackStreamValue};
 
-#[derive(Debug, Clone, Eq)]
-pub(crate) struct JoltRelationship {
+const SIGIL_F: &str = JoltSigil::RelationshipForward.str();
+const SIGIL_B: &str = JoltSigil::RelationshipBackward.str();
+const SIGIL: &str = constcat::concat!(SIGIL_F, r#""/""#, SIGIL_B);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) struct JoltRelationshipData<'a> {
     pub(crate) id: i64,
     pub(crate) start_node_id: i64,
-    pub(crate) rel_type: String,
+    pub(crate) rel_type: Cow<'a, str>,
     pub(crate) end_node_id: i64,
-    pub(crate) properties: IndexMap<String, PackStreamValue>,
-    pub(crate) element_id_ext: Option<JoltRelationshipElementIdExt>,
-}
-
-impl PartialEq for JoltRelationship {
-    fn eq(&self, other: &Self) -> bool {
-        BoltRelationship::from_jolt_relationship(self)
-            == BoltRelationship::from_jolt_relationship(other)
-    }
+    pub(crate) properties: Cow<'a, IndexMap<String, PackStreamValue>>,
+    pub(crate) element_id_ext: ElementIdExt<JoltRelationshipElementIdExt<'a>>,
 }
 
 #[allow(clippy::struct_field_names, reason = "for better readability")]
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct JoltRelationshipElementIdExt {
-    pub(crate) element_id: String,
-    pub(crate) start_node_element_id: String,
-    pub(crate) end_node_element_id: String,
+pub(crate) struct JoltRelationshipElementIdExt<'a> {
+    pub(crate) element_id: Cow<'a, str>,
+    pub(crate) start_node_element_id: Cow<'a, str>,
+    pub(crate) end_node_element_id: Cow<'a, str>,
 }
 
-impl JoltRelationship {
-    pub(crate) fn parse(
+impl JoltRelationshipData<'static> {
+    pub(super) fn parse(
         v: JsonValue,
         jolt_version: JoltVersion,
         config: &ActorConfig,
     ) -> Result<Self, ParseError> {
         let JsonValue::Array(fields) = v else {
             return Err(ParseError::new(format!(
-                "Expected array after sigil \"{{}}\", but found {v:?}"
+                "Expected array after sigil \"{SIGIL}\", \
+                but found {v:?}"
             )));
         };
         let mut fields = fields.into_iter().enumerate();
         let i = 0;
 
-        let (i, id) = next_json_field(&mut fields, "id", i, "{}", config)?;
-        let (i, start_node_id) = next_json_field(&mut fields, "start node id", i, "{}", config)?;
-        let (i, rel_type) = next_json_field(&mut fields, "relation ship type", i, "{}", config)?;
-        let (i, end_node_id) = next_json_field(&mut fields, "end node id", i, "{}", config)?;
-        let (i, properties) = next_json_field(&mut fields, "properties", i, "{}", config)?;
-        let (i, element_id_ext) = match jolt_version {
-            JoltVersion::V1 => (i, None),
-            JoltVersion::V2 | JoltVersion::V3 => {
-                let (i, element_id) = next_json_field(&mut fields, "element id", i, "{}", config)?;
-                let (i, start_node_element_id) =
-                    next_json_field(&mut fields, "start node element id", i, "{}", config)?;
-                let (i, end_node_element_id) =
-                    next_json_field(&mut fields, "end node element id", i, "{}", config)?;
-                (
-                    i,
-                    Some(JoltRelationshipElementIdExt {
-                        element_id,
-                        start_node_element_id,
-                        end_node_element_id,
-                    }),
-                )
-            }
+        let (i, id) = next_json_field(&mut fields, "id", i, SIGIL, config)?;
+        let (i, start_node_id) = next_json_field(&mut fields, "start node id", i, SIGIL, config)?;
+        let (i, rel_type) = next_json_field(&mut fields, "relation ship type", i, SIGIL, config)?;
+        let (i, end_node_id) = next_json_field(&mut fields, "end node id", i, SIGIL, config)?;
+        let (i, properties) = next_json_field(&mut fields, "properties", i, SIGIL, config)?;
+        let (i, element_id_ext) = {
+            let mut i = i;
+            let element_id_ext = ElementIdExt::new_lazy(jolt_version, || {
+                let (new_i, element_id) =
+                    next_json_field(&mut fields, "element id", i, SIGIL, config)?;
+                i = new_i;
+                let (new_i, start_node_element_id) =
+                    next_json_field(&mut fields, "start node element id", i, SIGIL, config)?;
+                i = new_i;
+                let (new_i, end_node_element_id) =
+                    next_json_field(&mut fields, "end node element id", i, SIGIL, config)?;
+                i = new_i;
+                Ok::<_, ParseError>(JoltRelationshipElementIdExt {
+                    element_id: Cow::Owned(element_id),
+                    start_node_element_id: Cow::Owned(start_node_element_id),
+                    end_node_element_id: Cow::Owned(end_node_element_id),
+                })
+            })
+            .transpose()?;
+            (i, element_id_ext)
         };
         check_last_json_field(&mut fields, i, "{}")?;
 
-        Ok(Self {
+        Ok(JoltRelationshipData {
             id,
             start_node_id,
-            rel_type,
+            rel_type: Cow::Owned(rel_type),
             end_node_id,
-            properties,
+            properties: Cow::Owned(properties),
             element_id_ext,
         })
     }
+}
 
+impl JoltRelationshipData<'_> {
     pub(crate) fn flip_direction(&mut self) {
         mem::swap(&mut self.start_node_id, &mut self.end_node_id);
-        if let Some(ext) = self.element_id_ext.as_mut() {
+        self.element_id_ext.apply(|ext| {
             mem::swap(&mut ext.start_node_element_id, &mut ext.end_node_element_id);
+        });
+    }
+
+    pub(super) fn jolt_fmt(
+        &self,
+        jolt_version_data: JoltVersion,
+        jolt_version_ctx: JoltVersion,
+    ) -> impl Display + '_ {
+        struct JoltFormatter<'a> {
+            data: &'a JoltRelationshipData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
         }
+
+        impl Display for JoltFormatter<'_> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                fmt_jolt_sigil_and_map(
+                    f,
+                    SIGIL_F,
+                    self.jolt_version_data,
+                    self.jolt_version_ctx,
+                    Some(("[", "]")),
+                    |f| {
+                        Display::fmt(&self.data.id, f)?;
+                        f.write_str(", ")?;
+                        Display::fmt(&self.data.start_node_id, f)?;
+                        f.write_str(", ")?;
+                        Debug::fmt(&self.data.rel_type, f)?;
+                        f.write_str(", ")?;
+                        Display::fmt(&self.data.end_node_id, f)?;
+                        f.write_str(", {")?;
+                        let properties = self.data.properties.iter().map(|(k, v)| (k.as_str(), v));
+                        write_joined_entries(f, properties, self.jolt_version_ctx)?;
+                        match self.data.element_id_ext.inner(self.jolt_version_data) {
+                            None => f.write_str("}"),
+                            Some(ext) => {
+                                f.write_str("}, ")?;
+                                Debug::fmt(&ext.element_id, f)?;
+                                f.write_str(", ")?;
+                                Debug::fmt(&ext.start_node_element_id, f)?;
+                                f.write_str(", ")?;
+                                Debug::fmt(&ext.end_node_element_id, f)
+                            }
+                        }
+                    },
+                )
+            }
+        }
+
+        JoltFormatter {
+            data: self,
+            jolt_version_data,
+            jolt_version_ctx,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) struct JoltRelationship<'a> {
+    pub(crate) data: JoltRelationshipData<'a>,
+    pub(crate) jolt_version: JoltVersion,
+}
+
+impl JoltRelationship<'static> {
+    pub(crate) fn parse(
+        v: JsonValue,
+        jolt_version: JoltVersion,
+        config: &ActorConfig,
+    ) -> Result<Self, ParseError> {
+        JoltRelationshipData::parse(v, jolt_version, config).map(|data| Self { data, jolt_version })
+    }
+}
+
+impl<'a> JoltRelationship<'a> {
+    pub(crate) fn flip_direction(&mut self) {
+        self.data.flip_direction();
     }
 
     pub(crate) fn into_struct(self) -> PackStreamStruct {
         let mut fields = Vec::with_capacity(8);
         fields.extend([
-            PackStreamValue::Integer(self.id),
-            PackStreamValue::Integer(self.start_node_id),
-            PackStreamValue::Integer(self.end_node_id),
-            PackStreamValue::String(self.rel_type),
-            PackStreamValue::Dict(self.properties),
+            PackStreamValue::Integer(self.data.id),
+            PackStreamValue::Integer(self.data.start_node_id),
+            PackStreamValue::Integer(self.data.end_node_id),
+            PackStreamValue::String(self.data.rel_type.into_owned()),
+            PackStreamValue::Dict(self.data.properties.into_owned()),
         ]);
-        if let Some(element_id_ext) = self.element_id_ext {
-            fields.push(PackStreamValue::String(element_id_ext.element_id));
+        if let Some(element_id_ext) = self.data.element_id_ext.into_inner(self.jolt_version) {
             fields.push(PackStreamValue::String(
-                element_id_ext.start_node_element_id,
+                element_id_ext.element_id.into_owned(),
             ));
-            fields.push(PackStreamValue::String(element_id_ext.end_node_element_id));
+            fields.push(PackStreamValue::String(
+                element_id_ext.start_node_element_id.into_owned(),
+            ));
+            fields.push(PackStreamValue::String(
+                element_id_ext.end_node_element_id.into_owned(),
+            ));
         }
         PackStreamStruct {
             tag: TAG_RELATIONSHIP,
             fields,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Eq)]
-pub(crate) struct BoltRelationship<'a> {
-    pub(crate) id: i64,
-    pub(crate) start_node_id: i64,
-    pub(crate) rel_type: &'a str,
-    pub(crate) end_node_id: i64,
-    pub(crate) properties: &'a IndexMap<String, PackStreamValue>,
-    pub(crate) element_id_ext: Option<BoltRelationshipElementIdExt<'a>>,
-}
-
-impl PartialEq for BoltRelationship<'_> {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-            && self.start_node_id == other.start_node_id
-            && self.rel_type == other.rel_type
-            && self.end_node_id == other.end_node_id
-            && self.element_id_ext == other.element_id_ext
-            && self.properties == other.properties
-    }
-}
-
-#[allow(clippy::struct_field_names, reason = "for better readability")]
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub(super) struct BoltRelationshipElementIdExt<'a> {
-    pub(super) element_id: &'a str,
-    pub(super) start_node_element_id: &'a str,
-    pub(super) end_node_element_id: &'a str,
-}
-
-impl<'a> BoltRelationship<'a> {
-    fn from_jolt_relationship(rel: &'a JoltRelationship) -> Self {
-        Self {
-            id: rel.id,
-            start_node_id: rel.start_node_id,
-            rel_type: &rel.rel_type,
-            end_node_id: rel.end_node_id,
-            properties: &rel.properties,
-            element_id_ext: rel
-                .element_id_ext
-                .as_ref()
-                .map(|ext| BoltRelationshipElementIdExt {
-                    element_id: &ext.element_id,
-                    start_node_element_id: &ext.start_node_element_id,
-                    end_node_element_id: &ext.end_node_element_id,
-                }),
-        }
-    }
-
-    pub(crate) fn flip_direction(&mut self) {
-        mem::swap(&mut self.start_node_id, &mut self.end_node_id);
-        if let Some(ext) = self.element_id_ext.as_mut() {
-            mem::swap(&mut ext.start_node_element_id, &mut ext.end_node_element_id);
         }
     }
 
@@ -181,105 +211,117 @@ impl<'a> BoltRelationship<'a> {
         let id = next_pack_stream_field(&mut fields)?;
         let start_node_id = next_pack_stream_field(&mut fields)?;
         let end_node_id = next_pack_stream_field(&mut fields)?;
-        let rel_type = next_pack_stream_field(&mut fields)?;
-        let properties = next_pack_stream_field(&mut fields)?;
-        let element_id_ext = {
-            match jolt_version {
-                JoltVersion::V1 => None,
-                JoltVersion::V2 | JoltVersion::V3 => {
-                    let element_id = next_pack_stream_field(&mut fields)?;
-                    let start_node_element_id = next_pack_stream_field(&mut fields)?;
-                    let end_node_element_id = next_pack_stream_field(&mut fields)?;
-                    Some(BoltRelationshipElementIdExt {
-                        element_id,
-                        start_node_element_id,
-                        end_node_element_id,
-                    })
-                }
-            }
-        };
+        let rel_type = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+        let properties = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+        let element_id_ext = ElementIdExt::new_lazy(jolt_version, || {
+            let element_id = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+            let start_node_element_id = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+            let end_node_element_id = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+            Some(JoltRelationshipElementIdExt {
+                element_id,
+                start_node_element_id,
+                end_node_element_id,
+            })
+        })
+        .transpose()?;
         if !check_last_pack_stream_field(&mut fields) {
             return None;
         }
         Some(Self {
-            id,
-            start_node_id,
-            rel_type,
-            end_node_id,
-            properties,
-            element_id_ext,
+            data: JoltRelationshipData {
+                id,
+                start_node_id,
+                rel_type,
+                end_node_id,
+                properties,
+                element_id_ext,
+            },
+            jolt_version,
         })
     }
 
     pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            this: &'a BoltRelationship<'a>,
-            jolt_version: JoltVersion,
-        }
+        self.data.jolt_fmt(self.jolt_version, jolt_version)
+    }
+}
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                f.write_str(r#"{"->": ["#)?;
-                Display::fmt(&self.this.id, f)?;
-                f.write_str(", ")?;
-                Display::fmt(&self.this.start_node_id, f)?;
-                f.write_str(", ")?;
-                Debug::fmt(&self.this.rel_type, f)?;
-                f.write_str(", ")?;
-                Display::fmt(&self.this.end_node_id, f)?;
-                f.write_str(", {")?;
-                write_joined_entries(f, self.this.properties.iter(), self.jolt_version)?;
-                match self.this.element_id_ext.as_ref() {
-                    None => f.write_str("}]}"),
-                    Some(element_id_ext) => {
-                        f.write_str("}, ")?;
-                        Debug::fmt(&element_id_ext.element_id, f)?;
-                        f.write_str(", ")?;
-                        Debug::fmt(&element_id_ext.start_node_element_id, f)?;
-                        f.write_str(", ")?;
-                        Debug::fmt(&element_id_ext.end_node_element_id, f)?;
-                        f.write_str("]}")
-                    }
-                }
-            }
-        }
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) struct JoltUnboundRelationshipData<'a> {
+    pub(crate) id: i64,
+    pub(crate) rel_type: Cow<'a, str>,
+    pub(crate) properties: Cow<'a, IndexMap<String, PackStreamValue>>,
+    pub(crate) element_id: ElementIdExt<Cow<'a, str>>,
+}
 
-        JoltFormatter {
-            this: self,
-            jolt_version,
+impl<'a> From<JoltRelationshipData<'a>> for JoltUnboundRelationshipData<'a> {
+    fn from(value: JoltRelationshipData<'a>) -> Self {
+        Self {
+            id: value.id,
+            rel_type: value.rel_type,
+            properties: value.properties,
+            element_id: value.element_id_ext.map(|ext| ext.element_id),
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub(super) struct BoltUnboundRelationship<'a> {
-    pub(super) id: i64,
-    pub(super) rel_type: &'a str,
-    pub(super) properties: &'a IndexMap<String, PackStreamValue>,
-    pub(super) element_id: Option<&'a str>,
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) struct JoltUnboundRelationship<'a> {
+    pub(crate) data: JoltUnboundRelationshipData<'a>,
+    pub(crate) jolt_version: JoltVersion,
 }
 
-impl<'a> BoltUnboundRelationship<'a> {
+impl<'a> From<JoltRelationship<'a>> for JoltUnboundRelationship<'a> {
+    fn from(value: JoltRelationship<'a>) -> Self {
+        Self {
+            data: value.data.into(),
+            jolt_version: value.jolt_version,
+        }
+    }
+}
+
+impl<'a> JoltUnboundRelationship<'a> {
+    pub(super) fn new(data: JoltUnboundRelationshipData<'a>, jolt_version: JoltVersion) -> Self {
+        data.element_id.assert_jolt_version(jolt_version);
+        Self { data, jolt_version }
+    }
+
+    pub(crate) fn into_struct(self) -> PackStreamStruct {
+        let mut fields = Vec::with_capacity(4);
+        fields.extend([
+            PackStreamValue::Integer(self.data.id),
+            PackStreamValue::String(self.data.rel_type.into_owned()),
+            PackStreamValue::Dict(self.data.properties.into_owned()),
+        ]);
+        if let Some(element_id) = self.data.element_id.into_inner(self.jolt_version) {
+            fields.push(PackStreamValue::String(element_id.into_owned()));
+        }
+        PackStreamStruct {
+            tag: TAG_UNBOUND_RELATIONSHIP,
+            fields,
+        }
+    }
+
     pub(super) fn from_struct(s: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
         if s.tag != TAG_UNBOUND_RELATIONSHIP {
             return None;
         }
         let mut fields = s.fields.iter();
         let id = next_pack_stream_field(&mut fields)?;
-        let rel_type = next_pack_stream_field(&mut fields)?;
-        let properties = next_pack_stream_field(&mut fields)?;
-        let element_id = match jolt_version {
-            JoltVersion::V1 => None,
-            JoltVersion::V2 | JoltVersion::V3 => Some(next_pack_stream_field(&mut fields)?),
-        };
+        let rel_type = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+        let properties = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
+        let element_id = ElementIdExt::new_lazy(jolt_version, || {
+            Some(Cow::Borrowed(next_pack_stream_field(&mut fields)?))
+        })
+        .transpose()?;
         if !check_last_pack_stream_field(&mut fields) {
             return None;
         }
-        Some(Self {
+        let data = JoltUnboundRelationshipData {
             id,
             rel_type,
             properties,
             element_id,
-        })
+        };
+        Some(Self { data, jolt_version })
     }
 }

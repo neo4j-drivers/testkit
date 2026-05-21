@@ -5,23 +5,26 @@ use std::str::FromStr;
 use regex::{Captures, Regex};
 
 use crate::bolt_version::JoltVersion;
+use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::util::opt_res_ret;
-use crate::values::bolt_struct::_common::normalize_seconds_nanos;
+use crate::values::bolt_struct::_common::{fmt_jolt_sigil_and_map, normalize_seconds_nanos};
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::TAG_DURATION;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
+const SIGIL: &str = JoltSigil::Temporal.str();
+
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct JoltDuration {
+pub(crate) struct JoltDurationData {
     pub(crate) months: i64,
     pub(crate) days: i64,
     pub(crate) seconds: i64,
     pub(crate) nanos: i64,
 }
 
-impl JoltDuration {
-    pub(crate) fn parse(s: &str) -> Option<Result<Self, ParseError>> {
+impl JoltDurationData {
+    pub(crate) fn parse(s: &str, _jolt_version: JoltVersion) -> Option<Result<Self, ParseError>> {
         #[allow(
             clippy::unnecessary_wraps,
             reason = "Allows for using opt_res_ret => improved readability"
@@ -63,8 +66,8 @@ impl JoltDuration {
             let padded = format!("{:0<9}", m.as_str());
             if padded.len() > 9 {
                 return Some(Err(ParseError::new(
-                    "Duration has too many sub-seconds digits \
-                        (only nanoseconds are allowed, up to 9 digits)",
+                    "Duration has too many sub-second digits \
+                    (only nanoseconds are allowed, up to 9 digits)",
                 )));
             }
             Some(Ok(
@@ -102,24 +105,120 @@ impl JoltDuration {
         }))
     }
 
-    pub(crate) fn as_struct(&self) -> PackStreamStruct {
-        PackStreamStruct {
-            tag: TAG_DURATION,
-            fields: vec![
-                PackStreamValue::Integer(self.months),
-                PackStreamValue::Integer(self.days),
-                PackStreamValue::Integer(self.seconds),
-                PackStreamValue::Integer(self.nanos),
-            ],
+    pub(super) fn jolt_fmt(
+        &self,
+        jolt_version_data: JoltVersion,
+        jolt_version_ctx: JoltVersion,
+    ) -> impl Display + '_ {
+        struct JoltFormatter<'a> {
+            data: &'a JoltDurationData,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
         }
+
+        impl Display for JoltFormatter<'_> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                fmt_jolt_sigil_and_map(
+                    f,
+                    SIGIL,
+                    self.jolt_version_data,
+                    self.jolt_version_ctx,
+                    Some(("\"", "\"")),
+                    |f| self.data.repr(f),
+                )
+            }
+        }
+
+        JoltFormatter {
+            data: self,
+            jolt_version_data,
+            jolt_version_ctx,
+        }
+    }
+
+    fn repr(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        fn write_component(
+            f: &mut std::fmt::Formatter<'_>,
+            n: impl Display + Default + PartialEq + Copy,
+            designator: &'_ str,
+        ) -> std::fmt::Result {
+            if n == Default::default() {
+                Ok(())
+            } else {
+                Display::fmt(&n, f)?;
+                f.write_str(designator)
+            }
+        }
+
+        let Self {
+            months,
+            days,
+            seconds,
+            nanos,
+        } = *self;
+        let (years, months) = (months / 12, months % 12);
+        let total_ns: i128 = i128::from(seconds) * 1_000_000_000 + i128::from(nanos);
+        let seconds_sign = if total_ns < 0 { "-" } else { "" };
+        let (seconds, nanos): (i128, i64) = (
+            total_ns / 1_000_000_000,
+            (total_ns % 1_000_000_000)
+                .try_into()
+                .expect("±999_999_999 fits into i64"),
+        );
+        let (hours, seconds) = (seconds / 3600, seconds % 3600);
+        let (minutes, seconds) = (seconds / 60, seconds % 60);
+
+        let has_time = hours != 0 || minutes != 0 || seconds != 0 || nanos != 0;
+        let has_days = years != 0 || months != 0 || days != 0;
+
+        f.write_str("P")?;
+        write_component(f, years, "Y")?;
+        write_component(f, months, "M")?;
+        write_component(f, days, "D")?;
+        if has_time || !has_days {
+            f.write_str("T")?;
+            write_component(f, hours, "H")?;
+            write_component(f, minutes, "M")?;
+            if seconds != 0 || nanos != 0 || !has_time {
+                f.write_str(seconds_sign)?;
+                Display::fmt(&seconds.abs(), f)?;
+                if nanos != 0 {
+                    f.write_str(".")?;
+                    let nanos_str = format!("{:09}", nanos.abs());
+                    Display::fmt(nanos_str.trim_end_matches('0'), f)?;
+                }
+                f.write_str("S")?;
+            }
+        }
+        Ok(())
     }
 }
 
 #[derive(Debug, Copy, Clone)]
-pub(super) struct BoltDuration(JoltDuration);
+pub(crate) struct JoltDuration {
+    pub(crate) data: JoltDurationData,
+    pub(super) jolt_version: JoltVersion,
+}
 
-impl BoltDuration {
-    pub(super) fn from_struct(s: &PackStreamStruct, _jolt_version: JoltVersion) -> Option<Self> {
+impl JoltDuration {
+    pub(crate) fn parse(s: &str, jolt_version: JoltVersion) -> Option<Result<Self, ParseError>> {
+        JoltDurationData::parse(s, jolt_version)
+            .map(|res| res.map(|data| Self { data, jolt_version }))
+    }
+
+    pub(crate) fn as_struct(&self) -> PackStreamStruct {
+        PackStreamStruct {
+            tag: TAG_DURATION,
+            fields: vec![
+                PackStreamValue::Integer(self.data.months),
+                PackStreamValue::Integer(self.data.days),
+                PackStreamValue::Integer(self.data.seconds),
+                PackStreamValue::Integer(self.data.nanos),
+            ],
+        }
+    }
+
+    pub(super) fn from_struct(s: &PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
         let PackStreamStruct { tag, fields } = s;
         if *tag != TAG_DURATION {
             return None;
@@ -133,75 +232,17 @@ impl BoltDuration {
         if !check_last_pack_stream_field(fields) {
             return None;
         }
-        Some(Self(JoltDuration {
+        let data = JoltDurationData {
             months,
             days,
             seconds,
             nanos: nanos.into(),
-        }))
+        };
+        Some(Self { data, jolt_version })
     }
 
-    pub(super) fn jolt_fmt(&self, _jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            this: &'a BoltDuration,
-        }
-
-        fn write_component(
-            f: &mut std::fmt::Formatter<'_>,
-            n: i64,
-            designator: &'_ str,
-        ) -> std::fmt::Result {
-            if n == 0 {
-                Ok(())
-            } else {
-                Display::fmt(&n, f)?;
-                f.write_str(designator)
-            }
-        }
-
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let BoltDuration(JoltDuration {
-                    months,
-                    days,
-                    seconds,
-                    mut nanos,
-                }) = self.this;
-                let (years, months) = (months / 12, months % 12);
-                let (weeks, days) = (days / 7, days % 7);
-                let (hours, seconds) = (seconds / 3600, seconds % 3600);
-                let (minutes, mut seconds) = (seconds / 60, seconds % 60);
-                if seconds < 0 {
-                    seconds += 1;
-                    nanos = 1_000_000_000 - nanos;
-                }
-
-                let has_time = hours != 0 || minutes != 0 || seconds != 0 || nanos != 0;
-                let has_days = years != 0 || months != 0 || weeks != 0 || days != 0;
-
-                f.write_str(r#"{"T": "P"#)?;
-                write_component(f, years, "Y")?;
-                write_component(f, months, "M")?;
-                write_component(f, weeks, "W")?;
-                write_component(f, days, "D")?;
-                if has_time || !has_days {
-                    f.write_str("T")?;
-                    write_component(f, hours, "H")?;
-                    write_component(f, minutes, "M")?;
-                    if seconds != 0 || nanos != 0 || !has_time {
-                        Display::fmt(&seconds, f)?;
-                        if nanos != 0 {
-                            f.write_str(".")?;
-                            write!(f, "{nanos:09}")?;
-                        }
-                        f.write_str("S")?;
-                    }
-                }
-                f.write_str(r#""}"#)
-            }
-        }
-
-        JoltFormatter { this: self }
+    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
+        self.data.jolt_fmt(self.jolt_version, jolt_version)
     }
 }
 
@@ -296,18 +337,72 @@ mod tests {
         #[case] input: &str,
         #[case] expected: Option<Result<(i64, i64, i64, i64), ()>>,
     ) {
-        let result = dbg!(JoltDuration::parse(dbg!(input)));
+        let result = dbg!(JoltDuration::parse(dbg!(input), JoltVersion::V1));
         match (result, expected) {
             (Some(Ok(parsed)), Some(Ok((months, days, seconds, nanos)))) => {
-                assert_eq!(parsed.months, months);
-                assert_eq!(parsed.days, days);
-                assert_eq!(parsed.seconds, seconds);
-                assert_eq!(parsed.nanos, nanos);
+                assert_eq!(parsed.data.months, months);
+                assert_eq!(parsed.data.days, days);
+                assert_eq!(parsed.data.seconds, seconds);
+                assert_eq!(parsed.data.nanos, nanos);
             }
             (None, None) | (Some(Err(_)), Some(Err(()))) => {}
             (result, expected) => panic!(
                 "Unexpected result for input: {input}\nExpected: {expected:?}, Got: {result:?}"
             ),
         }
+    }
+
+    #[rstest]
+    #[case("P12Y", (12 * 12, 0, 0, 0))]
+    #[case("P1Y1M", (13, 0, 0, 0))]
+    #[case("P12345D", (0, 12345, 0, 0))]
+    #[case("PT1234H", (0, 0, 1234 * 60 * 60, 0))]
+    #[case("PT12H34M56S", (0, 0, (12 * 60 + 34) * 60 + 56, 0))]
+    #[case("PT0.123456789S", (0, 0, 0, 123_456_789))]
+    #[case("PT0.01S", (0, 0, 0, 10_000_000))]
+    #[case("PT0.1S", (0, 0, 0, 100_000_000))]
+    #[case("P-12Y", (-12 * 12, 0, 0, 0))]
+    #[case("P-1Y-1M", (-13, 0, 0, 0))]
+    #[case("P-12345D", (0, -12345, 0, 0))]
+    #[case("PT-1234H", (0, 0, -1234 * 60 * 60, 0))]
+    #[case("PT-1234H-56M", (0, 0, -(1234 * 60 + 56) * 60, 0))]
+    #[case("PT-0.123456789S", (0, 0, 0, -123_456_789))]
+    #[case("PT-0.01S", (0, 0, 0, -10_000_000))]
+    #[case("PT-0.1S", (0, 0, 0, -100_000_000))]
+    #[case("PT0S", (0, 0, 0, 0))]
+    #[case("PT1.123S", (0, 0, 1, 123_000_000))]
+    #[case("PT0.123S", (0, 0, 0, 123_000_000))]
+    #[case("PT-1.123S", (0, 0, -1, -123_000_000))]
+    #[case("PT-0.123S", (0, 0, 0, -123_000_000))]
+    #[case("PT0.999999999S", (0, 0, 0, 999_999_999))]
+    #[case("PT-0.999999999S", (0, 0, 0, -999_999_999))]
+    #[case("PT-0.000000001S", (0, 0, -1, 999_999_999))]
+    #[case("PT0.000000001S", (0, 0, 1, -999_999_999))]
+    #[case("P768614336404564650Y7M", (i64::MAX, 0, 0, 0))]
+    #[case("P-768614336404564650Y-8M", (i64::MIN, 0, 0, 0))]
+    #[case("P9223372036854775807D", (0, i64::MAX, 0, 0))]
+    #[case("P-9223372036854775808D", (0, i64::MIN, 0, 0))]
+    #[case("PT2562047788015215H30M7S", (0, 0, i64::MAX, 0))]
+    #[case("PT-2562047788015215H-30M-8S", (0, 0, i64::MIN, 0))]
+    #[case("PT2562047H47M16.854775807S", (0, 0, 0, i64::MAX))]
+    #[case("PT-2562047H-47M-16.854775808S", (0, 0, 0, i64::MIN))]
+    #[case("PT2562047790577263H17M23.854775807S", (0, 0, i64::MAX, i64::MAX))]
+    #[case("PT-2562047790577263H-17M-24.854775808S", (0, 0, i64::MIN, i64::MIN))]
+    #[case("PT2562047785453167H42M50.145224192S", (0, 0, i64::MAX, i64::MIN))]
+    #[case("PT-2562047785453167H-42M-51.145224193S", (0, 0, i64::MIN, i64::MAX))]
+    fn test_jolt_duration_fmt(#[case] expected: &str, #[case] components: (i64, i64, i64, i64)) {
+        const JOLT_VERSION: JoltVersion = JoltVersion::V1;
+        let duration = JoltDuration {
+            data: JoltDurationData {
+                months: components.0,
+                days: components.1,
+                seconds: components.2,
+                nanos: components.3,
+            },
+            jolt_version: JOLT_VERSION,
+        };
+        let result = dbg!(dbg!(duration).jolt_fmt(JOLT_VERSION).to_string());
+        let expected = format!(r#"{{"T": "{expected}"}}"#);
+        assert_eq!(result, expected);
     }
 }

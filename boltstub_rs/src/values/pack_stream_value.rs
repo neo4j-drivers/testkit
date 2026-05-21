@@ -20,14 +20,22 @@ use anyhow::{anyhow, Result};
 use indexmap::IndexMap;
 use nom::ToUsize;
 use usize_cast::FromUsize;
+use uuid::Uuid;
 
 use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::str_bytes;
 use crate::values::bolt_struct::BoltStruct;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, derive_more::Display)]
+pub enum PackStreamVersion {
+    #[display("PackStream v1")]
+    V1,
+    #[display("PackStream v2")]
+    V2,
+}
+
 #[derive(Debug, Clone)]
-#[non_exhaustive]
 pub enum PackStreamValue {
     Null,
     Boolean(bool),
@@ -37,6 +45,7 @@ pub enum PackStreamValue {
     String(String),
     List(Vec<PackStreamValue>),
     Dict(IndexMap<String, PackStreamValue>),
+    Uuid(Uuid),
     Struct(PackStreamStruct),
 }
 
@@ -47,8 +56,11 @@ pub struct PackStreamStruct {
 }
 
 impl PackStreamValue {
-    pub(crate) fn from_data_consume_all(data: &[u8]) -> Result<PackStreamValue> {
-        let mut decoder = PackStreamDecoder::new(data, 0);
+    pub(crate) fn from_data_consume_all(
+        data: &[u8],
+        version: PackStreamVersion,
+    ) -> Result<PackStreamValue> {
+        let mut decoder = PackStreamDecoder::new(version, data, 0);
         let value = decoder.read()?;
         if decoder.index != data.len() {
             return Err(anyhow!(
@@ -61,11 +73,11 @@ impl PackStreamValue {
         Ok(value)
     }
 
-    pub(crate) fn as_data(&self) -> Vec<u8> {
+    pub(crate) fn as_data(&self, version: PackStreamVersion) -> Result<Vec<u8>> {
         let mut data = Vec::with_capacity(128);
-        let mut serializer = PackStreamSerializer::new(&mut data);
-        serializer.write(self);
-        data
+        let mut serializer = PackStreamSerializer::new(version, &mut data);
+        serializer.write(self)?;
+        Ok(data)
     }
 }
 
@@ -81,7 +93,7 @@ impl PartialEq for PackStreamValue {
             }
             PackStreamValue::Float(v1) => match other {
                 PackStreamValue::Float(v2) => {
-                    v1.is_nan() && v2.is_nan() || v1.to_bits() == v2.to_bits()
+                    v1.to_bits() == v2.to_bits() || v1.is_nan() && v2.is_nan()
                 }
                 _ => false,
             },
@@ -89,6 +101,7 @@ impl PartialEq for PackStreamValue {
             PackStreamValue::String(v1) => matches!(other, PackStreamValue::String(v2) if v1 == v2),
             PackStreamValue::List(v1) => matches!(other, PackStreamValue::List(v2) if v1 == v2),
             PackStreamValue::Dict(v1) => matches!(other, PackStreamValue::Dict(v2) if v1 == v2),
+            PackStreamValue::Uuid(v1) => matches!(other, PackStreamValue::Uuid(v2) if v1 == v2),
             PackStreamValue::Struct(v1) => matches!(other, PackStreamValue::Struct(v2) if v1 == v2),
         }
     }
@@ -127,7 +140,9 @@ impl_value_from_into!(PackStreamValue::String, &str);
 impl_value_from_into!(PackStreamValue::Bytes, &[u8]);
 
 impl_value_from_owned!(PackStreamValue::String, String);
+impl_value_from_owned!(PackStreamValue::Uuid, Uuid);
 impl_value_from_owned!(PackStreamValue::Struct, PackStreamStruct);
+
 impl<T: Into<PackStreamValue>> From<IndexMap<String, T>> for PackStreamValue {
     fn from(value: IndexMap<String, T>) -> Self {
         PackStreamValue::Dict(value.into_iter().map(|(k, v)| (k, v.into())).collect())
@@ -387,6 +402,39 @@ impl PackStreamValue {
     }
 }
 
+impl TryFrom<PackStreamValue> for Uuid {
+    type Error = PackStreamValue;
+
+    #[inline]
+    fn try_from(value: PackStreamValue) -> Result<Self, Self::Error> {
+        match value {
+            PackStreamValue::Uuid(uuid) => Ok(uuid),
+            _ => Err(value),
+        }
+    }
+}
+
+impl PackStreamValue {
+    #[inline]
+    pub fn is_uuid(&self) -> bool {
+        matches!(self, PackStreamValue::Uuid(_))
+    }
+
+    #[inline]
+    pub fn as_uuid(&self) -> Option<Uuid> {
+        match self {
+            PackStreamValue::Uuid(uuid) => Some(*uuid),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
+    pub fn try_into_uuid(self) -> Result<Uuid, Self> {
+        self.try_into()
+    }
+}
+
 impl TryFrom<PackStreamValue> for PackStreamStruct {
     type Error = PackStreamValue;
 
@@ -444,15 +492,21 @@ const MAP_32: u8 = 0xDA;
 const BYTES_8: u8 = 0xCC;
 const BYTES_16: u8 = 0xCD;
 const BYTES_32: u8 = 0xCE;
+const UUID: u8 = 0xE0;
 
 struct PackStreamDecoder<'a> {
+    version: PackStreamVersion,
     bytes: &'a [u8],
     index: usize,
 }
 
 impl<'a> PackStreamDecoder<'a> {
-    fn new(bytes: &'a [u8], idx: usize) -> Self {
-        Self { bytes, index: idx }
+    fn new(version: PackStreamVersion, bytes: &'a [u8], idx: usize) -> Self {
+        Self {
+            version,
+            bytes,
+            index: idx,
+        }
     }
 
     fn read(&mut self) -> Result<PackStreamValue> {
@@ -463,7 +517,7 @@ impl<'a> PackStreamDecoder<'a> {
     fn read_value(&mut self, marker: u8) -> Result<PackStreamValue> {
         let high_nibble = marker & 0xF0;
 
-        Ok(match marker {
+        let value = match marker {
             // tiny int
             #[allow(clippy::cast_possible_wrap, reason = "deliberate wrapping")]
             _ if marker as i8 >= -16 => (marker as i8).into(),
@@ -526,11 +580,17 @@ impl<'a> PackStreamDecoder<'a> {
                 let len = self.read_u32()?;
                 self.read_map(len)?
             }
+            UUID if self.version >= PackStreamVersion::V2 => self.read_uuid()?.into(),
             _ if high_nibble == TINY_STRUCT => self.read_struct((marker & 0x0F).into())?,
             _ => {
-                return Err(anyhow!("Unknown PackStream marker {marker:02X}"));
+                return Err(anyhow!(
+                    "Unknown PackStream marker {marker:02X} for {}",
+                    self.version
+                ));
             }
-        })
+        };
+
+        Ok(value)
     }
 
     fn read_list(&mut self, length: usize) -> Result<PackStreamValue> {
@@ -645,6 +705,10 @@ impl<'a> PackStreamDecoder<'a> {
         self.read_n_bytes().map(f64::from_be_bytes)
     }
 
+    fn read_uuid(&mut self) -> Result<Uuid> {
+        self.read_n_bytes().map(Uuid::from_bytes)
+    }
+
     fn read_raw_string(&mut self, length: usize) -> Result<String> {
         if length == 0 {
             return Ok(String::new());
@@ -660,15 +724,16 @@ impl<'a> PackStreamDecoder<'a> {
 }
 
 pub struct PackStreamSerializer<'a> {
+    version: PackStreamVersion,
     data: &'a mut Vec<u8>,
 }
 
 impl<'a> PackStreamSerializer<'a> {
-    pub fn new(writer: &'a mut Vec<u8>) -> Self {
-        Self { data: writer }
+    pub fn new(version: PackStreamVersion, data: &'a mut Vec<u8>) -> Self {
+        Self { version, data }
     }
 
-    pub fn write(&mut self, value: &PackStreamValue) {
+    fn write(&mut self, value: &PackStreamValue) -> Result<()> {
         match value {
             PackStreamValue::Null => self.write_null(),
             PackStreamValue::Boolean(b) => self.write_bool(*b),
@@ -679,16 +744,17 @@ impl<'a> PackStreamSerializer<'a> {
             PackStreamValue::List(l) => {
                 self.write_list_header(u64::from_usize(l.len()));
                 for value in l {
-                    self.write(value);
+                    self.write(value)?;
                 }
             }
             PackStreamValue::Dict(m) => {
                 self.write_dict_header(u64::from_usize(m.len()));
                 for (k, v) in m {
                     self.write_string(k);
-                    self.write(v);
+                    self.write(v)?;
                 }
             }
+            PackStreamValue::Uuid(u) => self.write_uuid(*u)?,
             PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
                 self.write_struct_header(
                     *tag,
@@ -698,10 +764,11 @@ impl<'a> PackStreamSerializer<'a> {
                         .expect("Produced struct with too many fields"),
                 );
                 for value in fields {
-                    self.write(value);
+                    self.write(value)?;
                 }
             }
         }
+        Ok(())
     }
 
     #[inline]
@@ -830,6 +897,15 @@ impl<'a> PackStreamSerializer<'a> {
         }
     }
 
+    fn write_uuid(&mut self, uuid: Uuid) -> Result<()> {
+        if self.version < PackStreamVersion::V2 {
+            return Err(anyhow!("UUID is not supported in {}", self.version));
+        }
+        self.write_all(&[0xE0]);
+        self.write_all(uuid.as_bytes());
+        Ok(())
+    }
+
     fn write_struct_header(&mut self, tag: u8, size: u8) {
         self.write_all(&[0xB0 + size, tag]);
     }
@@ -863,25 +939,44 @@ pub(crate) fn value_jolt_fmt(
                     f.write_str("]")
                 }
                 PackStreamValue::Dict(m) => {
-                    let (start, end) = match m.keys().next().and_then(|k| JoltSigil::from_str(k)) {
+                    let (start, end) = match m
+                        .keys()
+                        .next()
+                        .and_then(|k| JoltSigil::from_str(k, self.jolt_version))
+                    {
                         Some(_) if m.len() == 1 => {
                             // dict could be confused with Jolt => encode as Jolt Dict
                             (r#"{"{}": {"#, "}}")
                         }
                         _ => ("{", "}"),
                     };
+                    let pairs = m.iter().map(|(k, v)| (k.as_str(), v));
                     f.write_str(start)?;
-                    write_joined_entries(f, m.iter(), self.jolt_version)?;
+                    write_joined_entries(f, pairs, self.jolt_version)?;
                     f.write_str(end)
                 }
-                PackStreamValue::Struct(s) => match BoltStruct::read(s, self.jolt_version) {
-                    None => {
-                        write!(f, "Struct[{:#04X}]{{", s.tag)?;
-                        write_joined_values(f, &s.fields, self.jolt_version)?;
-                        f.write_str("}}")
+                PackStreamValue::Uuid(u) => {
+                    let key = match self.jolt_version {
+                        JoltVersion::V1 | JoltVersion::V2 | JoltVersion::V3 => "UUv4",
+                        JoltVersion::V4 => "UU",
+                    };
+                    write!(f, r#"{{"{key}": {u}}}"#)
+                }
+                PackStreamValue::Struct(s) => {
+                    let parsed_struct = BoltStruct::read(s, self.jolt_version);
+                    if let Some(bolt_struct) = parsed_struct {
+                        let formattable = bolt_struct.jolt_fmt(self.jolt_version);
+                        return Display::fmt(&formattable, f);
                     }
-                    Some(bolt_struct) => Display::fmt(&bolt_struct.jolt_fmt(self.jolt_version), f),
-                },
+                    let parsed_struct = BoltStruct::read_other_jolt_version(s, self.jolt_version);
+                    if let Some((bolt_struct, _jolt_version)) = parsed_struct {
+                        let formattable = bolt_struct.jolt_fmt(self.jolt_version);
+                        return Display::fmt(&formattable, f);
+                    }
+                    write!(f, "Struct[{:#04X}]{{", s.tag)?;
+                    write_joined_values(f, &s.fields, self.jolt_version)?;
+                    f.write_str("}}")
+                }
             }
         }
     }
@@ -910,7 +1005,7 @@ pub(super) fn write_joined_values(
 
 pub(super) fn write_joined_entries<'e>(
     f: &mut Formatter<'_>,
-    mut entries: impl Iterator<Item = (&'e String, &'e PackStreamValue)>,
+    mut entries: impl Iterator<Item = (&'e str, &'e PackStreamValue)>,
     jolt_version: JoltVersion,
 ) -> std::fmt::Result {
     if let Some((k, v)) = entries.next() {
@@ -939,8 +1034,12 @@ mod test {
     #[case::tiny_int_0(&[0x00], PackStreamValue::Integer(0))]
     #[case::tiny_int_p1(&[0x01], PackStreamValue::Integer(1))]
     #[case::tiny_int_max(&[0x7F], PackStreamValue::Integer(127))]
-    fn decode(#[case] bytes: &[u8], #[case] expected: PackStreamValue) {
-        let mut decoder = PackStreamDecoder::new(bytes, 0);
+    fn decode(
+        #[case] bytes: &[u8],
+        #[case] expected: PackStreamValue,
+        #[values(PackStreamVersion::V1, PackStreamVersion::V2)] version: PackStreamVersion,
+    ) {
+        let mut decoder = PackStreamDecoder::new(version, bytes, 0);
         let value = decoder.read().unwrap();
         assert_eq!(value, expected);
     }

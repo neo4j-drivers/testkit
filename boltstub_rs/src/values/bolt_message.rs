@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use anyhow::Result;
 use itertools::Itertools;
 
 use crate::bolt_version::BoltVersion;
@@ -39,11 +40,24 @@ impl BoltMessage {
         }
     }
 
-    pub fn into_data(self) -> Vec<u8> {
-        PackStreamValue::Struct(PackStreamStruct {
-            tag: self.tag,
-            fields: self.fields,
+    pub fn into_serialized(self) -> Result<SerializedBoltMessage> {
+        SerializedBoltMessage::new(self)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SerializedBoltMessage {
+    pub message: BoltMessage,
+    pub data: Vec<u8>,
+}
+
+impl SerializedBoltMessage {
+    pub fn new(message: BoltMessage) -> Result<Self> {
+        let data = PackStreamValue::Struct(PackStreamStruct {
+            tag: message.tag,
+            fields: message.fields.clone(),
         })
-        .as_data()
+        .as_data(message.bolt_version.packstream_version())?;
+        Ok(Self { message, data })
     }
 }

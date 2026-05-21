@@ -1,3 +1,5 @@
+use crate::bolt_version::JoltVersion;
+
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum JoltSigil {
     Bool,
@@ -14,11 +16,12 @@ pub(crate) enum JoltSigil {
     RelationshipBackward,
     Path,
     Vector,
+    Uuid,
     UnsupportedType,
 }
 
 impl JoltSigil {
-    pub(crate) fn from_str(s: &str) -> Option<Self> {
+    pub(crate) fn from_str(s: &str, jolt_version: JoltVersion) -> Option<Self> {
         Some(match s {
             "?" => Self::Bool,
             "Z" => Self::Integer,
@@ -33,9 +36,31 @@ impl JoltSigil {
             "->" => Self::RelationshipForward,
             "<-" => Self::RelationshipBackward,
             ".." => Self::Path,
-            "V" => Self::Vector,
-            "UT" => Self::UnsupportedType,
+            "V" if jolt_version >= JoltVersion::V3 => Self::Vector,
+            "UT" if jolt_version >= JoltVersion::V3 => Self::UnsupportedType,
+            "UU" if jolt_version >= JoltVersion::V4 => Self::Uuid,
             _ => return None,
         })
+    }
+
+    pub(crate) const fn str(self) -> &'static str {
+        match self {
+            Self::Bool => "?",
+            Self::Integer => "Z",
+            Self::Float => "R",
+            Self::String => "U",
+            Self::Bytes => "#",
+            Self::List => "[]",
+            Self::Dict => "{}",
+            Self::Temporal => "T",
+            Self::Spatial => "@",
+            Self::Node => "()",
+            Self::RelationshipForward => "->",
+            Self::RelationshipBackward => "<-",
+            Self::Path => "..",
+            Self::Vector => "V",
+            Self::Uuid => "UU",
+            Self::UnsupportedType => "UT",
+        }
     }
 }
