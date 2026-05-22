@@ -218,7 +218,7 @@ impl JoltVector {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use indexmap::IndexMap;
     use rstest::rstest;
 

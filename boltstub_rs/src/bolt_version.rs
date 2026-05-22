@@ -507,6 +507,16 @@ impl JoltVersion {
             Self::V4 => Some(Self::V3),
         }
     }
+
+    #[cfg(test)]
+    pub(crate) fn min_bolt_version(self) -> BoltVersion {
+        match self {
+            JoltVersion::V1 => BoltVersion::V1,
+            JoltVersion::V2 => BoltVersion::V5_0,
+            JoltVersion::V3 => BoltVersion::V6_0,
+            JoltVersion::V4 => BoltVersion::V6_1,
+        }
+    }
 }
 
 struct JoltProximityIter {

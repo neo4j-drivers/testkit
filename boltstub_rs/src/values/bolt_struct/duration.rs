@@ -8,7 +8,7 @@ use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::util::opt_res_ret;
-use crate::values::bolt_struct::_common::{fmt_jolt_sigil_and_map, normalize_seconds_nanos};
+use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::TAG_DURATION;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
@@ -16,6 +16,7 @@ use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 const SIGIL: &str = JoltSigil::Temporal.str();
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct JoltDurationData {
     pub(crate) months: i64,
     pub(crate) days: i64,
@@ -195,6 +196,7 @@ impl JoltDurationData {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct JoltDuration {
     pub(crate) data: JoltDurationData,
     pub(super) jolt_version: JoltVersion,
@@ -228,7 +230,6 @@ impl JoltDuration {
         let days = next_pack_stream_field(&mut fields)?;
         let seconds = next_pack_stream_field(&mut fields)?;
         let nanos = next_pack_stream_field(&mut fields)?;
-        let (seconds, nanos) = normalize_seconds_nanos(seconds, nanos)?;
         if !check_last_pack_stream_field(fields) {
             return None;
         }
@@ -236,7 +237,7 @@ impl JoltDuration {
             months,
             days,
             seconds,
-            nanos: nanos.into(),
+            nanos,
         };
         Some(Self { data, jolt_version })
     }
@@ -404,5 +405,101 @@ mod tests {
         let result = dbg!(dbg!(duration).jolt_fmt(JOLT_VERSION).to_string());
         let expected = format!(r#"{{"T": "{expected}"}}"#);
         assert_eq!(result, expected);
+    }
+
+    #[rstest]
+    #[case((0, 0, 1, 123_000_000))]
+    #[case((0, 0, 0, 123_000_000))]
+    #[case((0, 0, -1, -123_000_000))]
+    #[case((0, 0, 0, -123_000_000))]
+    #[case((0, 0, 0, 999_999_999))]
+    #[case((0, 0, 0, -999_999_999))]
+    #[case((0, 0, -1, 999_999_999))]
+    #[case((0, 0, 1, -999_999_999))]
+    #[case((i64::MAX, 0, 0, 0))]
+    #[case((i64::MIN, 0, 0, 0))]
+    #[case((0, i64::MAX, 0, 0))]
+    #[case((0, i64::MIN, 0, 0))]
+    #[case((0, 0, i64::MAX, 0))]
+    #[case((0, 0, i64::MIN, 0))]
+    #[case((0, 0, 0, i64::MAX))]
+    #[case((0, 0, 0, i64::MIN))]
+    #[case((0, 0, i64::MAX, i64::MAX))]
+    #[case((0, 0, i64::MIN, i64::MIN))]
+    #[case((0, 0, i64::MAX, i64::MIN))]
+    #[case((0, 0, i64::MIN, i64::MAX))]
+    fn test_to_struct(
+        #[case] components: (i64, i64, i64, i64),
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let data = JoltDurationData {
+            months: components.0,
+            days: components.1,
+            seconds: components.2,
+            nanos: components.3,
+        };
+        let duration = JoltDuration { data, jolt_version };
+
+        let struct_ = duration.as_struct();
+
+        let expected = PackStreamStruct {
+            tag: TAG_DURATION,
+            fields: vec![
+                components.0.into(),
+                components.1.into(),
+                components.2.into(),
+                components.3.into(),
+            ],
+        };
+        assert_eq!(struct_, expected);
+    }
+
+    #[rstest]
+    #[case((0, 0, 1, 123_000_000))]
+    #[case((0, 0, 0, 123_000_000))]
+    #[case((0, 0, -1, -123_000_000))]
+    #[case((0, 0, 0, -123_000_000))]
+    #[case((0, 0, 0, 999_999_999))]
+    #[case((0, 0, 0, -999_999_999))]
+    #[case((0, 0, -1, 999_999_999))]
+    #[case((0, 0, 1, -999_999_999))]
+    #[case((i64::MAX, 0, 0, 0))]
+    #[case((i64::MIN, 0, 0, 0))]
+    #[case((0, i64::MAX, 0, 0))]
+    #[case((0, i64::MIN, 0, 0))]
+    #[case((0, 0, i64::MAX, 0))]
+    #[case((0, 0, i64::MIN, 0))]
+    #[case((0, 0, 0, i64::MAX))]
+    #[case((0, 0, 0, i64::MIN))]
+    #[case((0, 0, i64::MAX, i64::MAX))]
+    #[case((0, 0, i64::MIN, i64::MIN))]
+    #[case((0, 0, i64::MAX, i64::MIN))]
+    #[case((0, 0, i64::MIN, i64::MAX))]
+    fn test_from_struct(
+        #[case] components: (i64, i64, i64, i64),
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let struct_ = PackStreamStruct {
+            tag: TAG_DURATION,
+            fields: vec![
+                components.0.into(),
+                components.1.into(),
+                components.2.into(),
+                components.3.into(),
+            ],
+        };
+
+        let date = JoltDuration::from_struct(&struct_, jolt_version).expect("failed to load");
+
+        let data = JoltDurationData {
+            months: components.0,
+            days: components.1,
+            seconds: components.2,
+            nanos: components.3,
+        };
+        let expected = JoltDuration { data, jolt_version };
+        assert_eq!(date, expected);
     }
 }

@@ -206,6 +206,7 @@ impl<'a> JoltTimeData<'a> {
     }
 }
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct JoltTime<'a> {
     pub(crate) data: JoltTimeData<'a>,
     pub(crate) jolt_version: JoltVersion,

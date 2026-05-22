@@ -141,7 +141,7 @@ pub(crate) fn fmt_bytes_compact(bytes: &[u8]) -> impl Display + '_ {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use rstest::rstest;
 
     use super::*;

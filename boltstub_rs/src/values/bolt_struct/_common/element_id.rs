@@ -91,11 +91,15 @@ impl<T, E> ElementIdExt<Result<T, E>> {
 impl<T> ElementIdExt<Option<T>> {
     pub(crate) fn transpose(self) -> Option<ElementIdExt<T>> {
         match self.inner {
-            Some(inner) => Some(ElementIdExt {
-                inner,
+            Some(Some(inner)) => Some(ElementIdExt {
+                inner: Some(inner),
                 jolt_version: self.jolt_version,
             }),
-            None => None,
+            Some(None) => None,
+            None => Some(ElementIdExt {
+                inner: None,
+                jolt_version: self.jolt_version,
+            }),
         }
     }
 }

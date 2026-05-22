@@ -5,6 +5,18 @@ use crate::parse_error::ParseError;
 use crate::parser::{transcode_field, ActorConfig};
 use crate::values::pack_stream_value::PackStreamValue;
 
+pub(in super::super) fn iter_json_fields(
+    fields: Vec<JsonValue>,
+) -> (usize, impl Iterator<Item = (usize, JsonValue)>) {
+    (
+        0,
+        fields
+            .into_iter()
+            .enumerate()
+            .map(|(i, field)| (i + 1, field)),
+    )
+}
+
 pub(in super::super) fn next_json_field<R: ExtractableField>(
     fields: &mut impl Iterator<Item = (usize, JsonValue)>,
     name: &str,
@@ -83,7 +95,7 @@ impl ExtractableField for i64 {
     fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
         field
             .as_i64()
-            .ok_or_else(|| format!("to be i64, but found {field:?}").into())
+            .ok_or_else(|| format!("to be an integer, but found {field:?}").into())
     }
 }
 
@@ -128,7 +140,7 @@ impl private::Sealed for String {}
 impl ExtractableField for String {
     fn extract(field: JsonValue, _: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
         let JsonValue::String(field) = field else {
-            return Err(format!("to be string, but found {field:?}").into());
+            return Err(format!("to be a string, but found {field:?}").into());
         };
         Ok(field)
     }

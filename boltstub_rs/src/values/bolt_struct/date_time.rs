@@ -7,6 +7,7 @@ use chrono::{
     Utc,
 };
 use chrono_tz::Tz;
+use log::warn;
 use regex::Regex;
 
 use crate::bolt_version::JoltVersion;
@@ -27,6 +28,7 @@ const UNIX_EPOCH_DATE_TIME: DateTime<Utc> = DateTime::from_timestamp(0, 0).unwra
 const SIGIL: &str = JoltSigil::Temporal.str();
 
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct JoltDateTime<'a> {
     pub(crate) date: JoltDateData,
     pub(crate) time: JoltTimeData<'a>,
@@ -177,6 +179,7 @@ impl<'a> JoltDateTime<'a> {
         }))
     }
 
+    #[expect(clippy::too_many_lines, reason = "A problem for future-us")]
     pub(super) fn from_struct(s: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
         let PackStreamStruct { tag, fields } = s;
         let mut fields = fields.iter();
@@ -192,17 +195,32 @@ impl<'a> JoltDateTime<'a> {
                     normalize_seconds_nanos(seconds_since_epoch, nanos)?;
                 let date_time = DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
                 let Ok(tz) = Tz::from_str(zone_id) else {
+                    warn!(
+                        "Received unknown time zone {zone_id}. \
+                        Representations might look misleading"
+                    );
                     return Some(Self::new_unknown_tz(date_time, zone_id, jolt_version));
                 };
-                let date_time = match tz.from_local_datetime(&date_time) {
+                let date_time = match dbg!(tz.from_local_datetime(&date_time)) {
                     MappedLocalTime::Single(d) => d,
-                    MappedLocalTime::Ambiguous(_, _) | MappedLocalTime::None => {
-                        return Some(Self::new_unknown_tz(date_time, zone_id, jolt_version))
+                    MappedLocalTime::Ambiguous(d1, d2) => {
+                        warn!(
+                            "Received datetime with ambiguous local time: {date_time} {tz}. \
+                            Datetime will be loaded as {d1} (alternative: {d2})"
+                        );
+                        d1
+                    }
+                    MappedLocalTime::None => {
+                        warn!(
+                            "Received datetime with non-existing local time: {date_time} {tz}. \
+                            Datetime will be loaded without offset"
+                        );
+                        return Some(Self::new_unknown_tz(date_time, zone_id, jolt_version));
                     }
                 };
                 Self::new_tz(&date_time, zone_id, jolt_version)
             }
-            TAG_DATE_TIME_ZONE_ID_V2 if jolt_version == JoltVersion::V2 => {
+            TAG_DATE_TIME_ZONE_ID_V2 if jolt_version >= JoltVersion::V2 => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
                 let nanos: i64 = next_pack_stream_field(&mut fields)?;
                 let zone_id: &str = next_pack_stream_field(&mut fields)?;
@@ -212,11 +230,19 @@ impl<'a> JoltDateTime<'a> {
                 let (seconds_since_epoch, nanos) =
                     normalize_seconds_nanos(seconds_since_epoch, nanos)?;
                 let utc_date_time =
-                    DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
+                    dbg!(DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local());
                 let Ok(tz) = Tz::from_str(zone_id) else {
+                    warn!(
+                        "Received unknown time zone {zone_id}. \
+                        Representations might look misleading"
+                    );
                     return Some(Self::new_unknown_tz(utc_date_time, zone_id, jolt_version));
                 };
-                Self::new_tz(&tz.from_utc_datetime(&utc_date_time), zone_id, jolt_version)
+                Self::new_tz(
+                    &dbg!(tz.from_utc_datetime(&utc_date_time)),
+                    zone_id,
+                    jolt_version,
+                )
             }
             TAG_DATE_TIME_V1 if jolt_version == JoltVersion::V1 => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
@@ -230,7 +256,7 @@ impl<'a> JoltDateTime<'a> {
                 let date_time = DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
                 Self::new(date_time, Some(utc_offset_seconds), None, jolt_version)
             }
-            TAG_DATE_TIME_V2 if jolt_version == JoltVersion::V2 => {
+            TAG_DATE_TIME_V2 if jolt_version >= JoltVersion::V2 => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
                 let nanos: i64 = next_pack_stream_field(&mut fields)?;
                 let utc_offset_seconds: i64 = next_pack_stream_field(&mut fields)?;
@@ -241,10 +267,14 @@ impl<'a> JoltDateTime<'a> {
                     normalize_seconds_nanos(seconds_since_epoch, nanos)?;
                 let utc_date_time =
                     DateTime::from_timestamp(seconds_since_epoch, nanos)?.naive_local();
-                let utc_date_time = utc_date_time.checked_sub_signed(
-                    TimeDelta::new(seconds_since_epoch, nanos).expect("input is normalized"),
-                )?;
-                Self::new(utc_date_time, Some(utc_offset_seconds), None, jolt_version)
+                let local_date_time =
+                    utc_date_time.checked_add_signed(TimeDelta::new(utc_offset_seconds, 0)?)?;
+                Self::new(
+                    local_date_time,
+                    Some(utc_offset_seconds),
+                    None,
+                    jolt_version,
+                )
             }
             TAG_LOCAL_DATE_TIME => {
                 let seconds_since_epoch: i64 = next_pack_stream_field(&mut fields)?;
@@ -588,5 +618,177 @@ mod tests {
         JoltDateTime::parse(input, JoltVersion::V1)
             .expect("case input must not be rejected")
             .expect_err("case input should fail to parse");
+    }
+
+    #[rstest]
+    #[case(
+        "1970-01-02T01:01:01.000001234",
+        TAG_LOCAL_DATE_TIME,
+        vec![90061.into(), 1234.into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01",
+        TAG_DATE_TIME_V1,
+        vec![90061.into(), 123_400_000.into(), 3600.into()],
+    )]
+    // packstream v1 bug: non-unique times
+    #[case(
+        "1970-10-25T01:30-04:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V1,
+        vec![25_666_200.into(), 0.into(), "America/New_York".into()],
+    )]
+    // Wow! The same encoding \o/ [/sarcasm]
+    #[case(
+        "1970-10-25T01:30-05:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V1,
+        vec![25_666_200.into(), 0.into(), "America/New_York".into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01[Europe/Stockholm]",
+        TAG_DATE_TIME_ZONE_ID_V1,
+        vec![90061.into(), 123_400_000.into(), "Europe/Stockholm".into()],
+    )]
+    fn test_to_struct_v1(
+        #[case] input: &str,
+        #[case] tag: u8,
+        #[case] fields: Vec<PackStreamValue>,
+    ) {
+        let date_time = JoltDateTime::parse(input, JoltVersion::V1)
+            .expect("non-datetime input")
+            .expect("invalid input");
+
+        let struct_ = date_time
+            .into_struct()
+            .expect("no struct")
+            .expect("invalid struct");
+
+        let expected = PackStreamStruct { tag, fields };
+        assert_eq!(struct_, expected);
+    }
+
+    #[rstest]
+    #[case(
+        "1970-01-02T01:01:01.000001234",
+        TAG_LOCAL_DATE_TIME,
+        vec![90061.into(), 1234.into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01",
+        TAG_DATE_TIME_V2,
+        vec![(90061 - 3600).into(), 123_400_000.into(), 3600.into()],
+    )]
+    #[case(
+        "1970-10-25T01:30-04:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V2,
+        vec![(25_666_200 + 4 * 3600).into(), 0.into(), "America/New_York".into()],
+    )]
+    #[case(
+        "1970-10-25T01:30-05:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V2,
+        vec![(25_666_200 + 5 * 3600).into(), 0.into(), "America/New_York".into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01[Europe/Stockholm]",
+        TAG_DATE_TIME_ZONE_ID_V2,
+        vec![(90061 - 3600).into(), 123_400_000.into(), "Europe/Stockholm".into()],
+    )]
+    fn test_to_struct_v2_plus(
+        #[case] input: &str,
+        #[case] tag: u8,
+        #[case] fields: Vec<PackStreamValue>,
+        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+    ) {
+        let date_time = JoltDateTime::parse(input, jolt_version)
+            .expect("non-datetime input")
+            .expect("invalid input");
+
+        let struct_ = date_time
+            .into_struct()
+            .expect("no struct")
+            .expect("invalid struct");
+
+        let expected = PackStreamStruct { tag, fields };
+        assert_eq!(struct_, expected);
+    }
+    #[rstest]
+    #[case(
+        "1970-01-02T01:01:01.000001234",
+        TAG_LOCAL_DATE_TIME,
+        vec![90061.into(), 1234.into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01",
+        TAG_DATE_TIME_V1,
+        vec![90061.into(), 123_400_000.into(), 3600.into()],
+    )]
+    // packstream v1 bug: non-unique times
+    #[case(
+        // could also be "1970-10-25T01:30-05:00[America/New_York]"
+        // either is fine, but consistency is desired
+        "1970-10-25T01:30-04:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V1,
+        vec![25_666_200.into(), 0.into(), "America/New_York".into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01[Europe/Stockholm]",
+        TAG_DATE_TIME_ZONE_ID_V1,
+        vec![90061.into(), 123_400_000.into(), "Europe/Stockholm".into()],
+    )]
+    fn test_from_struct_v1(
+        #[case] input: &str,
+        #[case] tag: u8,
+        #[case] fields: Vec<PackStreamValue>,
+    ) {
+        let jolt_version = JoltVersion::V1;
+        let struct_ = PackStreamStruct { tag, fields };
+
+        let date_time = JoltDateTime::from_struct(&struct_, jolt_version).expect("failed to load");
+
+        let expected = JoltDateTime::parse(input, jolt_version)
+            .expect("non-datetime input")
+            .expect("invalid input");
+        assert_eq!(date_time, expected);
+    }
+
+    #[rstest]
+    #[case(
+        "1970-01-02T01:01:01.000001234",
+        TAG_LOCAL_DATE_TIME,
+        vec![90061.into(), 1234.into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01",
+        TAG_DATE_TIME_V2,
+        vec![(90061 - 3600).into(), 123_400_000.into(), 3600.into()],
+    )]
+    #[case(
+        "1970-10-25T01:30-04:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V2,
+        vec![(25_666_200 + 4 * 3600).into(), 0.into(), "America/New_York".into()],
+    )]
+    #[case(
+        "1970-10-25T01:30-05:00[America/New_York]",
+        TAG_DATE_TIME_ZONE_ID_V2,
+        vec![(25_666_200 + 5 * 3600).into(), 0.into(), "America/New_York".into()],
+    )]
+    #[case(
+        "1970-01-02T01:01:01.1234+01[Europe/Stockholm]",
+        TAG_DATE_TIME_ZONE_ID_V2,
+        vec![(90061 - 3600).into(), 123_400_000.into(), "Europe/Stockholm".into()],
+    )]
+    fn test_from_struct_v2_plus(
+        #[case] input: &str,
+        #[case] tag: u8,
+        #[case] fields: Vec<PackStreamValue>,
+        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+    ) {
+        let struct_ = PackStreamStruct { tag, fields };
+
+        let date_time = JoltDateTime::from_struct(&struct_, jolt_version).expect("failed to load");
+
+        let expected = JoltDateTime::parse(input, jolt_version)
+            .expect("non-datetime input")
+            .expect("invalid input");
+        assert_eq!(date_time, expected);
     }
 }

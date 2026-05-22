@@ -40,7 +40,7 @@ pub(super) fn fmt_jolt_sigil_and_map<'a>(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use std::borrow::Cow;
 
     use super::*;

@@ -1032,7 +1032,7 @@ pub(super) fn write_joined_entries<'e>(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use rstest::rstest;
 
     use super::*;

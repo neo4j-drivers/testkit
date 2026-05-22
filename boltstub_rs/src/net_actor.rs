@@ -677,10 +677,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
         initial_size: &mut usize,
     ) -> NetActorResult<()> {
         let mut error = None;
-        loop {
-            let Some(block) = blocks.front_mut() else {
-                break;
-            };
+        while let Some(block) = blocks.front_mut() {
             let res = Box::pin(self.server_action(block)).await;
             if let Err(err) = res {
                 error.get_or_insert(err);

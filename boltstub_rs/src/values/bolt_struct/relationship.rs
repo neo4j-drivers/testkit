@@ -6,7 +6,8 @@ use indexmap::IndexMap;
 use serde_json::Value as JsonValue;
 
 use super::_parsing::{
-    check_last_json_field, check_last_pack_stream_field, next_json_field, next_pack_stream_field,
+    check_last_json_field, check_last_pack_stream_field, iter_json_fields, next_json_field,
+    next_pack_stream_field,
 };
 use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
@@ -51,12 +52,11 @@ impl JoltRelationshipData<'static> {
                 but found {v:?}"
             )));
         };
-        let mut fields = fields.into_iter().enumerate();
-        let i = 0;
+        let (i, mut fields) = iter_json_fields(fields);
 
         let (i, id) = next_json_field(&mut fields, "id", i, SIGIL, config)?;
         let (i, start_node_id) = next_json_field(&mut fields, "start node id", i, SIGIL, config)?;
-        let (i, rel_type) = next_json_field(&mut fields, "relation ship type", i, SIGIL, config)?;
+        let (i, rel_type) = next_json_field(&mut fields, "relationship type", i, SIGIL, config)?;
         let (i, end_node_id) = next_json_field(&mut fields, "end node id", i, SIGIL, config)?;
         let (i, properties) = next_json_field(&mut fields, "properties", i, SIGIL, config)?;
         let (i, element_id_ext) = {
@@ -124,9 +124,9 @@ impl JoltRelationshipData<'_> {
                         Display::fmt(&self.data.id, f)?;
                         f.write_str(", ")?;
                         Display::fmt(&self.data.start_node_id, f)?;
-                        f.write_str(", ")?;
-                        Debug::fmt(&self.data.rel_type, f)?;
-                        f.write_str(", ")?;
+                        f.write_str(", \"")?;
+                        Display::fmt(&self.data.rel_type, f)?;
+                        f.write_str("\", ")?;
                         Display::fmt(&self.data.end_node_id, f)?;
                         f.write_str(", {")?;
                         let properties = self.data.properties.iter().map(|(k, v)| (k.as_str(), v));
@@ -134,12 +134,13 @@ impl JoltRelationshipData<'_> {
                         match self.data.element_id_ext.inner(self.jolt_version_data) {
                             None => f.write_str("}"),
                             Some(ext) => {
-                                f.write_str("}, ")?;
-                                Debug::fmt(&ext.element_id, f)?;
-                                f.write_str(", ")?;
-                                Debug::fmt(&ext.start_node_element_id, f)?;
-                                f.write_str(", ")?;
-                                Debug::fmt(&ext.end_node_element_id, f)
+                                f.write_str("}, \"")?;
+                                Display::fmt(&ext.element_id, f)?;
+                                f.write_str("\", \"")?;
+                                Display::fmt(&ext.start_node_element_id, f)?;
+                                f.write_str("\", \"")?;
+                                Display::fmt(&ext.end_node_element_id, f)?;
+                                f.write_str("\"")
                             }
                         }
                     },
@@ -323,5 +324,564 @@ impl<'a> JoltUnboundRelationship<'a> {
             element_id,
         };
         Some(Self { data, jolt_version })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::bolt_version::BoltCapabilities;
+
+    use super::*;
+
+    use rstest::rstest;
+
+    fn make_actor_config(jolt_version: JoltVersion) -> ActorConfig {
+        let bolt_version = jolt_version.min_bolt_version();
+        let bolt_version_raw = (bolt_version.major(), bolt_version.major());
+        ActorConfig {
+            bolt_version,
+            bolt_version_raw,
+            bolt_capabilities: BoltCapabilities::default(),
+            handshake_manifest_version: None,
+            handshake: None,
+            handshake_response: None,
+            handshake_delay: None,
+            allow_restart: false,
+            allow_concurrent: false,
+            auto_responses: IndexMap::default(),
+            py_lines: vec![],
+        }
+    }
+
+    fn make_element_ids<'a>(
+        jolt_version: JoltVersion,
+        ids: (&'a str, &'a str, &'a str),
+    ) -> ElementIdExt<JoltRelationshipElementIdExt<'a>> {
+        let ext = JoltRelationshipElementIdExt {
+            element_id: Cow::Borrowed(ids.0),
+            start_node_element_id: Cow::Borrowed(ids.1),
+            end_node_element_id: Cow::Borrowed(ids.2),
+        };
+        ElementIdExt::new(jolt_version, ext)
+    }
+
+    #[rstest]
+    #[case(
+        r#"[123, 456, "FOO", 786, {"a": 1, "b": null}]"#,
+        (123, 456, 786),
+        "FOO",
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+    )]
+    #[case(
+        r#"[-1, 9223372036854775807, "", -9223372036854775808, {}]"#,
+        (-1, i64::MAX, i64::MIN),
+        "",
+        &[],
+    )]
+    #[case(
+        r#"[0, 0, "🍨", 0, {}]"#,
+        (0, 0, 0),
+        "🍨",
+        &[],
+    )]
+    fn test_parse_v1(
+        #[case] input: &str,
+        #[case] ids: (i64, i64, i64),
+        #[case] rel_type: &str,
+        #[case] properties: &[(&str, PackStreamValue)],
+    ) {
+        let jolt_version = JoltVersion::V1;
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+
+        let parsed =
+            JoltRelationship::parse(input, jolt_version, &config).expect("case input failed");
+
+        let data = JoltRelationshipData {
+            id: ids.0,
+            start_node_id: ids.1,
+            rel_type: rel_type.into(),
+            end_node_id: ids.2,
+            properties: Cow::Owned(properties),
+            element_id_ext: make_element_ids(jolt_version, ("", "", "")),
+        };
+        let expected = JoltRelationship { data, jolt_version };
+        assert_eq!(parsed, expected);
+    }
+
+    #[rstest]
+    #[case(
+        r#"[123, 456, "FOO", 786, {"a": 1, "b": null}, "", "", ""]"#,
+        (123, 456, 786),
+        "FOO",
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+        ("", "", ""),
+    )]
+    #[case(
+        r#"[-1, 9223372036854775807, "", -9223372036854775808, {}, "a", "b", "c"]"#,
+        (-1, i64::MAX, i64::MIN),
+        "",
+        &[],
+        ("a", "b", "c"),
+    )]
+    #[case(
+        r#"[0, 0, "🍨", 0, {"🚑": "🏥"}, "🍪", "🍩", "⚖️"]"#,
+        (0, 0, 0),
+        "🍨",
+        &[("🚑", "🏥".into())],
+        ("🍪", "🍩", "⚖️")
+    )]
+    fn test_parse_v2_plus(
+        #[case] input: &str,
+        #[case] ids: (i64, i64, i64),
+        #[case] rel_type: &str,
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_ids: (&str, &str, &str),
+        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let element_id_ext = make_element_ids(jolt_version, element_ids);
+
+        let parsed =
+            JoltRelationship::parse(input, jolt_version, &config).expect("case input failed");
+
+        let data = JoltRelationshipData {
+            id: ids.0,
+            start_node_id: ids.1,
+            rel_type: rel_type.into(),
+            end_node_id: ids.2,
+            properties: Cow::Owned(properties),
+            element_id_ext,
+        };
+        let expected = JoltRelationship { data, jolt_version };
+        assert_eq!(parsed, expected);
+    }
+
+    #[rstest]
+    #[case(
+        r#"["1", 2, "FOO", 3, {"a": 1, "b": null}]"#,
+        &["id (field 1)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[1, "2", "FOO", 3, {"a": 1, "b": null}]"#,
+        &["start node id (field 2)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[1, 2, 0, 3, {"a": 1, "b": null}]"#,
+        &["relationship type (field 3)", "to be a string", "found number"],
+    )]
+    #[case(
+        r#"[1, 2, {"0": "FOO"}, 3, {"a": 1, "b": null}]"#,
+        &["relationship type (field 3)", "to be a string", "found object"],
+    )]
+    #[case(
+        r#"[1, 2, "FOO", "3", {"a": 1, "b": null}]"#,
+        &["end node id (field 4)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, null]"#,
+        &["properties (field 5)", "to be a map", "found null"],
+    )]
+    #[case(
+        "[]",
+        &["missing", "id (field 1)"],
+    )]
+    #[case(
+        "[1]",
+        &["missing", "start node id (field 2)"],
+    )]
+    #[case(
+        "[1, 2]",
+        &["missing", "relationship type (field 3)"],
+    )]
+    #[case(
+        r#"[1, 2, ""]"#,
+        &["missing", "end node id (field 4)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3]"#,
+        &["missing", "properties (field 5)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, null]"#,
+        &["too many fields"],
+    )]
+    fn test_failing_parse_v1(#[case] input: &str, #[case] err_matchers: &[&str]) {
+        let jolt_version = JoltVersion::V1;
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+
+        let err = JoltRelationship::parse(input, jolt_version, &config)
+            .expect_err("case input parsed successfully");
+        for error_matcher in err_matchers {
+            assert!(
+                err.to_string().to_lowercase().contains(error_matcher),
+                "Expected error message to contain {error_matcher:?}, but got {err:?}"
+            );
+        }
+    }
+
+    #[rstest]
+    #[case(
+        r#"["1", 2, "FOO", 3, {"a": 1, "b": null}, "e1", "e2", "e3"]"#,
+        &["id (field 1)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[1, "2", "FOO", 3, {"a": 1, "b": null}, "e1", "e2", "e3"]"#,
+        &["start node id (field 2)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[1, 2, 0, 3, {"a": 1, "b": null}, "e1", "e2", "e3"]"#,
+        &["relationship type (field 3)", "to be a string", "found number"],
+    )]
+    #[case(
+        r#"[1, 2, {"0": "FOO"}, 3, {"a": 1, "b": null}, "e1", "e2", "e3"]"#,
+        &["relationship type (field 3)", "to be a string", "found object"],
+    )]
+    #[case(
+        r#"[1, 2, "FOO", "3", {"a": 1, "b": null}, "e1", "e2", "e3"]"#,
+        &["end node id (field 4)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, null, "e1", "e2", "e3"]"#,
+        &["properties (field 5)", "to be a map", "found null"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, 1, "e2", "e3"]"#,
+        &["element id (field 6)", "to be a string", "found number"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, "e1", 2, "e3"]"#,
+        &["start node element id (field 7)", "to be a string", "found number"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, "e1", "e2", 3]"#,
+        &["end node element id (field 8)", "to be a string", "found number"],
+    )]
+    #[case(
+        "[]",
+        &["missing", "id (field 1)"],
+    )]
+    #[case(
+        "[1]",
+        &["missing", "start node id (field 2)"],
+    )]
+    #[case(
+        "[1, 2]",
+        &["missing", "relationship type (field 3)"],
+    )]
+    #[case(
+        r#"[1, 2, ""]"#,
+        &["missing", "end node id (field 4)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3]"#,
+        &["missing", "properties (field 5)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}]"#,
+        &["missing", "element id (field 6)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, "e1"]"#,
+        &["missing", "start node element id (field 7)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, "e1", "e2"]"#,
+        &["missing", "end node element id (field 8)"],
+    )]
+    #[case(
+        r#"[1, 2, "", 3, {}, "e1", "e2", "e3", null]"#,
+        &["too many fields"],
+    )]
+    fn test_failing_parse_v2_plus(
+        #[case] input: &str,
+        #[case] err_matchers: &[&str],
+        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+
+        let err = JoltRelationship::parse(input, jolt_version, &config)
+            .expect_err("case input parsed successfully");
+        for error_matcher in err_matchers {
+            assert!(
+                err.to_string().to_lowercase().contains(error_matcher),
+                "Expected error message to contain {error_matcher:?}, but got {err:?}"
+            );
+        }
+    }
+
+    #[rstest]
+    #[case(
+        r#"[0, 0, "", 0, {"uuid": {"UU": "12345678-1234-1234-1234-123456789012"}}]"#,
+        JoltVersion::V1,
+        false,
+        false
+    )]
+    #[case(
+        r#"[0, 0, "", 0, {"uuid": {"UU": "12345678-1234-1234-1234-123456789012"}}, "", "", ""]"#,
+        JoltVersion::V4,
+        false,
+        true
+    )]
+    #[case(
+        r#"[0, 0, "", 0, {"uuid": {"UUv4": "12345678-1234-1234-1234-123456789012"}}]"#,
+        JoltVersion::V1,
+        true,
+        true
+    )]
+    #[case(
+        r#"[0, 0, "", 0, {"uuid": {"UUv1": "12345678-1234-1234-1234-123456789012"}}, "", "", ""]"#,
+        JoltVersion::V4,
+        false,
+        false
+    )]
+    fn test_parse_recursive_jolt_version(
+        #[case] input: &str,
+        #[case] jolt_version: JoltVersion,
+        #[case] fails: bool,
+        #[case] parses_uuid: bool,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+
+        let res = JoltRelationship::parse(input, jolt_version, &config);
+        if fails {
+            res.expect_err("didn't fail parsing");
+            return;
+        }
+        let JoltRelationship {
+            data,
+            jolt_version: parsed_jolt_version,
+        } = res.expect("case input failed");
+
+        assert_eq!(parsed_jolt_version, jolt_version);
+        assert_eq!(data.properties.len(), 1);
+        let uuid = data.properties.get("uuid").expect("missing uuid property");
+        if parses_uuid {
+            assert!(uuid.is_uuid());
+        } else {
+            let uuid_map = uuid.as_map().expect("not a map");
+            assert_eq!(uuid_map.len(), 1);
+            let key = uuid_map.keys().next().unwrap();
+            assert!(key.starts_with("UU"));
+            let uuid_str = uuid_map.get(key).expect("missing UU* key");
+            assert!(uuid_str.is_string());
+        }
+    }
+
+    #[rstest]
+    #[case(
+        r#"[123, 234, "FOO", 345, {"a": 1, "b": null}]"#,
+        (123, 234, 345),
+        "FOO",
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+    )]
+    #[case(
+        r#"[0, 9223372036854775807, "", -9223372036854775808, {}]"#,
+        (0, i64::MAX, i64::MIN),
+        "",
+        &[],
+    )]
+    fn test_jolt_fmt_v1(
+        #[case] expected: &str,
+        #[case] ids: (i64, i64, i64),
+        #[case] rel_type: &str,
+        #[case] properties: &[(&str, PackStreamValue)],
+    ) {
+        let jolt_version = JoltVersion::V1;
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let data = JoltRelationshipData {
+            id: ids.0,
+            start_node_id: ids.1,
+            rel_type: rel_type.into(),
+            end_node_id: ids.2,
+            properties: Cow::Owned(properties),
+            element_id_ext: make_element_ids(jolt_version, ("", "", "")),
+        };
+        let node = JoltRelationship { data, jolt_version };
+
+        let expected = format!(r#"{{"->": {expected}}}"#);
+        assert_eq!(node.jolt_fmt(jolt_version).to_string(), expected);
+    }
+
+    #[rstest]
+    #[case(
+        r#"[123, 234, "FOO", 345, {"a": 1, "b": null}, "", "", ""]"#,
+        (123, 234, 345),
+        "FOO",
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+        ("", "", ""),
+    )]
+    #[case(
+        r#"[0, 9223372036854775807, "", -9223372036854775808, {}, "🍪", "🍩", "⚖️"]"#,
+        (0, i64::MAX, i64::MIN),
+        "",
+        &[],
+        ("🍪", "🍩", "⚖️"),
+    )]
+    fn test_jolt_fmt_v2_plus(
+        #[case] expected: &str,
+        #[case] ids: (i64, i64, i64),
+        #[case] rel_type: &str,
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_ids: (&str, &str, &str),
+        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+    ) {
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let data = JoltRelationshipData {
+            id: ids.0,
+            start_node_id: ids.1,
+            rel_type: rel_type.into(),
+            end_node_id: ids.2,
+            properties: Cow::Owned(properties),
+            element_id_ext: make_element_ids(jolt_version, element_ids),
+        };
+        let node = JoltRelationship { data, jolt_version };
+
+        let expected = format!(r#"{{"->": {expected}}}"#);
+        assert_eq!(node.jolt_fmt(jolt_version).to_string(), expected);
+    }
+
+    #[rstest]
+    #[case(
+        (0, 0, 0),
+        "",
+        &[],
+        ("", "", "")
+    )]
+    #[case(
+        (1, 2, 3),
+        "FOO",
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        ("abc", "def", "xyz")
+    )]
+    #[case(
+        (i64::MIN, i64::MIN, i64::MIN),
+        "🍨",
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        ("🍪", "🍩", "⚖️"),
+    )]
+    fn test_as_struct(
+        #[case] ids: (i64, i64, i64),
+        #[case] rel_type: &str,
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_ids: (&str, &str, &str),
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let properties: IndexMap<String, PackStreamValue> = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let data = JoltRelationshipData {
+            id: ids.0,
+            start_node_id: ids.1,
+            rel_type: rel_type.into(),
+            end_node_id: ids.2,
+            properties: Cow::Owned(properties.clone()),
+            element_id_ext: make_element_ids(jolt_version, element_ids),
+        };
+        let node = JoltRelationship { data, jolt_version };
+
+        let struct_ = node.into_struct();
+
+        let mut fields = vec![
+            ids.0.into(),
+            ids.1.into(),
+            ids.2.into(),
+            rel_type.into(),
+            properties.into(),
+        ];
+        if ElementIdExt::uses_element_id(jolt_version) {
+            fields.push(element_ids.0.into());
+            fields.push(element_ids.1.into());
+            fields.push(element_ids.2.into());
+        }
+        let expected = PackStreamStruct {
+            tag: TAG_RELATIONSHIP,
+            fields,
+        };
+        assert_eq!(struct_, expected);
+    }
+
+    #[rstest]
+    #[case(
+        (0, 0, 0),
+        "",
+        &[],
+        ("", "", "")
+    )]
+    #[case(
+        (1, 2, 3),
+        "FOO",
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        ("abc", "def", "xyz")
+    )]
+    #[case(
+        (i64::MIN, i64::MIN, i64::MIN),
+        "🍨",
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        ("🍪", "🍩", "⚖️"),
+    )]
+    fn test_from_struct(
+        #[case] ids: (i64, i64, i64),
+        #[case] rel_type: &str,
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_ids: (&str, &str, &str),
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let properties: IndexMap<String, PackStreamValue> = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let mut fields = vec![
+            ids.0.into(),
+            ids.1.into(),
+            ids.2.into(),
+            rel_type.into(),
+            properties.clone().into(),
+        ];
+        if ElementIdExt::uses_element_id(jolt_version) {
+            fields.push(element_ids.0.into());
+            fields.push(element_ids.1.into());
+            fields.push(element_ids.2.into());
+        }
+        let struct_ = PackStreamStruct {
+            tag: TAG_RELATIONSHIP,
+            fields,
+        };
+
+        let struct_ =
+            JoltRelationship::from_struct(&struct_, jolt_version).expect("failed to load");
+
+        let data = JoltRelationshipData {
+            id: ids.0,
+            start_node_id: ids.1,
+            rel_type: rel_type.into(),
+            end_node_id: ids.2,
+            properties: Cow::Owned(properties),
+            element_id_ext: make_element_ids(jolt_version, element_ids),
+        };
+        let expected = JoltRelationship { data, jolt_version };
+
+        assert_eq!(struct_, expected);
     }
 }

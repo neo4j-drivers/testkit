@@ -86,6 +86,7 @@ impl JoltDateData {
 }
 
 #[derive(Debug, Copy, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct JoltDate {
     pub(crate) data: JoltDateData,
     pub(super) jolt_version: JoltVersion,
@@ -164,9 +165,14 @@ mod tests {
     #[case("2024-12-01", (2024, 12, 1))]
     #[case("2024-12-31", (2024, 12, 31))]
     #[case("2023-02-28", (2023, 2, 28))]
-    fn test_parse(#[case] input: &str, #[case] ymd: (i32, u32, u32)) {
+    fn test_parse(
+        #[case] input: &str,
+        #[case] ymd: (i32, u32, u32),
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
         let naive_date = NaiveDate::from_ymd_opt(ymd.0, ymd.1, ymd.2).expect("failed to load ymd");
-        let jolt_date = JoltDate::parse(input, JoltVersion::V1)
+        let jolt_date = JoltDate::parse(input, jolt_version)
             .expect("case input rejected")
             .expect("case input failed");
         assert_eq!(jolt_date.data.date, naive_date);
@@ -207,13 +213,18 @@ mod tests {
     #[case("-12345-02-03", (-12345, 2, 3))]
     #[case("+262142-02-03", (262_142, 2, 3))]
     #[case("-262143-02-03", (-262_143, 2, 3))]
-    fn test_fmt(#[case] expected: &str, #[case] ymd: (i32, u32, u32)) {
+    fn test_fmt(
+        #[case] expected: &str,
+        #[case] ymd: (i32, u32, u32),
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
         let naive_date = NaiveDate::from_ymd_opt(ymd.0, ymd.1, ymd.2).expect("failed to load ymd");
         let jolt_date = JoltDate {
             data: JoltDateData { date: naive_date },
-            jolt_version: JoltVersion::V1,
+            jolt_version,
         };
-        let output = jolt_date.jolt_fmt(JoltVersion::V1).to_string();
+        let output = jolt_date.jolt_fmt(jolt_version).to_string();
         let expected = format!(r#"{{"T": "{expected}"}}"#);
         assert_eq!(output, expected);
     }
@@ -242,8 +253,12 @@ mod tests {
     #[case("1970-01-1")]
     #[case("1970-001-01")]
     #[case("1970-01-001")]
-    fn test_no_match_parse(#[case] input: &str) {
-        let parsed = JoltDate::parse(input, JoltVersion::V1);
+    fn test_no_match_parse(
+        #[case] input: &str,
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let parsed = JoltDate::parse(input, jolt_version);
         assert!(dbg!(parsed).is_none());
     }
 
@@ -279,9 +294,121 @@ mod tests {
     #[case("1970-13-01")]
     #[case("+262143-02-03")]
     #[case("-262144-02-03")]
-    fn test_invalid_parse(#[case] input: &str) {
-        JoltDate::parse(input, JoltVersion::V1)
+    fn test_invalid_parse(
+        #[case] input: &str,
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        JoltDate::parse(input, jolt_version)
             .expect("case input must not be rejected")
             .expect_err("case input should fail to parse");
+    }
+
+    #[rstest]
+    #[case("0000-01-01")]
+    #[case("1234-01-01")]
+    #[case("1970-01-01")]
+    #[case("2026-05-19")]
+    #[case("2024-01-01")]
+    #[case("2024-01-31")]
+    #[case("2024-02-01")]
+    #[case("2024-02-29")]
+    #[case("2024-03-01")]
+    #[case("2024-03-31")]
+    #[case("2024-04-01")]
+    #[case("2024-04-30")]
+    #[case("2024-05-01")]
+    #[case("2024-05-31")]
+    #[case("2024-06-01")]
+    #[case("2024-06-30")]
+    #[case("2024-07-01")]
+    #[case("2024-07-31")]
+    #[case("2024-08-01")]
+    #[case("2024-08-31")]
+    #[case("2024-09-01")]
+    #[case("2024-09-30")]
+    #[case("2024-10-01")]
+    #[case("2024-10-31")]
+    #[case("2024-11-01")]
+    #[case("2024-11-30")]
+    #[case("2024-12-01")]
+    #[case("2024-12-31")]
+    #[case("2023-02-28")]
+    #[case("-0001-02-03")]
+    #[case("+12345-02-03")]
+    #[case("-12345-02-03")]
+    #[case("+262142-02-03")]
+    #[case("-262143-02-03")]
+    fn test_to_struct(
+        #[case] input: &str,
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let date = NaiveDate::parse_from_str(input, "%Y-%m-%d").expect("invalid date input");
+        let days_since_epoch = (date - UNIX_EPOCH_DATE).num_days();
+        let data = JoltDateData { date };
+        let jolt_date = JoltDate { data, jolt_version };
+
+        let struct_ = jolt_date.as_struct();
+
+        let expected = PackStreamStruct {
+            tag: TAG_DATE,
+            fields: vec![days_since_epoch.into()],
+        };
+        assert_eq!(struct_, expected);
+    }
+
+    #[rstest]
+    #[case("0000-01-01")]
+    #[case("1234-01-01")]
+    #[case("1970-01-01")]
+    #[case("2026-05-19")]
+    #[case("2024-01-01")]
+    #[case("2024-01-31")]
+    #[case("2024-02-01")]
+    #[case("2024-02-29")]
+    #[case("2024-03-01")]
+    #[case("2024-03-31")]
+    #[case("2024-04-01")]
+    #[case("2024-04-30")]
+    #[case("2024-05-01")]
+    #[case("2024-05-31")]
+    #[case("2024-06-01")]
+    #[case("2024-06-30")]
+    #[case("2024-07-01")]
+    #[case("2024-07-31")]
+    #[case("2024-08-01")]
+    #[case("2024-08-31")]
+    #[case("2024-09-01")]
+    #[case("2024-09-30")]
+    #[case("2024-10-01")]
+    #[case("2024-10-31")]
+    #[case("2024-11-01")]
+    #[case("2024-11-30")]
+    #[case("2024-12-01")]
+    #[case("2024-12-31")]
+    #[case("2023-02-28")]
+    #[case("-0001-02-03")]
+    #[case("+12345-02-03")]
+    #[case("-12345-02-03")]
+    #[case("+262142-02-03")]
+    #[case("-262143-02-03")]
+    fn test_from_struct(
+        #[case] input: &str,
+        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
+        jolt_version: JoltVersion,
+    ) {
+        let date = NaiveDate::parse_from_str(input, "%Y-%m-%d").expect("invalid date input");
+        let days_since_epoch = (date - UNIX_EPOCH_DATE).num_days();
+        let struct_ = PackStreamStruct {
+            tag: TAG_DATE,
+            fields: vec![days_since_epoch.into()],
+        };
+
+        let jolt_date = JoltDate::from_struct(&struct_, jolt_version).expect("failed to load");
+
+        let data = JoltDateData { date };
+        let expected = JoltDate { data, jolt_version };
+        assert_eq!(jolt_date, expected);
     }
 }

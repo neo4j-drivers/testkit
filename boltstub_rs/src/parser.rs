@@ -832,7 +832,7 @@ fn create_message_sender(
     let data = BoltMessage::new(tag, fields, config.bolt_version)
         .into_serialized()
         .map_err(|e| {
-            ParseError::new_ctx(message_name_ctx, format!("Cannot serialize message: {e}",))
+            ParseError::new_ctx(message_name_ctx, format!("Cannot serialize message: {e}"))
         })?
         .data;
 
@@ -1737,7 +1737,7 @@ fn missing_leading_if(ctx: Context, block_name: &str) -> ParseError {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use indexmap::indexmap;
     use serde_json::Number;
 
