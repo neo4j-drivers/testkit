@@ -18,6 +18,7 @@ pub(crate) enum JoltSigil {
     Vector,
     Uuid,
     UnsupportedType,
+    Struct,
 }
 
 impl JoltSigil {
@@ -39,6 +40,7 @@ impl JoltSigil {
             "V" if jolt_version >= JoltVersion::V3 => Self::Vector,
             "UT" if jolt_version >= JoltVersion::V3 => Self::UnsupportedType,
             "UU" if jolt_version >= JoltVersion::V4 => Self::Uuid,
+            "STRUCT" => Self::Struct,
             _ => return None,
         })
     }
@@ -61,6 +63,7 @@ impl JoltSigil {
             Self::Vector => "V",
             Self::Uuid => "UU",
             Self::UnsupportedType => "UT",
+            Self::Struct => "STRUCT",
         }
     }
 }

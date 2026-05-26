@@ -9,12 +9,13 @@ use chrono::{
 use chrono_tz::Tz;
 use log::warn;
 use regex::Regex;
+use serde::Serialize;
 
 use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::util::opt_res_ret;
-use crate::values::bolt_struct::_common::{fmt_jolt_sigil_and_map, normalize_seconds_nanos};
+use crate::values::bolt_struct::_common::normalize_seconds_nanos;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::date::JoltDateData;
 use crate::values::bolt_struct::time::JoltTimeData;
@@ -22,6 +23,7 @@ use crate::values::bolt_struct::{
     TAG_DATE_TIME_V1, TAG_DATE_TIME_V2, TAG_DATE_TIME_ZONE_ID_V1, TAG_DATE_TIME_ZONE_ID_V2,
     TAG_LOCAL_DATE_TIME,
 };
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const UNIX_EPOCH_DATE_TIME: DateTime<Utc> = DateTime::from_timestamp(0, 0).unwrap();
@@ -343,44 +345,54 @@ impl<'a> JoltDateTime<'a> {
         )
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            this: &'a JoltDateTime<'a>,
-            jolt_version: JoltVersion,
-        }
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a>(&'a JoltDateTime<'a>);
 
-        impl Display for JoltFormatter<'_> {
+        impl Display for DataSer<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.this.jolt_version,
-                    self.jolt_version,
-                    Some(("\"", "\"")),
-                    |f| {
-                        self.this.date.repr(f)?;
-                        f.write_str("T")?;
-                        self.this.time.repr(f)
-                    },
-                )
+                write!(f, "{}T{}", self.0.date.repr(), self.0.time.repr())
             }
         }
 
-        JoltFormatter {
-            this: self,
-            jolt_version,
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                serializer.collect_str(self)
+            }
         }
+
+        let body = DataSer(self);
+        let map = JoltSigilMapSer::new(SIGIL, self.jolt_version, jolt_version_ctx, &body);
+        map.serialize(serializer)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use chrono::{NaiveDate, NaiveTime};
+
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{
+        all_jolt_versions, jolt_serializer,
+        jolt_versions_v1_and_down as jolt_versions_without_utc_fix,
+        jolt_versions_v2_and_up as jolt_versions_with_utc_fix,
+    };
+
     use super::*;
 
-    use chrono::{NaiveDate, NaiveTime};
     use rstest::rstest;
+    use rstest_reuse::apply;
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case(
         "0000-01-01T00:00",
         (0, 1, 1),
@@ -485,24 +497,24 @@ mod tests {
         #[case] hmsn: (u32, u32, u32, u32),
         #[case] utc_offset_seconds: Option<i64>,
         #[case] time_zone_id: Option<&'_ str>,
+        jolt_version: JoltVersion,
     ) {
-        const JOLT_VERSION: JoltVersion = JoltVersion::V1;
         dbg!(input);
         let date = NaiveDate::from_ymd_opt(ymd.0, ymd.1, ymd.2).expect("failed to load ymd");
         let time = NaiveTime::from_hms_nano_opt(hmsn.0, hmsn.1, hmsn.2, hmsn.3)
             .expect("failed to load hmsn");
         let date_time = NaiveDateTime::new(date, time);
-        let expected = JoltDateTime::new(date_time, utc_offset_seconds, time_zone_id, JOLT_VERSION);
+        let expected = JoltDateTime::new(date_time, utc_offset_seconds, time_zone_id, jolt_version);
 
-        let jolt_date = JoltDateTime::parse(input, JOLT_VERSION)
+        let jolt_date_time = JoltDateTime::parse(input, jolt_version)
             .expect("case input rejected")
             .expect("case input failed");
 
-        assert_eq!(jolt_date.date, expected.date);
-        assert_eq!(jolt_date.time, expected.time);
+        assert_eq!(jolt_date_time.date, expected.date);
+        assert_eq!(jolt_date_time.time, expected.time);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case(
         "0000-01-01T00:00:00",
         (0, 1, 1),
@@ -579,22 +591,27 @@ mod tests {
         #[case] hmsn: (u32, u32, u32, u32),
         #[case] utc_offset_seconds: Option<i64>,
         #[case] time_zone_id: Option<&'_ str>,
+        jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
-        const JOLT_VERSION: JoltVersion = JoltVersion::V1;
         let date = NaiveDate::from_ymd_opt(ymd.0, ymd.1, ymd.2).expect("failed to load ymd");
         let time = NaiveTime::from_hms_nano_opt(hmsn.0, hmsn.1, hmsn.2, hmsn.3)
             .expect("failed to load hmsn");
         let date_time = NaiveDateTime::new(date, time);
         let date_time =
-            JoltDateTime::new(date_time, utc_offset_seconds, time_zone_id, JOLT_VERSION);
+            JoltDateTime::new(date_time, utc_offset_seconds, time_zone_id, jolt_version);
         dbg!(&date_time);
 
-        let output = date_time.jolt_fmt(JOLT_VERSION).to_string();
+        date_time
+            .jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
         let expected = format!(r#"{{"T": "{expected}"}}"#);
-        assert_eq!(output, expected);
+        assert_eq!(formatted, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("2024-01-02")]
     #[case("2024-01-02T")]
     #[case("03:04:05.123456789")]
@@ -602,25 +619,25 @@ mod tests {
     #[case("2024-01-02TT03:04:05.123456789")]
     #[case("2024-01-0203:04:05.123456789")]
     #[case("2024-01-02X03:04:05.123456789")]
-    fn test_no_match_parse(#[case] input: &str) {
-        let parsed = JoltDateTime::parse(input, JoltVersion::V1);
+    fn test_no_match_parse(#[case] input: &str, jolt_version: JoltVersion) {
+        let parsed = JoltDateTime::parse(input, jolt_version);
         assert!(dbg!(parsed).is_none());
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("2024-01-02T03:04:05.1234567890")]
     #[case("2024-01-02T03:04:05.123456789[Europe/Stockholm]")]
     #[case("2024-01-02T03:04:05.123456789+24:01")]
     #[case("2024-01-02T03:04:05.123456789+25:00")]
     #[case("2024-01-02T03:04:05.123456789-24:01")]
     #[case("2024-01-02T03:04:05.123456789-25:00")]
-    fn test_invalid_parse(#[case] input: &str) {
-        JoltDateTime::parse(input, JoltVersion::V1)
+    fn test_invalid_parse(#[case] input: &str, jolt_version: JoltVersion) {
+        JoltDateTime::parse(input, jolt_version)
             .expect("case input must not be rejected")
             .expect_err("case input should fail to parse");
     }
 
-    #[rstest]
+    #[apply(jolt_versions_without_utc_fix)]
     #[case(
         "1970-01-02T01:01:01.000001234",
         TAG_LOCAL_DATE_TIME,
@@ -652,8 +669,9 @@ mod tests {
         #[case] input: &str,
         #[case] tag: u8,
         #[case] fields: Vec<PackStreamValue>,
+        jolt_version: JoltVersion,
     ) {
-        let date_time = JoltDateTime::parse(input, JoltVersion::V1)
+        let date_time = JoltDateTime::parse(input, jolt_version)
             .expect("non-datetime input")
             .expect("invalid input");
 
@@ -666,7 +684,7 @@ mod tests {
         assert_eq!(struct_, expected);
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_utc_fix)]
     #[case(
         "1970-01-02T01:01:01.000001234",
         TAG_LOCAL_DATE_TIME,
@@ -696,7 +714,7 @@ mod tests {
         #[case] input: &str,
         #[case] tag: u8,
         #[case] fields: Vec<PackStreamValue>,
-        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+        jolt_version: JoltVersion,
     ) {
         let date_time = JoltDateTime::parse(input, jolt_version)
             .expect("non-datetime input")
@@ -710,7 +728,8 @@ mod tests {
         let expected = PackStreamStruct { tag, fields };
         assert_eq!(struct_, expected);
     }
-    #[rstest]
+
+    #[apply(jolt_versions_without_utc_fix)]
     #[case(
         "1970-01-02T01:01:01.000001234",
         TAG_LOCAL_DATE_TIME,
@@ -738,8 +757,8 @@ mod tests {
         #[case] input: &str,
         #[case] tag: u8,
         #[case] fields: Vec<PackStreamValue>,
+        jolt_version: JoltVersion,
     ) {
-        let jolt_version = JoltVersion::V1;
         let struct_ = PackStreamStruct { tag, fields };
 
         let date_time = JoltDateTime::from_struct(&struct_, jolt_version).expect("failed to load");
@@ -750,7 +769,7 @@ mod tests {
         assert_eq!(date_time, expected);
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_utc_fix)]
     #[case(
         "1970-01-02T01:01:01.000001234",
         TAG_LOCAL_DATE_TIME,
@@ -780,7 +799,7 @@ mod tests {
         #[case] input: &str,
         #[case] tag: u8,
         #[case] fields: Vec<PackStreamValue>,
-        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+        jolt_version: JoltVersion,
     ) {
         let struct_ = PackStreamStruct { tag, fields };
 

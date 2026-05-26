@@ -3,13 +3,14 @@ use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 use regex::Regex;
+use serde::Serialize;
 
 use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::{TAG_POINT_2D, TAG_POINT_3D};
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const SIGIL: &str = JoltSigil::Spatial.str();
@@ -145,51 +146,58 @@ impl JoltPoint {
         Some(JoltPoint::new(srid, x, y, z, jolt_version))
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            data: &'a JoltPoint,
-            jolt_version: JoltVersion,
-        }
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a>(&'a JoltPoint);
 
-        impl Display for JoltFormatter<'_> {
+        impl Display for DataSer<'_> {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.data.jolt_version,
-                    self.jolt_version,
-                    Some(("\"", "\"")),
-                    |f| {
-                        f.write_str("SRID=")?;
-                        Display::fmt(&self.data.srid, f)?;
-                        f.write_str(";POINT(")?;
-                        Display::fmt(&self.data.x, f)?;
-                        f.write_str(" ")?;
-                        Display::fmt(&self.data.y, f)?;
-                        if let Some(z) = self.data.z {
-                            f.write_str(" ")?;
-                            Display::fmt(&z, f)?;
-                        }
-                        f.write_str(")")
-                    },
-                )
+                f.write_str("SRID=")?;
+                Display::fmt(&self.0.srid, f)?;
+                f.write_str(";POINT(")?;
+                Display::fmt(&self.0.x, f)?;
+                f.write_str(" ")?;
+                Display::fmt(&self.0.y, f)?;
+                if let Some(z) = self.0.z {
+                    f.write_str(" ")?;
+                    Display::fmt(&z, f)?;
+                }
+                f.write_str(")")
             }
         }
 
-        JoltFormatter {
-            data: self,
-            jolt_version,
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                serializer.collect_str(self)
+            }
         }
+
+        let body = DataSer(self);
+        let map = JoltSigilMapSer::new(SIGIL, self.jolt_version, jolt_version, &body);
+        map.serialize(serializer)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{all_jolt_versions, jolt_serializer};
+
     use super::*;
 
     use rstest::rstest;
+    use rstest_reuse::apply;
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("SRID=0;POINT(0 0)", 0, 0.0, 0.0, None)]
     #[case("SRID=0;POINT(0 0 0)", 0, 0.0, 0.0, Some(0.0))]
     #[case("SRID=0 ;  POINT( 0   0  )", 0, 0.0, 0.0, None)]
@@ -215,7 +223,6 @@ mod tests {
         #[case] x: f64,
         #[case] y: f64,
         #[case] z: Option<f64>,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
     ) {
         let point = JoltPoint::parse(input, jolt_version).expect("failed to parse");
@@ -224,7 +231,7 @@ mod tests {
         assert_eq!(point, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("POINT(0 0)")]
     #[case("SRID;POINT(0 0)")]
     #[case("SRID=;POINT(0 0)")]
@@ -237,17 +244,13 @@ mod tests {
     #[case("SRID=0;POINT(0)")]
     #[case("SRID=0;POINT(0 0 0 0)")]
     #[case("SRID=0;(0 0)")]
-    fn test_jolt_point_parse_invalid(
-        #[case] input: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-          jolt_version: JoltVersion,
-    ) {
+    fn test_jolt_point_parse_invalid(#[case] input: &str, jolt_version: JoltVersion) {
         let res = JoltPoint::parse(input, jolt_version);
 
         res.expect_err("parsing succeededs");
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("SRID=0;POINT(0 0)", 0, 0.0, 0.0, None)]
     #[case("SRID=0;POINT(0 0 0)", 0, 0.0, 0.0, Some(0.0))]
     #[case("SRID=1;POINT(2 3)", 1, 2.0, 3.0, None)]
@@ -270,18 +273,21 @@ mod tests {
         #[case] x: f64,
         #[case] y: f64,
         #[case] z: Option<f64>,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
         let point = JoltPoint::new(srid, x, y, z, jolt_version);
 
-        let formatted = point.jolt_fmt(jolt_version).to_string();
+        point
+            .jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
 
         let expected = format!(r#"{{"@": "{expected}"}}"#);
         assert_eq!(formatted, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case(0, 0.0, 0.0, None)]
     #[case(0, 0.0, 0.0, Some(0.0))]
     #[case(1, 2.0, 3.0, None)]
@@ -297,7 +303,6 @@ mod tests {
         #[case] x: f64,
         #[case] y: f64,
         #[case] z: Option<f64>,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
     ) {
         let point = JoltPoint::new(srid, x, y, z, jolt_version);
@@ -318,7 +323,7 @@ mod tests {
         assert_eq!(struct_, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case(0, 0.0, 0.0, None)]
     #[case(0, 0.0, 0.0, Some(0.0))]
     #[case(1, 2.0, 3.0, None)]
@@ -334,7 +339,6 @@ mod tests {
         #[case] x: f64,
         #[case] y: f64,
         #[case] z: Option<f64>,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
     ) {
         let (tag, fields) = match z {

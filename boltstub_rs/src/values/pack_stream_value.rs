@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::convert::Into;
-use std::fmt::{Display, Formatter};
 use std::io::Write;
 
 use anyhow::{anyhow, Result};
@@ -21,11 +20,6 @@ use indexmap::IndexMap;
 use nom::ToUsize;
 use usize_cast::FromUsize;
 use uuid::Uuid;
-
-use crate::bolt_version::JoltVersion;
-use crate::jolt::JoltSigil;
-use crate::str_bytes;
-use crate::values::bolt_struct::BoltStruct;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, derive_more::Display)]
 pub enum PackStreamVersion {
@@ -918,117 +912,6 @@ impl<'a> PackStreamSerializer<'a> {
     fn write_struct_header(&mut self, tag: u8, size: u8) {
         self.write_all(&[0xB0 + size, tag]);
     }
-}
-
-pub(crate) fn value_jolt_fmt(
-    value: &PackStreamValue,
-    jolt_version: JoltVersion,
-) -> impl Display + '_ {
-    struct Repr<'a> {
-        value: &'a PackStreamValue,
-        jolt_version: JoltVersion,
-    }
-
-    impl Display for Repr<'_> {
-        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            match self.value {
-                PackStreamValue::Null => f.write_str("null"),
-                PackStreamValue::Boolean(b) => Display::fmt(&b, f),
-                PackStreamValue::Integer(i) => Display::fmt(&i, f),
-                PackStreamValue::Float(v) => Display::fmt(&v, f),
-                PackStreamValue::Bytes(b) => {
-                    f.write_str(r##"{{"#": "##)?;
-                    str_bytes::fmt_bytes(b).fmt(f)?;
-                    f.write_str("}")
-                }
-                PackStreamValue::String(s) => std::fmt::Debug::fmt(&s, f),
-                PackStreamValue::List(l) => {
-                    f.write_str("[")?;
-                    write_joined_values(f, l, self.jolt_version)?;
-                    f.write_str("]")
-                }
-                PackStreamValue::Dict(m) => {
-                    let (start, end) = match m
-                        .keys()
-                        .next()
-                        .and_then(|k| JoltSigil::from_str(k, self.jolt_version))
-                    {
-                        Some(_) if m.len() == 1 => {
-                            // dict could be confused with Jolt => encode as Jolt Dict
-                            (r#"{"{}": {"#, "}}")
-                        }
-                        _ => ("{", "}"),
-                    };
-                    let pairs = m.iter().map(|(k, v)| (k.as_str(), v));
-                    f.write_str(start)?;
-                    write_joined_entries(f, pairs, self.jolt_version)?;
-                    f.write_str(end)
-                }
-                PackStreamValue::Uuid(u) => {
-                    let key = match self.jolt_version {
-                        JoltVersion::V1 | JoltVersion::V2 | JoltVersion::V3 => "UUv4",
-                        JoltVersion::V4 => "UU",
-                    };
-                    write!(f, r#"{{"{key}": {u}}}"#)
-                }
-                PackStreamValue::Struct(s) => {
-                    let parsed_struct = BoltStruct::read(s, self.jolt_version);
-                    if let Some(bolt_struct) = parsed_struct {
-                        let formattable = bolt_struct.jolt_fmt(self.jolt_version);
-                        return Display::fmt(&formattable, f);
-                    }
-                    let parsed_struct = BoltStruct::read_other_jolt_version(s, self.jolt_version);
-                    if let Some((bolt_struct, _jolt_version)) = parsed_struct {
-                        let formattable = bolt_struct.jolt_fmt(self.jolt_version);
-                        return Display::fmt(&formattable, f);
-                    }
-                    write!(f, "Struct[{:#04X}]{{", s.tag)?;
-                    write_joined_values(f, &s.fields, self.jolt_version)?;
-                    f.write_str("}}")
-                }
-            }
-        }
-    }
-
-    Repr {
-        value,
-        jolt_version,
-    }
-}
-
-pub(super) fn write_joined_values(
-    f: &mut Formatter<'_>,
-    values: &[PackStreamValue],
-    jolt_version: JoltVersion,
-) -> std::fmt::Result {
-    let mut values = values.iter();
-    if let Some(value) = values.next() {
-        Display::fmt(&value_jolt_fmt(value, jolt_version), f)?;
-        for value in values {
-            f.write_str(", ")?;
-            Display::fmt(&value_jolt_fmt(value, jolt_version), f)?;
-        }
-    }
-    Ok(())
-}
-
-pub(super) fn write_joined_entries<'e>(
-    f: &mut Formatter<'_>,
-    mut entries: impl Iterator<Item = (&'e str, &'e PackStreamValue)>,
-    jolt_version: JoltVersion,
-) -> std::fmt::Result {
-    if let Some((k, v)) = entries.next() {
-        std::fmt::Debug::fmt(k, f)?;
-        f.write_str(": ")?;
-        Display::fmt(&value_jolt_fmt(v, jolt_version), f)?;
-        for (k, v) in entries {
-            f.write_str(", ")?;
-            std::fmt::Debug::fmt(k, f)?;
-            f.write_str(": ")?;
-            Display::fmt(&value_jolt_fmt(v, jolt_version), f)?;
-        }
-    }
-    Ok(())
 }
 
 #[cfg(test)]

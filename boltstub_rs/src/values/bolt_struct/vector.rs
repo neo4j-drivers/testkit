@@ -1,5 +1,6 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use super::_parsing::{
@@ -9,9 +10,9 @@ use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
-use crate::str_bytes::{fmt_bytes, parse_jolt_hex_string};
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
+use crate::str_bytes::{parse_jolt_hex_string, serialize_fmt_bytes};
 use crate::values::bolt_struct::TAG_VECTOR;
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const SIGIL: &str = JoltSigil::Vector.str();
@@ -185,35 +186,17 @@ impl JoltVector {
         })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            data: &'a JoltVector,
-            jolt_version: JoltVersion,
-        }
-
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    "V",
-                    self.data.jolt_version,
-                    self.jolt_version,
-                    Some(("[", "]")),
-                    |f| {
-                        f.write_str("\"")?;
-                        Display::fmt(self.data.inner_type.to_jolt(), f)?;
-                        f.write_str(r#"", ""#)?;
-                        fmt_bytes(&self.data.data).fmt(f)?;
-                        f.write_str("\"")
-                    },
-                )
-            }
-        }
-
-        JoltFormatter {
-            data: self,
-            jolt_version,
-        }
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let body = (self.inner_type.to_jolt(), serialize_fmt_bytes(&self.data));
+        let map = JoltSigilMapSer::new(SIGIL, self.jolt_version, jolt_version, &body);
+        map.serialize(serializer)
     }
 }
 
@@ -221,8 +204,15 @@ impl JoltVector {
 mod tests {
     use indexmap::IndexMap;
     use rstest::rstest;
+    use rstest_reuse::apply;
 
     use crate::bolt_version::{BoltCapabilities, BoltVersion};
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{
+        all_jolt_versions, jolt_serializer,
+        jolt_versions_v2_and_down as jolt_versions_without_vector,
+        jolt_versions_v3_and_up as jolt_versions_with_vector,
+    };
 
     use super::*;
 
@@ -242,7 +232,7 @@ mod tests {
         }
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_vector)]
     #[case::empty_i8(r#"["i8", ""]"#, JoltVector {
         inner_type: JoltVectorType::Int8,
         data: vec![],
@@ -303,7 +293,12 @@ mod tests {
         data: vec![0x0F, 0x1F, 0x2F, 0x3F, 0x4F, 0x5F, 0x6F, 0x7F],
         jolt_version: JoltVersion::V3,
     })]
-    fn test_jolt_vector_parse(#[case] input: &str, #[case] expected: JoltVector) {
+    fn test_jolt_vector_parse(
+        #[case] input: &str,
+        #[case] mut expected: JoltVector,
+        jolt_version: JoltVersion,
+    ) {
+        expected.jolt_version = jolt_version;
         let json = serde_json::from_str(input).unwrap();
         let config = actor_config();
 
@@ -339,17 +334,15 @@ mod tests {
         JoltVector::parse(json, jolt_version, &config).unwrap_err();
     }
 
-    #[rstest]
-    #[case::v1(JoltVersion::V1)]
-    #[case::v2(JoltVersion::V2)]
-    fn test_jolt_vector_parse_invalid_jolt_version(#[case] jolt_version: JoltVersion) {
+    #[apply(jolt_versions_without_vector)]
+    fn test_jolt_vector_parse_invalid_jolt_version(jolt_version: JoltVersion) {
         let json = serde_json::from_str(r#"["i8", ""]"#).unwrap();
         let config = actor_config();
 
         JoltVector::parse(json, jolt_version, &config).unwrap_err();
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case::empty_i8(
         JoltVector {
             inner_type: JoltVectorType::Int8,
@@ -471,10 +464,14 @@ mod tests {
         #[case] jolt_vector: JoltVector,
         #[case] expected: &str,
         #[case] expected_versioned: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
-        let formatted = jolt_vector.jolt_fmt(jolt_version).to_string();
+        jolt_vector
+            .jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
         if jolt_vector.jolt_version == jolt_version {
             assert_eq!(formatted, expected);
         } else {

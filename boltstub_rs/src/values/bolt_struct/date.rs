@@ -1,16 +1,17 @@
 use std::cell::LazyCell;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 use std::str::FromStr;
 
 use chrono::{Duration, NaiveDate};
 use regex::Regex;
+use serde::Serialize;
 
 use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::TAG_DATE;
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const UNIX_EPOCH_DATE: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
@@ -49,39 +50,33 @@ impl JoltDateData {
         Some(Ok(Self { date }))
     }
 
-    pub(super) fn jolt_fmt(
-        &self,
+    pub(super) fn jolt_serialize<S>(
+        self,
+        serializer: S,
         jolt_version_data: JoltVersion,
         jolt_version_ctx: JoltVersion,
-    ) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            data: &'a JoltDateData,
-            jolt_version_data: JoltVersion,
-            jolt_version_ctx: JoltVersion,
-        }
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer(JoltDateData);
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.jolt_version_data,
-                    self.jolt_version_ctx,
-                    Some(("\"", "\"")),
-                    |f| self.data.repr(f),
-                )
+        impl serde::Serialize for DataSer {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                serializer.collect_str(&self.0.repr())
             }
         }
 
-        JoltFormatter {
-            data: self,
-            jolt_version_data,
-            jolt_version_ctx,
-        }
+        let body = DataSer(self);
+        let map = JoltSigilMapSer::new(SIGIL, jolt_version_data, jolt_version_ctx, &body);
+        map.serialize(serializer)
     }
 
-    pub(super) fn repr(self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.date.format("%Y-%m-%d"), f)
+    pub(super) fn repr(&self) -> impl std::fmt::Display + '_ {
+        self.date.format("%Y-%m-%d")
     }
 }
 
@@ -122,18 +117,30 @@ impl JoltDate {
         Some(Self { data, jolt_version })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        self.data.jolt_fmt(self.jolt_version, jolt_version)
+    pub(super) fn jolt_serialize<S>(
+        self,
+        serializer: S,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data
+            .jolt_serialize(serializer, self.jolt_version, jolt_version_ctx)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{all_jolt_versions, jolt_serializer};
+
     use super::*;
 
     use rstest::rstest;
+    use rstest_reuse::apply;
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("0000-01-01", (0, 1, 1))]
     #[case("0000-01", (0, 1, 1))]
     #[case("0000", (0, 1, 1))]
@@ -165,12 +172,7 @@ mod tests {
     #[case("2024-12-01", (2024, 12, 1))]
     #[case("2024-12-31", (2024, 12, 31))]
     #[case("2023-02-28", (2023, 2, 28))]
-    fn test_parse(
-        #[case] input: &str,
-        #[case] ymd: (i32, u32, u32),
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_parse(#[case] input: &str, #[case] ymd: (i32, u32, u32), jolt_version: JoltVersion) {
         let naive_date = NaiveDate::from_ymd_opt(ymd.0, ymd.1, ymd.2).expect("failed to load ymd");
         let jolt_date = JoltDate::parse(input, jolt_version)
             .expect("case input rejected")
@@ -178,7 +180,7 @@ mod tests {
         assert_eq!(jolt_date.data.date, naive_date);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("0000-01-01", (0, 1, 1))]
     #[case("1234-01-01", (1234, 1, 1))]
     #[case("1970-01-01", (1970, 1, 1))]
@@ -216,20 +218,25 @@ mod tests {
     fn test_fmt(
         #[case] expected: &str,
         #[case] ymd: (i32, u32, u32),
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
         let naive_date = NaiveDate::from_ymd_opt(ymd.0, ymd.1, ymd.2).expect("failed to load ymd");
         let jolt_date = JoltDate {
             data: JoltDateData { date: naive_date },
             jolt_version,
         };
-        let output = jolt_date.jolt_fmt(jolt_version).to_string();
+
+        jolt_date
+            .jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
         let expected = format!(r#"{{"T": "{expected}"}}"#);
-        assert_eq!(output, expected);
+        assert_eq!(formatted, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("P1S")]
     #[case("2000-01-01T")]
     #[case("+2000-01-01")]
@@ -253,16 +260,12 @@ mod tests {
     #[case("1970-01-1")]
     #[case("1970-001-01")]
     #[case("1970-01-001")]
-    fn test_no_match_parse(
-        #[case] input: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_no_match_parse(#[case] input: &str, jolt_version: JoltVersion) {
         let parsed = JoltDate::parse(input, jolt_version);
         assert!(dbg!(parsed).is_none());
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("1970-00-01")]
     #[case("1970-01-00")]
     #[case("1970-01-00")]
@@ -294,17 +297,13 @@ mod tests {
     #[case("1970-13-01")]
     #[case("+262143-02-03")]
     #[case("-262144-02-03")]
-    fn test_invalid_parse(
-        #[case] input: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_invalid_parse(#[case] input: &str, jolt_version: JoltVersion) {
         JoltDate::parse(input, jolt_version)
             .expect("case input must not be rejected")
             .expect_err("case input should fail to parse");
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("0000-01-01")]
     #[case("1234-01-01")]
     #[case("1970-01-01")]
@@ -339,11 +338,7 @@ mod tests {
     #[case("-12345-02-03")]
     #[case("+262142-02-03")]
     #[case("-262143-02-03")]
-    fn test_to_struct(
-        #[case] input: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_to_struct(#[case] input: &str, jolt_version: JoltVersion) {
         let date = NaiveDate::parse_from_str(input, "%Y-%m-%d").expect("invalid date input");
         let days_since_epoch = (date - UNIX_EPOCH_DATE).num_days();
         let data = JoltDateData { date };
@@ -358,7 +353,7 @@ mod tests {
         assert_eq!(struct_, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case("0000-01-01")]
     #[case("1234-01-01")]
     #[case("1970-01-01")]
@@ -393,11 +388,7 @@ mod tests {
     #[case("-12345-02-03")]
     #[case("+262142-02-03")]
     #[case("-262143-02-03")]
-    fn test_from_struct(
-        #[case] input: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_from_struct(#[case] input: &str, jolt_version: JoltVersion) {
         let date = NaiveDate::parse_from_str(input, "%Y-%m-%d").expect("invalid date input");
         let days_since_epoch = (date - UNIX_EPOCH_DATE).num_days();
         let struct_ = PackStreamStruct {

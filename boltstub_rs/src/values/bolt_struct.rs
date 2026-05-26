@@ -7,11 +7,12 @@ mod node;
 mod path;
 mod point;
 mod relationship;
+mod struct_;
 mod time;
 mod unsupported_type;
 mod vector;
 
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 
 pub(crate) use date::JoltDate;
 pub(crate) use date_time::JoltDateTime;
@@ -20,6 +21,7 @@ pub(crate) use node::JoltNode;
 pub(crate) use path::JoltPath;
 pub(crate) use point::JoltPoint;
 pub(crate) use relationship::JoltRelationship;
+pub(crate) use struct_::JoltStruct;
 pub(crate) use time::JoltTime;
 pub(crate) use unsupported_type::JoltUnsupportedType;
 pub(crate) use vector::JoltVector;
@@ -88,8 +90,15 @@ impl<'a> BoltStruct<'a> {
         None
     }
 
-    pub(crate) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        self.inner.jolt_fmt(jolt_version)
+    pub(crate) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.inner.jolt_fmt(serializer, jolt_version)
     }
 }
 
@@ -110,33 +119,31 @@ impl<'a> BoltStructType<'a> {
             })
     }
 
-    pub(crate) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct Repr<'a> {
-            type_: &'a BoltStructType<'a>,
-            jolt_version: JoltVersion,
-        }
+    pub(crate) fn jolt_fmt<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let ser = serializer;
+        let ver = jolt_version;
 
-        impl Display for Repr<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                let version = self.jolt_version;
-                match self.type_ {
-                    BoltStructType::Node(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Relationship(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Path(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Point(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Date(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Time(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::DateTime(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Duration(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::Vector(v) => v.jolt_fmt(version).fmt(f),
-                    BoltStructType::UnsupportedType(v) => v.jolt_fmt(version).fmt(f),
-                }
-            }
-        }
-
-        Repr {
-            type_: self,
-            jolt_version,
+        match self {
+            BoltStructType::Node(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Relationship(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Path(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Point(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Date(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Time(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::DateTime(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Duration(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::Vector(v) => v.jolt_serialize(ser, ver),
+            BoltStructType::UnsupportedType(v) => v.jolt_serialize(ser, ver),
         }
     }
 }
+
+#[cfg(test)]
+mod tests {}

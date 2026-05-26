@@ -730,6 +730,29 @@ Example:
 ```
 
 
+### JOLT struct
+*NOTE*:  
+Standard JOLT does not support raw structs.
+
+This represents a raw, bolt version agnostic PackStream structure.
+
+**Simple**: **not supported**
+
+**Full**: `{"STRUCT": ["<HEX_TAG>", "field 1", "..."]}`
+
+The tag is to be a single byte in hexadecimal notation (e.g., `3F` or `0xa0`).
+
+The fields following the tag may be an arbitrary amount of JOLT encoded values.
+N.B., PackStream may apply a limitation of how many fields can be represented on the wire.
+
+Example:
+```json lines
+{"STRUCT": ["0x3F", "name", 0, 1, {"{}": {"message": "hi"}}]}
+# equivalent to:
+{"UTv3": ["name", 0, 1, "hi"]}
+```
+
+
 ## JOLT Versions
 Some types require a certain JOLT version to be available.
 Others change the required fields or their representation with different PackStream versions.

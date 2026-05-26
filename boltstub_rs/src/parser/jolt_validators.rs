@@ -16,10 +16,10 @@ use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::util::opt_res_ret;
 use crate::values::bolt_struct::{
-    JoltDate, JoltDateTime, JoltDuration, JoltDurationData, JoltPoint, JoltTime, JoltVector,
-    JoltVectorType, TAG_DATE, TAG_DATE_TIME_V1, TAG_DATE_TIME_V2, TAG_DATE_TIME_ZONE_ID_V1,
-    TAG_DATE_TIME_ZONE_ID_V2, TAG_DURATION, TAG_LOCAL_DATE_TIME, TAG_LOCAL_TIME, TAG_POINT_2D,
-    TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
+    JoltDate, JoltDateTime, JoltDuration, JoltDurationData, JoltPoint, JoltStruct, JoltTime,
+    JoltVector, JoltVectorType, TAG_DATE, TAG_DATE_TIME_V1, TAG_DATE_TIME_V2,
+    TAG_DATE_TIME_ZONE_ID_V1, TAG_DATE_TIME_ZONE_ID_V2, TAG_DURATION, TAG_LOCAL_DATE_TIME,
+    TAG_LOCAL_TIME, TAG_POINT_2D, TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
 };
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
@@ -100,6 +100,7 @@ pub fn build_validator(
         JoltSigil::Vector => build_vector(expected, jolt_version, config),
         JoltSigil::Uuid => build_uuid(expected, config),
         JoltSigil::UnsupportedType => build_unsupported_type(),
+        JoltSigil::Struct => build_struct(expected, jolt_version, config),
     }
 }
 
@@ -285,7 +286,7 @@ fn build_spatial(expected: JsonValue, jolt_version: JoltVersion) -> Result<IsJol
 fn build_node(expected: &JsonValue, sigil: &str) -> Result<IsJoltValidator> {
     let fixed_syntax = format!(
         r#"{{"\{sigil}": {}}}"#,
-        serde_json_ext::compact_pretty_print(expected)
+        serde_json_ext::to_string_pretty_compact(expected)
             .expect("JsonValue cannot fail Json serialization")
     );
     Err(ParseError::new(format!(
@@ -297,7 +298,7 @@ fn build_node(expected: &JsonValue, sigil: &str) -> Result<IsJoltValidator> {
 fn build_relationship(expected: &JsonValue, sigil: &str) -> Result<IsJoltValidator> {
     let fixed_syntax = format!(
         r#"{{"\{sigil}": {}}}"#,
-        serde_json_ext::compact_pretty_print(expected)
+        serde_json_ext::to_string_pretty_compact(expected)
             .expect("JsonValue cannot fail Json serialization")
     );
     Err(ParseError::new(format!(
@@ -309,7 +310,7 @@ fn build_relationship(expected: &JsonValue, sigil: &str) -> Result<IsJoltValidat
 fn build_path(expected: &JsonValue, sigil: &str) -> Result<IsJoltValidator> {
     let fixed_syntax = format!(
         r#"{{"\{sigil}": {}}}"#,
-        serde_json_ext::compact_pretty_print(expected)
+        serde_json_ext::to_string_pretty_compact(expected)
             .expect("JsonValue cannot fail Json serialization")
     );
     Err(ParseError::new(format!(
@@ -405,6 +406,18 @@ fn build_unsupported_type() -> Result<IsJoltValidator> {
     Err(ParseError::new(
         "UnsupportedType structs cannot be received by the server, only sent.",
     ))
+}
+
+fn build_struct(
+    expected: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValidator> {
+    let jolt_struct = JoltStruct::parse(expected, jolt_version, config)?;
+    let expected_struct = jolt_struct.into_struct();
+    Ok(IsJoltValidator::Yes(build_struct_match_validator(
+        expected_struct,
+    )))
 }
 
 pub fn build_field_validator(field: JsonValue, config: &ActorConfig) -> Result<ValidateValueFn> {

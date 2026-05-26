@@ -1,8 +1,10 @@
 use std::borrow::Cow;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 
 use indexmap::IndexMap;
 use itertools::Itertools;
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use super::_parsing::{
@@ -14,9 +16,9 @@ use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
 use crate::values::bolt_struct::_common::element_id::ElementIdExt;
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::TAG_NODE;
-use crate::values::pack_stream_value::{write_joined_entries, PackStreamStruct, PackStreamValue};
+use crate::values::jolt_ser::{JoltSer, JoltSerValue, JoltSigilMapSer};
+use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const SIGIL: &str = JoltSigil::Node.str();
 
@@ -80,59 +82,50 @@ impl JoltNodeData<'static> {
 }
 
 impl JoltNodeData<'_> {
-    pub(super) fn jolt_fmt(
+    pub(super) fn jolt_serialize<S>(
         &self,
+        serializer: S,
         jolt_version_data: JoltVersion,
         jolt_version_ctx: JoltVersion,
-    ) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a> {
             data: &'a JoltNodeData<'a>,
             jolt_version_data: JoltVersion,
             jolt_version_ctx: JoltVersion,
         }
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.jolt_version_data,
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let has_element_ids = self.data.element_id.inner(self.jolt_version_data).is_some();
+                let size = if has_element_ids { 4 } else { 3 };
+                let mut seq = serializer.serialize_seq(Some(size))?;
+                seq.serialize_element(&self.data.id)?;
+                seq.serialize_element(&self.data.labels)?;
+                let properties = JoltSer::new_value(
+                    JoltSerValue::Dict(&self.data.properties),
                     self.jolt_version_ctx,
-                    Some(("[", "]")),
-                    |f| {
-                        Display::fmt(&self.data.id, f)?;
-                        f.write_str(", [")?;
-                        let mut labels = self.data.labels.iter();
-                        if let Some(label) = labels.next() {
-                            f.write_str("\"")?;
-                            Display::fmt(label, f)?;
-                            for label in labels {
-                                f.write_str("\", \"")?;
-                                Display::fmt(label, f)?;
-                            }
-                            f.write_str("\"")?;
-                        }
-                        f.write_str("], {")?;
-                        let properties = self.data.properties.iter().map(|(k, v)| (k.as_str(), v));
-                        write_joined_entries(f, properties, self.jolt_version_ctx)?;
-                        match self.data.element_id.inner(self.jolt_version_data) {
-                            None => f.write_str("}"),
-                            Some(element_id) => {
-                                f.write_str(r#"}, ""#)?;
-                                Display::fmt(element_id, f)?;
-                                f.write_str(r#"""#)
-                            }
-                        }
-                    },
-                )
+                );
+                seq.serialize_element(&properties)?;
+                if let Some(ext) = self.data.element_id.inner(self.jolt_version_data) {
+                    seq.serialize_element(&ext)?;
+                }
+                seq.end()
             }
         }
 
-        JoltFormatter {
+        let body = DataSer {
             data: self,
             jolt_version_data,
             jolt_version_ctx,
-        }
+        };
+        let map = JoltSigilMapSer::new(SIGIL, jolt_version_data, jolt_version_ctx, &body);
+        map.serialize(serializer)
     }
 }
 
@@ -212,18 +205,33 @@ impl<'a> JoltNode<'a> {
         })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        self.data.jolt_fmt(self.jolt_version, jolt_version)
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data
+            .jolt_serialize(serializer, self.jolt_version, jolt_version_ctx)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::bolt_version::BoltCapabilities;
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{
+        all_jolt_versions, jolt_serializer,
+        jolt_versions_v1_and_down as jolt_versions_without_element_id,
+        jolt_versions_v2_and_up as jolt_versions_with_element_id,
+    };
 
     use super::*;
 
     use rstest::rstest;
+    use rstest_reuse::apply;
 
     fn make_actor_config(jolt_version: JoltVersion) -> ActorConfig {
         let bolt_version = jolt_version.min_bolt_version();
@@ -243,7 +251,7 @@ mod tests {
         }
     }
 
-    #[rstest]
+    #[apply(jolt_versions_without_element_id)]
     #[case(
         r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}]"#,
         123,
@@ -257,9 +265,15 @@ mod tests {
         &[],
     )]
     #[case(
-        r#"[0, ["FOO", "BAR", "", "BAZ"], {}]"#,
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}]"#,
         0,
-        &["FOO", "BAR", "", "BAZ"],
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}]",
+        0,
+        &["\u{202E}"],
         &[],
     )]
     fn test_parse_v1(
@@ -267,8 +281,8 @@ mod tests {
         #[case] id: i64,
         #[case] labels: &[&str],
         #[case] properties: &[(&str, PackStreamValue)],
+        jolt_version: JoltVersion,
     ) {
-        let jolt_version = JoltVersion::V1;
         let config = make_actor_config(jolt_version);
         let input = serde_json::from_str(input).unwrap();
         let properties = properties
@@ -288,7 +302,7 @@ mod tests {
         assert_eq!(parsed, expected);
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_element_id)]
     #[case(
         r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
         123,
@@ -304,9 +318,16 @@ mod tests {
         "",
     )]
     #[case(
-        r#"[0, ["FOO", "BAR", "", "BAZ"], {}, "1"]"#,
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}, "1"]"#,
         0,
-        &["FOO", "BAR", "", "BAZ"],
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+        "1",
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}, \"1\"]",
+        0,
+        &["\u{202E}"],
         &[],
         "1",
     )]
@@ -316,7 +337,7 @@ mod tests {
         #[case] labels: &[&str],
         #[case] properties: &[(&str, PackStreamValue)],
         #[case] element_id: &str,
-        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+        jolt_version: JoltVersion,
     ) {
         let config = make_actor_config(jolt_version);
         let input = serde_json::from_str(input).unwrap();
@@ -337,7 +358,7 @@ mod tests {
         assert_eq!(parsed, expected);
     }
 
-    #[rstest]
+    #[apply(jolt_versions_without_element_id)]
     #[case(
         r#"["123", ["FOO", "BAR"], {"a": 1, "b": null}]"#,
         &["node id (field 1)", "to be an integer", "found string"],
@@ -370,8 +391,11 @@ mod tests {
         r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
         &["too many fields"],
     )]
-    fn test_failing_parse_v1(#[case] input: &str, #[case] err_matchers: &[&str]) {
-        let jolt_version = JoltVersion::V1;
+    fn test_failing_parse_v1(
+        #[case] input: &str,
+        #[case] err_matchers: &[&str],
+        jolt_version: JoltVersion,
+    ) {
         let config = make_actor_config(jolt_version);
         let input = serde_json::from_str(input).unwrap();
 
@@ -385,7 +409,7 @@ mod tests {
         }
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_element_id)]
     #[case(
         r#"["123", ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
         &["node id (field 1)", "to be an integer", "found string"],
@@ -429,7 +453,7 @@ mod tests {
     fn test_failing_parse_v2_plus(
         #[case] input: &str,
         #[case] err_matchers: &[&str],
-        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+        jolt_version: JoltVersion,
     ) {
         let config = make_actor_config(jolt_version);
         let input = serde_json::from_str(input).unwrap();
@@ -503,7 +527,7 @@ mod tests {
         }
     }
 
-    #[rstest]
+    #[apply(jolt_versions_without_element_id)]
     #[case(
         r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}]"#,
         123,
@@ -517,9 +541,15 @@ mod tests {
         &[],
     )]
     #[case(
-        r#"[0, ["FOO", "BAR", "", "BAZ"], {}]"#,
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}]"#,
         0,
-        &["FOO", "BAR", "", "BAZ"],
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}]",
+        0,
+        &["\u{202E}"],
         &[],
     )]
     fn test_jolt_fmt_v1(
@@ -527,8 +557,9 @@ mod tests {
         #[case] id: i64,
         #[case] labels: &[&str],
         #[case] properties: &[(&str, PackStreamValue)],
+        jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
-        let jolt_version = JoltVersion::V1;
         let properties = properties
             .iter()
             .map(|(k, v)| ((*k).into(), v.clone()))
@@ -541,11 +572,15 @@ mod tests {
         };
         let node = JoltNode { data, jolt_version };
 
+        node.jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
         let expected = format!(r#"{{"()": {expected}}}"#);
-        assert_eq!(node.jolt_fmt(jolt_version).to_string(), expected);
+        assert_eq!(formatted, expected);
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_element_id)]
     #[case(
         r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
         123,
@@ -561,9 +596,16 @@ mod tests {
         "",
     )]
     #[case(
-        r#"[0, ["FOO", "BAR", "", "BAZ"], {}, "1"]"#,
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}, "1"]"#,
         0,
-        &["FOO", "BAR", "", "BAZ"],
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+        "1",
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}, \"1\"]",
+        0,
+        &["\u{202E}"],
         &[],
         "1",
     )]
@@ -573,7 +615,8 @@ mod tests {
         #[case] labels: &[&str],
         #[case] properties: &[(&str, PackStreamValue)],
         #[case] element_id: &str,
-        #[values(JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)] jolt_version: JoltVersion,
+        jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
         let properties = properties
             .iter()
@@ -587,11 +630,15 @@ mod tests {
         };
         let node = JoltNode { data, jolt_version };
 
+        node.jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
         let expected = format!(r#"{{"()": {expected}}}"#);
-        assert_eq!(node.jolt_fmt(jolt_version).to_string(), expected);
+        assert_eq!(formatted, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case(
         0,
         &[],
@@ -600,7 +647,7 @@ mod tests {
     )]
     #[case(
         i64::MAX,
-        &["", "FOO", "BAR"],
+        &["", "FOO", "BAR", "\""],
         &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
         "abc",
     )]
@@ -615,7 +662,6 @@ mod tests {
         #[case] labels: &[&str],
         #[case] properties: &[(&str, PackStreamValue)],
         #[case] element_id: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
     ) {
         let properties: IndexMap<String, PackStreamValue> = properties
@@ -647,7 +693,7 @@ mod tests {
         assert_eq!(struct_, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case(
         0,
         &[],
@@ -656,7 +702,7 @@ mod tests {
     )]
     #[case(
         i64::MAX,
-        &["", "FOO", "BAR"],
+        &["", "FOO", "BAR", "\""],
         &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
         "abc",
     )]
@@ -671,7 +717,6 @@ mod tests {
         #[case] labels: &[&str],
         #[case] properties: &[(&str, PackStreamValue)],
         #[case] element_id: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
     ) {
         let properties: IndexMap<String, PackStreamValue> = properties

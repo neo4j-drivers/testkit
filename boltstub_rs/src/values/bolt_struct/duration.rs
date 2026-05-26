@@ -1,16 +1,17 @@
 use std::cell::LazyCell;
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 
 use regex::{Captures, Regex};
+use serde::Serialize;
 
 use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::util::opt_res_ret;
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::TAG_DURATION;
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const SIGIL: &str = JoltSigil::Temporal.str();
@@ -106,38 +107,9 @@ impl JoltDurationData {
         }))
     }
 
-    pub(super) fn jolt_fmt(
-        &self,
-        jolt_version_data: JoltVersion,
-        jolt_version_ctx: JoltVersion,
-    ) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            data: &'a JoltDurationData,
-            jolt_version_data: JoltVersion,
-            jolt_version_ctx: JoltVersion,
-        }
+    pub(super) fn repr(&self) -> impl std::fmt::Display + '_ {
+        struct ReprDisplay<'a>(&'a JoltDurationData);
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.jolt_version_data,
-                    self.jolt_version_ctx,
-                    Some(("\"", "\"")),
-                    |f| self.data.repr(f),
-                )
-            }
-        }
-
-        JoltFormatter {
-            data: self,
-            jolt_version_data,
-            jolt_version_ctx,
-        }
-    }
-
-    fn repr(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         fn write_component(
             f: &mut std::fmt::Formatter<'_>,
             n: impl Display + Default + PartialEq + Copy,
@@ -151,47 +123,53 @@ impl JoltDurationData {
             }
         }
 
-        let Self {
-            months,
-            days,
-            seconds,
-            nanos,
-        } = *self;
-        let (years, months) = (months / 12, months % 12);
-        let total_ns: i128 = i128::from(seconds) * 1_000_000_000 + i128::from(nanos);
-        let seconds_sign = if total_ns < 0 { "-" } else { "" };
-        let (seconds, nanos): (i128, i64) = (
-            total_ns / 1_000_000_000,
-            (total_ns % 1_000_000_000)
-                .try_into()
-                .expect("±999_999_999 fits into i64"),
-        );
-        let (hours, seconds) = (seconds / 3600, seconds % 3600);
-        let (minutes, seconds) = (seconds / 60, seconds % 60);
+        impl Display for ReprDisplay<'_> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+                let JoltDurationData {
+                    months,
+                    days,
+                    seconds,
+                    nanos,
+                } = *self.0;
+                let (years, months) = (months / 12, months % 12);
+                let total_ns: i128 = i128::from(seconds) * 1_000_000_000 + i128::from(nanos);
+                let seconds_sign = if total_ns < 0 { "-" } else { "" };
+                let (seconds, nanos): (i128, i64) = (
+                    total_ns / 1_000_000_000,
+                    (total_ns % 1_000_000_000)
+                        .try_into()
+                        .expect("±999_999_999 fits into i64"),
+                );
+                let (hours, seconds) = (seconds / 3600, seconds % 3600);
+                let (minutes, seconds) = (seconds / 60, seconds % 60);
 
-        let has_time = hours != 0 || minutes != 0 || seconds != 0 || nanos != 0;
-        let has_days = years != 0 || months != 0 || days != 0;
+                let has_time = hours != 0 || minutes != 0 || seconds != 0 || nanos != 0;
+                let has_days = years != 0 || months != 0 || days != 0;
 
-        f.write_str("P")?;
-        write_component(f, years, "Y")?;
-        write_component(f, months, "M")?;
-        write_component(f, days, "D")?;
-        if has_time || !has_days {
-            f.write_str("T")?;
-            write_component(f, hours, "H")?;
-            write_component(f, minutes, "M")?;
-            if seconds != 0 || nanos != 0 || !has_time {
-                f.write_str(seconds_sign)?;
-                Display::fmt(&seconds.abs(), f)?;
-                if nanos != 0 {
-                    f.write_str(".")?;
-                    let nanos_str = format!("{:09}", nanos.abs());
-                    Display::fmt(nanos_str.trim_end_matches('0'), f)?;
+                f.write_str("P")?;
+                write_component(f, years, "Y")?;
+                write_component(f, months, "M")?;
+                write_component(f, days, "D")?;
+                if has_time || !has_days {
+                    f.write_str("T")?;
+                    write_component(f, hours, "H")?;
+                    write_component(f, minutes, "M")?;
+                    if seconds != 0 || nanos != 0 || !has_time {
+                        f.write_str(seconds_sign)?;
+                        Display::fmt(&seconds.abs(), f)?;
+                        if nanos != 0 {
+                            f.write_str(".")?;
+                            let nanos_str = format!("{:09}", nanos.abs());
+                            Display::fmt(nanos_str.trim_end_matches('0'), f)?;
+                        }
+                        f.write_str("S")?;
+                    }
                 }
-                f.write_str("S")?;
+                Ok(())
             }
         }
-        Ok(())
+
+        ReprDisplay(self)
     }
 }
 
@@ -242,8 +220,28 @@ impl JoltDuration {
         Some(Self { data, jolt_version })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        self.data.jolt_fmt(self.jolt_version, jolt_version)
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a>(&'a JoltDurationData);
+
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                serializer.collect_str(&self.0.repr())
+            }
+        }
+
+        let body = DataSer(&self.data);
+        let map = JoltSigilMapSer::new(SIGIL, self.jolt_version, jolt_version, &body);
+        map.serialize(serializer)
     }
 }
 
@@ -251,8 +249,13 @@ impl JoltDuration {
 mod tests {
     #![allow(clippy::unreadable_literal, reason = "Not readable either way")]
 
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{all_jolt_versions, jolt_serializer};
+
     use super::*;
+
     use rstest::rstest;
+    use rstest_reuse::apply;
 
     #[rstest]
     #[case("P12Y", Some(Ok((12 * 12, 0, 0, 0))))]
@@ -391,7 +394,11 @@ mod tests {
     #[case("PT-2562047790577263H-17M-24.854775808S", (0, 0, i64::MIN, i64::MIN))]
     #[case("PT2562047785453167H42M50.145224192S", (0, 0, i64::MAX, i64::MIN))]
     #[case("PT-2562047785453167H-42M-51.145224193S", (0, 0, i64::MIN, i64::MAX))]
-    fn test_jolt_duration_fmt(#[case] expected: &str, #[case] components: (i64, i64, i64, i64)) {
+    fn test_jolt_duration_fmt(
+        #[case] expected: &str,
+        #[case] components: (i64, i64, i64, i64),
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
+    ) {
         const JOLT_VERSION: JoltVersion = JoltVersion::V1;
         let duration = JoltDuration {
             data: JoltDurationData {
@@ -402,12 +409,17 @@ mod tests {
             },
             jolt_version: JOLT_VERSION,
         };
-        let result = dbg!(dbg!(duration).jolt_fmt(JOLT_VERSION).to_string());
+
+        dbg!(&duration)
+            .jolt_serialize(jolt_serializer.ser(), JOLT_VERSION)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
         let expected = format!(r#"{{"T": "{expected}"}}"#);
-        assert_eq!(result, expected);
+        assert_eq!(formatted, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case((0, 0, 1, 123_000_000))]
     #[case((0, 0, 0, 123_000_000))]
     #[case((0, 0, -1, -123_000_000))]
@@ -428,11 +440,7 @@ mod tests {
     #[case((0, 0, i64::MIN, i64::MIN))]
     #[case((0, 0, i64::MAX, i64::MIN))]
     #[case((0, 0, i64::MIN, i64::MAX))]
-    fn test_to_struct(
-        #[case] components: (i64, i64, i64, i64),
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_to_struct(#[case] components: (i64, i64, i64, i64), jolt_version: JoltVersion) {
         let data = JoltDurationData {
             months: components.0,
             days: components.1,
@@ -455,7 +463,7 @@ mod tests {
         assert_eq!(struct_, expected);
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case((0, 0, 1, 123_000_000))]
     #[case((0, 0, 0, 123_000_000))]
     #[case((0, 0, -1, -123_000_000))]
@@ -476,11 +484,7 @@ mod tests {
     #[case((0, 0, i64::MIN, i64::MIN))]
     #[case((0, 0, i64::MAX, i64::MIN))]
     #[case((0, 0, i64::MIN, i64::MAX))]
-    fn test_from_struct(
-        #[case] components: (i64, i64, i64, i64),
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
-        jolt_version: JoltVersion,
-    ) {
+    fn test_from_struct(#[case] components: (i64, i64, i64, i64), jolt_version: JoltVersion) {
         let struct_ = PackStreamStruct {
             tag: TAG_DURATION,
             fields: vec![

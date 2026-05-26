@@ -30,7 +30,7 @@ use crate::util::opt_res_ret;
 use crate::values::bolt_message::{BoltMessage, SerializedBoltMessage};
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltNode, JoltPath, JoltPoint, JoltRelationship,
-    JoltTime, JoltUnsupportedType, JoltVector,
+    JoltStruct, JoltTime, JoltUnsupportedType, JoltVector,
 };
 use crate::values::pack_stream_value::{PackStreamValue, PackStreamVersion};
 use jolt_validators::build_fields_validator;
@@ -1045,6 +1045,7 @@ fn transcode_jolt_value(
         JoltSigil::UnsupportedType => {
             transcode_jolt_value_unsupported_type(value, jolt_version, config)
         }
+        JoltSigil::Struct => transcode_jolt_value_struct(value, jolt_version, config),
     }
 }
 
@@ -1274,6 +1275,17 @@ fn transcode_jolt_value_unsupported_type(
     config: &ActorConfig,
 ) -> Result<IsJoltValue> {
     let bolt_unsupported_type = JoltUnsupportedType::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_unsupported_type.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_struct(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_unsupported_type = JoltStruct::parse(value, jolt_version, config)?;
     Ok(IsJoltValue::Yes(PackStreamValue::Struct(
         bolt_unsupported_type.into_struct(),
     )))

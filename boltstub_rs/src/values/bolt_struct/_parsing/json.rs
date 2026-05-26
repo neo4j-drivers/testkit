@@ -145,3 +145,10 @@ impl ExtractableField for String {
         Ok(field)
     }
 }
+
+impl private::Sealed for PackStreamValue {}
+impl ExtractableField for PackStreamValue {
+    fn extract(field: JsonValue, config: &ActorConfig) -> Result<Self, private::ExtractionFailure> {
+        transcode_field(field, config).map_err(Into::into)
+    }
+}

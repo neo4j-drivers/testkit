@@ -447,16 +447,20 @@ impl BoltCapabilities {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Ord, derive_more::Display)]
 pub enum JoltVersion {
+    #[display("Jolt v1")]
     V1,
     /// * Fixes temporal types' representation being ambiguous in V1.
     /// * Adds element ids to nodes and relationships.
+    #[display("Jolt v2")]
     V2,
     /// * Adds support for vector and unsupported types.
+    #[display("Jolt v3")]
     V3,
     #[expect(clippy::doc_markdown, reason = "PackStream is the name of the game")]
     /// * Adds support for UUID (PackStream V2)
+    #[display("Jolt v4")]
     V4,
 }
 

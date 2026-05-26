@@ -140,6 +140,21 @@ pub(crate) fn fmt_bytes_compact(bytes: &[u8]) -> impl Display + '_ {
     BytesDisplay(bytes)
 }
 
+pub(crate) fn serialize_fmt_bytes(bytes: &[u8]) -> impl serde::Serialize + '_ {
+    struct BytesDisplay<'a>(&'a [u8]);
+
+    impl serde::Serialize for BytesDisplay<'_> {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            serializer.collect_str(&fmt_bytes(self.0))
+        }
+    }
+
+    BytesDisplay(bytes)
+}
+
 #[cfg(test)]
 mod tests {
     use rstest::rstest;

@@ -1,6 +1,8 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 
 use indexmap::IndexMap;
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use super::_parsing::{check_last_json_field, next_json_field, next_pack_stream_field};
@@ -8,8 +10,8 @@ use crate::bolt_version::JoltVersion;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::TAG_UNSUPPORTED_TYPE;
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const SIGIL: &str = JoltSigil::UnsupportedType.str();
@@ -123,42 +125,36 @@ impl JoltUnsupportedType {
         })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            data: &'a JoltUnsupportedType,
-            jolt_version: JoltVersion,
-        }
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a>(&'a JoltUnsupportedType);
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.data.jolt_version,
-                    self.jolt_version,
-                    Some(("[", "]")),
-                    |f| {
-                        f.write_str("\"")?;
-                        f.write_str(&self.data.name)?;
-                        f.write_str("\", ")?;
-                        Display::fmt(&self.data.minimum_protocol_major, f)?;
-                        f.write_str(", ")?;
-                        Display::fmt(&self.data.minimum_protocol_minor, f)?;
-                        if let Some(message) = &self.data.message {
-                            f.write_str(r#", ""#)?;
-                            f.write_str(message)?;
-                            f.write_str(r#"""#)?;
-                        }
-                        Ok(())
-                    },
-                )
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let len = if self.0.message.is_none() { 3 } else { 4 };
+                let mut seq = serializer.serialize_seq(Some(len))?;
+                seq.serialize_element(&self.0.name)?;
+                seq.serialize_element(&self.0.minimum_protocol_major)?;
+                seq.serialize_element(&self.0.minimum_protocol_minor)?;
+                if let Some(message) = &self.0.message {
+                    seq.serialize_element(message)?;
+                }
+                seq.end()
             }
         }
 
-        JoltFormatter {
-            data: self,
-            jolt_version,
-        }
+        let body = DataSer(self);
+        let map = JoltSigilMapSer::new(SIGIL, self.jolt_version, jolt_version, &body);
+        map.serialize(serializer)
     }
 }
 
@@ -166,10 +162,17 @@ impl JoltUnsupportedType {
 mod tests {
     use indexmap::IndexMap;
     use rstest::rstest;
-
-    use crate::bolt_version::{BoltCapabilities, BoltVersion};
+    use rstest_reuse::apply;
 
     use super::*;
+
+    use crate::bolt_version::{BoltCapabilities, BoltVersion};
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{
+        all_jolt_versions, jolt_serializer,
+        jolt_versions_v2_and_down as jolt_versions_without_unsupported_type,
+        jolt_versions_v3_and_up as jolt_versions_with_unsupported_type,
+    };
 
     fn actor_config() -> ActorConfig {
         ActorConfig {
@@ -187,7 +190,7 @@ mod tests {
         }
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_unsupported_type)]
     #[case::no_message(
         r#"["Quantum Integer", 6, 10]"#,
         JoltUnsupportedType {
@@ -208,10 +211,22 @@ mod tests {
             jolt_version: JoltVersion::V3,
         },
     )]
+    #[case::json_escaping(
+        r#"["\"\\", 6, 10, "\\\""]"#,
+        JoltUnsupportedType {
+            name: "\"\\".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: Some("\\\"".to_string()),
+            jolt_version: JoltVersion::V3,
+        },
+    )]
     fn test_jolt_unsupported_type_parse(
         #[case] input: &str,
         #[case] mut expected: JoltUnsupportedType,
+        jolt_version: JoltVersion,
     ) {
+        expected.jolt_version = jolt_version;
         let json = serde_json::from_str(input).unwrap();
         let jolt_version = JoltVersion::V3;
         expected.jolt_version = jolt_version;
@@ -247,17 +262,15 @@ mod tests {
         JoltUnsupportedType::parse(json, jolt_version, &config).unwrap_err();
     }
 
-    #[rstest]
-    #[case::v1(JoltVersion::V1)]
-    #[case::v2(JoltVersion::V2)]
-    fn test_jolt_unsupported_type_parse_invalid_jolt_version(#[case] jolt_version: JoltVersion) {
+    #[apply(jolt_versions_without_unsupported_type)]
+    fn test_jolt_unsupported_type_parse_invalid_jolt_version(jolt_version: JoltVersion) {
         let json = serde_json::from_str(r#"["Quantum Integer", 6, 10]"#).unwrap();
         let config = actor_config();
 
         JoltUnsupportedType::parse(json, jolt_version, &config).unwrap_err();
     }
 
-    #[rstest]
+    #[apply(all_jolt_versions)]
     #[case::no_message_v3(
         JoltUnsupportedType {
             name: "Quantum Integer".to_string(),
@@ -306,10 +319,13 @@ mod tests {
         #[case] jolt_unsupported_type: JoltUnsupportedType,
         #[case] expected: &str,
         #[case] expected_versioned: &str,
-        #[values(JoltVersion::V1, JoltVersion::V2, JoltVersion::V3, JoltVersion::V4)]
         jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
     ) {
-        let formatted = jolt_unsupported_type.jolt_fmt(jolt_version).to_string();
+        jolt_unsupported_type
+            .jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
         if jolt_version == jolt_unsupported_type.jolt_version {
             assert_eq!(formatted, expected);
         } else {

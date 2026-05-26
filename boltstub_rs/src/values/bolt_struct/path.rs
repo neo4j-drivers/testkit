@@ -1,10 +1,12 @@
 use std::borrow::{Borrow, Cow};
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::Rc;
 
 use indexmap::IndexMap;
 use itertools::Itertools;
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use crate::bolt_version::JoltVersion;
@@ -12,7 +14,6 @@ use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
 use crate::values::bolt_struct::_common::element_id::ElementIdExt;
-use crate::values::bolt_struct::_common::fmt_jolt_sigil_and_map;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
 use crate::values::bolt_struct::node::JoltNodeData;
 use crate::values::bolt_struct::relationship::{
@@ -20,6 +21,7 @@ use crate::values::bolt_struct::relationship::{
     JoltUnboundRelationshipData,
 };
 use crate::values::bolt_struct::{JoltNode, JoltRelationship, TAG_PATH};
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 const SIGIL: &str = JoltSigil::Path.str();
@@ -234,98 +236,141 @@ impl JoltPathData<'static> {
 }
 
 impl JoltPathData<'_> {
-    pub(super) fn jolt_fmt(
+    #[expect(clippy::too_many_lines, reason = "TODO: refactor")]
+    pub(super) fn jolt_serialize<S>(
         &self,
+        serializer: S,
         jolt_version_data: JoltVersion,
         jolt_version_ctx: JoltVersion,
-    ) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct RelationshipSer<'a> {
+            data: &'a JoltRelationshipData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
+        }
+
+        impl serde::Serialize for RelationshipSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.data
+                    .jolt_serialize(serializer, self.jolt_version_data, self.jolt_version_ctx)
+            }
+        }
+
+        struct NodeSer<'a> {
+            data: &'a JoltNodeData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
+        }
+
+        impl serde::Serialize for NodeSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.data
+                    .jolt_serialize(serializer, self.jolt_version_data, self.jolt_version_ctx)
+            }
+        }
+
+        struct DataSer<'a> {
             data: &'a JoltPathData<'a>,
             jolt_version_data: JoltVersion,
             jolt_version_ctx: JoltVersion,
         }
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                fmt_jolt_sigil_and_map(
-                    f,
-                    SIGIL,
-                    self.jolt_version_data,
-                    self.jolt_version_ctx,
-                    Some(("[", "]")),
-                    |f| {
-                        let mut prev_node = &self.data.nodes[0];
-                        prev_node
-                            .jolt_fmt(self.jolt_version_data, self.jolt_version_data)
-                            .fmt(f)?;
-                        let mut indices = self.data.indices.iter();
-                        while let Some(rel_idx) = indices.next() {
-                            let rel_idx_usize = usize::try_from(rel_idx.unsigned_abs())
-                                .expect("is_valid asserts that all indexes fit in usize")
-                                - 1;
-                            let node_idx =
-                                indices.next().expect("checked even size in from_struct");
-                            let node_idx = usize::try_from(*node_idx)
-                                .expect("is_valid asserts that all indexes fit in usize");
-                            let next_node = &self.data.nodes[node_idx];
-                            let relationship = &self.data.relationships[rel_idx_usize];
-                            let mut relationship = JoltRelationshipData {
-                                id: relationship.id,
-                                start_node_id: prev_node.id,
-                                rel_type: Cow::Borrowed(&*relationship.rel_type),
-                                end_node_id: next_node.id,
-                                properties: Cow::Borrowed(&*relationship.properties),
-                                element_id_ext: ElementIdExt::new_lazy(
-                                    self.jolt_version_data,
-                                    || JoltRelationshipElementIdExt {
-                                        element_id: Cow::Borrowed(
-                                            relationship
-                                                .element_id
-                                                .inner(self.jolt_version_data)
-                                                .as_ref()
-                                                .expect("either all or no element_id are present"),
-                                        ),
-                                        start_node_element_id: Cow::Borrowed(
-                                            prev_node
-                                                .element_id
-                                                .inner(self.jolt_version_data)
-                                                .as_ref()
-                                                .expect("either all or no element_id are present"),
-                                        ),
-                                        end_node_element_id: Cow::Borrowed(
-                                            next_node
-                                                .element_id
-                                                .inner(self.jolt_version_data)
-                                                .as_ref()
-                                                .expect("either all or no element_id are present"),
-                                        ),
-                                    },
-                                ),
-                            };
-                            if *rel_idx < 0 {
-                                relationship.flip_direction();
-                            }
-                            f.write_str(", ")?;
-                            relationship
-                                .jolt_fmt(self.jolt_version_data, self.jolt_version_data)
-                                .fmt(f)?;
-                            f.write_str(", ")?;
-                            next_node
-                                .jolt_fmt(self.jolt_version_data, self.jolt_version_data)
-                                .fmt(f)?;
-                            prev_node = next_node;
-                        }
-                        Ok(())
-                    },
-                )
+        impl<'a> DataSer<'a> {
+            fn new_node(&self, data: &'a JoltNodeData<'a>) -> NodeSer<'a> {
+                NodeSer {
+                    data,
+                    jolt_version_data: self.jolt_version_data,
+                    jolt_version_ctx: self.jolt_version_ctx,
+                }
+            }
+
+            fn new_relationship(&self, data: &'a JoltRelationshipData<'a>) -> RelationshipSer<'a> {
+                RelationshipSer {
+                    data,
+                    jolt_version_data: self.jolt_version_data,
+                    jolt_version_ctx: self.jolt_version_ctx,
+                }
             }
         }
 
-        JoltFormatter {
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let mut seq = serializer
+                    .serialize_seq(Some(self.data.nodes.len() + self.data.relationships.len()))?;
+                let mut prev_node = &self.data.nodes[0];
+                seq.serialize_element(&self.new_node(prev_node))?;
+                let mut indices = self.data.indices.iter();
+                while let Some(rel_idx) = indices.next() {
+                    let rel_idx_usize = usize::try_from(rel_idx.unsigned_abs())
+                        .expect("is_valid asserts that all indexes fit in usize")
+                        - 1;
+                    let node_idx = indices.next().expect("checked even size in from_struct");
+                    let node_idx = usize::try_from(*node_idx)
+                        .expect("is_valid asserts that all indexes fit in usize");
+                    let next_node = &self.data.nodes[node_idx];
+                    let relationship = &self.data.relationships[rel_idx_usize];
+                    let mut relationship = JoltRelationshipData {
+                        id: relationship.id,
+                        start_node_id: prev_node.id,
+                        rel_type: Cow::Borrowed(&*relationship.rel_type),
+                        end_node_id: next_node.id,
+                        properties: Cow::Borrowed(&*relationship.properties),
+                        element_id_ext: ElementIdExt::new_lazy(self.jolt_version_data, || {
+                            JoltRelationshipElementIdExt {
+                                element_id: Cow::Borrowed(
+                                    relationship
+                                        .element_id
+                                        .inner(self.jolt_version_data)
+                                        .as_ref()
+                                        .expect("either all or no element_id are present"),
+                                ),
+                                start_node_element_id: Cow::Borrowed(
+                                    prev_node
+                                        .element_id
+                                        .inner(self.jolt_version_data)
+                                        .as_ref()
+                                        .expect("either all or no element_id are present"),
+                                ),
+                                end_node_element_id: Cow::Borrowed(
+                                    next_node
+                                        .element_id
+                                        .inner(self.jolt_version_data)
+                                        .as_ref()
+                                        .expect("either all or no element_id are present"),
+                                ),
+                            }
+                        }),
+                    };
+                    if *rel_idx < 0 {
+                        relationship.flip_direction();
+                    }
+                    seq.serialize_element(&self.new_relationship(&relationship))?;
+                    seq.serialize_element(&self.new_node(next_node))?;
+                    prev_node = next_node;
+                }
+                seq.end()
+            }
+        }
+
+        let body = DataSer {
             data: self,
             jolt_version_data,
             jolt_version_ctx,
-        }
+        };
+        let map = JoltSigilMapSer::new(SIGIL, jolt_version_data, jolt_version_ctx, &body);
+        map.serialize(serializer)
     }
 
     fn is_valid(&self) -> bool {
@@ -425,8 +470,16 @@ impl<'a> JoltPath<'a> {
         data.is_valid().then(|| Self { data, jolt_version })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        self.data.jolt_fmt(self.jolt_version, jolt_version)
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data
+            .jolt_serialize(serializer, self.jolt_version, jolt_version_ctx)
     }
 }
 
