@@ -627,7 +627,7 @@ class Structure:
             if isinstance(field, Structure):
                 return field.to_jolt_type()
             if isinstance(field, UUID):
-                return field.to_jolt_type()
+                return jolt_v4_types.JoltUuid(str(field))
             return field
 
         return transform_field(self.fields)

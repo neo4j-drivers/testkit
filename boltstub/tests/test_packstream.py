@@ -17,6 +17,7 @@
 
 
 import inspect
+import uuid
 
 import pytest
 
@@ -24,6 +25,7 @@ from ..bolt_protocol import Structure
 from ..simple_jolt.v1 import jolt_types as jolt_v1_types
 from ..simple_jolt.v2 import jolt_types as jolt_v2_types
 from ..simple_jolt.v3 import jolt_types as jolt_v3_types
+from ..simple_jolt.v4 import jolt_types as jolt_v4_types
 
 
 @pytest.mark.parametrize(("packstream_version", "fields", "res"), (
@@ -329,3 +331,10 @@ def test_struct_to_jolt_type(packstream_version, fields, res):
             jolt_types[i].__class__ == res[i].__class__
             for i in range(len(res))
         )
+
+
+def test_uuid_field_converts_to_jolt_uuid():
+    uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+    struct = Structure(b"\x00", uuid_val, packstream_version=4, verified=False)
+    result = struct.fields_to_jolt_types()
+    assert result == [jolt_v4_types.JoltUuid("550e8400-e29b-41d4-a716-446655440000")]
