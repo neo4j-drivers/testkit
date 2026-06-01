@@ -23,6 +23,7 @@ from ..common.errors import (
     JOLTValueError,
     NoSimpleRepresentation,
 )
+from .jolt_types import JoltUuid
 
 # unused transformer imports are required for the codec to pick them up
 from ..v2.codec import Codec as _Codec
@@ -46,7 +47,7 @@ from ..v3.codec import JoltVectorTransformer  # noqa: F401
 
 
 class JoltUuidTransformer(JoltTypeTransformer):
-    _supported_types = (UUID,)
+    _supported_types = (UUID, JoltUuid)
     sigil = "UU"
 
     @staticmethod
@@ -64,7 +65,8 @@ class JoltUuidTransformer(JoltTypeTransformer):
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
-        raise NoSimpleRepresentation()
+        uuid_str = str(value)
+        return f"{uuid_str[:3]}...{uuid_str[-3:]}"
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
