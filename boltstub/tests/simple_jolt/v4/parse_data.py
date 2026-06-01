@@ -17,27 +17,26 @@
 
 
 import json
-
-from ....simple_jolt.v4.jolt_types import JoltUuid
+from uuid import UUID
 
 
 V4_LOADS = (
     # UUID - full
     (
         '{"UU": "00000000-0000-0000-0000-000000000000"}',
-        JoltUuid("00000000-0000-0000-0000-000000000000"),
+        UUID("00000000-0000-0000-0000-000000000000"),
     ),
     (
         '{"UU": "ffffffff-ffff-ffff-ffff-ffffffffffff"}',
-        JoltUuid("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+        UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
     ),
     (
         '{"UU": "550e8400-e29b-41d4-a716-446655440000"}',
-        JoltUuid("550e8400-e29b-41d4-a716-446655440000"),
+        UUID("550e8400-e29b-41d4-a716-446655440000"),
     ),
     (
         '{"UU": "01020304-0506-0708-090a-0b0c0d0e0f10"}',
-        JoltUuid("01020304-0506-0708-090a-0b0c0d0e0f10"),
+        UUID("01020304-0506-0708-090a-0b0c0d0e0f10"),
     ),
 )
 

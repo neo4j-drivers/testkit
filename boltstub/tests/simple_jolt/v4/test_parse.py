@@ -17,6 +17,7 @@
 
 
 import pytest
+from uuid import UUID
 
 from ....simple_jolt.common.errors import JOLTValueError
 from ....simple_jolt.v4 import (
@@ -24,7 +25,6 @@ from ....simple_jolt.v4 import (
     dumps_simple,
     loads,
 )
-from ....simple_jolt.v4.jolt_types import JoltUuid
 from ... import _common
 from ..v1.parse_data import V1_EXPLICIT_LOADS
 from ..v2.parse_data import V2_EXPLICIT_LOADS
@@ -38,19 +38,19 @@ from .parse_data import (
 @pytest.mark.parametrize(("in_", "out_"), (
     # UUID
     (
-        JoltUuid("00000000-0000-0000-0000-000000000000"),
+        UUID("00000000-0000-0000-0000-000000000000"),
         '{"UU": "00000000-0000-0000-0000-000000000000"}',
     ),
     (
-        JoltUuid("ffffffff-ffff-ffff-ffff-ffffffffffff"),
+        UUID("ffffffff-ffff-ffff-ffff-ffffffffffff"),
         '{"UU": "ffffffff-ffff-ffff-ffff-ffffffffffff"}',
     ),
     (
-        JoltUuid("550e8400-e29b-41d4-a716-446655440000"),
+        UUID("550e8400-e29b-41d4-a716-446655440000"),
         '{"UU": "550e8400-e29b-41d4-a716-446655440000"}',
     ),
     (
-        JoltUuid("01020304-0506-0708-090a-0b0c0d0e0f10"),
+        UUID("01020304-0506-0708-090a-0b0c0d0e0f10"),
         '{"UU": "01020304-0506-0708-090a-0b0c0d0e0f10"}',
     ),
 ))
@@ -62,11 +62,11 @@ def test_dumps_full(in_, out_, human_readable):
 @pytest.mark.parametrize(("in_", "out_"), (
     # UUID has no simple representation; falls through to full form
     (
-        JoltUuid("00000000-0000-0000-0000-000000000000"),
+        UUID("00000000-0000-0000-0000-000000000000"),
         '{"UU": "00000000-0000-0000-0000-000000000000"}',
     ),
     (
-        JoltUuid("550e8400-e29b-41d4-a716-446655440000"),
+        UUID("550e8400-e29b-41d4-a716-446655440000"),
         '{"UU": "550e8400-e29b-41d4-a716-446655440000"}',
     ),
 ))

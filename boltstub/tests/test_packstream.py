@@ -239,6 +239,28 @@ from ..simple_jolt.v4 import jolt_types as jolt_v4_types
         [Structure(b"\x59", 123, 1.2, 3.4, 5.6, packstream_version=2)],
         [jolt_v2_types.JoltPoint("SRID=123;POINT(1.2 3.4 5.6)")]
     ),
+    # UUID (v4 primitive, appears as a field value inside a struct)
+    (
+        4,
+        [uuid.UUID("00000000-0000-0000-0000-000000000000")],
+        [jolt_v4_types.JoltUuid("00000000-0000-0000-0000-000000000000")],
+    ),
+    (
+        4,
+        [uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")],
+        [jolt_v4_types.JoltUuid("ffffffff-ffff-ffff-ffff-ffffffffffff")],
+    ),
+    (
+        4,
+        [uuid.UUID("550e8400-e29b-41d4-a716-446655440000")],
+        [jolt_v4_types.JoltUuid("550e8400-e29b-41d4-a716-446655440000")],
+    ),
+    # UUID inside a raw dict field (exercises the recursive dict path)
+    (
+        4,
+        [{"uid": uuid.UUID("550e8400-e29b-41d4-a716-446655440000")}],
+        [{"uid": jolt_v4_types.JoltUuid("550e8400-e29b-41d4-a716-446655440000")}],
+    ),
     # Vector
     (
         1,

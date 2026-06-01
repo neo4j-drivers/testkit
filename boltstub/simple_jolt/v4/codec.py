@@ -17,6 +17,7 @@
 
 
 import inspect
+import re
 from uuid import UUID
 
 from ..common.errors import (
@@ -61,12 +62,19 @@ class JoltUuidTransformer(JoltTypeTransformer):
                 "Expecting UUID string after sigil "
                 f"{JoltUuidTransformer.sigil}"
             )
+        uuid_re = re.compile(
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+            re.IGNORECASE,
+        )
+        if not uuid_re.match(value):
+            raise JOLTValueError(
+                f"Invalid UUID string: {value!r}"
+            )
         return UUID(value)
 
     @staticmethod
     def _encode_simple(value, encode_cb, human_readable):
-        uuid_str = str(value)
-        return f"{uuid_str[:3]}...{uuid_str[-3:]}"
+        raise NoSimpleRepresentation()
 
     @classmethod
     def _encode_full(cls, value, encode_cb, human_readable):
