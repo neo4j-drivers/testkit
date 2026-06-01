@@ -259,7 +259,9 @@ from ..simple_jolt.v4 import jolt_types as jolt_v4_types
     (
         4,
         [{"uid": uuid.UUID("550e8400-e29b-41d4-a716-446655440000")}],
-        [{"uid": jolt_v4_types.JoltUuid("550e8400-e29b-41d4-a716-446655440000")}],
+        [{"uid": jolt_v4_types.JoltUuid(
+            "550e8400-e29b-41d4-a716-446655440000"
+        )}],
     ),
     # Vector
     (
@@ -356,10 +358,6 @@ def test_struct_to_jolt_type(packstream_version, fields, res):
 
 
 def test_can_display_translated_structure_with_uuid_in_map():
-    """Whenever a structure containing UUID field(s) is converted to string
-    (for logging, error messages, or any human-readable output), __str__()
-    calls fields_to_jolt_types() to produce a human-readable Jolt representation.
-    This must recursively convert all UUID values to JoltUuid."""
     from ..bolt_protocol import TranslatedStructure
     uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
     struct = TranslatedStructure(
@@ -374,7 +372,6 @@ def test_can_display_translated_structure_with_uuid_in_map():
 
 
 def test_can_display_translated_structure_with_uuid_in_list():
-    """Same as above but with a UUID nested in a list field (for human-readable output)."""
     from ..bolt_protocol import TranslatedStructure
     uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
     struct = TranslatedStructure(
@@ -383,5 +380,3 @@ def test_can_display_translated_structure_with_uuid_in_list():
         packstream_version=4
     )
     str(struct)
-
-

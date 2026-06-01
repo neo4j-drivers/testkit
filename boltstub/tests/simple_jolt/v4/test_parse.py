@@ -16,8 +16,9 @@
 # limitations under the License.
 
 
-import pytest
 from uuid import UUID
+
+import pytest
 
 from ....simple_jolt.common.errors import JOLTValueError
 from ....simple_jolt.v4 import (

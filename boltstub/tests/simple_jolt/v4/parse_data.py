@@ -19,7 +19,6 @@
 import json
 from uuid import UUID
 
-
 V4_LOADS = (
     # UUID - full
     (

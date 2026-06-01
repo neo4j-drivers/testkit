@@ -24,7 +24,6 @@ from ..common.errors import (
     JOLTValueError,
     NoSimpleRepresentation,
 )
-from .jolt_types import JoltUuid
 
 # unused transformer imports are required for the codec to pick them up
 from ..v2.codec import Codec as _Codec
@@ -45,6 +44,7 @@ from ..v2.codec import JoltStrTransformer  # noqa: F401
 from ..v2.codec import JoltTypeTransformer
 from ..v3.codec import JoltUnsupportedTypeTransformer  # noqa: F401
 from ..v3.codec import JoltVectorTransformer  # noqa: F401
+from .jolt_types import JoltUuid
 
 
 class JoltUuidTransformer(JoltTypeTransformer):
