@@ -25,7 +25,7 @@ class JoltType(JoltTypeCommon):  # version specific type base class
 
 class JoltUuid(JoltType):
     """
-    Represents a UUID value in JOLT v3.
+    Represents a UUID value in JOLT v4.
 
     :param value: The UUID as a standard hyphenated string,
         e.g. "550e8400-e29b-41d4-a716-446655440000".
