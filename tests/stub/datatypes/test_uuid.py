@@ -134,5 +134,8 @@ class TestUuid6x0(_UuidTestCase):
         if driver_name in ["python"]:
             self.assertIn("packstream", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker bytes
+        if driver_name in ["dotnet"]:
+            self.assertIn("uuid", msg)
+            self.assertIn("6.1", msg) # demands bolt 6.1
         else:
             raise NotImplementedError(f"Add error assertion for {driver_name}")
