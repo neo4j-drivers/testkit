@@ -49,6 +49,10 @@ from .jolt_types import JoltUuid
 
 class JoltUuidTransformer(JoltTypeTransformer):
     _supported_types = (UUID, JoltUuid)
+    _uuid_re = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        re.IGNORECASE,
+    )
     sigil = "UU"
 
     @staticmethod
@@ -62,11 +66,8 @@ class JoltUuidTransformer(JoltTypeTransformer):
                 "Expecting UUID string after sigil "
                 f"{JoltUuidTransformer.sigil}"
             )
-        uuid_re = re.compile(
-            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-            re.IGNORECASE,
-        )
-        if not uuid_re.match(value):
+
+        if not _uuid_re.match(value):
             raise JOLTValueError(
                 f"Invalid UUID string: {value!r}"
             )
