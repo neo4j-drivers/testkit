@@ -116,7 +116,7 @@ class TestUuid6x0(_UuidTestCase):
                         session.run(
                             "RETURN $value AS value",
                             params={"value": types.CypherUUID(uuid.uuid4())},
-                        )
+                        ).consume()
                     self._server.done()
                     self.assertIn("uuid", exc.exception.msg.lower())
 
@@ -137,5 +137,8 @@ class TestUuid6x0(_UuidTestCase):
         if driver_name in ["dotnet"]:
             self.assertIn("uuid", msg)
             self.assertIn("6.1", msg)  # demands bolt 6.1
+        if driver_name in ["javascript"]:
+            self.assertIn("unknown packed", msg)
+            self.assertIn("e0", msg)  # UUID PackStream type marker byte
         else:
             raise NotImplementedError(f"Add error assertion for {driver_name}")
