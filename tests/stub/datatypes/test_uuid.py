@@ -133,7 +133,7 @@ class TestUuid6x0(_UuidTestCase):
         msg = exc.exception.msg.lower()
         if driver_name in ["python"]:
             self.assertIn("packstream", msg)
-            self.assertIn("e0", msg)  # UUID PackStream type marker bytes
+            self.assertIn("e0", msg)  # UUID PackStream type marker byte
         if driver_name in ["dotnet"]:
             self.assertIn("uuid", msg)
             self.assertIn("6.1", msg)  # demands bolt 6.1
