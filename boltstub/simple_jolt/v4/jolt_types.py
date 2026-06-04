@@ -34,9 +34,6 @@ class JoltUuid(JoltType):
     def __init__(self, value):
         self.value = str(value)
 
-    def __str__(self):
-        return self.value
-
     def __eq__(self, other):
         if not isinstance(other, JoltUuid):
             return NotImplemented
