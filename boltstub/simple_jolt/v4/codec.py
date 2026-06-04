@@ -67,7 +67,7 @@ class JoltUuidTransformer(JoltTypeTransformer):
                 f"{JoltUuidTransformer.sigil}"
             )
 
-        if not _uuid_re.match(value):
+        if not JoltUuidTransformer._uuid_re.match(value):
             raise JOLTValueError(
                 f"Invalid UUID string: {value!r}"
             )
