@@ -16,28 +16,34 @@
 # limitations under the License.
 
 
-import json
-
-from .codec import Codec
+from ..common.jolt_types import JoltType as JoltTypeCommon
 
 
-def dumps_full(obj, human_readable=False):
-    obj = Codec.encode_full(obj, human_readable=human_readable)
-    return json.dumps(obj)
+class JoltType(JoltTypeCommon):  # version specific type base class
+    pass
 
 
-def dumps_simple(obj, human_readable=False):
-    obj = Codec.encode_simple(obj, human_readable=human_readable)
-    return json.dumps(obj)
+class JoltUuid(JoltType):
+    """
+    Represents a UUID value in JOLT v4.
 
+    :param value: The UUID as a standard hyphenated string,
+        e.g. "550e8400-e29b-41d4-a716-446655440000".
+    """
 
-def loads(str_):
-    obj = json.loads(str_)
-    return Codec.decode(obj)
+    def __init__(self, value):
+        self.value = str(value)
+
+    def __eq__(self, other):
+        if not isinstance(other, JoltUuid):
+            return NotImplemented
+        return self.value == other.value
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}<{self.value!r}>"
 
 
 __all__ = [
-    "dumps_full",
-    "dumps_simple",
-    "loads",
+    "JoltType",
+    "JoltUuid"
 ]

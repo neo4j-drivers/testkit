@@ -1,0 +1,16 @@
+!: BOLT 6.1
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN {"U": "RETURN $value AS value"} {"value": #VALUE#} {"{}": "*"}
+S: SUCCESS {"fields": ["value"], "qid": 1}
+{{
+    C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+----
+    C: PULL {"n": {"Z": "*"}, "qid": 1}
+}}
+S: RECORD [#VALUE#]
+   SUCCESS {"type": "r"}
+*: RESET
+?: GOODBYE

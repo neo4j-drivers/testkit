@@ -36,4 +36,8 @@ def loads(str_):
     return Codec.decode(obj)
 
 
-__all__ = dumps_full, dumps_simple, loads
+__all__ = [
+    "dumps_full",
+    "dumps_simple",
+    "loads",
+]

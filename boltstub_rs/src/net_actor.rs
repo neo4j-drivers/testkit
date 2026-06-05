@@ -27,9 +27,8 @@ use crate::types::actor_types::{
     ServerActionLine, ServerMessageSender,
 };
 use crate::types::Script;
-use crate::values;
 use crate::values::bolt_message::BoltMessage;
-use crate::values::pack_stream_value::PackStreamStruct;
+use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
 type NetActorResult<T> = Result<T, NetActorError>;
 
@@ -678,10 +677,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
         initial_size: &mut usize,
     ) -> NetActorResult<()> {
         let mut error = None;
-        loop {
-            let Some(block) = blocks.front_mut() else {
-                break;
-            };
+        while let Some(block) = blocks.front_mut() {
             let res = Box::pin(self.server_action(block)).await;
             if let Err(err) = res {
                 error.get_or_insert(err);
@@ -1195,6 +1191,8 @@ impl<'a, C: Connection> NetActor<'a, C> {
 
         trace!(logging_ctx, "Read message: {}", fmt_bytes(&message_buffer));
         parse_message(&message_buffer, bolt_version)
+            .inspect(|message| debug!(logging_ctx, "Parsed message: {}", message.repr()))
+            .inspect_err(|err| debug!(logging_ctx, "Failed to parse message: {err:?}"))
     }
 
     async fn write_message(&mut self, sender: &dyn ServerMessageSender) -> NetActorResult<()> {
@@ -1684,11 +1682,10 @@ fn parse_message(data: &[u8], bolt_version: BoltVersion) -> NetActorResult<BoltM
         )));
     }
 
-    let value = values::pack_stream_value::PackStreamValue::from_data_consume_all(data)
+    let packstream_version = bolt_version.packstream_version();
+    let value = PackStreamValue::from_data_consume_all(data, packstream_version)
         .context("Parsing bolt message")?;
-    let values::pack_stream_value::PackStreamValue::Struct(PackStreamStruct { tag, fields }) =
-        value
-    else {
+    let PackStreamValue::Struct(PackStreamStruct { tag, fields }) = value else {
         return Err(NetActorError::Anyhow(anyhow!(
             "Expected a bolt message but got: {value:?}."
         )));

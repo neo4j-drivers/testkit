@@ -1,97 +1,36 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::borrow::Cow;
+use std::fmt::Debug;
 
 use indexmap::IndexMap;
 use itertools::Itertools;
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use super::_parsing::{
-    check_last_json_field, check_last_pack_stream_field, next_json_field, next_pack_stream_field,
+    check_last_json_field, check_last_pack_stream_field, iter_json_fields, next_json_field,
+    next_pack_stream_field,
 };
 use crate::bolt_version::JoltVersion;
+use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
+use crate::values::bolt_struct::_common::element_id::ElementIdExt;
 use crate::values::bolt_struct::TAG_NODE;
-use crate::values::pack_stream_value::{write_joined_entries, PackStreamStruct, PackStreamValue};
+use crate::values::jolt_ser::{JoltSer, JoltSerValue, JoltSigilMapSer};
+use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
-#[derive(Debug, Clone, Eq)]
-pub(crate) struct JoltNode {
+const SIGIL: &str = JoltSigil::Node.str();
+
+#[derive(Debug, Clone)]
+pub(crate) struct JoltNodeData<'a> {
     pub(crate) id: i64,
-    pub(crate) labels: Vec<String>,
-    pub(crate) properties: IndexMap<String, PackStreamValue>,
-    pub(crate) element_id: Option<String>,
+    pub(crate) labels: Vec<Cow<'a, str>>,
+    pub(crate) properties: Cow<'a, IndexMap<String, PackStreamValue>>,
+    pub(crate) element_id: ElementIdExt<Cow<'a, str>>,
 }
 
-impl PartialEq for JoltNode {
-    fn eq(&self, other: &Self) -> bool {
-        BoltNode::from_jolt_node(self) == BoltNode::from_jolt_node(other)
-    }
-}
-
-impl JoltNode {
-    pub(crate) fn parse(
-        v: JsonValue,
-        jolt_version: JoltVersion,
-        config: &ActorConfig,
-    ) -> Result<Self, ParseError> {
-        let JsonValue::Array(fields) = v else {
-            return Err(ParseError::new(format!(
-                "Expected array after sigil \"()\", but found {v:?}"
-            )));
-        };
-        let mut fields = fields.into_iter().enumerate();
-        let i = 0;
-
-        let (i, id) = next_json_field(&mut fields, "node id", i, "()", config)?;
-        let (i, labels) = next_json_field::<Vec<String>>(&mut fields, "labels", i, "()", config)?;
-        let labels = labels.into_iter().collect();
-        let (i, properties) = next_json_field(&mut fields, "properties", i, "()", config)?;
-        let (i, element_id) = match jolt_version {
-            JoltVersion::V1 => (i, None),
-            JoltVersion::V2 | JoltVersion::V3 => {
-                let (i, element_id) = next_json_field(&mut fields, "element id", i, "()", config)?;
-                (i, Some(element_id))
-            }
-        };
-        check_last_json_field(&mut fields, i, "()")?;
-
-        Ok(Self {
-            id,
-            labels,
-            properties,
-            element_id,
-        })
-    }
-
-    pub(crate) fn into_struct(self) -> PackStreamStruct {
-        let mut fields = Vec::with_capacity(4);
-        fields.extend([
-            PackStreamValue::Integer(self.id),
-            PackStreamValue::List(
-                self.labels
-                    .into_iter()
-                    .map(PackStreamValue::String)
-                    .collect(),
-            ),
-            PackStreamValue::Dict(self.properties),
-        ]);
-        if let Some(element_id) = self.element_id {
-            fields.push(PackStreamValue::String(element_id));
-        }
-        PackStreamStruct {
-            tag: TAG_NODE,
-            fields,
-        }
-    }
-}
-#[derive(Debug, Clone, Eq)]
-pub(super) struct BoltNode<'a> {
-    pub(super) id: i64,
-    pub(super) labels: Vec<&'a str>,
-    pub(super) properties: &'a IndexMap<String, PackStreamValue>,
-    pub(super) element_id: Option<&'a str>,
-}
-
-impl PartialEq for BoltNode<'_> {
+impl PartialEq for JoltNodeData<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
             && self.properties == other.properties
@@ -100,13 +39,138 @@ impl PartialEq for BoltNode<'_> {
             && self.labels.iter().sorted().eq(other.labels.iter().sorted())
     }
 }
-impl<'a> BoltNode<'a> {
-    fn from_jolt_node(jolt_node: &'a JoltNode) -> Self {
-        Self {
-            id: jolt_node.id,
-            labels: jolt_node.labels.iter().map(String::as_str).collect(),
-            properties: &jolt_node.properties,
-            element_id: jolt_node.element_id.as_deref(),
+
+impl Eq for JoltNodeData<'_> {}
+
+impl JoltNodeData<'static> {
+    pub(super) fn parse(
+        v: JsonValue,
+        jolt_version: JoltVersion,
+        config: &ActorConfig,
+    ) -> Result<Self, ParseError> {
+        let JsonValue::Array(fields) = v else {
+            return Err(ParseError::new(format!(
+                "Expected array after sigil \"{SIGIL}\", but found {v:?}"
+            )));
+        };
+        let (i, mut fields) = iter_json_fields(fields);
+
+        let (i, id) = next_json_field(&mut fields, "node id", i, SIGIL, config)?;
+        let (i, labels) = next_json_field::<Vec<String>>(&mut fields, "labels", i, SIGIL, config)?;
+        let labels = labels.into_iter().map(Cow::Owned).collect();
+        let (i, properties) = next_json_field(&mut fields, "properties", i, SIGIL, config)?;
+        let (i, element_id) = {
+            let mut i = i;
+            let element_id = ElementIdExt::new_lazy(jolt_version, || {
+                let (new_i, element_id) =
+                    next_json_field(&mut fields, "element id", i, SIGIL, config)?;
+                i = new_i;
+                Ok::<_, ParseError>(Cow::Owned(element_id))
+            })
+            .transpose()?;
+            (i, element_id)
+        };
+
+        check_last_json_field(&mut fields, i, SIGIL)?;
+        Ok(Self {
+            id,
+            labels,
+            properties: Cow::Owned(properties),
+            element_id,
+        })
+    }
+}
+
+impl JoltNodeData<'_> {
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_data: JoltVersion,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a> {
+            data: &'a JoltNodeData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
+        }
+
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let has_element_ids = self.data.element_id.inner(self.jolt_version_data).is_some();
+                let size = if has_element_ids { 4 } else { 3 };
+                let mut seq = serializer.serialize_seq(Some(size))?;
+                seq.serialize_element(&self.data.id)?;
+                seq.serialize_element(&self.data.labels)?;
+                let properties = JoltSer::new_value(
+                    JoltSerValue::Dict(&self.data.properties),
+                    self.jolt_version_ctx,
+                );
+                seq.serialize_element(&properties)?;
+                if let Some(ext) = self.data.element_id.inner(self.jolt_version_data) {
+                    seq.serialize_element(&ext)?;
+                }
+                seq.end()
+            }
+        }
+
+        let body = DataSer {
+            data: self,
+            jolt_version_data,
+            jolt_version_ctx,
+        };
+        let map = JoltSigilMapSer::new(SIGIL, jolt_version_data, jolt_version_ctx, &body);
+        map.serialize(serializer)
+    }
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
+pub(crate) struct JoltNode<'a> {
+    pub(crate) data: JoltNodeData<'a>,
+    pub(super) jolt_version: JoltVersion,
+}
+
+impl JoltNode<'static> {
+    pub(crate) fn parse(
+        v: JsonValue,
+        jolt_version: JoltVersion,
+        config: &ActorConfig,
+    ) -> Result<Self, ParseError> {
+        JoltNodeData::parse(v, jolt_version, config).map(|data| Self { data, jolt_version })
+    }
+}
+
+impl<'a> JoltNode<'a> {
+    pub(super) fn new(data: JoltNodeData<'a>, jolt_version: JoltVersion) -> Self {
+        data.element_id.assert_jolt_version(jolt_version);
+        Self { data, jolt_version }
+    }
+
+    pub(crate) fn into_struct(self) -> PackStreamStruct {
+        let mut fields = Vec::with_capacity(4);
+        fields.extend([
+            PackStreamValue::Integer(self.data.id),
+            PackStreamValue::List(
+                self.data
+                    .labels
+                    .into_iter()
+                    .map(|l| PackStreamValue::String(l.into_owned()))
+                    .collect(),
+            ),
+            PackStreamValue::Dict(self.data.properties.into_owned()),
+        ]);
+        if let Some(element_id) = self.data.element_id.into_inner(self.jolt_version) {
+            fields.push(PackStreamValue::String(element_id.into_owned()));
+        }
+        PackStreamStruct {
+            tag: TAG_NODE,
+            fields,
         }
     }
 
@@ -116,55 +180,572 @@ impl<'a> BoltNode<'a> {
         }
         let mut fields = s.fields.iter();
         let id = next_pack_stream_field(&mut fields)?;
-        let labels = next_pack_stream_field(&mut fields)?;
-        let properties = next_pack_stream_field(&mut fields)?;
-        let element_id = match jolt_version {
-            JoltVersion::V1 => None,
-            JoltVersion::V2 | JoltVersion::V3 => Some(next_pack_stream_field(&mut fields)?),
-        };
+        let labels: Vec<&String> = next_pack_stream_field(&mut fields)?;
+        let labels = labels
+            .into_iter()
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .collect();
+        let properties = Cow::Borrowed(next_pack_stream_field(&mut fields)?);
 
-        if !check_last_pack_stream_field(&mut fields) {
-            return None;
-        }
+        let element_id = ElementIdExt::new_lazy(jolt_version, || {
+            Some(Cow::Borrowed(next_pack_stream_field(&mut fields)?))
+        })
+        .transpose()?;
+
+        check_last_pack_stream_field(&mut fields).then_some(())?;
         Some(Self {
-            id,
-            labels,
-            properties,
-            element_id,
+            data: JoltNodeData {
+                id,
+                labels,
+                properties,
+                element_id,
+            },
+            jolt_version,
         })
     }
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            this: &'a BoltNode<'a>,
-            jolt_version: JoltVersion,
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data
+            .jolt_serialize(serializer, self.jolt_version, jolt_version_ctx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::bolt_version::BoltCapabilities;
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{
+        all_jolt_versions, jolt_serializer,
+        jolt_versions_v1_and_down as jolt_versions_without_element_id,
+        jolt_versions_v2_and_up as jolt_versions_with_element_id,
+    };
+
+    use super::*;
+
+    use rstest::rstest;
+    use rstest_reuse::apply;
+
+    fn make_actor_config(jolt_version: JoltVersion) -> ActorConfig {
+        let bolt_version = jolt_version.min_bolt_version();
+        let bolt_version_raw = (bolt_version.major(), bolt_version.major());
+        ActorConfig {
+            bolt_version,
+            bolt_version_raw,
+            bolt_capabilities: BoltCapabilities::default(),
+            handshake_manifest_version: None,
+            handshake: None,
+            handshake_response: None,
+            handshake_delay: None,
+            allow_restart: false,
+            allow_concurrent: false,
+            auto_responses: IndexMap::default(),
+            py_lines: vec![],
         }
+    }
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                f.write_str(r#"{"{}": ["#)?;
-                Display::fmt(&self.this.id, f)?;
+    #[apply(jolt_versions_without_element_id)]
+    #[case(
+        r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}]"#,
+        123,
+        &["FOO", "BAR"],
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+    )]
+    #[case(
+        "[-1, [], {}]",
+        -1,
+        &[],
+        &[],
+    )]
+    #[case(
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}]"#,
+        0,
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}]",
+        0,
+        &["\u{202E}"],
+        &[],
+    )]
+    fn test_parse_v1(
+        #[case] input: &str,
+        #[case] id: i64,
+        #[case] labels: &[&str],
+        #[case] properties: &[(&str, PackStreamValue)],
+        jolt_version: JoltVersion,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
 
-                f.write_str(", [")?;
-                let mut labels = self.this.labels.iter();
-                if let Some(label) = labels.next() {
-                    Debug::fmt(label, f)?;
-                    for label in labels {
-                        f.write_str(", ")?;
-                        Debug::fmt(label, f)?;
-                    }
-                }
+        let parsed = JoltNode::parse(input, jolt_version, &config).expect("case input failed");
 
-                f.write_str("], {")?;
-                write_joined_entries(f, self.this.properties.iter(), self.jolt_version)?;
+        let data = JoltNodeData {
+            id,
+            labels: labels.iter().map(|l| (*l).into()).collect(),
+            properties: Cow::Owned(properties),
+            element_id: ElementIdExt::new(jolt_version, "".into()),
+        };
+        let expected = JoltNode { data, jolt_version };
+        assert_eq!(parsed, expected);
+    }
 
-                f.write_str("}]}")
-            }
+    #[apply(jolt_versions_with_element_id)]
+    #[case(
+        r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
+        123,
+        &["FOO", "BAR"],
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+        "abc",
+    )]
+    #[case(
+        r#"[-1, [], {}, ""]"#,
+        -1,
+        &[],
+        &[],
+        "",
+    )]
+    #[case(
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}, "1"]"#,
+        0,
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+        "1",
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}, \"1\"]",
+        0,
+        &["\u{202E}"],
+        &[],
+        "1",
+    )]
+    fn test_parse_v2_plus(
+        #[case] input: &str,
+        #[case] id: i64,
+        #[case] labels: &[&str],
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_id: &str,
+        jolt_version: JoltVersion,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+
+        let parsed = JoltNode::parse(input, jolt_version, &config).expect("case input failed");
+
+        let data = JoltNodeData {
+            id,
+            labels: labels.iter().map(|l| (*l).into()).collect(),
+            properties: Cow::Owned(properties),
+            element_id: ElementIdExt::new(jolt_version, element_id.into()),
+        };
+        let expected = JoltNode { data, jolt_version };
+        assert_eq!(parsed, expected);
+    }
+
+    #[apply(jolt_versions_without_element_id)]
+    #[case(
+        r#"["123", ["FOO", "BAR"], {"a": 1, "b": null}]"#,
+        &["node id (field 1)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[123, {"0": "FOO"}, {"a": 1, "b": null}]"#,
+        &["labels (field 2)", "to be an array", "found object"],
+    )]
+    #[case(
+        r#"[123, [1, 2], {"a": 1, "b": null}]"#,
+        &["labels (field 2)", "to be an array of strings", "found number"],
+    )]
+    #[case(
+        "[123, [], null]",
+        &["properties (field 3)", "to be a map", "found null"],
+    )]
+    #[case(
+        "[]",
+        &["missing", "node id (field 1)"],
+    )]
+    #[case(
+        "[123]",
+        &["missing", "labels (field 2)"],
+    )]
+    #[case(
+        "[123, []]",
+        &["missing", "properties (field 3)"],
+    )]
+    #[case(
+        r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
+        &["too many fields"],
+    )]
+    fn test_failing_parse_v1(
+        #[case] input: &str,
+        #[case] err_matchers: &[&str],
+        jolt_version: JoltVersion,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+
+        let err = JoltNode::parse(input, jolt_version, &config)
+            .expect_err("case input parsed successfully");
+        for error_matcher in err_matchers {
+            assert!(
+                err.to_string().to_lowercase().contains(error_matcher),
+                "Expected error message to contain {error_matcher:?}, but got {err:?}"
+            );
         }
+    }
 
-        JoltFormatter {
-            this: self,
-            jolt_version,
+    #[apply(jolt_versions_with_element_id)]
+    #[case(
+        r#"["123", ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
+        &["node id (field 1)", "to be an integer", "found string"],
+    )]
+    #[case(
+        r#"[123, {"0": "FOO"}, {"a": 1, "b": null}, "abc"]"#,
+        &["labels (field 2)", "to be an array", "found object"],
+    )]
+    #[case(
+        r#"[123, [1, 2], {"a": 1, "b": null}, "abc"]"#,
+        &["labels (field 2)", "to be an array of strings", "found number"],
+    )]
+    #[case(
+        r#"[123, [], null, "abc"]"#,
+        &["properties (field 3)", "to be a map", "found null"],
+    )]
+    #[case(
+        "[123, [], {}, null]",
+        &["element id (field 4)", "to be a string", "found null"],
+    )]
+    #[case(
+        "[]",
+        &["missing", "node id (field 1)"],
+    )]
+    #[case(
+        "[123]",
+        &["missing", "labels (field 2)"],
+    )]
+    #[case(
+        "[123, []]",
+        &["missing", "properties (field 3)"],
+    )]
+    #[case(
+        "[123, [], {}]",
+        &["missing", "element id (field 4)"],
+    )]
+    #[case(
+        r#"[123, [], {}, "abc", null]"#,
+        &["too many fields"],
+    )]
+    fn test_failing_parse_v2_plus(
+        #[case] input: &str,
+        #[case] err_matchers: &[&str],
+        jolt_version: JoltVersion,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+
+        let err = JoltNode::parse(input, jolt_version, &config)
+            .expect_err("case input parsed successfully");
+        for error_matcher in err_matchers {
+            assert!(
+                err.to_string().to_lowercase().contains(error_matcher),
+                "Expected error message to contain {error_matcher:?}, but got {err:?}"
+            );
         }
+    }
+
+    #[rstest]
+    #[case(
+        r#"[0, [], {"uuid": {"UU": "12345678-1234-1234-1234-123456789012"}}]"#,
+        JoltVersion::V1,
+        false,
+        false
+    )]
+    #[case(
+        r#"[0, [], {"uuid": {"UU": "12345678-1234-1234-1234-123456789012"}}, ""]"#,
+        JoltVersion::V4,
+        false,
+        true
+    )]
+    #[case(
+        r#"[0, [], {"uuid": {"UUv4": "12345678-1234-1234-1234-123456789012"}}]"#,
+        JoltVersion::V1,
+        true,
+        true
+    )]
+    #[case(
+        r#"[0, [], {"uuid": {"UUv1": "12345678-1234-1234-1234-123456789012"}}, ""]"#,
+        JoltVersion::V4,
+        false,
+        false
+    )]
+    fn test_parse_recursive_jolt_version(
+        #[case] input: &str,
+        #[case] jolt_version: JoltVersion,
+        #[case] fails: bool,
+        #[case] parses_uuid: bool,
+    ) {
+        let config = make_actor_config(jolt_version);
+        let input = serde_json::from_str(input).unwrap();
+
+        let res = JoltNode::parse(input, jolt_version, &config);
+        if fails {
+            res.expect_err("didn't fail parsing");
+            return;
+        }
+        let JoltNode {
+            data,
+            jolt_version: parsed_jolt_version,
+        } = res.expect("case input failed");
+
+        assert_eq!(parsed_jolt_version, jolt_version);
+        assert_eq!(data.properties.len(), 1);
+        let uuid = data.properties.get("uuid").expect("missing uuid property");
+        if parses_uuid {
+            assert!(uuid.is_uuid());
+        } else {
+            let uuid_map = uuid.as_map().expect("not a map");
+            assert_eq!(uuid_map.len(), 1);
+            let key = uuid_map.keys().next().unwrap();
+            assert!(key.starts_with("UU"));
+            let uuid_str = uuid_map.get(key).expect("missing UU* key");
+            assert!(uuid_str.is_string());
+        }
+    }
+
+    #[apply(jolt_versions_without_element_id)]
+    #[case(
+        r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}]"#,
+        123,
+        &["FOO", "BAR"],
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+    )]
+    #[case(
+        "[-1, [], {}]",
+        -1,
+        &[],
+        &[],
+    )]
+    #[case(
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}]"#,
+        0,
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}]",
+        0,
+        &["\u{202E}"],
+        &[],
+    )]
+    fn test_jolt_fmt_v1(
+        #[case] expected: &str,
+        #[case] id: i64,
+        #[case] labels: &[&str],
+        #[case] properties: &[(&str, PackStreamValue)],
+        jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
+    ) {
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let data = JoltNodeData {
+            id,
+            labels: labels.iter().map(|l| (*l).into()).collect(),
+            properties: Cow::Owned(properties),
+            element_id: ElementIdExt::new(jolt_version, "".into()),
+        };
+        let node = JoltNode { data, jolt_version };
+
+        node.jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
+        let expected = format!(r#"{{"()": {expected}}}"#);
+        assert_eq!(formatted, expected);
+    }
+
+    #[apply(jolt_versions_with_element_id)]
+    #[case(
+        r#"[123, ["FOO", "BAR"], {"a": 1, "b": null}, "abc"]"#,
+        123,
+        &["FOO", "BAR"],
+        &[("a", 1.into()), ("b", None::<i64>.into())],
+        "abc",
+    )]
+    #[case(
+        r#"[-1, [], {}, ""]"#,
+        -1,
+        &[],
+        &[],
+        "",
+    )]
+    #[case(
+        r#"[0, ["FOO", "BAR", "", "BAZ", "\""], {}, "1"]"#,
+        0,
+        &["FOO", "BAR", "", "BAZ", "\""],
+        &[],
+        "1",
+    )]
+    #[case(
+        "[0, [\"\u{202E}\"], {}, \"1\"]",
+        0,
+        &["\u{202E}"],
+        &[],
+        "1",
+    )]
+    fn test_jolt_fmt_v2_plus(
+        #[case] expected: &str,
+        #[case] id: i64,
+        #[case] labels: &[&str],
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_id: &str,
+        jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
+    ) {
+        let properties = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let data = JoltNodeData {
+            id,
+            labels: labels.iter().map(|l| (*l).into()).collect(),
+            properties: Cow::Owned(properties),
+            element_id: ElementIdExt::new(jolt_version, element_id.into()),
+        };
+        let node = JoltNode { data, jolt_version };
+
+        node.jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+
+        let expected = format!(r#"{{"()": {expected}}}"#);
+        assert_eq!(formatted, expected);
+    }
+
+    #[apply(all_jolt_versions)]
+    #[case(
+        0,
+        &[],
+        &[],
+        "",
+    )]
+    #[case(
+        i64::MAX,
+        &["", "FOO", "BAR", "\""],
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        "abc",
+    )]
+    #[case(
+        i64::MIN,
+        &["🍨"],
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        "🍨",
+    )]
+    fn test_as_struct(
+        #[case] id: i64,
+        #[case] labels: &[&str],
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_id: &str,
+        jolt_version: JoltVersion,
+    ) {
+        let properties: IndexMap<String, PackStreamValue> = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let data = JoltNodeData {
+            id,
+            labels: labels.iter().map(|l| (*l).into()).collect(),
+            properties: Cow::Owned(properties.clone()),
+            element_id: ElementIdExt::new(jolt_version, element_id.into()),
+        };
+        let node = JoltNode { data, jolt_version };
+
+        let struct_ = node.into_struct();
+
+        let mut fields = vec![
+            id.into(),
+            PackStreamValue::List(labels.iter().map(|l| (*l).into()).collect()),
+            properties.into(),
+        ];
+        if ElementIdExt::uses_element_id(jolt_version) {
+            fields.push(element_id.into());
+        }
+        let expected = PackStreamStruct {
+            tag: TAG_NODE,
+            fields,
+        };
+        assert_eq!(struct_, expected);
+    }
+
+    #[apply(all_jolt_versions)]
+    #[case(
+        0,
+        &[],
+        &[],
+        "",
+    )]
+    #[case(
+        i64::MAX,
+        &["", "FOO", "BAR", "\""],
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        "abc",
+    )]
+    #[case(
+        i64::MIN,
+        &["🍨"],
+        &[("a", None::<i64>.into()), ("c", 1.into()), ("b", vec![1, 2, 3].into())],
+        "🍨",
+    )]
+    fn test_from_struct(
+        #[case] id: i64,
+        #[case] labels: &[&str],
+        #[case] properties: &[(&str, PackStreamValue)],
+        #[case] element_id: &str,
+        jolt_version: JoltVersion,
+    ) {
+        let properties: IndexMap<String, PackStreamValue> = properties
+            .iter()
+            .map(|(k, v)| ((*k).into(), v.clone()))
+            .collect();
+        let mut fields = vec![
+            id.into(),
+            PackStreamValue::List(labels.iter().map(|l| (*l).into()).collect()),
+            properties.clone().into(),
+        ];
+        if ElementIdExt::uses_element_id(jolt_version) {
+            fields.push(element_id.into());
+        }
+        let struct_ = PackStreamStruct {
+            tag: TAG_NODE,
+            fields,
+        };
+
+        let struct_ = JoltNode::from_struct(&struct_, jolt_version).expect("failed to load");
+
+        let data = JoltNodeData {
+            id,
+            labels: labels.iter().map(|l| (*l).into()).collect(),
+            properties: Cow::Owned(properties),
+            element_id: ElementIdExt::new(jolt_version, element_id.into()),
+        };
+        let expected = JoltNode { data, jolt_version };
+
+        assert_eq!(struct_, expected);
     }
 }

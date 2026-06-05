@@ -36,7 +36,7 @@ pub(crate) fn script_excerpt(script_name: &str, script: &str, ctx: Context) -> S
             column = Some(col);
             excerpt_lines.push(
                 std::iter::repeat_n(" ", col + 3 + line_num_width)
-                    .chain(["^"].into_iter())
+                    .chain(["^"])
                     .collect::<String>(),
             );
         }

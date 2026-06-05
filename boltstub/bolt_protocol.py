@@ -29,6 +29,7 @@ from .packstream import Structure
 from .simple_jolt import v1 as jolt_v1
 from .simple_jolt import v2 as jolt_v2
 from .simple_jolt import v3 as jolt_v3
+from .simple_jolt import v4 as jolt_v4
 from .util import (
     hex_repr,
     recursive_subclasses,
@@ -38,6 +39,7 @@ jolt_package = {
     1: jolt_v1,
     2: jolt_v2,
     3: jolt_v3,
+    4: jolt_v4,
 }
 
 auto_bolt_id = 0
@@ -642,6 +644,20 @@ class Bolt6x0Protocol(Bolt5x8Protocol):
     max_handshake_manifest_version = 1
 
     server_agent = "Neo4j/2025.10.0"
+
+
+class Bolt6x1Protocol(Bolt6x0Protocol):
+    protocol_version = (6, 1)
+    version_aliases = set()
+    equivalent_versions = set()
+
+    packstream_version = 4
+    handshake_minor_support = True
+    handshake_range_support = True
+    max_handshake_manifest_version = 1
+
+    # TODO: update once Bolt 6.1 has been released server-side
+    server_agent = "Neo4j/2026.06.0"
 
 
 # [stub-bolt-change] search tag when adding/removing bolt version support

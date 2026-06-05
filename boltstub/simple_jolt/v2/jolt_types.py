@@ -155,16 +155,16 @@ class JoltPath(JoltV1PathMixin, JoltType):
 
 
 __all__ = [
-    JoltType,
-    JoltDate,
-    JoltTime,
-    JoltLocalTime,
-    JoltDateTime,
-    JoltLocalDateTime,
-    JoltDuration,
-    JoltPoint,
-    JoltNode,
-    JoltRelationship,
-    JoltPath,
-    JoltWildcard,
+    "JoltType",
+    "JoltDate",
+    "JoltTime",
+    "JoltLocalTime",
+    "JoltDateTime",
+    "JoltLocalDateTime",
+    "JoltDuration",
+    "JoltPoint",
+    "JoltNode",
+    "JoltRelationship",
+    "JoltPath",
+    "JoltWildcard",
 ]

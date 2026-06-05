@@ -14,30 +14,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-import json
-
-from .codec import Codec
-
-
-def dumps_full(obj, human_readable=False):
-    obj = Codec.encode_full(obj, human_readable=human_readable)
-    return json.dumps(obj)
-
-
-def dumps_simple(obj, human_readable=False):
-    obj = Codec.encode_simple(obj, human_readable=human_readable)
-    return json.dumps(obj)
-
-
-def loads(str_):
-    obj = json.loads(str_)
-    return Codec.decode(obj)
-
-
-__all__ = [
-    "dumps_full",
-    "dumps_simple",
-    "loads",
-]

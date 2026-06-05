@@ -1,3 +1,5 @@
+pub(super) mod element_id;
+
 pub(super) fn normalize_seconds_nanos(second: i64, nanos: i64) -> Option<(i64, u32)> {
     let mut seconds = second.checked_add(nanos / 1_000_000_000)?;
     let mut nanos = nanos % 1_000_000_000;
@@ -9,7 +11,7 @@ pub(super) fn normalize_seconds_nanos(second: i64, nanos: i64) -> Option<(i64, u
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]

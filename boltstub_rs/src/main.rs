@@ -4,6 +4,12 @@
     clippy::match_same_arms,
     reason = "Improves readability and editability"
 )]
+#![allow(clippy::match_bool, reason = "Personal preference")]
+#![allow(clippy::single_match_else, reason = "Personal preference")]
+#![cfg_attr(
+    test,
+    allow(clippy::large_stack_arrays, reason = "rstest matrices can get big")
+)]
 
 mod bang_line;
 mod bolt_version;

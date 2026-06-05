@@ -259,8 +259,8 @@ encode_full = Codec.encode_full
 
 
 __all__ = [
-    _Codec,
-    decode,
-    encode_simple,
-    encode_full,
+    "Codec",
+    "decode",
+    "encode_simple",
+    "encode_full",
 ]

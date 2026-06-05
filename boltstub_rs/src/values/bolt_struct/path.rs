@@ -1,67 +1,39 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::borrow::{Borrow, Cow};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::rc::Rc;
 
 use indexmap::IndexMap;
 use itertools::Itertools;
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use crate::bolt_version::JoltVersion;
+use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
+use crate::values::bolt_struct::_common::element_id::ElementIdExt;
 use crate::values::bolt_struct::_parsing::{check_last_pack_stream_field, next_pack_stream_field};
-use crate::values::bolt_struct::node::BoltNode;
+use crate::values::bolt_struct::node::JoltNodeData;
 use crate::values::bolt_struct::relationship::{
-    BoltRelationship, BoltRelationshipElementIdExt, BoltUnboundRelationship,
+    JoltRelationshipData, JoltRelationshipElementIdExt, JoltUnboundRelationship,
+    JoltUnboundRelationshipData,
 };
-use crate::values::bolt_struct::{JoltNode, JoltRelationship, TAG_PATH, TAG_UNBOUND_RELATIONSHIP};
+use crate::values::bolt_struct::{JoltNode, JoltRelationship, TAG_PATH};
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
 
+const SIGIL: &str = JoltSigil::Path.str();
+
 #[derive(Debug, Clone)]
-pub(crate) struct JoltPath {
-    pub(crate) nodes: Vec<JoltNode>,
-    pub(crate) relationships: Vec<JoltUnboundRelationship>,
+pub(crate) struct JoltPathData<'a> {
+    pub(crate) nodes: Vec<JoltNodeData<'a>>,
+    pub(crate) relationships: Vec<JoltUnboundRelationshipData<'a>>,
     pub(crate) indices: Vec<i64>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct JoltUnboundRelationship {
-    pub(crate) id: i64,
-    pub(crate) rel_type: String,
-    pub(crate) properties: IndexMap<String, PackStreamValue>,
-    pub(crate) element_id: Option<String>,
-}
-
-impl From<JoltRelationship> for JoltUnboundRelationship {
-    fn from(value: JoltRelationship) -> Self {
-        Self {
-            id: value.id,
-            rel_type: value.rel_type,
-            properties: value.properties,
-            element_id: value.element_id_ext.map(|ext| ext.element_id),
-        }
-    }
-}
-
-impl JoltUnboundRelationship {
-    pub(crate) fn into_struct(self) -> PackStreamStruct {
-        let mut fields = Vec::with_capacity(4);
-        fields.extend([
-            PackStreamValue::Integer(self.id),
-            PackStreamValue::String(self.rel_type),
-            PackStreamValue::Dict(self.properties),
-        ]);
-        if let Some(element_id) = self.element_id {
-            fields.push(PackStreamValue::String(element_id));
-        }
-        PackStreamStruct {
-            tag: TAG_UNBOUND_RELATIONSHIP,
-            fields,
-        }
-    }
-}
-
-impl JoltPath {
+impl JoltPathData<'static> {
     pub(crate) fn parse(
         v: JsonValue,
         jolt_version: JoltVersion,
@@ -69,12 +41,12 @@ impl JoltPath {
     ) -> Result<Self, ParseError> {
         let JsonValue::Array(fields) = v else {
             return Err(ParseError::new(format!(
-                "Expected array after sigil \"..\", but found {v:?}"
+                "Expected array after sigil \"{SIGIL}\", but found {v:?}"
             )));
         };
         if fields.len() % 2 != 1 {
             return Err(ParseError::new(format!(
-                "Expected odd number of fields after sigil \"..\", but found {}",
+                "Expected odd number of fields after sigil \"{SIGIL}\", but found {}",
                 fields.len()
             )));
         }
@@ -86,20 +58,22 @@ impl JoltPath {
         let mut relationships = Vec::with_capacity(fields.len() / 2);
 
         let (i, field) = fields.next().expect("checked non-empty above");
-        nodes.push(Self::next_node(i, field, jolt_version, config)?);
+        nodes.push(Self::next_node(i, field, jolt_version, config)?.data);
 
         while let Some((i, field)) = fields.next() {
             let relationship = Self::next_relationship(i, field, jolt_version, config)?;
-            relationships.push(relationship);
+            relationships.push(relationship.data);
             let (i, field) = fields.next().expect("checked uneven size above");
             let node = Self::next_node(i, field, jolt_version, config)?;
-            nodes.push(node);
+            nodes.push(node.data);
         }
-        match jolt_version {
-            JoltVersion::V1 => Self::encode_indices::<IdPathIndexer>(nodes, relationships),
-            JoltVersion::V2 | JoltVersion::V3 => {
-                Self::encode_indices::<ElementIdPathIndexer>(nodes, relationships)
-            }
+        match ElementIdExt::uses_element_id(jolt_version) {
+            false => Self::encode_indices(&IdPathIndexer::new(), nodes, relationships),
+            true => Self::encode_indices(
+                &ElementIdPathIndexer::new(jolt_version),
+                nodes,
+                relationships,
+            ),
         }
     }
 
@@ -108,7 +82,7 @@ impl JoltPath {
         v: JsonValue,
         jolt_version: JoltVersion,
         config: &ActorConfig,
-    ) -> Result<JoltNode, ParseError> {
+    ) -> Result<JoltNode<'static>, ParseError> {
         fn not_node(i: usize, v: impl Debug) -> ParseError {
             ParseError::new(format!(
                 "Expected path entry at index {i} to be a Jolt node, but found {v:?}"
@@ -136,7 +110,7 @@ impl JoltPath {
         v: JsonValue,
         jolt_version: JoltVersion,
         config: &ActorConfig,
-    ) -> Result<JoltRelationship, ParseError> {
+    ) -> Result<JoltRelationship<'static>, ParseError> {
         fn not_relationship(i: usize, v: impl Debug) -> ParseError {
             ParseError::new(format!(
                 "Expected path entry at index {i} to be a Jolt relationship, but found {v:?}"
@@ -166,12 +140,13 @@ impl JoltPath {
     }
 
     fn encode_indices<P: PathIndexer>(
-        nodes: Vec<JoltNode>,
-        relationships: Vec<JoltRelationship>,
+        indexer: &P,
+        nodes: Vec<JoltNodeData<'static>>,
+        relationships: Vec<JoltRelationshipData<'static>>,
     ) -> Result<Self, ParseError> {
         assert_eq!(relationships.len() + 1, nodes.len());
         i64::try_from(nodes.len() + relationships.len())
-            .expect("How does even fit into your memory?!?");
+            .expect("How does this even fit into your memory?!?");
 
         let nodes = nodes.into_iter().map(Rc::new).collect::<Vec<_>>();
         let relationships = relationships.into_iter().map(Rc::new).collect::<Vec<_>>();
@@ -180,7 +155,7 @@ impl JoltPath {
 
         let mut unique_nodes = IndexMap::with_capacity(nodes.len());
         for (i, node) in nodes.iter().enumerate() {
-            let idx = P::node_index(node);
+            let idx = indexer.node_index(node);
             if let Some(other_node) = unique_nodes.get(idx) {
                 if other_node != node {
                     return Err(ParseError::new(format!(
@@ -190,7 +165,7 @@ impl JoltPath {
                     )));
                 }
             } else {
-                unique_nodes.insert(idx.clone(), Rc::clone(node));
+                unique_nodes.insert(idx.to_owned(), Rc::clone(node));
             }
             if i != 0 {
                 let node_idx = unique_nodes.get_index_of(idx).expect("inserted above");
@@ -200,7 +175,7 @@ impl JoltPath {
         }
         let mut unique_relationships = IndexMap::with_capacity(relationships.len());
         for (i, relationship) in relationships.iter().enumerate() {
-            let idx = P::relationship_index(relationship);
+            let idx = indexer.relationship_index(relationship);
             if let Some(other_relationship) = unique_relationships.get(idx) {
                 if other_relationship != relationship {
                     return Err(ParseError::new(format!(
@@ -210,14 +185,14 @@ impl JoltPath {
                     )));
                 }
             } else {
-                unique_relationships.insert(idx.clone(), Rc::clone(relationship));
+                unique_relationships.insert(idx.to_owned(), Rc::clone(relationship));
             }
             let prev_node = &nodes[i];
-            let prev_node_idx = P::node_index(prev_node);
-            let start_node_idx = P::relationship_start_index(relationship);
+            let prev_node_idx = indexer.node_index(prev_node);
+            let start_node_idx = indexer.relationship_start_index(relationship);
             let next_node = &nodes[i + 1];
-            let next_node_idx = P::node_index(next_node);
-            let end_node_idx = P::relationship_end_index(relationship);
+            let next_node_idx = indexer.node_index(next_node);
+            let end_node_idx = indexer.relationship_end_index(relationship);
             let rel_idx = unique_relationships
                 .get_index_of(idx)
                 .expect("inserted above");
@@ -252,139 +227,150 @@ impl JoltPath {
             .map(Into::into)
             .collect();
 
-        Ok(Self {
+        Ok(JoltPathData {
             nodes,
             relationships,
             indices,
         })
     }
+}
 
-    pub(crate) fn into_struct(self) -> PackStreamStruct {
-        let nodes = PackStreamValue::List(
-            self.nodes
-                .into_iter()
-                .map(JoltNode::into_struct)
-                .map(PackStreamValue::Struct)
-                .collect(),
-        );
-        let relationships = PackStreamValue::List(
-            self.relationships
-                .into_iter()
-                .map(JoltUnboundRelationship::into_struct)
-                .map(PackStreamValue::Struct)
-                .collect(),
-        );
-        let indices = PackStreamValue::List(
-            self.indices
-                .into_iter()
-                .map(PackStreamValue::Integer)
-                .collect(),
-        );
-        PackStreamStruct {
-            tag: TAG_PATH,
-            fields: vec![nodes, relationships, indices],
+impl JoltPathData<'_> {
+    #[expect(clippy::too_many_lines, reason = "TODO: refactor")]
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_data: JoltVersion,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct RelationshipSer<'a> {
+            data: &'a JoltRelationshipData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
         }
-    }
-}
 
-trait PathIndexer {
-    type Index: Hash + Eq + Debug + Clone;
-    fn name() -> &'static str;
-    fn node_index(node: &JoltNode) -> &Self::Index;
-    fn relationship_index(relationship: &JoltRelationship) -> &Self::Index;
-    fn relationship_start_index(relationship: &JoltRelationship) -> &Self::Index;
-    fn relationship_end_index(relationship: &JoltRelationship) -> &Self::Index;
-}
-
-struct IdPathIndexer;
-impl PathIndexer for IdPathIndexer {
-    type Index = i64;
-    fn name() -> &'static str {
-        "id"
-    }
-    fn node_index<'a>(node: &JoltNode) -> &Self::Index {
-        &node.id
-    }
-    fn relationship_index(relationship: &JoltRelationship) -> &Self::Index {
-        &relationship.id
-    }
-    fn relationship_start_index(relationship: &JoltRelationship) -> &Self::Index {
-        &relationship.start_node_id
-    }
-    fn relationship_end_index(relationship: &JoltRelationship) -> &Self::Index {
-        &relationship.end_node_id
-    }
-}
-
-struct ElementIdPathIndexer;
-impl PathIndexer for ElementIdPathIndexer {
-    type Index = String;
-    fn name() -> &'static str {
-        "element id"
-    }
-    fn node_index(node: &JoltNode) -> &Self::Index {
-        node.element_id
-            .as_ref()
-            .expect("cannot user ElementIdPathIndexer without element ids")
-    }
-    fn relationship_index(relationship: &JoltRelationship) -> &Self::Index {
-        &relationship
-            .element_id_ext
-            .as_ref()
-            .expect("cannot user ElementIdPathIndexer without element ids")
-            .element_id
-    }
-    fn relationship_start_index(relationship: &JoltRelationship) -> &Self::Index {
-        &relationship
-            .element_id_ext
-            .as_ref()
-            .expect("cannot user ElementIdPathIndexer without element ids")
-            .start_node_element_id
-    }
-    fn relationship_end_index(relationship: &JoltRelationship) -> &Self::Index {
-        &relationship
-            .element_id_ext
-            .as_ref()
-            .expect("cannot user ElementIdPathIndexer without element ids")
-            .end_node_element_id
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct BoltPath<'a> {
-    pub(super) nodes: Vec<BoltNode<'a>>,
-    pub(super) relationships: Vec<BoltUnboundRelationship<'a>>,
-    pub(super) indices: Vec<i64>,
-}
-
-impl<'a> BoltPath<'a> {
-    pub(super) fn from_struct(s: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
-        if s.tag != TAG_PATH {
-            return None;
+        impl serde::Serialize for RelationshipSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.data
+                    .jolt_serialize(serializer, self.jolt_version_data, self.jolt_version_ctx)
+            }
         }
-        let mut fields = s.fields.iter();
-        let nodes = next_pack_stream_field::<&[PackStreamValue]>(&mut fields)?
-            .iter()
-            .map(|v| BoltNode::from_struct(v.as_struct()?, jolt_version))
-            .collect::<Option<_>>()?;
-        let relationships = next_pack_stream_field::<&[PackStreamValue]>(&mut fields)?
-            .iter()
-            .map(|v| BoltUnboundRelationship::from_struct(v.as_struct()?, jolt_version))
-            .collect::<Option<_>>()?;
-        let indices: Vec<_> = next_pack_stream_field(&mut fields)?;
-        if !check_last_pack_stream_field(&mut fields) {
-            return None;
+
+        struct NodeSer<'a> {
+            data: &'a JoltNodeData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
         }
-        let this = Self {
-            nodes,
-            relationships,
-            indices,
+
+        impl serde::Serialize for NodeSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                self.data
+                    .jolt_serialize(serializer, self.jolt_version_data, self.jolt_version_ctx)
+            }
+        }
+
+        struct DataSer<'a> {
+            data: &'a JoltPathData<'a>,
+            jolt_version_data: JoltVersion,
+            jolt_version_ctx: JoltVersion,
+        }
+
+        impl<'a> DataSer<'a> {
+            fn new_node(&self, data: &'a JoltNodeData<'a>) -> NodeSer<'a> {
+                NodeSer {
+                    data,
+                    jolt_version_data: self.jolt_version_data,
+                    jolt_version_ctx: self.jolt_version_ctx,
+                }
+            }
+
+            fn new_relationship(&self, data: &'a JoltRelationshipData<'a>) -> RelationshipSer<'a> {
+                RelationshipSer {
+                    data,
+                    jolt_version_data: self.jolt_version_data,
+                    jolt_version_ctx: self.jolt_version_ctx,
+                }
+            }
+        }
+
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let mut seq = serializer
+                    .serialize_seq(Some(self.data.nodes.len() + self.data.relationships.len()))?;
+                let mut prev_node = &self.data.nodes[0];
+                seq.serialize_element(&self.new_node(prev_node))?;
+                let mut indices = self.data.indices.iter();
+                while let Some(rel_idx) = indices.next() {
+                    let rel_idx_usize = usize::try_from(rel_idx.unsigned_abs())
+                        .expect("is_valid asserts that all indexes fit in usize")
+                        - 1;
+                    let node_idx = indices.next().expect("checked even size in from_struct");
+                    let node_idx = usize::try_from(*node_idx)
+                        .expect("is_valid asserts that all indexes fit in usize");
+                    let next_node = &self.data.nodes[node_idx];
+                    let relationship = &self.data.relationships[rel_idx_usize];
+                    let mut relationship = JoltRelationshipData {
+                        id: relationship.id,
+                        start_node_id: prev_node.id,
+                        rel_type: Cow::Borrowed(&*relationship.rel_type),
+                        end_node_id: next_node.id,
+                        properties: Cow::Borrowed(&*relationship.properties),
+                        element_id_ext: ElementIdExt::new_lazy(self.jolt_version_data, || {
+                            JoltRelationshipElementIdExt {
+                                element_id: Cow::Borrowed(
+                                    relationship
+                                        .element_id
+                                        .inner(self.jolt_version_data)
+                                        .as_ref()
+                                        .expect("either all or no element_id are present"),
+                                ),
+                                start_node_element_id: Cow::Borrowed(
+                                    prev_node
+                                        .element_id
+                                        .inner(self.jolt_version_data)
+                                        .as_ref()
+                                        .expect("either all or no element_id are present"),
+                                ),
+                                end_node_element_id: Cow::Borrowed(
+                                    next_node
+                                        .element_id
+                                        .inner(self.jolt_version_data)
+                                        .as_ref()
+                                        .expect("either all or no element_id are present"),
+                                ),
+                            }
+                        }),
+                    };
+                    if *rel_idx < 0 {
+                        relationship.flip_direction();
+                    }
+                    seq.serialize_element(&self.new_relationship(&relationship))?;
+                    seq.serialize_element(&self.new_node(next_node))?;
+                    prev_node = next_node;
+                }
+                seq.end()
+            }
+        }
+
+        let body = DataSer {
+            data: self,
+            jolt_version_data,
+            jolt_version_ctx,
         };
-        if this.is_valid() {
-            Some(this)
-        } else {
-            None
-        }
+        let map = JoltSigilMapSer::new(SIGIL, jolt_version_data, jolt_version_ctx, &body);
+        map.serialize(serializer)
     }
 
     fn is_valid(&self) -> bool {
@@ -410,66 +396,204 @@ impl<'a> BoltPath<'a> {
                 .step_by(2)
                 .all(|i| (0..nodes_count).contains(i))
     }
+}
 
-    pub(super) fn jolt_fmt(&self, jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            this: &'a BoltPath<'a>,
-            jolt_version: JoltVersion,
+#[derive(Debug, Clone)]
+pub(crate) struct JoltPath<'a> {
+    pub(crate) data: JoltPathData<'a>,
+    pub(crate) jolt_version: JoltVersion,
+}
+
+impl JoltPath<'static> {
+    pub(crate) fn parse(
+        v: JsonValue,
+        jolt_version: JoltVersion,
+        config: &ActorConfig,
+    ) -> Result<Self, ParseError> {
+        JoltPathData::parse(v, jolt_version, config).map(|data| Self { data, jolt_version })
+    }
+}
+
+impl<'a> JoltPath<'a> {
+    pub(crate) fn into_struct(self) -> PackStreamStruct {
+        let nodes = PackStreamValue::List(
+            self.data
+                .nodes
+                .into_iter()
+                .map(|data| JoltNode::new(data, self.jolt_version).into_struct())
+                .map(PackStreamValue::Struct)
+                .collect(),
+        );
+        let relationships = PackStreamValue::List(
+            self.data
+                .relationships
+                .into_iter()
+                .map(|data| JoltUnboundRelationship::new(data, self.jolt_version).into_struct())
+                .map(PackStreamValue::Struct)
+                .collect(),
+        );
+        let indices = PackStreamValue::List(
+            self.data
+                .indices
+                .into_iter()
+                .map(PackStreamValue::Integer)
+                .collect(),
+        );
+        PackStreamStruct {
+            tag: TAG_PATH,
+            fields: vec![nodes, relationships, indices],
         }
+    }
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                f.write_str(r#"{"..": ["#)?;
-                let mut prev_node = &self.this.nodes[0];
-                prev_node.jolt_fmt(self.jolt_version).fmt(f)?;
-                let mut indices = self.this.indices.iter();
-                while let Some(rel_idx) = indices.next() {
-                    let rel_idx_usize = usize::try_from(rel_idx.unsigned_abs())
-                        .expect("is_valid asserts that all indexes fit in usize")
-                        - 1;
-                    let node_idx = indices.next().expect("checked even size in from_struct");
-                    let node_idx = usize::try_from(*node_idx)
-                        .expect("is_valid asserts that all indexes fit in usize");
-                    let next_node = &self.this.nodes[node_idx];
-                    let relationship = &self.this.relationships[rel_idx_usize];
-                    let mut relationship = BoltRelationship {
-                        id: relationship.id,
-                        start_node_id: prev_node.id,
-                        rel_type: relationship.rel_type,
-                        end_node_id: next_node.id,
-                        properties: relationship.properties,
-                        element_id_ext: relationship.element_id.map(|element_id| {
-                            let start_node_element_id = prev_node.element_id.expect(
-                                "from_struct asserts that either all or no element_id are present",
-                            );
-                            let end_node_element_id = next_node.element_id.expect(
-                                "from_struct asserts that either all or no element_id are present",
-                            );
-                            BoltRelationshipElementIdExt {
-                                element_id,
-                                start_node_element_id,
-                                end_node_element_id,
-                            }
-                        }),
-                    };
-                    if *rel_idx < 0 {
-                        relationship.flip_direction();
-                    }
-                    f.write_str(", ")?;
-                    relationship.jolt_fmt(self.jolt_version).fmt(f)?;
-                    f.write_str(", ")?;
-                    next_node.jolt_fmt(self.jolt_version).fmt(f)?;
-                    prev_node = next_node;
-                }
-
-                f.write_str("]}")
-            }
+    pub(super) fn from_struct(s: &'a PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
+        if s.tag != TAG_PATH {
+            return None;
         }
-
-        JoltFormatter {
-            this: self,
-            jolt_version,
+        let mut fields = s.fields.iter();
+        let nodes = next_pack_stream_field::<&[PackStreamValue]>(&mut fields)?
+            .iter()
+            .map(|v| Some(JoltNode::from_struct(v.as_struct()?, jolt_version)?.data))
+            .collect::<Option<_>>()?;
+        let relationships = next_pack_stream_field::<&[PackStreamValue]>(&mut fields)?
+            .iter()
+            .map(|v| Some(JoltUnboundRelationship::from_struct(v.as_struct()?, jolt_version)?.data))
+            .collect::<Option<_>>()?;
+        let indices: Vec<_> = next_pack_stream_field(&mut fields)?;
+        if !check_last_pack_stream_field(&mut fields) {
+            return None;
         }
+        let data = JoltPathData {
+            nodes,
+            relationships,
+            indices,
+        };
+        data.is_valid().then(|| Self { data, jolt_version })
+    }
+
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version_ctx: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.data
+            .jolt_serialize(serializer, self.jolt_version, jolt_version_ctx)
+    }
+}
+
+trait PathIndexer {
+    type Index: Hash + Eq + Debug + Borrow<Self::IndexBorrow>;
+    type IndexBorrow: Hash + Eq + Debug + ToOwned<Owned = Self::Index> + ?Sized;
+    fn name() -> &'static str;
+    fn node_index<'a>(&self, node: &'a JoltNodeData<'a>) -> &'a Self::IndexBorrow;
+    fn relationship_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow;
+    fn relationship_start_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow;
+    fn relationship_end_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow;
+}
+
+struct IdPathIndexer;
+impl IdPathIndexer {
+    fn new() -> Self {
+        Self
+    }
+}
+impl PathIndexer for IdPathIndexer {
+    type Index = i64;
+    type IndexBorrow = i64;
+    fn name() -> &'static str {
+        "id"
+    }
+    fn node_index<'a>(&self, node: &'a JoltNodeData<'a>) -> &'a Self::IndexBorrow {
+        &node.id
+    }
+    fn relationship_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow {
+        &relationship.id
+    }
+    fn relationship_start_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow {
+        &relationship.start_node_id
+    }
+    fn relationship_end_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow {
+        &relationship.end_node_id
+    }
+}
+
+struct ElementIdPathIndexer {
+    jolt_version: JoltVersion,
+}
+impl ElementIdPathIndexer {
+    fn new(jolt_version: JoltVersion) -> Self {
+        assert!(
+            ElementIdExt::uses_element_id(jolt_version),
+            "cannot use ElementIdPathIndexer with \
+             {jolt_version:?}: does not support element ids"
+        );
+        Self { jolt_version }
+    }
+}
+impl PathIndexer for ElementIdPathIndexer {
+    type Index = String;
+    type IndexBorrow = str;
+    fn name() -> &'static str {
+        "element id"
+    }
+    fn node_index<'a>(&self, node: &'a JoltNodeData<'a>) -> &'a Self::IndexBorrow {
+        node.element_id
+            .inner(self.jolt_version)
+            .map(std::ops::Deref::deref)
+            .expect("availability checked in constructor")
+    }
+    fn relationship_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow {
+        &relationship
+            .element_id_ext
+            .inner(self.jolt_version)
+            .as_ref()
+            .expect("availability checked in constructor")
+            .element_id
+    }
+    fn relationship_start_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow {
+        &relationship
+            .element_id_ext
+            .inner(self.jolt_version)
+            .as_ref()
+            .expect("availability checked in constructor")
+            .start_node_element_id
+    }
+    fn relationship_end_index<'a>(
+        &self,
+        relationship: &'a JoltRelationshipData<'a>,
+    ) -> &'a Self::IndexBorrow {
+        &relationship
+            .element_id_ext
+            .inner(self.jolt_version)
+            .as_ref()
+            .expect("availability checked in constructor")
+            .end_node_element_id
     }
 }
 
@@ -479,6 +603,14 @@ mod tests {
 
     use super::*;
     use crate::bolt_version::{BoltCapabilities, BoltVersion};
+
+    fn no_element_id(jolt_version: JoltVersion) -> ElementIdExt<Cow<'static, str>> {
+        assert!(
+            !ElementIdExt::uses_element_id(jolt_version),
+            "{jolt_version:?} uses element_id"
+        );
+        ElementIdExt::new(jolt_version, "".into())
+    }
 
     #[test]
     fn test_parse_path() {
@@ -498,42 +630,45 @@ mod tests {
 
         let input = r#"[{"()": [1, ["l"], {}]}, {"->": [2, 1, "RELATES_TO", 3, {}]}, {"()": [3, ["l"], {}]}, {"->": [4, 3, "RELATES_TO", 1, {}]}, {"()": [1, ["l"], {}]}]"#;
         let parsed = serde_json::from_str::<JsonValue>(input).unwrap();
-        let JoltPath {
+        let parsed = JoltPath::parse(parsed, JoltVersion::V1, &config).unwrap();
+        let JoltPath { data, jolt_version } = parsed;
+        let JoltPathData {
             nodes,
             relationships,
             indices,
-        } = JoltPath::parse(parsed, JoltVersion::V1, &config).unwrap();
+        } = data;
+        assert_eq!(jolt_version, JoltVersion::V1);
         assert_eq!(
             nodes,
             vec![
-                JoltNode {
+                JoltNodeData {
                     id: 1,
-                    labels: vec![String::from("l")],
-                    properties: IndexMap::default(),
-                    element_id: None,
+                    labels: vec![Cow::Owned(String::from("l"))],
+                    properties: Cow::Owned(IndexMap::default()),
+                    element_id: no_element_id(jolt_version),
                 },
-                JoltNode {
+                JoltNodeData {
                     id: 3,
-                    labels: vec![String::from("l")],
-                    properties: IndexMap::default(),
-                    element_id: None,
+                    labels: vec![Cow::Owned(String::from("l"))],
+                    properties: Cow::Owned(IndexMap::default()),
+                    element_id: no_element_id(jolt_version),
                 },
             ]
         );
         assert_eq!(
             relationships,
             vec![
-                JoltUnboundRelationship {
+                JoltUnboundRelationshipData {
                     id: 2,
-                    rel_type: String::from("RELATES_TO"),
-                    properties: IndexMap::default(),
-                    element_id: None,
+                    rel_type: Cow::Owned(String::from("RELATES_TO")),
+                    properties: Cow::Owned(IndexMap::default()),
+                    element_id: no_element_id(jolt_version),
                 },
-                JoltUnboundRelationship {
+                JoltUnboundRelationshipData {
                     id: 4,
-                    rel_type: String::from("RELATES_TO"),
-                    properties: IndexMap::default(),
-                    element_id: None,
+                    rel_type: Cow::Owned(String::from("RELATES_TO")),
+                    properties: Cow::Owned(IndexMap::default()),
+                    element_id: no_element_id(jolt_version),
                 },
             ]
         );
