@@ -120,7 +120,7 @@ impl BoltVersion {
             BoltVersion::V5_7 => 7,
             BoltVersion::V5_8 => 8,
             BoltVersion::V6_0 => 0,
-            BoltVersion::V6_1 => 0,
+            BoltVersion::V6_1 => 1,
         }
     }
 
