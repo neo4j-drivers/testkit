@@ -125,7 +125,7 @@ class TestUuid6x0(_UuidTestCase):
             with self._driver(self._server) as driver:
                 with driver.session("r") as session:
                     with self.assertRaises(types.DriverError) as exc:
-                        session.run("RETURN uuid()").consume()
+                        list(session.run("RETURN uuid()"))
                     # drivers don't need to handle the connection gracefully
                     self._server.reset()
 
@@ -134,11 +134,14 @@ class TestUuid6x0(_UuidTestCase):
         if driver_name in ["python"]:
             self.assertIn("packstream", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker byte
-        if driver_name in ["dotnet"]:
+        elif driver_name in ["dotnet"]:
             self.assertIn("uuid", msg)
             self.assertIn("6.1", msg)  # demands bolt 6.1
-        if driver_name in ["javascript"]:
+        elif driver_name in ["javascript"]:
             self.assertIn("unknown packed", msg)
+            self.assertIn("e0", msg)  # UUID PackStream type marker byte
+        elif driver_name in ["java"]:
+            self.assertIn("unknown packstream", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker byte
         else:
             raise NotImplementedError(f"Add error assertion for {driver_name}")
