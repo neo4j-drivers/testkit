@@ -54,6 +54,9 @@ env_neo4j_client_cert = "TEST_NEO4J_SSL_CLIENT_CERT"
 env_neo4j_client_key = "TEST_NEO4J_SSL_CLIENT_KEY"
 
 
+_BOLT_SCHEME_RE = re.compile(r"^(?:bolt|neo4j)(?:\+s(?:sc)?)?$")
+
+
 def get_authorization():
     """Return default authorization for tests that do not test this aspect."""
     return AuthorizationToken(
@@ -110,7 +113,7 @@ def get_default_db():
 
 
 def get_auto_resolved_db():
-    if get_neo4j_scheme() == "http":
+    if get_neo4j_scheme() in {"http", "https"}:
         # Via HTTP Query API, a database name *must* be specified
         return get_default_db()
     # Via Bolt, the driver can omit the database name.
@@ -230,11 +233,11 @@ class ServerInfo:
 
     @property
     def is_http(self):
-        return self.scheme == "http"
+        return self.scheme in {"http", "https"}
 
     @property
     def is_bolt(self):
-        return self.scheme in {"bolt", "neo4j"}
+        bool(_BOLT_SCHEME_RE.match(self.scheme))
 
 
 def get_server_info():
