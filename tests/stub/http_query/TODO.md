@@ -48,8 +48,8 @@
 * [x] Basic ITs (probably only types and basic APIs)
 * [ ] v1.1
   * [ ] test new types
-  * [ ] vectors
-  * [ ] unsupported type
+    * [ ] vectors
+    * [ ] unsupported type
   * [ ] support `+jsonl` content type
 * [ ] features to be implemented server-side
   * [ ] notification filtering
@@ -59,3 +59,4 @@
   * [ ] summary
     * [ ] query type
     * [ ] timers
+  * [ ] UUID
