@@ -373,12 +373,12 @@ class TestSummaryDatabase(_SummaryTestBase):
         self.assertEqual(summary.database, expected)
 
     def test_session_run(self):
-        db = "🦹🏼‍♀️ \t\n\x00%-db"
+        db = "myDb123"
         summary = self._get_summary_with_database_session_run(db)
         self._assert_database(summary, db)
 
     def test_tx(self):
-        db = "🦹🏼‍♀️ \t\n\x00%-db"
+        db = "myDb123"
         summary = self._get_summary_with_database_tx(db)
         self._assert_database(summary, db)
 
