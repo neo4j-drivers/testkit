@@ -720,6 +720,11 @@ class RoutingV5x0(RoutingBase):
                 "org.neo4j.driver.exceptions.SessionExpiredException",
                 exc.exception.errorType
             )
+        elif driver_name in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::SessionExpiredException",
+                exc.exception.errorType
+            )
         elif driver_name in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.SessionExpired'>",
@@ -2633,6 +2638,11 @@ class RoutingV5x0(RoutingBase):
                     "org.neo4j.driver.exceptions.SessionExpiredException",
                     e.errorType
                 )
+            elif driver_name in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
+                    e.errorType
+                )
             elif driver_name in ["python"]:
                 self.assertEqual(
                     "<class 'neo4j.exceptions.SessionExpired'>",
@@ -2680,6 +2690,11 @@ class RoutingV5x0(RoutingBase):
             if get_driver_name() in ["java"]:
                 self.assertEqual(
                     "org.neo4j.driver.exceptions.SessionExpiredException",
+                    e.exception.errorType
+                )
+            elif get_driver_name() in ["ruby"]:
+                self.assertEqual(
+                    "Neo4j::Driver::Exceptions::SessionExpiredException",
                     e.exception.errorType
                 )
             elif get_driver_name() in ["python"]:
@@ -2983,6 +2998,15 @@ class RoutingV5x0(RoutingBase):
         if get_driver_name() in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ClientException",
+                exc.exception.errorType
+            )
+            self.assertTrue("Unable to acquire connection from the "
+                            "pool within configured maximum time of "
+                            f"{acq_timeout_ms}ms"
+                            in exc.exception.msg)
+        elif get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ClientException",
                 exc.exception.errorType
             )
             self.assertTrue("Unable to acquire connection from the "

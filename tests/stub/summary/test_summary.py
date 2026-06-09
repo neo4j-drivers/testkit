@@ -163,6 +163,11 @@ class TestSummaryBasicInfo(_TestSummaryBase):
                     e.exception.errorType,
                     "org.neo4j.driver.exceptions.ProtocolException"
                 )
+            elif driver in ["ruby"]:
+                self.assertEqual(
+                    e.exception.errorType,
+                    "Neo4j::Driver::Exceptions::ProtocolException"
+                )
             elif driver in ["go"]:
                 self.assertEqual(e.exception.errorType, "ProtocolError")
 

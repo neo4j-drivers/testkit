@@ -82,7 +82,7 @@ class TestDirectConnectionRecvTimeout(TestkitTestCase):
             )
         elif driver in ["ruby"]:
             self.assertEqual(
-                "Neo4j::Driver::Exceptions::ClientException",
+                "Neo4j::Driver::Exceptions::TransactionTerminatedException",
                 e.errorType
             )
         elif driver in ["python"]:

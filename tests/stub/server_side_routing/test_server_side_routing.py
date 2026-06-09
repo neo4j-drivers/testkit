@@ -59,6 +59,7 @@ class TestServerSideRouting(TestkitTestCase):
             self.assertIn(uri, exc.exception.msg)
         elif get_driver_name() in ["ruby"]:
             self.assertEqual("ArgumentError", exc.exception.errorType)
+            self.assertIn(uri, exc.exception.msg)
         elif get_driver_name() in ["python"]:
             self.assertEqual(
                 "<class 'neo4j.exceptions.ConfigurationError'>",
