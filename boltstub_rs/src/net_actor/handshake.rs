@@ -35,7 +35,7 @@ impl<C: Connection> NetActor<'_, C> {
                 "Unimplemented manifest version {manifest}"
             ))),
             Some((major, minor)) => {
-                if self.script.config.bolt_capabilities != Default::default() {
+                if self.script.config.bolt_capabilities != BoltCapabilities::default() {
                     let msg = "Script contains bolt capabilities, \
                         but non-manifest style negotiation is used.";
                     swallow_anyhow_error(
@@ -295,6 +295,10 @@ impl<C: Connection> NetActor<'_, C> {
 
     async fn write_var_int(&mut self, mut val: usize) -> io::Result<()> {
         loop {
+            #[allow(
+                clippy::cast_possible_truncation,
+                reason = "false positive: `& 0x7F` guarantees u8 fit"
+            )]
             let mut byte = (val & 0x7F) as u8;
             val >>= 7;
             if val != 0 {
@@ -359,8 +363,8 @@ impl ClientVersionRequest {
         Self::new(major, minor, range)
     }
 
-    fn mask_reserved_bytes(&self, actor_config: &ActorConfig) -> Self {
-        let mut request = *self;
+    fn mask_reserved_bytes(self, actor_config: &ActorConfig) -> Self {
+        let mut request = self;
         if actor_config.handshake_manifest_version.unwrap_or_default() != 0 {
             // forced handshake-manifest style negotiation => use reserved bytes
             return request;
@@ -375,53 +379,10 @@ impl ClientVersionRequest {
         request
     }
 
-    fn negotiate(&self, logging_ctx: LoggingCtx, actor_config: &ActorConfig) -> Option<(u8, u8)> {
+    fn negotiate(self, logging_ctx: LoggingCtx, actor_config: &ActorConfig) -> Option<(u8, u8)> {
         match (actor_config.handshake_manifest_version, self.major) {
             (None, MANIFEST_MAJOR) => {
-                let requested_min = self.minor - self.range;
-                let requested_max = self.minor;
-                let max = actor_config.bolt_version.max_handshake_manifest_version();
-                debug!(
-                    logging_ctx,
-                    "Manifest style request {}",
-                    if requested_min == requested_max {
-                        format!("v{requested_min}")
-                    } else {
-                        format!("v{requested_min}-v{requested_max}")
-                    }
-                );
-                match max {
-                    0 => {
-                        debug!(
-                            logging_ctx,
-                            "Server manifest max v0 => no manifest support => reject"
-                        );
-                        None
-                    }
-                    _ if max < requested_min => {
-                        debug!(
-                            logging_ctx,
-                            "Server manifest max v{max} lower than requested minimum => reject"
-                        );
-                        None
-                    }
-                    _ if max < requested_max => {
-                        debug!(
-                            logging_ctx,
-                            "Server manifest max v{max} is lower than requested maximum => \
-                            accept server maximum"
-                        );
-                        Some((MANIFEST_MAJOR, max))
-                    }
-                    _ => {
-                        debug!(
-                            logging_ctx,
-                            "Server manifest max v{max} is higher  than or equals requested \
-                            maximum => accept requested maximum"
-                        );
-                        Some((MANIFEST_MAJOR, requested_max))
-                    }
-                }
+                self.negotiate_any_manifest_version(logging_ctx, actor_config)
             }
             (Some(0), MANIFEST_MAJOR) => {
                 debug!(
@@ -430,51 +391,9 @@ impl ClientVersionRequest {
                 );
                 None
             }
-            (None, _) | (Some(0), _) => {
-                let (server_major, server_minor) = actor_config.bolt_version_raw;
-                if self.matches(server_major, server_minor) {
-                    debug!(
-                        logging_ctx,
-                        "Non-manifest style request matches server version {:?} => accept",
-                        actor_config.bolt_version_raw
-                    );
-                    return Some((server_major, server_minor));
-                }
-                for alias in actor_config.bolt_version.backwards_equivalent_versions() {
-                    if self.matches(alias.0, alias.1) {
-                        debug!(
-                            logging_ctx,
-                            "Non-manifest style request matches server alias {alias:?} => accept",
-                        );
-                        return Some(*alias);
-                    }
-                }
-                debug!(
-                    logging_ctx,
-                    "Non-manifest style request doesn't match server version {:?} \
-                    or aliases {:?} => reject",
-                    actor_config.bolt_version_raw,
-                    actor_config.bolt_version.backwards_equivalent_versions(),
-                );
-                None
-            }
+            (None | Some(0), _) => self.negotiate_non_manifest(logging_ctx, actor_config),
             (Some(forced_manifest), MANIFEST_MAJOR) => {
-                match self.matches(MANIFEST_MAJOR, forced_manifest) {
-                    true => {
-                        debug!(
-                            logging_ctx,
-                            "Enforced manifest style v{forced_manifest} matches => accept"
-                        );
-                        Some((MANIFEST_MAJOR, forced_manifest))
-                    }
-                    false => {
-                        debug!(
-                            logging_ctx,
-                            "Enforced manifest style v{forced_manifest} doesn't matches => reject"
-                        );
-                        None
-                    }
-                }
+                self.negotiate_forced_manifest_version(forced_manifest, logging_ctx)
             }
             (Some(forced_manifest), _) => {
                 debug!(
@@ -487,8 +406,112 @@ impl ClientVersionRequest {
         }
     }
 
+    fn negotiate_any_manifest_version(
+        self,
+        logging_ctx: LoggingCtx,
+        actor_config: &ActorConfig,
+    ) -> Option<(u8, u8)> {
+        let requested_min = self.minor - self.range;
+        let requested_max = self.minor;
+        let max = actor_config.bolt_version.max_handshake_manifest_version();
+        debug!(
+            logging_ctx,
+            "Manifest style request {}",
+            if requested_min == requested_max {
+                format!("v{requested_min}")
+            } else {
+                format!("v{requested_min}-v{requested_max}")
+            }
+        );
+        match max {
+            0 => {
+                debug!(
+                    logging_ctx,
+                    "Server manifest max v0 => no manifest support => reject"
+                );
+                None
+            }
+            _ if max < requested_min => {
+                debug!(
+                    logging_ctx,
+                    "Server manifest max v{max} lower than requested minimum => reject"
+                );
+                None
+            }
+            _ if max < requested_max => {
+                debug!(
+                    logging_ctx,
+                    "Server manifest max v{max} is lower than requested maximum => \
+                        accept server maximum"
+                );
+                Some((MANIFEST_MAJOR, max))
+            }
+            _ => {
+                debug!(
+                    logging_ctx,
+                    "Server manifest max v{max} is higher  than or equals requested \
+                        maximum => accept requested maximum"
+                );
+                Some((MANIFEST_MAJOR, requested_max))
+            }
+        }
+    }
+
+    fn negotiate_forced_manifest_version(
+        self,
+        forced_manifest: u8,
+        logging_ctx: LoggingCtx,
+    ) -> Option<(u8, u8)> {
+        if self.matches(MANIFEST_MAJOR, forced_manifest) {
+            debug!(
+                logging_ctx,
+                "Enforced manifest style v{forced_manifest} matches => accept"
+            );
+            Some((MANIFEST_MAJOR, forced_manifest))
+        } else {
+            debug!(
+                logging_ctx,
+                "Enforced manifest style v{forced_manifest} doesn't matches => reject"
+            );
+            None
+        }
+    }
+
+    fn negotiate_non_manifest(
+        self,
+        logging_ctx: LoggingCtx,
+        actor_config: &ActorConfig,
+    ) -> Option<(u8, u8)> {
+        let (server_major, server_minor) = actor_config.bolt_version_raw;
+        if self.matches(server_major, server_minor) {
+            debug!(
+                logging_ctx,
+                "Non-manifest style request matches server version {:?} => accept",
+                actor_config.bolt_version_raw
+            );
+            return Some((server_major, server_minor));
+        }
+        for alias in actor_config.bolt_version.backwards_equivalent_versions() {
+            if self.matches(alias.0, alias.1) {
+                debug!(
+                    logging_ctx,
+                    "Non-manifest style request matches server alias {alias:?} => accept",
+                );
+                return Some(*alias);
+            }
+        }
+        debug!(
+            logging_ctx,
+            "Non-manifest style request doesn't match server version {:?} \
+            or aliases {:?} => reject",
+            actor_config.bolt_version_raw,
+            actor_config.bolt_version.backwards_equivalent_versions(),
+        );
+        None
+    }
+
     fn accept_exact_version(
-        &self,
+        self,
         logging_ctx: LoggingCtx,
         actor_config: &ActorConfig,
     ) -> NetActorResult<()> {
@@ -525,7 +548,7 @@ impl ClientVersionRequest {
         Ok(())
     }
 
-    fn matches(&self, major: u8, minor: u8) -> bool {
+    fn matches(self, major: u8, minor: u8) -> bool {
         self.major == major && (self.minor.saturating_sub(self.range)..=self.minor).contains(&minor)
     }
 }

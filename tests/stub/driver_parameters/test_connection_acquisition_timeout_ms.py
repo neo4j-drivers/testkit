@@ -242,7 +242,8 @@ class TestConnectionAcquisitionTimeoutMs(TestkitTestCase):
         self._driver.close()
         self._driver = None
         self._router.done()
-        self._server.done()
+        self._server.reset()  # script has not been played to the end
+        self.assertEqual(self._server.count_requests("HELLO"), 1)
 
     def test_router_handshake_has_own_timeout_too_slow(self):
         self._start_server(self._router, "router_hello_delay.script")

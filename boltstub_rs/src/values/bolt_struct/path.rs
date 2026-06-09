@@ -78,6 +78,9 @@ impl JoltPath {
                 fields.len()
             )));
         }
+        if i64::try_from(fields.len() / 2).is_err() {
+            return Err(ParseError::new("Path can contain at most i64::MAX nodes"));
+        }
         let mut fields = fields.into_iter().enumerate().peekable();
         let mut nodes = Vec::with_capacity(fields.len() / 2 + 1);
         let mut relationships = Vec::with_capacity(fields.len() / 2);
@@ -190,7 +193,9 @@ impl JoltPath {
                 unique_nodes.insert(idx.clone(), Rc::clone(node));
             }
             if i != 0 {
-                node_indices.push(unique_nodes.get_index_of(idx).expect("inserted above") as i64);
+                let node_idx = unique_nodes.get_index_of(idx).expect("inserted above");
+                let node_idx = i64::try_from(node_idx).expect("parse limits nodes count to fit");
+                node_indices.push(node_idx);
             }
         }
         let mut unique_relationships = IndexMap::with_capacity(relationships.len());
@@ -213,10 +218,11 @@ impl JoltPath {
             let next_node = &nodes[i + 1];
             let next_node_idx = P::node_index(next_node);
             let end_node_idx = P::relationship_end_index(relationship);
-            let positive_index = unique_relationships
+            let rel_idx = unique_relationships
                 .get_index_of(idx)
-                .expect("inserted above") as i64
-                + 1;
+                .expect("inserted above");
+            let positive_index =
+                i64::try_from(rel_idx).expect("parse limits relationships count to fit") + 1;
             if (start_node_idx, end_node_idx) == (prev_node_idx, next_node_idx) {
                 relationship_indices.push(positive_index);
             } else if (start_node_idx, end_node_idx) == (next_node_idx, prev_node_idx) {
@@ -374,9 +380,10 @@ impl<'a> BoltPath<'a> {
             relationships,
             indices,
         };
-        match this.is_valid() {
-            false => None,
-            true => Some(this),
+        if this.is_valid() {
+            Some(this)
+        } else {
+            None
         }
     }
 
@@ -417,10 +424,14 @@ impl<'a> BoltPath<'a> {
                 prev_node.jolt_fmt(self.jolt_version).fmt(f)?;
                 let mut indices = self.this.indices.iter();
                 while let Some(rel_idx) = indices.next() {
+                    let rel_idx_usize = usize::try_from(rel_idx.unsigned_abs())
+                        .expect("is_valid asserts that all indexes fit in usize")
+                        - 1;
                     let node_idx = indices.next().expect("checked even size in from_struct");
-                    let next_node = &self.this.nodes[*node_idx as usize];
-                    let relationship =
-                        &self.this.relationships[rel_idx.unsigned_abs() as usize - 1];
+                    let node_idx = usize::try_from(*node_idx)
+                        .expect("is_valid asserts that all indexes fit in usize");
+                    let next_node = &self.this.nodes[node_idx];
+                    let relationship = &self.this.relationships[rel_idx_usize];
                     let mut relationship = BoltRelationship {
                         id: relationship.id,
                         start_node_id: prev_node.id,
@@ -442,7 +453,7 @@ impl<'a> BoltPath<'a> {
                         }),
                     };
                     if *rel_idx < 0 {
-                        relationship.flip_direction()
+                        relationship.flip_direction();
                     }
                     f.write_str(", ")?;
                     relationship.jolt_fmt(self.jolt_version).fmt(f)?;
@@ -451,7 +462,7 @@ impl<'a> BoltPath<'a> {
                     prev_node = next_node;
                 }
 
-                f.write_str(r#"]}"#)
+                f.write_str("]}")
             }
         }
 
@@ -464,22 +475,24 @@ impl<'a> BoltPath<'a> {
 
 #[cfg(test)]
 mod tests {
+    use indexmap::IndexMap;
+
     use super::*;
-    use crate::bolt_version::BoltVersion;
+    use crate::bolt_version::{BoltCapabilities, BoltVersion};
 
     #[test]
     fn test_parse_path() {
         let config = ActorConfig {
             bolt_version: BoltVersion::V4_4,
             bolt_version_raw: (4, 4),
-            bolt_capabilities: Default::default(),
+            bolt_capabilities: BoltCapabilities::default(),
             handshake_manifest_version: None,
             handshake: None,
             handshake_response: None,
             handshake_delay: None,
             allow_restart: false,
             allow_concurrent: false,
-            auto_responses: Default::default(),
+            auto_responses: IndexMap::default(),
             py_lines: vec![],
         };
 
@@ -496,13 +509,13 @@ mod tests {
                 JoltNode {
                     id: 1,
                     labels: vec![String::from("l")],
-                    properties: Default::default(),
+                    properties: IndexMap::default(),
                     element_id: None,
                 },
                 JoltNode {
                     id: 3,
                     labels: vec![String::from("l")],
-                    properties: Default::default(),
+                    properties: IndexMap::default(),
                     element_id: None,
                 },
             ]
@@ -513,13 +526,13 @@ mod tests {
                 JoltUnboundRelationship {
                     id: 2,
                     rel_type: String::from("RELATES_TO"),
-                    properties: Default::default(),
+                    properties: IndexMap::default(),
                     element_id: None,
                 },
                 JoltUnboundRelationship {
                     id: 4,
                     rel_type: String::from("RELATES_TO"),
-                    properties: Default::default(),
+                    properties: IndexMap::default(),
                     element_id: None,
                 },
             ]

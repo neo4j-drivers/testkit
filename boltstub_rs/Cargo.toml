@@ -5,27 +5,27 @@ edition = "2021"
 rust-version = "1.88.0"
 
 [dependencies]
-anyhow = "1.0.98"
-chrono = "0.4.39"
-chrono-tz = "0.10.3"
-clap = { version = "4.5.36", features = ["derive"] }
+anyhow = "1.0.100"
+chrono = "0.4.43"
+chrono-tz = "0.10.4"
+clap = { version = "4.5.57", features = ["derive"] }
 fern = { version = "0.7.1" }
-indexmap = "2.7.1"
-indoc = "2.0.6"
+indexmap = "2.13.0"
+indoc = "2.0.7"
 itertools = "0.14.0"
-log = "0.4.27"
+log = "0.4.29"
 nom = "8.0.0"
 nom_locate = "5.0.0"
-pyo3 = "0.24.2"
-regex = "1.11.1"
-serde = "1.0.219"
-serde_json = { version = "1.0.140", features = ["default", "preserve_order"] }
+pyo3 = "0.28.2"
+regex = "1.12.3"
+serde = "1.0.228"
+serde_json = { version = "1.0.149", features = ["default", "preserve_order"] }
 termcolor = "1.4.1"
-tokio = { version = "1.44.2", features = ["full"] }
-tokio-util = "0.7.14"
+tokio = { version = "1.49.0", features = ["full"] }
+tokio-util = "0.7.18"
 usize_cast = "1.1.0"
-pin-project = "1.0.12"
-sha1 = "0.10.1"
+pin-project = "1.1.10"
+sha1 = "0.10.6"
 base64 = "0.22.1"
 
 [dev-dependencies]

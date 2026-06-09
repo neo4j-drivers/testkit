@@ -35,23 +35,10 @@ class TestVectorTypes(TestkitTestCase):
         finally:
             server.reset()
 
-    @contextmanager
     def _driver(self, server):
         uri = "bolt://%s" % server.address
         auth = types.AuthorizationToken("basic", principal="", credentials="")
-        driver = Driver(self._backend, uri, auth)
-        try:
-            yield driver
-        finally:
-            driver.close()
-
-    @contextmanager
-    def _session(self, driver):
-        session = driver.session("r")
-        try:
-            yield session
-        finally:
-            session.close()
+        return Driver(self._backend, uri, auth)
 
     def test_vector(self):
         script = "echo_vector.script"
@@ -137,7 +124,7 @@ class TestVectorTypes(TestkitTestCase):
                     },
                 ):
                     with self._driver(self._server) as driver:
-                        with self._session(driver) as session:
+                        with driver.session("r") as session:
                             vec = types.CypherVector(dtype, data)
                             result = session.run(
                                 "RETURN $vec AS vec",

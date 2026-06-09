@@ -128,14 +128,14 @@ impl BoltUnsupportedType {
                 f.write_str(r#"", "#)?;
                 Display::fmt(&self.this.minimum_protocol_major, f)?;
 
-                f.write_str(r#", "#)?;
+                f.write_str(", ")?;
                 Display::fmt(&self.this.minimum_protocol_minor, f)?;
                 if let Some(message) = &self.this.message {
                     f.write_str(r#", ""#)?;
                     f.write_str(message)?;
                     f.write_str(r#"""#)?;
                 }
-                f.write_str(r#"]}"#)
+                f.write_str("]}")
             }
         }
 
@@ -145,9 +145,10 @@ impl BoltUnsupportedType {
 
 #[cfg(test)]
 mod test {
-    use crate::bolt_version::BoltVersion;
-
+    use indexmap::IndexMap;
     use rstest::rstest;
+
+    use crate::bolt_version::{BoltCapabilities, BoltVersion};
 
     use super::*;
 
@@ -155,15 +156,15 @@ mod test {
         ActorConfig {
             bolt_version: BoltVersion::V6_0,
             bolt_version_raw: (6, 0),
-            bolt_capabilities: Default::default(),
-            handshake_manifest_version: Default::default(),
-            handshake: Default::default(),
-            handshake_response: Default::default(),
-            handshake_delay: Default::default(),
-            allow_restart: Default::default(),
-            allow_concurrent: Default::default(),
-            auto_responses: Default::default(),
-            py_lines: Default::default(),
+            bolt_capabilities: BoltCapabilities::default(),
+            handshake_manifest_version: None,
+            handshake: None,
+            handshake_response: None,
+            handshake_delay: None,
+            allow_restart: false,
+            allow_concurrent: false,
+            auto_responses: IndexMap::default(),
+            py_lines: Vec::default(),
         }
     }
 
@@ -209,7 +210,7 @@ mod test {
     }
 
     #[rstest]
-    #[case::wrong_type(r#"1"#)]
+    #[case::wrong_type(r"1")]
     #[case::array_too_short(r#"["quantum integer", 6]"#)]
     #[case::array_too_long(r#"["quantum integer", 6, 10, "future", "from the"]"#)]
     #[case::invalid_data(r#"[1, 6, 10, "future"]"#)]
@@ -288,6 +289,6 @@ mod test {
                 minimum_protocol_minor: 10,
                 message,
             }))
-        )
+        );
     }
 }

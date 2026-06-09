@@ -43,9 +43,9 @@ impl BoltVersion {
     pub fn match_valid_version(major: u8, minor: Option<u8>) -> Option<Self> {
         #[expect(clippy::collapsible_match, reason = "improves readability")]
         Some(match (major, minor) {
-            (1, None) | (1, Some(0)) => BoltVersion::V1,
-            (2, None) | (2, Some(0)) => BoltVersion::V2,
-            (3, None) | (3, Some(0)) => BoltVersion::V3,
+            (1, None | Some(0)) => BoltVersion::V1,
+            (2, None | Some(0)) => BoltVersion::V2,
+            (3, None | Some(0)) => BoltVersion::V3,
             (4, Some(x)) => match x {
                 0 => BoltVersion::V4_0,
                 1 => BoltVersion::V4_1,
@@ -74,7 +74,7 @@ impl BoltVersion {
         })
     }
 
-    pub fn major(&self) -> u8 {
+    pub fn major(self) -> u8 {
         match self {
             BoltVersion::V1 => 1,
             BoltVersion::V2 => 2,
@@ -97,7 +97,7 @@ impl BoltVersion {
         }
     }
 
-    pub fn minor(&self) -> u8 {
+    pub fn minor(self) -> u8 {
         match self {
             BoltVersion::V1 => 0,
             BoltVersion::V2 => 0,
@@ -120,7 +120,7 @@ impl BoltVersion {
         }
     }
 
-    pub fn jolt_version(&self) -> JoltVersion {
+    pub fn jolt_version(self) -> JoltVersion {
         match self {
             BoltVersion::V1 => JoltVersion::V1,
             BoltVersion::V2 => JoltVersion::V1,
@@ -143,15 +143,15 @@ impl BoltVersion {
         }
     }
 
-    pub fn supports_minor(&self) -> bool {
-        self >= &BoltVersion::V4_0
+    pub fn supports_minor(self) -> bool {
+        self >= BoltVersion::V4_0
     }
 
-    pub fn supports_range(&self) -> bool {
-        self >= &BoltVersion::V4_2
+    pub fn supports_range(self) -> bool {
+        self >= BoltVersion::V4_2
     }
 
-    pub fn max_handshake_manifest_version(&self) -> u8 {
+    pub fn max_handshake_manifest_version(self) -> u8 {
         match self {
             BoltVersion::V1 => 0,
             BoltVersion::V2 => 0,
@@ -174,7 +174,7 @@ impl BoltVersion {
         }
     }
 
-    pub fn backwards_equivalent_versions(&self) -> &'static [(u8, u8)] {
+    pub fn backwards_equivalent_versions(self) -> &'static [(u8, u8)] {
         static NONE: [(u8, u8); 0] = [];
         static ALIASES_V4_2: [(u8, u8); 1] = [(4, 1)];
 
@@ -200,30 +200,34 @@ impl BoltVersion {
         }
     }
 
-    pub fn message_tag_from_request(&self, name: &str) -> Option<u8> {
+    pub fn message_tag_from_request(self, name: &str) -> Option<u8> {
         Some(match name {
-            "INIT" if self < &BoltVersion::V3 => 0x01,
-            "HELLO" if self >= &BoltVersion::V3 => 0x01,
-            "LOGON" if self >= &BoltVersion::V5_1 => 0x6A,
-            "LOGOFF" if self >= &BoltVersion::V5_1 => 0x6B,
-            "TELEMETRY" if self >= &BoltVersion::V5_4 => 0x54,
+            "INIT" if self < BoltVersion::V3 => 0x01,
+            "HELLO" if self >= BoltVersion::V3 => 0x01,
+            "LOGON" if self >= BoltVersion::V5_1 => 0x6A,
+            "LOGOFF" if self >= BoltVersion::V5_1 => 0x6B,
+            "TELEMETRY" if self >= BoltVersion::V5_4 => 0x54,
             "GOODBYE" => 0x02,
-            "ACK_FAILURE" if self < &BoltVersion::V3 => 0x0E,
+            "ACK_FAILURE" if self < BoltVersion::V3 => 0x0E,
             "RESET" => 0x0F,
             "RUN" => 0x10,
-            "DISCARD_ALL" if self < &BoltVersion::V4_0 => 0x2F,
-            "DISCARD" if self >= &BoltVersion::V4_0 => 0x2F,
-            "PULL_ALL" if self < &BoltVersion::V4_0 => 0x3F,
-            "PULL" if self >= &BoltVersion::V4_0 => 0x3F,
+            "DISCARD_ALL" if self < BoltVersion::V4_0 => 0x2F,
+            "DISCARD" if self >= BoltVersion::V4_0 => 0x2F,
+            "PULL_ALL" if self < BoltVersion::V4_0 => 0x3F,
+            "PULL" if self >= BoltVersion::V4_0 => 0x3F,
             "BEGIN" => 0x11,
             "COMMIT" => 0x12,
             "ROLLBACK" => 0x13,
-            "ROUTE" if self >= &BoltVersion::V4_3 => 0x66,
+            "ROUTE" if self >= BoltVersion::V4_3 => 0x66,
             _ => return None,
         })
     }
 
-    pub fn message_tag_from_response(&self, name: &str) -> Option<u8> {
+    #[allow(
+        clippy::unused_self,
+        reason = "response tags might change in a future protocol version"
+    )]
+    pub fn message_tag_from_response(self, name: &str) -> Option<u8> {
         Some(match name {
             "SUCCESS" => 0x70,
             "IGNORED" => 0x7E,
@@ -233,25 +237,25 @@ impl BoltVersion {
         })
     }
 
-    pub fn message_name_from_tag(&self, tag: u8) -> Option<&'static str> {
+    pub fn message_name_from_tag(self, tag: u8) -> Option<&'static str> {
         Some(match tag {
-            0x01 if self < &BoltVersion::V3 => "INIT",
-            0x01 if self >= &BoltVersion::V3 => "HELLO",
-            0x6A if self >= &BoltVersion::V5_1 => "LOGON",
-            0x6B if self >= &BoltVersion::V5_1 => "LOGOFF",
-            0x54 if self >= &BoltVersion::V5_4 => "TELEMETRY",
+            0x01 if self < BoltVersion::V3 => "INIT",
+            0x01 if self >= BoltVersion::V3 => "HELLO",
+            0x6A if self >= BoltVersion::V5_1 => "LOGON",
+            0x6B if self >= BoltVersion::V5_1 => "LOGOFF",
+            0x54 if self >= BoltVersion::V5_4 => "TELEMETRY",
             0x02 => "GOODBYE",
-            0x0E if self < &BoltVersion::V3 => "ACK_FAILURE",
+            0x0E if self < BoltVersion::V3 => "ACK_FAILURE",
             0x0F => "RESET",
             0x10 => "RUN",
-            0x2F if self < &BoltVersion::V4_0 => "DISCARD_ALL",
-            0x2F if self >= &BoltVersion::V4_0 => "DISCARD",
-            0x3F if self < &BoltVersion::V4_0 => "PULL_ALL",
-            0x3F if self >= &BoltVersion::V4_0 => "PULL",
+            0x2F if self < BoltVersion::V4_0 => "DISCARD_ALL",
+            0x2F if self >= BoltVersion::V4_0 => "DISCARD",
+            0x3F if self < BoltVersion::V4_0 => "PULL_ALL",
+            0x3F if self >= BoltVersion::V4_0 => "PULL",
             0x11 => "BEGIN",
             0x12 => "COMMIT",
             0x13 => "ROLLBACK",
-            0x66 if self >= &BoltVersion::V4_3 => "ROUTE",
+            0x66 if self >= BoltVersion::V4_3 => "ROUTE",
             0x70 => "SUCCESS",
             0x7E => "IGNORED",
             0x7F => "FAILURE",
@@ -260,7 +264,7 @@ impl BoltVersion {
         })
     }
 
-    pub fn message_auto_response(&self, tag: u8) -> Option<Resolvable<(u8, Vec<PackStreamValue>)>> {
+    pub fn message_auto_response(self, tag: u8) -> Resolvable<(u8, Vec<PackStreamValue>)> {
         const SUCCESS_TAG: u8 = 0x70;
         let success_meta = match tag {
             0x01 => {
@@ -270,19 +274,19 @@ impl BoltVersion {
                     String::from("server"),
                     PackStreamValue::String(String::from(self.server_agent())),
                 );
-                if self < &BoltVersion::V3 {
-                    return Some(Resolvable::Static((
+                if self < BoltVersion::V3 {
+                    return Resolvable::Static((
                         SUCCESS_TAG,
                         vec![PackStreamValue::Dict(success_map)],
-                    )));
+                    ));
                 }
-                if self >= &BoltVersion::V5_7 {
+                if self >= BoltVersion::V5_7 {
                     success_map.insert(
                         String::from("protocol_version"),
                         PackStreamValue::String(self.to_string()),
                     );
                 }
-                if self >= &BoltVersion::V5_8 {
+                if self >= BoltVersion::V5_8 {
                     success_map.insert(
                         String::from("hints"),
                         PackStreamValue::Dict(
@@ -290,10 +294,10 @@ impl BoltVersion {
                         ),
                     );
                 }
-                return Some(Resolvable::Dynamic {
+                return Resolvable::Dynamic {
                     func: Box::new(move || {
-                        let mut success_map = success_map.clone();
                         static CONNECTION_ID: AtomicI64 = AtomicI64::new(1);
+                        let mut success_map = success_map.clone();
                         let connection_id =
                             CONNECTION_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                         assert_ne!(connection_id, 0, "Connection ID overflowed");
@@ -304,17 +308,14 @@ impl BoltVersion {
                         (SUCCESS_TAG, vec![PackStreamValue::Dict(success_map)])
                     }),
                     repr: format!("Auto-HELLO-SUCCESS @{}:{}", file!(), line!()),
-                });
+                };
             }
-            _ => Default::default(),
+            _ => IndexMap::default(),
         };
-        Some(Resolvable::Static((
-            SUCCESS_TAG,
-            vec![PackStreamValue::Dict(success_meta)],
-        )))
+        Resolvable::Static((SUCCESS_TAG, vec![PackStreamValue::Dict(success_meta)]))
     }
 
-    fn server_agent(&self) -> &'static str {
+    fn server_agent(self) -> &'static str {
         match self {
             BoltVersion::V1 => "Neo4j/3.3.0",
             BoltVersion::V2 => "Neo4j/3.4.0",
@@ -333,17 +334,17 @@ impl BoltVersion {
             BoltVersion::V5_6 => "Neo4j/5.23.0",
             BoltVersion::V5_7 => "Neo4j/5.26.0",
             BoltVersion::V5_8 => "Neo4j/5.26.0",
-            // TODO: Finalize when Bolt 6.0 support has been released in the server.
-            BoltVersion::V6_0 => "Neo4j/2025.08.0",
+            BoltVersion::V6_0 => "Neo4j/2025.10.0",
         }
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct BoltCapabilities(Vec<u8>);
+pub struct BoltCapabilities(Vec<u8>);
 
 impl PartialEq for BoltCapabilities {
     fn eq(&self, other: &Self) -> bool {
+        #[allow(clippy::verbose_bit_mask, reason = "improves readability")]
         self.0.iter().zip_longest(other.0.iter()).all(|e| match e {
             EitherOrBoth::Both(a, b) => a & 0x7F == b & 0x7F,
             EitherOrBoth::Left(byte) | EitherOrBoth::Right(byte) => *byte & 0x7F == 0,
@@ -362,7 +363,7 @@ impl Default for BoltCapabilities {
 const CAPABILITIES_MAX_BITS: usize = 63;
 
 impl BoltCapabilities {
-    pub(crate) fn from_bytes(mut bytes: Vec<u8>) -> Result<Self, Cow<'static, str>> {
+    pub fn from_bytes(mut bytes: Vec<u8>) -> Result<Self, Cow<'static, str>> {
         if bytes.is_empty() {
             bytes.push(0);
         }
@@ -377,7 +378,7 @@ impl BoltCapabilities {
         Ok(Self(bytes))
     }
 
-    pub(crate) fn raw(&self) -> &[u8] {
+    pub fn raw(&self) -> &[u8] {
         &self.0
     }
 
@@ -403,7 +404,7 @@ impl BoltCapabilities {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum JoltVersion {
+pub enum JoltVersion {
     V1,
     /// * Fixes temporal types' representation being ambiguous in V1.
     /// * Adds element ids to nodes and relationships.
@@ -413,7 +414,7 @@ pub(crate) enum JoltVersion {
 }
 
 impl JoltVersion {
-    pub(crate) fn parse(s: &str) -> Result<Self, String> {
+    pub fn parse(s: &str) -> Result<Self, String> {
         let jolt_version =
             i32::from_str(s).map_err(|e| format!("Jolt version must be i32 (found {s:?}): {e}"))?;
         Ok(match jolt_version {

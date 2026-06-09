@@ -423,14 +423,17 @@ def main(settings, configurations):
         server_name = neo4j_config.name
         stress_duration = neo4j_config.stress_test_duration
 
-        if not (
-            test_flags["TESTKIT_TESTS"]
-            or (test_flags["STRESS_TESTS"] and stress_duration > 0)
-            or test_flags["INTEGRATION_TESTS"]
-            or (
-                is_neo4j_test_selected_to_run()
-                and not test_flags["EXTERNAL_TESTKIT_TESTS"]
+        if (
+            not (
+                test_flags["TESTKIT_TESTS"]
+                or (test_flags["STRESS_TESTS"] and stress_duration > 0)
+                or test_flags["INTEGRATION_TESTS"]
+                or (
+                    is_neo4j_test_selected_to_run()
+                    and not test_flags["EXTERNAL_TESTKIT_TESTS"]
+                )
             )
+            or runner_container.should_run_neo4j_tests(neo4j_config)
         ):
             continue
         with test_suite(neo4j_config.name):

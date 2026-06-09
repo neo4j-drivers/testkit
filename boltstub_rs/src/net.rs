@@ -19,7 +19,7 @@ use crate::web_socket_stream::WebSocketStream;
 
 pub struct Server {
     address: String,
-    server_script_cfg: &'static ActorScript<'static>,
+    script_cfg: &'static ActorScript<'static>,
     ever_acted: Arc<atomic::AtomicBool>,
     shutting_down: Arc<atomic::AtomicBool>,
 }
@@ -32,7 +32,7 @@ enum TakeNewConnection {
 
 impl Server {
     pub fn new(address: &str, server_script_cfg: &'static ActorScript<'static>) -> Self {
-        let address = if address.starts_with(":") {
+        let address = if address.starts_with(':') {
             format!("localhost{address}")
         } else {
             address.to_string()
@@ -40,21 +40,22 @@ impl Server {
         debug!("Creating server listening on {address}");
         Server {
             address,
-            server_script_cfg,
-            ever_acted: Default::default(),
-            shutting_down: Default::default(),
+            script_cfg: server_script_cfg,
+            ever_acted: Arc::<atomic::AtomicBool>::default(),
+            shutting_down: Arc::<atomic::AtomicBool>::default(),
         }
     }
 
     pub fn start(&mut self) -> Result<()> {
         debug!("Starting server");
-        let rt = match self.server_script_cfg.config.allow_concurrent {
-            true => tokio::runtime::Builder::new_multi_thread()
+        let rt = if self.script_cfg.config.allow_concurrent {
+            tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
-                .build(),
-            false => tokio::runtime::Builder::new_current_thread()
+                .build()
+        } else {
+            tokio::runtime::Builder::new_current_thread()
                 .enable_all()
-                .build(),
+                .build()
         }?;
 
         rt.block_on(self.run())
@@ -63,7 +64,7 @@ impl Server {
     async fn run(&mut self) -> Result<()> {
         let listener = TcpListener::bind(&self.address).await?;
         println!("Listening");
-        let mut set: JoinSet<Result<()>> = Default::default();
+        let mut set: JoinSet<Result<()>> = JoinSet::default();
 
         let ct = CancellationToken::new();
 
@@ -74,15 +75,12 @@ impl Server {
                 loop {
                     Self::exit_signal()?.await;
                     self.shutting_down.store(true, atomic::Ordering::Release);
-                    match i {
-                        0 => {
-                            info!("1st interrupt signal received. Cancelling all actors.");
-                            ct.cancel();
-                        }
-                        _ => {
-                            info!("2nd interrupt signal received. Hard exit.");
-                            panic!("Hard exit after cancellation didn't succeed.");
-                        }
+                    if i == 0 {
+                        info!("1st interrupt signal received. Cancelling all actors.");
+                        ct.cancel();
+                    } else {
+                        info!("2nd interrupt signal received. Hard exit.");
+                        panic!("Hard exit after cancellation didn't succeed.");
                     }
                     i += 1;
                 }
@@ -145,7 +143,7 @@ impl Server {
                 conn = listener.accept() => {
                     self.handle_connection(conn, ct_connection, handles).await
                 },
-                _ = ct.cancelled() => {
+                () = ct.cancelled() => {
                     debug!("Server stops listening after being cancelled \
                         while awaiting a new connection");
                     return Ok(())
@@ -173,7 +171,7 @@ impl Server {
         ct: CancellationToken,
         handles: &mut JoinSet<Result<()>>,
     ) -> Result<TakeNewConnection> {
-        let restarts = self.server_script_cfg.config.allow_restart;
+        let restarts = self.script_cfg.config.allow_restart;
 
         match conn {
             Ok((conn, addr)) => {
@@ -185,7 +183,7 @@ impl Server {
                     8 * 1024, // 8 KiB write buffer
                     conn,
                 );
-                let script = self.server_script_cfg;
+                let script = self.script_cfg;
                 let shutting_down = Arc::clone(&self.shutting_down);
 
                 if eval_http(conn.get_mut()).await {
@@ -203,9 +201,10 @@ impl Server {
                     }
                 }
 
-                Ok(match restarts {
-                    true => TakeNewConnection::Yes,
-                    false => TakeNewConnection::No,
+                Ok(if restarts {
+                    TakeNewConnection::Yes
+                } else {
+                    TakeNewConnection::No
                 })
             }
             Err(inner) => {
@@ -233,7 +232,7 @@ async fn execute_actor(
     shutting_down: Arc<atomic::AtomicBool>,
     conn: impl Connection + Send + Sync + 'static,
     script: &'static ActorScript<'static>,
-    handles: &mut JoinSet<Result<()>>,
+    handlers: &mut JoinSet<Result<()>>,
 ) -> Option<Result<TakeNewConnection>> {
     let restarts = script.config.allow_restart;
     let concurrent = script.config.allow_concurrent;
@@ -246,7 +245,7 @@ async fn execute_actor(
             .inspect_err(|e| debug!("Async handler failed: {e:?}"))
     };
     if concurrent {
-        handles.spawn(handler);
+        handlers.spawn(handler);
         debug!("Spawned new connection handler concurrently");
         return Some(Ok(TakeNewConnection::Yes));
     }
@@ -255,7 +254,7 @@ async fn execute_actor(
     if let Err(err) = res {
         return if restarts {
             debug!("Connection handler failed, storing error because restarting script");
-            handles.spawn(async move { Err(err) });
+            handlers.spawn(async move { Err(err) });
             Some(Ok(TakeNewConnection::Yes))
         } else {
             debug!("Connection handler failed, not restarting script");
@@ -271,7 +270,7 @@ fn validate_results(results: &[Result<()>]) -> Result<()> {
         .iter()
         .filter(|e| !e.is_ok())
         .map(|res| match res {
-            Ok(_) => panic!("failed to filter"),
+            Ok(()) => panic!("failed to filter"),
             Err(err) => err,
         })
         .collect_vec();
@@ -287,7 +286,7 @@ fn validate_results(results: &[Result<()>]) -> Result<()> {
         );
         for error in errors {
             sb = sb.add(error.chain().join("\n").as_str());
-            sb.push('\n')
+            sb.push('\n');
         }
         // report all errors
         return Err(anyhow!(sb));

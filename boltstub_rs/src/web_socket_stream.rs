@@ -15,6 +15,7 @@ use crate::net_actor::Connection;
 const MAGIC_WS_STRING: &str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const PONG: &[u8] = b"\x0A\x00";
 
+#[derive(Debug)]
 #[pin_project]
 pub struct WebSocketStream<RW> {
     #[pin]
@@ -60,7 +61,7 @@ impl<RW: AsyncRead + AsyncWrite> WebSocketStream<RW> {
             if h_key.eq_ignore_ascii_case("upgrade") && h_value.eq_ignore_ascii_case("websocket") {
                 ws_upgrade = true;
             } else if h_key.eq_ignore_ascii_case("sec-websocket-key") {
-                ws_key = Some(h_value)
+                ws_key = Some(h_value);
             }
         }
         if !ws_upgrade {
@@ -179,64 +180,89 @@ impl<RW: Connection> Connection for WebSocketStream<RW> {
     }
 }
 
+#[derive(Debug)]
 enum WsRead {
-    ReadingFrameStart {
-        buf: [u8; 2],
-        pos: usize,
-        payload: Vec<u8>,
-        payload_pos: usize,
-    },
-    ReadingShortFrameLen {
-        buf: [u8; 2],
-        pos: usize,
-        fin: bool,
-        opcode: u8,
-        masked: bool,
-        payload: Vec<u8>,
-        payload_pos: usize,
-    },
-    ReadingLongFrameLen {
-        buf: [u8; 8],
-        pos: usize,
-        fin: bool,
-        opcode: u8,
-        masked: bool,
-        payload: Vec<u8>,
-        payload_pos: usize,
-    },
-    ReadingMask {
-        buf: [u8; 4],
-        pos: usize,
-        payload_len: usize,
-        fin: bool,
-        opcode: u8,
-        payload: Vec<u8>,
-        payload_pos: usize,
-    },
-    ReadingPayload {
-        mask: Option<[u8; 4]>,
-        payload: Vec<u8>,
-        payload_pos: usize,
-        payload_start: usize,
-        fin: bool,
-        opcode: u8,
-    },
-    AnswerPing {
-        pos: usize,
-        payload: Vec<u8>,
-        payload_pos: usize,
-    },
+    ReadingFrameStart(ReadingFrameStart),
+    ReadingShortFrameLen(ReadingShortFrameLen),
+    ReadingLongFrameLen(ReadingLongFrameLen),
+    ReadingMask(ReadingMask),
+    ReadingPayload(ReadingPayload),
+    AnswerPing(AnswerPing),
     Done(Vec<u8>),
+}
+
+#[derive(Debug)]
+struct ReadingFrameStart {
+    buf: [u8; 2],
+    pos: usize,
+    payload: Vec<u8>,
+    payload_pos: usize,
+}
+
+#[derive(Debug)]
+struct ReadingShortFrameLen {
+    buf: [u8; 2],
+    pos: usize,
+    fin: bool,
+    opcode: u8,
+    masked: bool,
+    payload: Vec<u8>,
+    payload_pos: usize,
+}
+
+#[derive(Debug)]
+struct ReadingLongFrameLen {
+    buf: [u8; 8],
+    pos: usize,
+    fin: bool,
+    opcode: u8,
+    masked: bool,
+    payload: Vec<u8>,
+    payload_pos: usize,
+}
+
+#[derive(Debug)]
+struct ReadingMask {
+    buf: [u8; 4],
+    pos: usize,
+    payload_len: usize,
+    fin: bool,
+    opcode: u8,
+    payload: Vec<u8>,
+    payload_pos: usize,
+}
+
+#[derive(Debug)]
+struct ReadingPayload {
+    mask: Option<[u8; 4]>,
+    payload: Vec<u8>,
+    payload_pos: usize,
+    payload_start: usize,
+    fin: bool,
+    opcode: u8,
+}
+
+#[derive(Debug)]
+struct AnswerPing {
+    pos: usize,
+    payload: Vec<u8>,
+    payload_pos: usize,
+}
+
+#[derive(Debug)]
+enum WsReadLoop<'a> {
+    NewState(WsRead),
+    Return(Poll<io::Result<&'a [u8]>>),
 }
 
 impl WsRead {
     fn new() -> Self {
-        WsRead::ReadingFrameStart {
+        WsRead::ReadingFrameStart(ReadingFrameStart {
             buf: [0; 2],
             pos: 0,
             payload: Vec::new(),
             payload_pos: 0,
-        }
+        })
     }
 
     fn poll<'a>(
@@ -245,243 +271,299 @@ impl WsRead {
         mut rw: Pin<&mut (impl AsyncRead + AsyncWrite)>,
     ) -> Poll<io::Result<&'a [u8]>> {
         loop {
-            match self {
-                WsRead::ReadingFrameStart {
-                    buf,
-                    pos,
-                    payload,
-                    payload_pos,
-                } => match read_into_buffer(cx, rw.as_mut(), buf, pos) {
-                    ReadResult::Return(poll) => return poll.map_ok(|()| [].as_slice()),
-                    ReadResult::Done => {
-                        let fin = buf[0] & 0b1000_0000 != 0;
-                        let rsv1 = buf[0] & 0b0100_0000 != 0;
-                        let rsv2 = buf[0] & 0b0010_0000 != 0;
-                        let rsv3 = buf[0] & 0b0001_0000 != 0;
-                        if rsv1 || rsv2 || rsv3 {
-                            return Poll::Ready(Err(io::Error::new(
-                                io::ErrorKind::InvalidData,
-                                "Reserved bits are set",
-                            )));
-                        }
-                        let opcode = buf[0] & 0b0000_1111;
-                        let payload_len_marker = buf[1] & 0b0111_1111;
-                        let masked = buf[1] & 0b1000_0000 != 0;
-                        match payload_len_marker {
-                            126 => {
-                                *self = WsRead::ReadingShortFrameLen {
-                                    buf: [0; 2],
-                                    pos: 0,
-                                    fin,
-                                    opcode,
-                                    masked,
-                                    payload: mem::take(payload),
-                                    payload_pos: *payload_pos,
-                                };
-                            }
-                            127 => {
-                                *self = WsRead::ReadingLongFrameLen {
-                                    buf: [0; 8],
-                                    pos: 0,
-                                    fin,
-                                    opcode,
-                                    masked,
-                                    payload: mem::take(payload),
-                                    payload_pos: *payload_pos,
-                                };
-                            }
-                            len => match masked {
-                                true => {
-                                    *self = WsRead::ReadingMask {
-                                        buf: [0; 4],
-                                        pos: 0,
-                                        payload_len: len.into(),
-                                        fin,
-                                        opcode,
-                                        payload: mem::take(payload),
-                                        payload_pos: *payload_pos,
-                                    };
-                                }
-                                false => {
-                                    let mut payload = mem::take(payload);
-                                    payload.extend(iter::repeat_n(0, len.into()));
-                                    *self = WsRead::ReadingPayload {
-                                        mask: None,
-                                        payload,
-                                        payload_pos: *payload_pos,
-                                        payload_start: *payload_pos,
-                                        fin,
-                                        opcode,
-                                    };
-                                }
-                            },
-                        };
-                    }
-                },
-                WsRead::ReadingShortFrameLen {
-                    buf,
-                    pos,
-                    fin,
-                    opcode,
-                    masked,
-                    payload,
-                    payload_pos,
-                } => match read_into_buffer(cx, rw.as_mut(), buf, pos) {
-                    ReadResult::Return(poll) => return poll.map_ok(|()| [].as_slice()),
-                    ReadResult::Done => match masked {
-                        true => {
-                            *self = WsRead::ReadingMask {
-                                buf: [0; 4],
-                                pos: 0,
-                                payload_len: u16::from_be_bytes(*buf).into(),
-                                fin: *fin,
-                                opcode: *opcode,
-                                payload: mem::take(payload),
-                                payload_pos: *payload_pos,
-                            };
-                        }
-                        false => {
-                            let mut payload = mem::take(payload);
-                            payload.extend(iter::repeat_n(0, u16::from_be_bytes(*buf).into()));
-                            *self = WsRead::ReadingPayload {
-                                mask: None,
-                                payload,
-                                payload_pos: *payload_pos,
-                                payload_start: *payload_pos,
-                                fin: *fin,
-                                opcode: *opcode,
-                            };
-                        }
-                    },
-                },
-                WsRead::ReadingLongFrameLen {
-                    buf,
-                    pos,
-                    fin,
-                    opcode,
-                    masked,
-                    payload,
-                    payload_pos,
-                } => match read_into_buffer(cx, rw.as_mut(), buf, pos) {
-                    ReadResult::Return(poll) => return poll.map_ok(|()| [].as_slice()),
-                    ReadResult::Done => match masked {
-                        true => {
-                            *self = WsRead::ReadingMask {
-                                buf: [0; 4],
-                                pos: 0,
-                                payload_len: usize::from_be_bytes(*buf),
-                                fin: *fin,
-                                opcode: *opcode,
-                                payload: mem::take(payload),
-                                payload_pos: *payload_pos,
-                            };
-                        }
-                        false => {
-                            let mut payload = mem::take(payload);
-                            payload.extend(iter::repeat_n(0, usize::from_be_bytes(*buf)));
-                            *self = WsRead::ReadingPayload {
-                                mask: None,
-                                payload,
-                                payload_pos: *payload_pos,
-                                payload_start: *payload_pos,
-                                fin: *fin,
-                                opcode: *opcode,
-                            };
-                        }
-                    },
-                },
-                WsRead::ReadingMask {
-                    buf,
-                    payload_len,
-                    pos,
-                    fin,
-                    opcode,
-                    payload,
-                    payload_pos,
-                } => match read_into_buffer(cx, rw.as_mut(), buf, pos) {
-                    ReadResult::Return(poll) => return poll.map_ok(|()| [].as_slice()),
-                    ReadResult::Done => {
-                        let mut payload = mem::take(payload);
-                        payload.extend(iter::repeat_n(0, *payload_len));
-                        *self = WsRead::ReadingPayload {
-                            mask: Some(*buf),
-                            payload,
-                            payload_pos: *payload_pos,
-                            payload_start: *payload_pos,
-                            fin: *fin,
-                            opcode: *opcode,
-                        };
-                    }
-                },
-                WsRead::ReadingPayload {
-                    mask,
-                    payload,
-                    payload_pos,
-                    payload_start,
-                    fin,
-                    opcode,
-                } => match read_into_buffer(cx, rw.as_mut(), payload, payload_pos) {
-                    ReadResult::Return(poll) => return poll.map_ok(|()| [].as_slice()),
-                    ReadResult::Done => {
-                        if let Some(mask) = mask.take() {
-                            payload[*payload_start..].iter_mut().enumerate().for_each(
-                                |(i, byte)| {
-                                    *byte ^= mask[i % 4];
-                                },
-                            );
-                        }
-                        if *opcode & 0b0000_1000 != 0 {
-                            // PING
-                            *self = WsRead::AnswerPing {
-                                pos: 0,
-                                payload: mem::take(payload),
-                                payload_pos: *payload_pos,
-                            };
-                            continue;
-                        }
-                        match *fin {
-                            true => {
-                                *self = WsRead::Done(mem::take(payload));
-                                continue;
-                            }
-                            false => {
-                                // also read continuation frame(s)
-                                *self = WsRead::ReadingFrameStart {
-                                    buf: [0; 2],
-                                    pos: 0,
-                                    payload: mem::take(payload),
-                                    payload_pos: *payload_pos,
-                                };
-                            }
-                        }
-                    }
-                },
-                WsRead::AnswerPing {
-                    pos,
-                    payload,
-                    payload_pos,
-                } => {
-                    match write_buffer(cx, rw.as_mut(), PONG, pos) {
-                        WriteResult::Return(poll) => return poll.map(Err),
-                        WriteResult::Done => {
-                            // After sending PONG, read the next frame
-                            *self = WsRead::ReadingFrameStart {
-                                buf: [0; 2],
-                                pos: 0,
-                                payload: mem::take(payload),
-                                payload_pos: *payload_pos,
-                            };
-                        }
-                    }
+            let loop_result = match self {
+                WsRead::ReadingFrameStart(reading_frame_start) => {
+                    Self::read_frame_start(cx, &mut rw, reading_frame_start)
                 }
+                WsRead::ReadingShortFrameLen(reading_short_frame_len) => {
+                    Self::read_short_frame_len(cx, &mut rw, reading_short_frame_len)
+                }
+                WsRead::ReadingLongFrameLen(reading_long_frame_len) => {
+                    Self::read_long_frame_len(cx, &mut rw, reading_long_frame_len)
+                }
+                WsRead::ReadingMask(reading_mask) => Self::read_mask(cx, &mut rw, reading_mask),
+                WsRead::ReadingPayload(reading_payload) => {
+                    Self::read_payload(cx, &mut rw, reading_payload)
+                }
+                WsRead::AnswerPing(answer_ping) => Self::answer_ping(cx, &mut rw, answer_ping),
                 WsRead::Done(data) => {
                     return Poll::Ready(Ok(data));
                 }
+            };
+            match loop_result {
+                WsReadLoop::NewState(ws_read) => *self = ws_read,
+                WsReadLoop::Return(poll) => return poll,
+            }
+        }
+    }
+
+    fn read_frame_start(
+        cx: &mut Context<'_>,
+        rw: &mut Pin<&mut (impl AsyncRead + AsyncWrite)>,
+        reading_frame_start: &mut ReadingFrameStart,
+    ) -> WsReadLoop<'static> {
+        let ReadingFrameStart {
+            buf,
+            pos,
+            payload,
+            payload_pos,
+        } = reading_frame_start;
+        let new_state = match read_into_buffer(cx, rw.as_mut(), buf, pos) {
+            ReadResult::Return(poll) => return WsReadLoop::Return(poll.map_ok(|()| [].as_slice())),
+            ReadResult::Done => {
+                let fin = buf[0] & 0b1000_0000 != 0;
+                let rsv1 = buf[0] & 0b0100_0000 != 0;
+                let rsv2 = buf[0] & 0b0010_0000 != 0;
+                let rsv3 = buf[0] & 0b0001_0000 != 0;
+                if rsv1 || rsv2 || rsv3 {
+                    return WsReadLoop::Return(Poll::Ready(Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "Reserved bits are set",
+                    ))));
+                }
+                let opcode = buf[0] & 0b0000_1111;
+                let payload_len_marker = buf[1] & 0b0111_1111;
+                let masked = buf[1] & 0b1000_0000 != 0;
+                match payload_len_marker {
+                    126 => WsRead::ReadingShortFrameLen(ReadingShortFrameLen {
+                        buf: [0; 2],
+                        pos: 0,
+                        fin,
+                        opcode,
+                        masked,
+                        payload: mem::take(payload),
+                        payload_pos: *payload_pos,
+                    }),
+                    127 => WsRead::ReadingLongFrameLen(ReadingLongFrameLen {
+                        buf: [0; 8],
+                        pos: 0,
+                        fin,
+                        opcode,
+                        masked,
+                        payload: mem::take(payload),
+                        payload_pos: *payload_pos,
+                    }),
+                    len => {
+                        if masked {
+                            WsRead::ReadingMask(ReadingMask {
+                                buf: [0; 4],
+                                pos: 0,
+                                payload_len: len.into(),
+                                fin,
+                                opcode,
+                                payload: mem::take(payload),
+                                payload_pos: *payload_pos,
+                            })
+                        } else {
+                            let mut payload = mem::take(payload);
+                            payload.extend(iter::repeat_n(0, len.into()));
+                            WsRead::ReadingPayload(ReadingPayload {
+                                mask: None,
+                                payload,
+                                payload_pos: *payload_pos,
+                                payload_start: *payload_pos,
+                                fin,
+                                opcode,
+                            })
+                        }
+                    }
+                }
+            }
+        };
+        WsReadLoop::NewState(new_state)
+    }
+
+    fn read_short_frame_len(
+        cx: &mut Context<'_>,
+        rw: &mut Pin<&mut (impl AsyncRead + AsyncWrite)>,
+        reading_short_frame_len: &mut ReadingShortFrameLen,
+    ) -> WsReadLoop<'static> {
+        let ReadingShortFrameLen {
+            buf,
+            pos,
+            fin,
+            opcode,
+            masked,
+            payload,
+            payload_pos,
+        } = reading_short_frame_len;
+        let new_state = match read_into_buffer(cx, rw.as_mut(), buf, pos) {
+            ReadResult::Return(poll) => return WsReadLoop::Return(poll.map_ok(|()| [].as_slice())),
+            ReadResult::Done => match masked {
+                true => WsRead::ReadingMask(ReadingMask {
+                    buf: [0; 4],
+                    pos: 0,
+                    payload_len: u16::from_be_bytes(*buf).into(),
+                    fin: *fin,
+                    opcode: *opcode,
+                    payload: mem::take(payload),
+                    payload_pos: *payload_pos,
+                }),
+                false => {
+                    let mut payload = mem::take(payload);
+                    payload.extend(iter::repeat_n(0, u16::from_be_bytes(*buf).into()));
+                    WsRead::ReadingPayload(ReadingPayload {
+                        mask: None,
+                        payload,
+                        payload_pos: *payload_pos,
+                        payload_start: *payload_pos,
+                        fin: *fin,
+                        opcode: *opcode,
+                    })
+                }
+            },
+        };
+        WsReadLoop::NewState(new_state)
+    }
+
+    fn read_long_frame_len(
+        cx: &mut Context<'_>,
+        rw: &mut Pin<&mut (impl AsyncRead + AsyncWrite)>,
+        reading_long_frame_len: &mut ReadingLongFrameLen,
+    ) -> WsReadLoop<'static> {
+        let ReadingLongFrameLen {
+            buf,
+            pos,
+            fin,
+            opcode,
+            masked,
+            payload,
+            payload_pos,
+        } = reading_long_frame_len;
+        let new_state = match read_into_buffer(cx, rw.as_mut(), buf, pos) {
+            ReadResult::Return(poll) => return WsReadLoop::Return(poll.map_ok(|()| [].as_slice())),
+            ReadResult::Done => match masked {
+                true => WsRead::ReadingMask(ReadingMask {
+                    buf: [0; 4],
+                    pos: 0,
+                    payload_len: usize::from_be_bytes(*buf),
+                    fin: *fin,
+                    opcode: *opcode,
+                    payload: mem::take(payload),
+                    payload_pos: *payload_pos,
+                }),
+                false => {
+                    let mut payload = mem::take(payload);
+                    payload.extend(iter::repeat_n(0, usize::from_be_bytes(*buf)));
+                    WsRead::ReadingPayload(ReadingPayload {
+                        mask: None,
+                        payload,
+                        payload_pos: *payload_pos,
+                        payload_start: *payload_pos,
+                        fin: *fin,
+                        opcode: *opcode,
+                    })
+                }
+            },
+        };
+        WsReadLoop::NewState(new_state)
+    }
+
+    fn read_mask(
+        cx: &mut Context<'_>,
+        rw: &mut Pin<&mut (impl AsyncRead + AsyncWrite)>,
+        reading_mask: &mut ReadingMask,
+    ) -> WsReadLoop<'static> {
+        let ReadingMask {
+            buf,
+            pos,
+            payload_len,
+            fin,
+            opcode,
+            payload,
+            payload_pos,
+        } = reading_mask;
+        let new_state = match read_into_buffer(cx, rw.as_mut(), buf, pos) {
+            ReadResult::Return(poll) => return WsReadLoop::Return(poll.map_ok(|()| [].as_slice())),
+            ReadResult::Done => {
+                let mut payload = mem::take(payload);
+                payload.extend(iter::repeat_n(0, *payload_len));
+                WsRead::ReadingPayload(ReadingPayload {
+                    mask: Some(*buf),
+                    payload,
+                    payload_pos: *payload_pos,
+                    payload_start: *payload_pos,
+                    fin: *fin,
+                    opcode: *opcode,
+                })
+            }
+        };
+        WsReadLoop::NewState(new_state)
+    }
+
+    fn read_payload(
+        cx: &mut Context<'_>,
+        rw: &mut Pin<&mut (impl AsyncRead + AsyncWrite)>,
+        reading_payload: &mut ReadingPayload,
+    ) -> WsReadLoop<'static> {
+        let ReadingPayload {
+            mask,
+            payload,
+            payload_pos,
+            payload_start,
+            fin,
+            opcode,
+        } = reading_payload;
+        let new_state = match read_into_buffer(cx, rw.as_mut(), payload, payload_pos) {
+            ReadResult::Return(poll) => return WsReadLoop::Return(poll.map_ok(|()| [].as_slice())),
+            ReadResult::Done => 'new_state: {
+                if let Some(mask) = mask.take() {
+                    payload[*payload_start..]
+                        .iter_mut()
+                        .enumerate()
+                        .for_each(|(i, byte)| {
+                            *byte ^= mask[i % 4];
+                        });
+                }
+                if *opcode & 0b0000_1000 != 0 {
+                    // PING
+                    break 'new_state WsRead::AnswerPing(AnswerPing {
+                        pos: 0,
+                        payload: mem::take(payload),
+                        payload_pos: *payload_pos,
+                    });
+                }
+                if *fin {
+                    break 'new_state WsRead::Done(mem::take(payload));
+                }
+                // also read continuation frame(s)
+                WsRead::ReadingFrameStart(ReadingFrameStart {
+                    buf: [0; 2],
+                    pos: 0,
+                    payload: mem::take(payload),
+                    payload_pos: *payload_pos,
+                })
+            }
+        };
+        WsReadLoop::NewState(new_state)
+    }
+
+    fn answer_ping(
+        cx: &mut Context<'_>,
+        rw: &mut Pin<&mut (impl AsyncRead + AsyncWrite)>,
+        answer_ping: &mut AnswerPing,
+    ) -> WsReadLoop<'static> {
+        let AnswerPing {
+            pos,
+            payload,
+            payload_pos,
+        } = answer_ping;
+        match write_buffer(cx, rw.as_mut(), PONG, pos) {
+            WriteResult::Return(poll) => WsReadLoop::Return(poll.map(Err)),
+            WriteResult::Done => {
+                // After sending PONG, read the next frame
+                WsReadLoop::NewState(WsRead::ReadingFrameStart(ReadingFrameStart {
+                    buf: [0; 2],
+                    pos: 0,
+                    payload: mem::take(payload),
+                    payload_pos: *payload_pos,
+                }))
             }
         }
     }
 }
 
+#[derive(Debug)]
 enum WsWrite {
     WritingHeader {
         header: Vec<u8>,
@@ -509,9 +591,11 @@ impl WsWrite {
         let mut frame_header = Vec::with_capacity(9);
         frame_header.push(0b1000_0010);
         if payload_len < 126 {
+            #[allow(clippy::cast_possible_truncation, reason = "payload_len < 126")]
             frame_header.push(payload_len as u8);
         } else if payload_len < 0x10000 {
             frame_header.push(126);
+            #[allow(clippy::cast_possible_truncation, reason = "payload_len < 0x10000")]
             frame_header.extend_from_slice(&(payload_len as u16).to_be_bytes());
         } else {
             frame_header.push(127);
@@ -554,6 +638,7 @@ impl WsWrite {
     }
 }
 
+#[derive(Debug)]
 enum ReadResult {
     Return(Poll<io::Result<()>>),
     Done,
@@ -586,6 +671,7 @@ fn read_into_buffer(
     ReadResult::Done
 }
 
+#[derive(Debug)]
 enum WriteResult {
     Return(Poll<io::Error>),
     Done,

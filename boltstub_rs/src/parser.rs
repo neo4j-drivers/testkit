@@ -1,6 +1,5 @@
 use std::borrow::Cow;
 use std::cell::LazyCell;
-use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Formatter};
 use std::result::Result as StdResult;
 use std::str::FromStr;
@@ -8,7 +7,6 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use indexmap::IndexMap;
-use itertools::Itertools;
 use log::{trace, warn};
 use regex::Regex;
 use serde_json::{Deserializer, Map as JsonMap, Value as JsonValue};
@@ -17,7 +15,6 @@ use crate::bang_line::BangLine;
 use crate::bolt_version::{BoltCapabilities, BoltVersion, JoltVersion};
 use crate::context::Context;
 use crate::error::script_excerpt;
-use crate::ext::serde_json as serde_json_ext;
 use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::str_bytes;
@@ -30,10 +27,12 @@ use crate::util::opt_res_ret;
 use crate::values::bolt_message::BoltMessage;
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltNode, JoltPath, JoltPoint, JoltRelationship,
-    JoltTime, JoltUnsupportedType, JoltVector, JoltVectorType, TAG_DATE, TAG_DURATION,
-    TAG_LOCAL_TIME, TAG_POINT_2D, TAG_POINT_3D, TAG_TIME, TAG_VECTOR,
+    JoltTime, JoltUnsupportedType, JoltVector,
 };
-use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
+use crate::values::pack_stream_value::PackStreamValue;
+use jolt_validators::build_fields_validator;
+
+mod jolt_validators;
 
 #[derive(Debug)]
 pub struct ActorScript<'a> {
@@ -58,9 +57,6 @@ pub struct ActorConfig {
 }
 
 type Result<T> = StdResult<T, ParseError>;
-type ValidateValueFn = Box<dyn Fn(&PackStreamValue) -> anyhow::Result<()> + 'static + Send + Sync>;
-type ValidateValuesFn =
-    Box<dyn Fn(&[PackStreamValue]) -> anyhow::Result<()> + 'static + Send + Sync>;
 
 pub fn contextualize_res<T>(res: Result<T>, script_name: &str, script: &str) -> anyhow::Result<T> {
     match res {
@@ -110,210 +106,317 @@ pub fn parse(script: Script) -> Result<ActorScript> {
 }
 
 fn parse_config(bang_lines: &[BangLine]) -> Result<ActorConfig> {
-    let mut bolt_version: Option<((u8, u8), BoltVersion, BoltCapabilities)> = None;
-    let mut handshake_manifest_version: Option<(Context, u8)> = None;
-    let mut handshake: Option<Vec<u8>> = None;
-    let mut handshake_response: Option<(Context, Vec<u8>)> = None;
-    let mut handshake_delay: Option<Duration> = None;
-    let mut allow_restart: Option<()> = None;
-    let mut allow_concurrent: Option<()> = None;
-    let mut auto_responses = IndexMap::new();
-    let mut py_lines: Vec<(Context, String)> = Vec::new();
+    let mut parsed_bang_lines = ParsedBangLines::new();
 
     for bang_line in bang_lines {
         match bang_line {
             BangLine::Version(ctx, (ctx_bolt, bolt), capabilities) => {
-                if bolt_version.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple BOLT version bang lines found",
-                    ));
-                }
-                let (raw_version, version) = parse_bolt_version(*ctx_bolt, bolt)?;
-                let capabilities = match capabilities {
-                    None => BoltCapabilities::default(),
-                    Some((ctx_cap, cap)) => {
-                        let cap_bytes = str_bytes::parse_stubscript_hex_string(cap)
-                            .map_err(|e| ParseError::new_ctx(*ctx_cap, e.to_string()))?;
-                        BoltCapabilities::from_bytes(cap_bytes)
-                            .map_err(|e| ParseError::new_ctx(*ctx_cap, e.to_string()))?
-                    }
-                };
-                bolt_version = Some((raw_version, version, capabilities));
+                parsed_bang_lines.with_version(ctx, ctx_bolt, bolt, capabilities.as_ref())?;
             }
             BangLine::HandshakeManifest(ctx, (ctx_arg, arg)) => {
-                if handshake_manifest_version.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple handshake manifest bang lines found",
-                    ));
-                }
-                let version = u8::from_str(arg).map_err(|e| {
-                    ParseError::new_ctx(
-                        *ctx_arg,
-                        format!("Invalid handshake manifest version (expecting u8): {e}"),
-                    )
-                })?;
-                handshake_manifest_version = Some((*ctx, version));
+                parsed_bang_lines.with_handshake_manifest(ctx, ctx_arg, arg)?;
             }
             BangLine::Handshake(ctx, (ctx_byte, byte_str)) => {
-                if handshake.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple handshake bang lines found",
-                    ));
-                }
-
-                let data = str_bytes::parse_stubscript_hex_string(byte_str)
-                    .map_err(|e| ParseError::new_ctx(*ctx_byte, e.to_string()))?;
-                handshake = Some(data);
+                parsed_bang_lines.with_handshake(ctx, ctx_byte, byte_str)?;
             }
             BangLine::HandshakeResponse(ctx, (ctx_byte, byte_str)) => {
-                if handshake_response.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple handshake response bang lines found",
-                    ));
-                }
-
-                let data = str_bytes::parse_stubscript_hex_string(byte_str)
-                    .map_err(|e| ParseError::new_ctx(*ctx_byte, e.to_string()))?;
-                handshake_response = Some((*ctx, data));
+                parsed_bang_lines.with_handshake_response(ctx, ctx_byte, byte_str)?;
             }
             BangLine::HandshakeDelay(ctx, (ctx_delay, delay)) => {
-                if handshake_delay.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple handshake delay bang lines found",
-                    ));
-                }
-
-                let delay = f64::from_str(delay)
-                    .map_err(|e| ParseError::new_ctx(*ctx_delay, e.to_string()))?;
-                let delay = Duration::try_from_secs_f64(delay).map_err(|e| {
-                    ParseError::new_ctx(*ctx_delay, format!("Failed to parse handshake delay: {e}"))
-                })?;
-                handshake_delay = Some(delay);
+                parsed_bang_lines.with_handshake_delay(ctx, ctx_delay, delay)?;
             }
             BangLine::Auto(ctx, (ctx_msg, msg)) => {
-                let ctx_old = auto_responses.insert(msg, (ctx, ctx_msg));
-                if let Some((ctx_old, _)) = ctx_old {
-                    warn!(
-                        "Specified auto response for message \"{msg}\" more than once \
-                        ({ctx} and {ctx_old})."
-                    );
-                }
+                parsed_bang_lines.with_auto(ctx, ctx_msg, msg);
             }
             BangLine::AllowRestart(ctx) => {
-                if allow_restart.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple allow restart bang lines found",
-                    ));
-                }
-                allow_restart = Some(());
+                parsed_bang_lines.with_allow_restart(ctx)?;
             }
             BangLine::AllowConcurrent(ctx) => {
-                if allow_concurrent.is_some() {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        "Multiple allow concurrent bang lines found",
-                    ));
-                }
-                allow_concurrent = Some(());
+                parsed_bang_lines.with_allow_concurrent(ctx)?;
             }
             BangLine::Python(_, (line_ctx, line)) => {
-                py_lines.push((*line_ctx, line.clone()));
+                parsed_bang_lines.with_python(line_ctx, line.clone());
             }
             BangLine::Comment(_) => {}
         }
     }
 
-    let (bolt_version_raw, bolt_version, bolt_capabilities) =
-        bolt_version.ok_or(ParseError::new("Bolt version bang line missing"))?;
-    let allow_concurrent = allow_concurrent.is_some();
-    let allow_restart = allow_restart.is_some();
-    if allow_concurrent && allow_restart {
-        warn!(
-            "Both allow restart and allow concurrent bang lines were found. \
-            Allow concurrent already implies allow restart."
-        );
+    parsed_bang_lines.into()
+}
+
+#[derive(Debug)]
+struct ParsedBangLines<'a> {
+    bolt_version: Option<((u8, u8), BoltVersion, BoltCapabilities)>,
+    handshake_manifest_version: Option<(Context, u8)>,
+    handshake: Option<Vec<u8>>,
+    handshake_response: Option<(Context, Vec<u8>)>,
+    handshake_delay: Option<Duration>,
+    allow_restart: Option<()>,
+    allow_concurrent: Option<()>,
+    auto_responses: IndexMap<&'a str, (Context, Context)>,
+    py_lines: Vec<(Context, String)>,
+}
+
+impl<'a> ParsedBangLines<'a> {
+    fn new() -> Self {
+        Self {
+            bolt_version: None,
+            handshake_manifest_version: None,
+            handshake: None,
+            handshake_response: None,
+            handshake_delay: None,
+            allow_restart: None,
+            allow_concurrent: None,
+            auto_responses: IndexMap::new(),
+            py_lines: Vec::new(),
+        }
     }
-    let handshake_manifest_version = match handshake_manifest_version {
-        None => None,
-        Some((ctx, handshake_manifest_version)) => {
-            if handshake.is_some() || handshake_response.is_some() {
-                return Err(ParseError::new_ctx(
-                    ctx,
-                    "Handshake manifest version bang line cannot be used with handshake or \
-                    handshake response bang lines",
-                ));
-            }
-            Some(handshake_manifest_version)
+
+    fn with_version(
+        &mut self,
+        ctx: &Context,
+        ctx_bolt: &Context,
+        bolt: &str,
+        capabilities: Option<&(Context, String)>,
+    ) -> Result<()> {
+        if self.bolt_version.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple BOLT version bang lines found",
+            ));
         }
-    };
-    let handshake_response = match handshake_response {
-        None => None,
-        Some((ctx, handshake_response)) => {
-            if handshake.is_none() {
-                return Err(ParseError::new_ctx(
-                    ctx,
-                    "Handshake response bang line requires handshake bang line to be present",
-                ));
+        let (raw_version, version) = parse_bolt_version(*ctx_bolt, bolt)?;
+        let capabilities = match capabilities {
+            None => BoltCapabilities::default(),
+            Some((ctx_cap, cap)) => {
+                let cap_bytes = str_bytes::parse_stubscript_hex_string(cap)
+                    .map_err(|e| ParseError::new_ctx(*ctx_cap, e.to_string()))?;
+                BoltCapabilities::from_bytes(cap_bytes)
+                    .map_err(|e| ParseError::new_ctx(*ctx_cap, e.to_string()))?
             }
-            Some(handshake_response)
+        };
+        self.bolt_version = Some((raw_version, version, capabilities));
+        Ok(())
+    }
+
+    fn with_handshake_manifest(
+        &mut self,
+        ctx: &Context,
+        ctx_arg: &Context,
+        arg: &str,
+    ) -> Result<()> {
+        if self.handshake_manifest_version.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple handshake manifest bang lines found",
+            ));
         }
-    };
-    let auto_responses =
-        auto_responses
+        let version = u8::from_str(arg).map_err(|e| {
+            ParseError::new_ctx(
+                *ctx_arg,
+                format!("Invalid handshake manifest version (expecting u8): {e}"),
+            )
+        })?;
+        self.handshake_manifest_version = Some((*ctx, version));
+        Ok(())
+    }
+
+    fn with_handshake(&mut self, ctx: &Context, ctx_byte: &Context, byte_str: &str) -> Result<()> {
+        if self.handshake.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple handshake bang lines found",
+            ));
+        }
+
+        let data = str_bytes::parse_stubscript_hex_string(byte_str)
+            .map_err(|e| ParseError::new_ctx(*ctx_byte, e.to_string()))?;
+        self.handshake = Some(data);
+        Ok(())
+    }
+
+    fn with_handshake_response(
+        &mut self,
+        ctx: &Context,
+        ctx_byte: &Context,
+        byte_str: &str,
+    ) -> Result<()> {
+        if self.handshake_response.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple handshake response bang lines found",
+            ));
+        }
+
+        let data = str_bytes::parse_stubscript_hex_string(byte_str)
+            .map_err(|e| ParseError::new_ctx(*ctx_byte, e.to_string()))?;
+        self.handshake_response = Some((*ctx, data));
+        Ok(())
+    }
+
+    fn with_handshake_delay(
+        &mut self,
+        ctx: &Context,
+        ctx_delay: &Context,
+        delay: &str,
+    ) -> Result<()> {
+        if self.handshake_delay.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple handshake delay bang lines found",
+            ));
+        }
+
+        let delay =
+            f64::from_str(delay).map_err(|e| ParseError::new_ctx(*ctx_delay, e.to_string()))?;
+        let delay = Duration::try_from_secs_f64(delay).map_err(|e| {
+            ParseError::new_ctx(*ctx_delay, format!("Failed to parse handshake delay: {e}"))
+        })?;
+        self.handshake_delay = Some(delay);
+        Ok(())
+    }
+
+    fn with_auto(&mut self, ctx: &Context, ctx_msg: &Context, msg: &'a str) {
+        let ctx_old = self.auto_responses.insert(msg, (*ctx, *ctx_msg));
+        if let Some((ctx_old, _)) = ctx_old {
+            warn!(
+                "Specified auto response for message \"{msg}\" more than once \
+                ({ctx} and {ctx_old})."
+            );
+        }
+    }
+
+    fn with_allow_restart(&mut self, ctx: &Context) -> Result<()> {
+        if self.allow_restart.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple allow restart bang lines found",
+            ));
+        }
+        self.allow_restart = Some(());
+        Ok(())
+    }
+
+    fn with_allow_concurrent(&mut self, ctx: &Context) -> Result<()> {
+        if self.allow_concurrent.is_some() {
+            return Err(ParseError::new_ctx(
+                *ctx,
+                "Multiple allow concurrent bang lines found",
+            ));
+        }
+        self.allow_concurrent = Some(());
+        Ok(())
+    }
+
+    fn with_python(&mut self, line_ctx: &Context, line: String) {
+        self.py_lines.push((*line_ctx, line));
+    }
+}
+
+impl<'a> From<ParsedBangLines<'a>> for Result<ActorConfig> {
+    fn from(value: ParsedBangLines<'a>) -> Self {
+        let (bolt_version_raw, bolt_version, bolt_capabilities) = value
+            .bolt_version
+            .ok_or(ParseError::new("Bolt version bang line missing"))?;
+        let allow_concurrent = value.allow_concurrent.is_some();
+        let allow_restart = value.allow_restart.is_some();
+        if allow_concurrent && allow_restart {
+            warn!(
+                "Both allow restart and allow concurrent bang lines were found. \
+                Allow concurrent already implies allow restart."
+            );
+        }
+        let handshake_manifest_version = match value.handshake_manifest_version {
+            None => None,
+            Some((ctx, handshake_manifest_version)) => {
+                if value.handshake.is_some() || value.handshake_response.is_some() {
+                    return Err(ParseError::new_ctx(
+                        ctx,
+                        "Handshake manifest version bang line cannot be used with handshake or \
+                        handshake response bang lines",
+                    ));
+                }
+                Some(handshake_manifest_version)
+            }
+        };
+        let handshake_response = match value.handshake_response {
+            None => None,
+            Some((ctx, handshake_response)) => {
+                if value.handshake.is_none() {
+                    return Err(ParseError::new_ctx(
+                        ctx,
+                        "Handshake response bang line requires handshake bang line to be present",
+                    ));
+                }
+                Some(handshake_response)
+            }
+        };
+        let auto_responses = value
+            .auto_responses
             .into_iter()
-            .map(|(msg, (ctx, ctx_msg))| {
-                let Some(request_tag) = bolt_version.message_tag_from_request(msg) else {
-                    return Err(ParseError::new_ctx(
-                        *ctx_msg,
-                        format!(
-                            "Unknown request message name {msg:?} for BOLT version {bolt_version}"
-                        ),
-                    ));
-                };
-                let Some(response_resolver) = bolt_version.message_auto_response(request_tag)
-                else {
-                    return Err(ParseError::new_ctx(
-                        *ctx,
-                        format!(
-                            "BOLT version {bolt_version} has no auto-response for message {msg:?}",
-                        ),
-                    ));
-                };
-                Ok((
-                    request_tag,
-                    AutoBangLineHandler {
-                        ctx: *ctx_msg,
-                        sender: Box::new(SenderBytes::new_auto_response(
-                            response_resolver,
-                            bolt_version,
-                        )),
-                    },
-                ))
-            })
+            .map(|(msg, (_, ctx_msg))| parse_auto_bang_line(msg, ctx_msg, bolt_version))
             .collect::<Result<_>>()?;
 
-    Ok(ActorConfig {
-        bolt_version,
-        bolt_version_raw,
-        bolt_capabilities,
-        handshake_manifest_version,
-        handshake,
-        handshake_response,
-        handshake_delay,
-        allow_restart,
-        allow_concurrent,
-        auto_responses,
-        py_lines,
-    })
+        Ok(ActorConfig {
+            bolt_version,
+            bolt_version_raw,
+            bolt_capabilities,
+            handshake_manifest_version,
+            handshake: value.handshake,
+            handshake_response,
+            handshake_delay: value.handshake_delay,
+            allow_restart,
+            allow_concurrent,
+            auto_responses,
+            py_lines: value.py_lines,
+        })
+    }
+}
+
+fn parse_auto_bang_line(
+    msg: &str,
+    ctx_msg: Context,
+    bolt_version: BoltVersion,
+) -> Result<(u8, AutoBangLineHandler)> {
+    let Some(request_tag) = bolt_version.message_tag_from_request(msg) else {
+        return Err(ParseError::new_ctx(
+            ctx_msg,
+            format!("Unknown request message name {msg:?} for BOLT version {bolt_version}"),
+        ));
+    };
+    let response_resolver = bolt_version.message_auto_response(request_tag);
+    Ok((
+        request_tag,
+        AutoBangLineHandler {
+            ctx: ctx_msg,
+            sender: Box::new(SenderBytes::new_auto_response(
+                response_resolver,
+                bolt_version,
+            )),
+        },
+    ))
 }
 
 fn parse_bolt_version(ctx: Context, s: &str) -> Result<((u8, u8), BoltVersion)> {
+    fn convert_bolt_version(
+        ctx: Context,
+        major: u8,
+        minor: Option<u8>,
+    ) -> Result<((u8, u8), BoltVersion)> {
+        let version = BoltVersion::match_valid_version(major, minor).ok_or_else(|| {
+            let version = match minor {
+                None => {
+                    format!("{major}")
+                }
+                Some(minor) => {
+                    format!("{major}.{minor}")
+                }
+            };
+            ParseError::new_ctx(ctx, format!("Unknown BOLT version {version}"))
+        })?;
+        Ok(((major, minor.unwrap_or_default()), version))
+    }
+
     let mut current_start = 0;
     let mut segments = Vec::with_capacity(2);
     for (offset, char) in s.char_indices() {
@@ -341,25 +444,6 @@ fn parse_bolt_version(ctx: Context, s: &str) -> Result<((u8, u8), BoltVersion)> 
         current_start = offset + char.len_utf8();
     }
 
-    fn convert_bolt_version(
-        ctx: Context,
-        major: u8,
-        minor: Option<u8>,
-    ) -> Result<((u8, u8), BoltVersion)> {
-        let version = BoltVersion::match_valid_version(major, minor).ok_or_else(|| {
-            let version = match minor {
-                None => {
-                    format!("{major}")
-                }
-                Some(minor) => {
-                    format!("{major}.{minor}")
-                }
-            };
-            ParseError::new_ctx(ctx, format!("Unknown BOLT version {version}"))
-        })?;
-        Ok(((major, minor.unwrap_or_default()), version))
-    }
-
     match segments.len() {
         0 => Err(ParseError::new_ctx(
             ctx,
@@ -374,6 +458,231 @@ fn parse_bolt_version(ctx: Context, s: &str) -> Result<((u8, u8), BoltVersion)> 
     }
 }
 
+fn parse_block(block: &ScanBlock, config: &ActorConfig) -> Result<IntermediateActorBlock> {
+    match block {
+        ScanBlock::List(ctx, scan_blocks) => {
+            parse_blocks(*ctx, scan_blocks, config).map(Into::into)
+        }
+        ScanBlock::Alt(ctx, scan_blocks) => {
+            parse_alt_block(config, ctx, scan_blocks).map(Into::into)
+        }
+        ScanBlock::Parallel(ctx, scan_blocks) => {
+            parse_parallel_block(config, ctx, scan_blocks).map(Into::into)
+        }
+        ScanBlock::Optional(ctx, optional_scan_block) => {
+            parse_optional_block(config, ctx, optional_scan_block).map(Into::into)
+        }
+        ScanBlock::Repeat0(ctx, b) => parse_repeat_block(config, ctx, b, 0).map(Into::into),
+        ScanBlock::Repeat1(ctx, b) => parse_repeat_block(config, ctx, b, 1).map(Into::into),
+        ScanBlock::ClientMessage(ctx, (message_name_ctx, message_name), body) => {
+            parse_client_message_block(config, ctx, message_name_ctx, message_name, body.as_ref())
+                .map(Into::into)
+        }
+        ScanBlock::ServerMessage(ctx, (message_name_ctx, message_name), body) => {
+            parse_server_message_block(config, ctx, message_name_ctx, message_name, body.as_ref())
+                .map(Into::into)
+        }
+        ScanBlock::ServerAction(ctx, (action_name_ctx, action_name), body) => {
+            parse_server_action_block(ctx, action_name_ctx, action_name, body.as_ref())
+                .map(Into::into)
+        }
+        ScanBlock::AutoMessage(
+            ctx,
+            (client_message_name_ctx, client_message_name),
+            client_body,
+        ) => parse_auto_message_block(
+            config,
+            ctx,
+            client_message_name_ctx,
+            client_message_name,
+            client_body.as_ref(),
+        )
+        .map(Into::into),
+        ScanBlock::Comment(ctx) => Ok(ActorBlock::NoOp(*ctx).into()),
+        ScanBlock::Python(ctx, (_, py)) => {
+            // python can't be validated, so we just assume it will work, if it errors at run time,
+            // the actor can explain error from ctx
+            Ok(ActorBlock::Python(*ctx, py.clone()).into())
+        }
+        ScanBlock::ConditionPart(ctx, branch_type, condition, body) => {
+            parse_condition_part_block(config, ctx, *branch_type, condition.as_ref(), body)
+        }
+    }
+}
+
+fn parse_alt_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    scan_blocks: &[ScanBlock],
+) -> Result<ActorBlock> {
+    let mut actor_blocks = Vec::with_capacity(scan_blocks.len());
+    for block in scan_blocks {
+        let b = parse_block(block, config)?;
+        let b = finalize_intermediate(b)?;
+        validate_alt_child(&b)?;
+        actor_blocks.push(b);
+    }
+    Ok(ActorBlock::Alt(*ctx, actor_blocks))
+}
+
+fn parse_parallel_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    scan_blocks: &[ScanBlock],
+) -> Result<ActorBlock> {
+    let mut actor_blocks = Vec::with_capacity(scan_blocks.len());
+    for block in scan_blocks {
+        let b = parse_block(block, config)?;
+        let b = finalize_intermediate(b)?;
+        validate_parallel_child(&b)?;
+        actor_blocks.push(b);
+    }
+    Ok(ActorBlock::Parallel(*ctx, actor_blocks))
+}
+
+fn parse_optional_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    optional_scan_block: &ScanBlock,
+) -> Result<ActorBlock> {
+    let b = parse_block(optional_scan_block, config)?;
+    let b = finalize_intermediate(b)?;
+    validate_non_action(&b, Some("inside an optional block"))?;
+    validate_non_empty(&b, Some("inside an optional block"))?;
+    Ok(ActorBlock::Optional(*ctx, Box::new(b)))
+}
+
+fn parse_repeat_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    body_block: &ScanBlock,
+    repetitions: usize,
+) -> Result<ActorBlock> {
+    let body_block = parse_block(body_block, config)?;
+    let body_block = finalize_intermediate(body_block)?;
+    validate_non_action(&body_block, Some("inside a repeat block"))?;
+    validate_non_empty(&body_block, Some("inside a repeat block"))?;
+    Ok(ActorBlock::Repeat(*ctx, Box::new(body_block), repetitions))
+}
+
+fn parse_client_message_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    message_name_ctx: &Context,
+    message_name: &str,
+    body: Option<&(Context, String)>,
+) -> Result<ActorBlock> {
+    let validator = create_validator(
+        *message_name_ctx,
+        message_name,
+        body.map(|(ctx, body)| (*ctx, body.as_str())),
+        config,
+    )
+    .map_err(|mut e| {
+        e.ctx.get_or_insert(*ctx);
+        e
+    })?;
+    Ok(ActorBlock::ClientMessageValidate(*ctx, validator))
+}
+
+fn parse_server_message_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    message_name_ctx: &Context,
+    message_name: &str,
+    body: Option<&(Context, String)>,
+) -> Result<ActorBlock> {
+    let server_message_sender = create_message_sender(
+        *message_name_ctx,
+        message_name,
+        body.as_ref().map(|(ctx, body)| (*ctx, body.as_str())),
+        config,
+    )
+    .map_err(|mut e| {
+        e.ctx.get_or_insert(*ctx);
+        e
+    })?;
+    Ok(ActorBlock::ServerMessageSend(*ctx, server_message_sender))
+}
+
+fn parse_server_action_block(
+    ctx: &Context,
+    action_name_ctx: &Context,
+    action_name: &str,
+    body: Option<&(Context, String)>,
+) -> Result<ActorBlock> {
+    let server_action = create_server_action(
+        *action_name_ctx,
+        action_name,
+        body.as_ref().map(|(ctx, body)| (*ctx, body.as_str())),
+    )
+    .map_err(|mut e| {
+        e.ctx.get_or_insert(*ctx);
+        e
+    })?;
+    Ok(ActorBlock::ServerActionLine(*ctx, server_action))
+}
+
+fn parse_auto_message_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    client_message_name_ctx: &Context,
+    client_message_name: &str,
+    client_body: Option<&(Context, String)>,
+) -> Result<ActorBlock> {
+    Ok(ActorBlock::AutoMessage(
+        *ctx,
+        create_auto_message_handler(
+            *client_message_name_ctx,
+            client_message_name,
+            client_body
+                .as_ref()
+                .map(|(ctx, body)| (*ctx, body.as_str())),
+            config,
+        )?,
+    ))
+}
+
+fn parse_condition_part_block(
+    config: &ActorConfig,
+    ctx: &Context,
+    branch_type: Branch,
+    condition: Option<&(Context, String)>,
+    body: &ScanBlock,
+) -> Result<IntermediateActorBlock> {
+    let body = parse_block(body, config)?;
+    let body = finalize_intermediate(body)?;
+    match (branch_type, condition) {
+        (Branch::If, condition) => {
+            let Some((_, condition)) = condition else {
+                return Err(ParseError::new_ctx(*ctx, "IF condition is missing"));
+            };
+            validate_non_empty(&body, Some("as IF body"))?;
+            Ok(IntermediateActorBlock::PartialCondition(
+                PartialCondition::If((*ctx, condition.clone(), Box::new(body))),
+            ))
+        }
+        (Branch::ElseIf, condition) => {
+            let Some((_, condition)) = condition else {
+                return Err(ParseError::new_ctx(*ctx, "ELIF condition is missing"));
+            };
+            validate_non_empty(&body, Some("as ELIF body"))?;
+            Ok(IntermediateActorBlock::PartialCondition(
+                PartialCondition::ElseIf((*ctx, condition.clone(), Box::new(body))),
+            ))
+        }
+        (Branch::Else, condition) => {
+            if let Some((ctx, _)) = condition {
+                return Err(ParseError::new_ctx(*ctx, "ELSE may not have a condition"));
+            }
+            validate_non_empty(&body, Some("as ELSE body"))?;
+            Ok(IntermediateActorBlock::PartialCondition(
+                PartialCondition::Else((*ctx, Box::new(body))),
+            ))
+        }
+    }
+}
+
 fn parse_blocks(ctx: Context, blocks: &[ScanBlock], config: &ActorConfig) -> Result<ActorBlock> {
     let mut actor_blocks = condense_actor_blocks(blocks.iter().map(|b| parse_block(b, config)))?;
     validate_list_children(&actor_blocks)?;
@@ -385,148 +694,6 @@ fn parse_blocks(ctx: Context, blocks: &[ScanBlock], config: &ActorConfig) -> Res
     }
 }
 
-fn parse_block(block: &ScanBlock, config: &ActorConfig) -> Result<IntermediateActorBlock> {
-    match block {
-        ScanBlock::List(ctx, scan_blocks) => {
-            parse_blocks(*ctx, scan_blocks, config).map(Into::into)
-        }
-        ScanBlock::Alt(ctx, scan_blocks) => {
-            let mut actor_blocks = Vec::with_capacity(scan_blocks.len());
-            for block in scan_blocks {
-                let b = parse_block(block, config)?;
-                let b = finalize_intermediate(b)?;
-                validate_alt_child(&b)?;
-                actor_blocks.push(b);
-            }
-            Ok(ActorBlock::Alt(*ctx, actor_blocks).into())
-        }
-        ScanBlock::Parallel(ctx, scan_blocks) => {
-            let mut actor_blocks = Vec::with_capacity(scan_blocks.len());
-            for block in scan_blocks {
-                let b = parse_block(block, config)?;
-                let b = finalize_intermediate(b)?;
-                validate_parallel_child(&b)?;
-                actor_blocks.push(b);
-            }
-            Ok(ActorBlock::Parallel(*ctx, actor_blocks).into())
-        }
-        ScanBlock::Optional(ctx, optional_scan_block) => {
-            let b = parse_block(optional_scan_block, config)?;
-            let b = finalize_intermediate(b)?;
-            validate_non_action(&b, Some("inside an optional block"))?;
-            validate_non_empty(&b, Some("inside an optional block"))?;
-            Ok(ActorBlock::Optional(*ctx, Box::new(b)).into())
-        }
-        ScanBlock::Repeat0(ctx, b) => {
-            let b = parse_block(b, config)?;
-            let b = finalize_intermediate(b)?;
-            validate_non_action(&b, Some("inside a repeat block"))?;
-            validate_non_empty(&b, Some("inside a repeat block"))?;
-            Ok(ActorBlock::Repeat(*ctx, Box::new(b), 0).into())
-        }
-        ScanBlock::Repeat1(ctx, b) => {
-            let b = parse_block(b, config)?;
-            let b = finalize_intermediate(b)?;
-            validate_non_action(&b, Some("inside a repeat block"))?;
-            validate_non_empty(&b, Some("inside a repeat block"))?;
-            Ok(ActorBlock::Repeat(*ctx, Box::new(b), 1).into())
-        }
-        ScanBlock::ClientMessage(ctx, (message_name_ctx, message_name), body) => {
-            let validator = create_validator(
-                *message_name_ctx,
-                message_name,
-                body.as_ref().map(|(ctx, body)| (*ctx, body.as_str())),
-                config,
-            )
-            .map_err(|mut e| {
-                e.ctx.get_or_insert(*ctx);
-                e
-            })?;
-            Ok(ActorBlock::ClientMessageValidate(*ctx, validator).into())
-        }
-        ScanBlock::ServerMessage(ctx, (message_name_ctx, message_name), body) => {
-            let server_message_sender = create_message_sender(
-                *message_name_ctx,
-                message_name,
-                body.as_ref().map(|(ctx, body)| (*ctx, body.as_str())),
-                config,
-            )
-            .map_err(|mut e| {
-                e.ctx.get_or_insert(*ctx);
-                e
-            })?;
-            Ok(ActorBlock::ServerMessageSend(*ctx, server_message_sender).into())
-        }
-        ScanBlock::ServerAction(ctx, (action_name_ctx, action_name), body) => {
-            let server_action = create_server_action(
-                *action_name_ctx,
-                action_name,
-                body.as_ref().map(|(ctx, body)| (*ctx, body.as_str())),
-            )
-            .map_err(|mut e| {
-                e.ctx.get_or_insert(*ctx);
-                e
-            })?;
-            Ok(ActorBlock::ServerActionLine(*ctx, server_action).into())
-        }
-        ScanBlock::AutoMessage(
-            ctx,
-            (client_message_name_ctx, client_message_name),
-            client_body,
-        ) => Ok(ActorBlock::AutoMessage(
-            *ctx,
-            create_auto_message_handler(
-                *client_message_name_ctx,
-                client_message_name,
-                client_body
-                    .as_ref()
-                    .map(|(ctx, body)| (*ctx, body.as_str())),
-                config,
-            )?,
-        )
-        .into()),
-        ScanBlock::Comment(ctx) => Ok(ActorBlock::NoOp(*ctx).into()),
-        ScanBlock::Python(ctx, (_, py)) => {
-            // python can't be validated, so we just assume it will work, if it errors at run time,
-            // the actor can explain error from ctx
-            Ok(ActorBlock::Python(*ctx, py.clone()).into())
-        }
-        ScanBlock::ConditionPart(ctx, branch_type, condition, body) => {
-            let body = parse_block(body, config)?;
-            let body = finalize_intermediate(body)?;
-            match (branch_type, condition) {
-                (Branch::If, condition) => {
-                    let Some((_, condition)) = condition else {
-                        return Err(ParseError::new_ctx(*ctx, "IF condition is missing"));
-                    };
-                    validate_non_empty(&body, Some("as IF body"))?;
-                    Ok(IntermediateActorBlock::PartialCondition(
-                        PartialCondition::If((*ctx, condition.clone(), Box::new(body))),
-                    ))
-                }
-                (Branch::ElseIf, condition) => {
-                    let Some((_, condition)) = condition else {
-                        return Err(ParseError::new_ctx(*ctx, "ELIF condition is missing"));
-                    };
-                    validate_non_empty(&body, Some("as ELIF body"))?;
-                    Ok(IntermediateActorBlock::PartialCondition(
-                        PartialCondition::ElseIf((*ctx, condition.clone(), Box::new(body))),
-                    ))
-                }
-                (Branch::Else, condition) => {
-                    if let Some((ctx, _)) = condition {
-                        return Err(ParseError::new_ctx(*ctx, "ELSE may not have a condition"));
-                    }
-                    validate_non_empty(&body, Some("as ELSE body"))?;
-                    Ok(IntermediateActorBlock::PartialCondition(
-                        PartialCondition::Else((*ctx, Box::new(body))),
-                    ))
-                }
-            }
-        }
-    }
-}
-
 fn condense_actor_blocks(
     blocks: impl IntoIterator<Item = Result<IntermediateActorBlock>>,
 ) -> Result<Vec<ActorBlock>> {
@@ -534,15 +701,15 @@ fn condense_actor_blocks(
     let mut res = Vec::with_capacity(blocks.size_hint().1.unwrap_or_default());
     for block in blocks {
         let block = block?;
-        let last = res.last_mut();
-        match (block, last) {
-            (IntermediateActorBlock::Finished(ActorBlock::NoOp(_)), _) => continue,
+        let prev = res.last_mut();
+        match (block, prev) {
+            (IntermediateActorBlock::Finished(ActorBlock::NoOp(_)), _) => {}
             (
                 IntermediateActorBlock::Finished(ActorBlock::BlockList(ctx, list)),
-                Some(ActorBlock::BlockList(ctx_last, list_last)),
+                Some(ActorBlock::BlockList(ctx_prev, list_prev)),
             ) => {
-                *ctx_last = ctx_last.fuse(&ctx);
-                list_last.extend(list)
+                *ctx_prev = ctx_prev.fuse(&ctx);
+                list_prev.extend(list);
             }
             (IntermediateActorBlock::Finished(block), _) => res.push(block),
             (
@@ -565,28 +732,28 @@ fn condense_actor_blocks(
                     cond,
                     body,
                 ))),
-                Some(ActorBlock::Condition(ctx_last, cond_last)),
+                Some(ActorBlock::Condition(ctx_prev, cond_prev)),
             ) => {
-                if cond_last.else_.is_some() {
+                if cond_prev.else_.is_some() {
                     // previous condition has an ELSE, so we can't add another ELIF
                     return Err(missing_leading_if(ctx, "ELIF"));
                 }
-                *ctx_last = ctx_last.fuse(&ctx);
-                cond_last.else_if.push((ctx, cond, body));
+                *ctx_prev = ctx_prev.fuse(&ctx);
+                cond_prev.else_if.push((ctx, cond, body));
             }
             (IntermediateActorBlock::PartialCondition(PartialCondition::ElseIf((ctx, ..))), _) => {
                 return Err(missing_leading_if(ctx, "ELIF"));
             }
             (
                 IntermediateActorBlock::PartialCondition(PartialCondition::Else((ctx, body))),
-                Some(ActorBlock::Condition(ctx_last, cond_last)),
+                Some(ActorBlock::Condition(ctx_prev, cond_prev)),
             ) => {
-                if cond_last.else_.is_some() {
+                if cond_prev.else_.is_some() {
                     // previous condition has an ELSE, so we can't add another ELSE
                     return Err(missing_leading_if(ctx, "ELSE"));
                 }
-                *ctx_last = ctx_last.fuse(&ctx);
-                cond_last.else_ = Some((ctx, body));
+                *ctx_prev = ctx_prev.fuse(&ctx);
+                cond_prev.else_ = Some((ctx, body));
             }
             (IntermediateActorBlock::PartialCondition(PartialCondition::Else((ctx, ..))), _) => {
                 return Err(missing_leading_if(ctx, "ELSE"));
@@ -616,9 +783,9 @@ enum PartialCondition {
 }
 
 #[derive(Debug)]
-pub(crate) struct AutoBangLineHandler {
-    pub(crate) ctx: Context,
-    pub(crate) sender: Box<dyn ServerMessageSender>,
+pub struct AutoBangLineHandler {
+    pub ctx: Context,
+    pub sender: Box<dyn ServerMessageSender>,
 }
 
 fn create_auto_message_handler(
@@ -639,13 +806,7 @@ fn create_auto_message_handler(
         .expect("checked in create_validator");
     let response_resolver = config
         .bolt_version
-        .message_auto_response(client_message_tag)
-        .ok_or_else(|| {
-            ParseError::new(format!(
-                "Bolt version {} has not auto-response for message {client_message_name}",
-                config.bolt_version,
-            ))
-        })?;
+        .message_auto_response(client_message_tag);
     let server_sender = Box::new(SenderBytes::new_auto_response(
         response_resolver,
         config.bolt_version,
@@ -824,7 +985,7 @@ fn load_json_values(body: &str, ctx: Context) -> Result<Vec<JsonValue>> {
         })
 }
 
-pub(crate) fn transcode_field(field: JsonValue, config: &ActorConfig) -> Result<PackStreamValue> {
+pub fn transcode_field(field: JsonValue, config: &ActorConfig) -> Result<PackStreamValue> {
     Ok(match field {
         JsonValue::Null => PackStreamValue::Null,
         JsonValue::Bool(value) => PackStreamValue::Boolean(value),
@@ -879,137 +1040,136 @@ fn transcode_jolt_value(
     let Some(sigil) = JoltSigil::from_str(versionless_sigil) else {
         return Ok(IsJoltValue::No([(sigil, value)].into_iter().collect()));
     };
-    Ok(match sigil {
-        JoltSigil::Bool => {
-            if !value.is_boolean() {
-                return Err(ParseError::new(format!(
-                    "Expected bool after sigil \"?\", but found {value:?}",
-                )));
-            }
-            IsJoltValue::Yes(transcode_field(value, config)?)
-        }
-        JoltSigil::Integer => {
-            let JsonValue::String(value) = value else {
-                return Err(ParseError::new(format!(
-                    "Expected string after sigil \"Z\", but found {value:?}",
-                )));
-            };
-            let value = i64::from_str(&value).map_err(|e| {
-                ParseError::new(format!(
-                    "Failed to parse i64 after sigil \"Z\": {value:?} because {e}",
-                ))
-            })?;
-            IsJoltValue::Yes(transcode_field(JsonValue::Number(value.into()), config)?)
-        }
-        JoltSigil::Float => {
-            let JsonValue::String(value) = value else {
-                return Err(ParseError::new(format!(
-                    "Expected string after sigil \"R\", but found {value:?}",
-                )));
-            };
-            let value = f64::from_str(&value).map_err(|e| {
-                ParseError::new(format!(
-                    "Failed to parse f64 after sigil \"R\": {value:?} because {e}",
-                ))
-            })?;
-            IsJoltValue::Yes(PackStreamValue::Float(value))
-        }
-        JoltSigil::String => {
-            if !value.is_string() {
-                return Err(ParseError::new(format!(
-                    "Expected string after sigil \"U\", but found {value:?}",
-                )));
-            }
-            IsJoltValue::Yes(transcode_field(value, config)?)
-        }
-        JoltSigil::Bytes => {
-            let bytes = parse_jolt_bytes(value)?;
-            IsJoltValue::Yes(PackStreamValue::Bytes(bytes))
-        }
-        JoltSigil::List => {
-            if !value.is_array() {
-                return Err(ParseError::new(format!(
-                    "Expected array after sigil \"[]\", but found {value:?}",
-                )));
-            }
-            IsJoltValue::Yes(transcode_field(value, config)?)
-        }
-        JoltSigil::Dict => {
-            if !value.is_object() {
-                return Err(ParseError::new(format!(
-                    "Expected object after sigil \"{{}}\", but found {value:?}",
-                )));
-            };
-            IsJoltValue::Yes(transcode_field(value, config)?)
-        }
-        JoltSigil::Temporal => {
-            let JsonValue::String(value) = value else {
-                return Err(ParseError::new(format!(
-                    "Expected temporal string after sigil \"T\", but found {value:?}",
-                )));
-            };
-            let value = transcode_date_value(&value)
-                .or_else(|| transcode_time_value(&value))
-                .or_else(|| transcode_date_time_value(&value, jolt_version))
-                .or_else(|| transcode_duration_value(&value))
-                .transpose()?
-                .ok_or_else(|| {
-                    ParseError::new(format!(
-                        "Expected temporal string after sigil \"T\", but found {value:?}",
-                    ))
-                })?;
-            IsJoltValue::Yes(value)
-        }
-        JoltSigil::Spatial => {
-            let JsonValue::String(value) = value else {
-                return Err(ParseError::new(format!(
-                    "Expected spatial string after sigil \"@\", but found {value:?}",
-                )));
-            };
-            let bolt_point = JoltPoint::parse(&value)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_point.as_struct()))
-        }
-        JoltSigil::Node => {
-            let bolt_node = JoltNode::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_node.into_struct()))
-        }
+    match sigil {
+        JoltSigil::Bool => transcode_jolt_value_bool(value, config),
+        JoltSigil::Integer => transcode_jolt_value_int(value, config),
+        JoltSigil::Float => transcode_jolt_value_float(value),
+        JoltSigil::String => transcode_jolt_value_str(value, config),
+        JoltSigil::Bytes => transcode_jolt_value_bytes(value),
+        JoltSigil::List => transcode_jolt_value_list(value, config),
+        JoltSigil::Dict => transcode_jolt_value_dict(value, config),
+        JoltSigil::Temporal => transcode_jolt_value_temporal(value, jolt_version),
+        JoltSigil::Spatial => transcode_jolt_value_spatial(value),
+        JoltSigil::Node => transcode_jolt_value_node(value, jolt_version, config),
         JoltSigil::RelationshipForward => {
-            let bolt_relationship = JoltRelationship::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_relationship.into_struct()))
+            transcode_jolt_value_relationship_forward(value, jolt_version, config)
         }
         JoltSigil::RelationshipBackward => {
-            let mut bolt_relationship = JoltRelationship::parse(value, jolt_version, config)?;
-            bolt_relationship.flip_direction();
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_relationship.into_struct()))
+            transcode_jolt_value_relationship_backward(value, jolt_version, config)
         }
-        JoltSigil::Path => {
-            let bolt_path = JoltPath::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
-        }
-        JoltSigil::Vector => {
-            let bolt_path = JoltVector::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_path.into_struct()))
-        }
+        JoltSigil::Path => transcode_jolt_value_path(value, jolt_version, config),
+        JoltSigil::Vector => transcode_jolt_value_vector(value, jolt_version, config),
         JoltSigil::UnsupportedType => {
-            let bolt_unsupported_type = JoltUnsupportedType::parse(value, jolt_version, config)?;
-            IsJoltValue::Yes(PackStreamValue::Struct(bolt_unsupported_type.into_struct()))
+            transcode_jolt_value_unsupported_type(value, jolt_version, config)
         }
-    })
+    }
 }
 
-fn transcode_date_value(s: &str) -> Option<Result<PackStreamValue>> {
+fn transcode_jolt_value_bool(value: JsonValue, config: &ActorConfig) -> Result<IsJoltValue> {
+    if !value.is_boolean() {
+        return Err(ParseError::new(format!(
+            "Expected bool after sigil \"?\", but found {value:?}",
+        )));
+    }
+    Ok(IsJoltValue::Yes(transcode_field(value, config)?))
+}
+
+fn transcode_jolt_value_int(value: JsonValue, config: &ActorConfig) -> Result<IsJoltValue> {
+    let JsonValue::String(value) = value else {
+        return Err(ParseError::new(format!(
+            "Expected string after sigil \"Z\", but found {value:?}",
+        )));
+    };
+    let value = i64::from_str(&value).map_err(|e| {
+        ParseError::new(format!(
+            "Failed to parse i64 after sigil \"Z\": {value:?} because {e}",
+        ))
+    })?;
+    let packstream_value = transcode_field(JsonValue::Number(value.into()), config)?;
+    Ok(IsJoltValue::Yes(packstream_value))
+}
+
+fn transcode_jolt_value_float(value: JsonValue) -> Result<IsJoltValue> {
+    let JsonValue::String(value) = value else {
+        return Err(ParseError::new(format!(
+            "Expected string after sigil \"R\", but found {value:?}",
+        )));
+    };
+    let value = f64::from_str(&value).map_err(|e| {
+        ParseError::new(format!(
+            "Failed to parse f64 after sigil \"R\": {value:?} because {e}",
+        ))
+    })?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Float(value)))
+}
+
+fn transcode_jolt_value_str(value: JsonValue, config: &ActorConfig) -> Result<IsJoltValue> {
+    if !value.is_string() {
+        return Err(ParseError::new(format!(
+            "Expected string after sigil \"U\", but found {value:?}",
+        )));
+    }
+    Ok(IsJoltValue::Yes(transcode_field(value, config)?))
+}
+
+fn transcode_jolt_value_bytes(value: JsonValue) -> Result<IsJoltValue> {
+    let bytes = parse_jolt_bytes(value)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Bytes(bytes)))
+}
+
+fn transcode_jolt_value_list(value: JsonValue, config: &ActorConfig) -> Result<IsJoltValue> {
+    if !value.is_array() {
+        return Err(ParseError::new(format!(
+            "Expected array after sigil \"[]\", but found {value:?}",
+        )));
+    }
+    Ok(IsJoltValue::Yes(transcode_field(value, config)?))
+}
+
+fn transcode_jolt_value_dict(value: JsonValue, config: &ActorConfig) -> Result<IsJoltValue> {
+    if !value.is_object() {
+        return Err(ParseError::new(format!(
+            "Expected object after sigil \"{{}}\", but found {value:?}",
+        )));
+    }
+    Ok(IsJoltValue::Yes(transcode_field(value, config)?))
+}
+
+fn transcode_jolt_value_temporal(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+) -> Result<IsJoltValue> {
+    let JsonValue::String(value) = value else {
+        return Err(ParseError::new(format!(
+            "Expected temporal string after sigil \"T\", but found {value:?}",
+        )));
+    };
+    let value = transcode_jolt_value_date(&value)
+        .or_else(|| transcode_jolt_value_time(&value))
+        .or_else(|| transcode_jolt_value_date_time(&value, jolt_version))
+        .or_else(|| transcode_jolt_value_duration(&value))
+        .transpose()?
+        .ok_or_else(|| {
+            ParseError::new(format!(
+                "Expected temporal string after sigil \"T\", but found {value:?}",
+            ))
+        })?;
+    Ok(IsJoltValue::Yes(value))
+}
+
+fn transcode_jolt_value_date(s: &str) -> Option<Result<PackStreamValue>> {
     let bolt_date = opt_res_ret!(JoltDate::parse(s));
-    let value_struct = opt_res_ret!(bolt_date.as_struct());
+    let value_struct = bolt_date.as_struct();
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
 
-fn transcode_time_value(s: &str) -> Option<Result<PackStreamValue>> {
+fn transcode_jolt_value_time(s: &str) -> Option<Result<PackStreamValue>> {
     let bolt_time = opt_res_ret!(JoltTime::parse(s));
     let value_struct = opt_res_ret!(bolt_time.as_struct());
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
 
-fn transcode_date_time_value(
+fn transcode_jolt_value_date_time(
     s: &str,
     jolt_version: JoltVersion,
 ) -> Option<Result<PackStreamValue>> {
@@ -1018,10 +1178,89 @@ fn transcode_date_time_value(
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
 
-fn transcode_duration_value(s: &str) -> Option<Result<PackStreamValue>> {
+fn transcode_jolt_value_duration(s: &str) -> Option<Result<PackStreamValue>> {
     let bolt_duration = opt_res_ret!(JoltDuration::parse(s));
-    let value_struct = opt_res_ret!(bolt_duration.as_struct());
+    let value_struct = bolt_duration.as_struct();
     Some(Ok(PackStreamValue::Struct(value_struct)))
+}
+
+fn transcode_jolt_value_spatial(value: JsonValue) -> Result<IsJoltValue> {
+    let JsonValue::String(value) = value else {
+        return Err(ParseError::new(format!(
+            "Expected spatial string after sigil \"@\", but found {value:?}",
+        )));
+    };
+    let bolt_point = JoltPoint::parse(&value)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_point.as_struct(),
+    )))
+}
+
+fn transcode_jolt_value_node(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_node = JoltNode::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_node.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_relationship_forward(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_relationship = JoltRelationship::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_relationship.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_relationship_backward(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let mut bolt_relationship = JoltRelationship::parse(value, jolt_version, config)?;
+    bolt_relationship.flip_direction();
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_relationship.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_path(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_path = JoltPath::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_path.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_vector(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_path = JoltVector::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_path.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_unsupported_type(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_unsupported_type = JoltUnsupportedType::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_unsupported_type.into_struct(),
+    )))
 }
 
 fn create_server_action(
@@ -1148,7 +1387,7 @@ impl<T: Fn(&BoltMessage) -> anyhow::Result<()> + Send + Sync> Debug for Validato
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ValidatorImpl")
             .field("ctx", &self.ctx)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -1201,456 +1440,6 @@ fn create_validator(
             Some((ctx, _)) => message_name_ctx.fuse(ctx),
         },
     }))
-}
-
-fn build_no_fields_validator(message: &[PackStreamValue]) -> anyhow::Result<()> {
-    match message.len() {
-        0 => Ok(()),
-        _ => Err(anyhow!("Expected 0 fields")),
-    }
-}
-
-fn build_field_validator(field: JsonValue, config: &ActorConfig) -> Result<ValidateValueFn> {
-    Ok(match field {
-        JsonValue::Null => Box::new(|msg| match msg {
-            PackStreamValue::Null => Ok(()),
-            _ => Err(anyhow!("Expected null")),
-        }),
-        JsonValue::Bool(expected) => Box::new(move |msg| match msg {
-            PackStreamValue::Boolean(received) if received == &expected => Ok(()),
-            _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-        }),
-        JsonValue::Number(expected) if expected.is_i64() => {
-            let expected = expected.as_i64().expect("checked in match arm");
-            Box::new(move |msg| match msg {
-                PackStreamValue::Integer(received) if received == &expected => Ok(()),
-                _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-            })
-        }
-        JsonValue::Number(expected) if expected.is_f64() => {
-            let expected = expected.as_f64().expect("checked in match arm");
-            assert!(
-                expected.is_finite(),
-                "json does not allow for NaN or Inf. Therefore, we don't handle those here",
-            );
-            Box::new(move |msg| match msg {
-                PackStreamValue::Float(received) if received == &expected => Ok(()),
-                _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-            })
-        }
-        JsonValue::Number(expected) => {
-            return Err(ParseError::new(format!(
-                "Can't parse number (must be i64 or f64) {expected:?}",
-            )));
-        }
-        JsonValue::String(expected) => Box::new(move |msg| match msg {
-            _ if expected == "*" => Ok(()),
-            PackStreamValue::String(received) => validate_str_field_eq(&expected, received),
-            _ => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-        }),
-        JsonValue::Array(expected) => {
-            let validators = expected
-                .into_iter()
-                .map(|value| build_field_validator(value, config))
-                .collect::<Result<Vec<_>>>()?;
-            Box::new(move |msg| {
-                let PackStreamValue::List(received) = msg else {
-                    return Err(anyhow!("Expected list, found {:?}", msg));
-                };
-                if validators.len() != received.len() {
-                    return Err(anyhow!(
-                        "Expected {} fields, found {}",
-                        validators.len(),
-                        received.len()
-                    ));
-                }
-                for (validator, received) in validators.iter().zip(received.iter()) {
-                    validator(received)?;
-                }
-                Ok(())
-            })
-        }
-        JsonValue::Object(expected) => {
-            let expected = match build_jolt_validator(expected, config)? {
-                IsJoltValidator::Yes(jolt_validator) => return Ok(jolt_validator),
-                IsJoltValidator::No(expected) => expected,
-            };
-
-            build_map_validator(expected, config)?
-        }
-    })
-}
-
-fn build_map_validator(
-    expected: JsonMap<String, JsonValue>,
-    config: &ActorConfig,
-) -> Result<ValidateValueFn> {
-    let mut required_keys = HashSet::new();
-    let mut unique_keys = HashSet::new();
-    let validators = expected
-        .into_iter()
-        .map(|(key, expect_for_key)| {
-            let (key, validator, req) = build_map_entry_validator(&key, expect_for_key, config)?;
-            if req {
-                required_keys.insert(key.clone());
-            }
-            if !unique_keys.insert(key.clone()) {
-                return Err(ParseError::new(format!(
-                    "contains same unescaped key twice {key}"
-                )));
-            }
-            Ok((key, validator))
-        })
-        .collect::<Result<HashMap<_, _>>>()?;
-
-    Ok(Box::new(move |msg| {
-        let PackStreamValue::Dict(received) = msg else {
-            return Err(anyhow!("Expected map, found {:?}", msg));
-        };
-
-        let mut matched_keys = HashSet::new();
-
-        for (key, value) in received {
-            let Some(validator) = validators.get(key) else {
-                return Err(anyhow!("Unexpected Key:{key} was received."));
-            };
-            validator(value)?;
-            matched_keys.insert(key.clone());
-        }
-
-        match matched_keys.is_superset(&required_keys) {
-            true => Ok(()),
-            false => {
-                let mut missing_keys = required_keys.difference(&matched_keys);
-                Err(anyhow!(
-                    "Received message with missing keys: {:?}",
-                    missing_keys.join(", ")
-                ))
-            }
-        }
-    }))
-}
-
-/// # Returns
-///  * String: the map key this validator should be applied to with markers stripped from it.
-///  * ValidateValueFn: the validator function
-///  * bool: whether the key is required (`true`), or optional (`false`).
-fn build_map_entry_validator(
-    key: &str,
-    expected: JsonValue,
-    config: &ActorConfig,
-) -> Result<(String, ValidateValueFn, bool)> {
-    //  JSON object keys:
-    //    * The key will be **unescaped** before it is matched:
-    //      `\\`, `\[`, `\]`, `\{`, and `\}` are turned into `\`, `[`, `]`, `{`, and `}` respectively.
-    //    * If the escaped key starts with `[` and ends with `]`, the corresponding key/value pair is **optional**.
-    //      E.g., `C: PULL {"[n]": 1000}` matches `C: PULL {}` and `C: PULL {"n": 1000}`, but not `C: PULL {"n": 1000, "m": 1001}`,  `C: PULL {"n": 1}`, or  `C: PULL null`.
-    //    * If the escaped key ends on `{}` after potential optional-brackets (s. above) have been stripped, the corresponding value will be compared **sorted** if it's a list.
-    //      E.g., `C: MSG {"foo{}": [1, 2]}` will match `C: MSG {"foo": [1, 2]}` and `C: MSG {"foo": [2, 1]}`, but `C: MSG {"foo{}": "ba"}` will not match `C: MSG {"foo": "ab"}`.
-    //    * Example for **optional** and **sorted**: `C: MSG {"[foo{}]": [1, 2]}`.
-
-    let key = ParsedMapKey::parse(key);
-    let required = !key.is_optional;
-    let ordered = key.is_ordered;
-    let key = key.unescaped;
-    let validator: ValidateValueFn = match expected {
-        JsonValue::Array(expected) if ordered => {
-            let validators = expected
-                .into_iter()
-                .map(|value| build_field_validator(value, config))
-                .collect::<Result<Vec<_>>>()?;
-            Box::new(move |msg| {
-                let PackStreamValue::List(received) = msg else {
-                    return Err(anyhow!("Expected list, found {:?}", msg));
-                };
-                if validators.len() != received.len() {
-                    return Err(anyhow!(
-                        "Expected {} fields, found {}",
-                        validators.len(),
-                        received.len()
-                    ));
-                }
-                let mut left_validators = HashSet::new();
-                left_validators.extend(0..validators.len());
-                'values: for value_received in received.iter() {
-                    for validator_idx in &left_validators {
-                        let validator_idx = *validator_idx;
-                        let validator = &validators[validator_idx];
-                        if let Ok(()) = validator(value_received) {
-                            left_validators.remove(&validator_idx);
-                            continue 'values;
-                        }
-                    }
-                    return Err(anyhow!(
-                        "Unexpected value in any order array: {:?}",
-                        value_received
-                    ));
-                }
-                Ok(())
-            })
-        }
-        _ => build_field_validator(expected, config)?,
-    };
-    Ok((key, validator, required))
-}
-
-enum IsJoltValidator {
-    Yes(ValidateValueFn),
-    No(JsonMap<String, JsonValue>),
-}
-
-fn build_jolt_validator(
-    expected: JsonMap<String, JsonValue>,
-    config: &ActorConfig,
-) -> Result<IsJoltValidator> {
-    // try to build jolt matcher (incl. Structs like datetime)
-    //   * if has 1 key-value pair
-    //   * && key is known sigil
-    //   * Special string "*" applies: E.g., `C: RUN {"Z": "*"}` will match any integer: `C: RUN 1` and `C: RUN 2`, but not `C: RUN 1.2` or `C: RUN "*"`.
-    fn is_match_all(value: &JsonValue) -> bool {
-        value.as_str().map(|s| s == "*").unwrap_or_default()
-    }
-
-    macro_rules! match_any {
-        ($typ:expr, $pattern:pat) => {
-            return Ok(IsJoltValidator::Yes(Box::new(|msg| match msg {
-                $pattern => Ok(()),
-                _ => Err(anyhow!("Expected any {:} found {:?}", $typ, msg)),
-            })))
-        };
-    }
-
-    if expected.len() != 1 {
-        return Ok(IsJoltValidator::No(expected));
-    }
-    let (sigil, expected) = expected.into_iter().next().expect("non-empty check above");
-    let (versionless_sigil, jolt_version) = parse_jolt_sigil(&sigil, config)?;
-    let Some(parsed_sigil) = JoltSigil::from_str(versionless_sigil) else {
-        return Ok(IsJoltValidator::No(
-            [(sigil, expected)].into_iter().collect(),
-        ));
-    };
-    Ok(match parsed_sigil {
-        JoltSigil::Bool => {
-            if is_match_all(&expected) {
-                match_any!("bool", PackStreamValue::Boolean(_));
-            }
-            if !expected.is_boolean() {
-                return Err(ParseError::new(format!(
-                    "Expected bool after sigil \"?\", but found {expected:?}",
-                )));
-            }
-            IsJoltValidator::Yes(build_field_validator(expected, config)?)
-        }
-        JoltSigil::Integer => {
-            if is_match_all(&expected) {
-                match_any!("integer", PackStreamValue::Integer(_));
-            }
-            let JsonValue::String(expected) = expected else {
-                return Err(ParseError::new(format!(
-                    "Expected string after sigil \"Z\", but found {expected:?}",
-                )));
-            };
-            let expected = i64::from_str(&expected).map_err(|e| {
-                ParseError::new(format!(
-                    "Failed to parse i64 after sigil \"Z\": {expected:?} because {e}",
-                ))
-            })?;
-            IsJoltValidator::Yes(build_field_validator(
-                JsonValue::Number(expected.into()),
-                config,
-            )?)
-        }
-        JoltSigil::Float => {
-            if is_match_all(&expected) {
-                match_any!("float", PackStreamValue::Float(_));
-            }
-            let JsonValue::String(expected) = expected else {
-                return Err(ParseError::new(format!(
-                    "Expected string after sigil \"R\", but found {expected:?}",
-                )));
-            };
-            let expected = f64::from_str(&expected).map_err(|e| {
-                ParseError::new(format!(
-                    "Failed to parse f64 after sigil \"R\": {expected:?} because {e}",
-                ))
-            })?;
-            IsJoltValidator::Yes(Box::new(move |msg| {
-                match msg == &PackStreamValue::Float(expected) {
-                    true => Ok(()),
-                    false => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-                }
-            }))
-        }
-        JoltSigil::String => {
-            if is_match_all(&expected) {
-                match_any!("string", PackStreamValue::String(_));
-            }
-            if !expected.is_string() {
-                return Err(ParseError::new(format!(
-                    "Expected string after sigil \"U\", but found {expected:?}",
-                )));
-            }
-            IsJoltValidator::Yes(build_field_validator(expected, config)?)
-        }
-        JoltSigil::Bytes => {
-            if is_match_all(&expected) {
-                match_any!("bytes", PackStreamValue::Bytes(_));
-            }
-            let bytes = parse_jolt_bytes(expected)?;
-            IsJoltValidator::Yes(Box::new(move |msg| match msg {
-                PackStreamValue::Bytes(received) if &bytes == received => Ok(()),
-                _ => Err(anyhow!("Expected bytes {:?} found {:?}", &bytes, msg)),
-            }))
-        }
-        JoltSigil::List => {
-            if is_match_all(&expected) {
-                match_any!("list", PackStreamValue::List(_));
-            }
-            if !expected.is_array() {
-                return Err(ParseError::new(format!(
-                    "Expected array after sigil \"[]\", but found {expected:?}",
-                )));
-            }
-            IsJoltValidator::Yes(build_field_validator(expected, config)?)
-        }
-        JoltSigil::Dict => {
-            if is_match_all(&expected) {
-                match_any!("map", PackStreamValue::Dict(_));
-            }
-            let JsonValue::Object(expected) = expected else {
-                return Err(ParseError::new(format!(
-                    "Expected object after sigil \"{{}}\", but found {expected:?}",
-                )));
-            };
-            IsJoltValidator::Yes(build_map_validator(expected, config)?)
-        }
-        JoltSigil::Temporal => {
-            let JsonValue::String(expected) = expected else {
-                return Err(ParseError::new(format!(
-                    "Expected temporal string after sigil \"T\", but found {expected:?}",
-                )));
-            };
-            let validator = build_date_validator(&expected)
-                .or_else(|| build_time_validator(&expected))
-                .or_else(|| build_date_time_validator(&expected, jolt_version))
-                .or_else(|| build_duration_validator(&expected))
-                .transpose()?
-                .ok_or_else(|| {
-                    ParseError::new(format!(
-                        "Expected temporal string after sigil \"T\", but found {expected:?}",
-                    ))
-                })?;
-            IsJoltValidator::Yes(validator)
-        }
-        JoltSigil::Spatial => {
-            if is_match_all(&expected) {
-                return Ok(IsJoltValidator::Yes(Box::new(|msg| match msg {
-                    PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
-                        match (tag, fields.as_slice()) {
-                            (
-                                &TAG_POINT_2D,
-                                [PackStreamValue::Integer(_), PackStreamValue::Float(_), PackStreamValue::Float(_)],
-                            ) => Ok(()),
-                            (
-                                &TAG_POINT_3D,
-                                [PackStreamValue::Integer(_), PackStreamValue::Float(_), PackStreamValue::Float(_), PackStreamValue::Float(_)],
-                            ) => Ok(()),
-                            _ => Err(anyhow!("Expected any date struct found {msg:?}")),
-                        }
-                    }
-                    _ => Err(anyhow!("Expected any spatial struct found {msg:?}")),
-                })));
-            }
-            let JsonValue::String(expected) = expected else {
-                return Err(ParseError::new(format!(
-                    "Expected spatial string after sigil \"@\", but found {expected:?}",
-                )));
-            };
-            let bolt_point = JoltPoint::parse(&expected)?;
-            let expected = PackStreamValue::Struct(bolt_point.as_struct());
-            IsJoltValidator::Yes(Box::new(move |msg| match msg == &expected {
-                true => Ok(()),
-                false => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-            }))
-        }
-        JoltSigil::Node => {
-            let fixed_syntax = format!(
-                r#"{{"\{sigil}": {}}}"#,
-                serde_json_ext::compact_pretty_print(&expected)
-                    .expect("JsonValue cannot fail Json serialization")
-            );
-            return Err(ParseError::new(format!(
-                "Node structs cannot be received by the server, only sent. \
-                If you meant to match a map, use `{fixed_syntax}` instead.",
-            )));
-        }
-        JoltSigil::RelationshipForward | JoltSigil::RelationshipBackward => {
-            let fixed_syntax = format!(
-                r#"{{"\{sigil}": {}}}"#,
-                serde_json_ext::compact_pretty_print(&expected)
-                    .expect("JsonValue cannot fail Json serialization")
-            );
-            return Err(ParseError::new(format!(
-                "Relationship structs cannot be received by the server, only sent. \
-                If you meant to match a map, use `{fixed_syntax}` instead.",
-            )));
-        }
-        JoltSigil::Path => {
-            let fixed_syntax = format!(
-                r#"{{"\{sigil}": {}}}"#,
-                serde_json_ext::compact_pretty_print(&expected)
-                    .expect("JsonValue cannot fail Json serialization")
-            );
-            return Err(ParseError::new(format!(
-                "Path structs cannot be received by the server, only sent. \
-                If you meant to match a map, use `{fixed_syntax}` instead.",
-            )));
-        }
-        JoltSigil::Vector => {
-            if is_match_all(&expected) {
-                return Ok(IsJoltValidator::Yes(Box::new(|msg| {
-                    fn fail(msg: &PackStreamValue) -> anyhow::Result<()> {
-                        Err(anyhow!("Expected any vector struct found {msg:?}"))
-                    }
-
-                    match msg {
-                        PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
-                            match (tag, fields.as_slice()) {
-                                (
-                                    &TAG_VECTOR,
-                                    [PackStreamValue::Bytes(type_marker), PackStreamValue::Bytes(data)],
-                                ) => {
-                                    let [type_marker] = *type_marker.as_slice() else {
-                                        return fail(msg);
-                                    };
-                                    let Some(inner_type) =
-                                        JoltVectorType::from_packstream_marker(type_marker)
-                                    else {
-                                        return fail(msg);
-                                    };
-                                    if data.len() % inner_type.size() != 0 {
-                                        return fail(msg);
-                                    }
-                                    Ok(())
-                                }
-                                _ => fail(msg),
-                            }
-                        }
-                        _ => fail(msg),
-                    }
-                })));
-            }
-            let bolt_vector = JoltVector::parse(expected, jolt_version, config)?;
-            let expected_struct = bolt_vector.into_struct();
-            IsJoltValidator::Yes(build_struct_match_validator(expected_struct))
-        }
-        JoltSigil::UnsupportedType => {
-            return Err(ParseError::new(
-                "UnsupportedType structs cannot be received by the server, only sent.",
-            ));
-        }
-    })
 }
 
 fn parse_jolt_sigil<'a>(sigil: &'a str, config: &ActorConfig) -> Result<(&'a str, JoltVersion)> {
@@ -1708,293 +1497,6 @@ fn parse_jolt_bytes(expected: JsonValue) -> Result<Vec<u8>> {
 
 fn parse_hex_string(s: &str) -> Result<Vec<u8>> {
     str_bytes::parse_jolt_hex_string(s).map_err(|e| ParseError::new(format!("{e}")))
-}
-
-/// yes:
-/// 2020-01-01
-/// 2020-01
-/// 2020
-///
-/// no:
-/// 2020-1-1
-/// --1
-fn build_date_validator(s: &str) -> Option<Result<ValidateValueFn>> {
-    if s == "*" {
-        return Some(Ok(Box::new(|msg| match msg {
-            PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
-                match (tag, fields.as_slice()) {
-                    (&TAG_DATE, [PackStreamValue::Integer(_)]) => Ok(()),
-                    _ => Err(anyhow!("Expected any date struct found {msg:?}")),
-                }
-            }
-            _ => Err(anyhow!("Expected any date struct found {msg:?}")),
-        })));
-    }
-    let bolt_date = opt_res_ret!(JoltDate::parse(s));
-    let expected_struct = opt_res_ret!(bolt_date.as_struct());
-    Some(Ok(build_struct_match_validator(expected_struct)))
-}
-
-/// yes:
-/// 12:00:00.000000000+0000
-/// 12:00:00.000+0000
-/// 12:00:00+00:00
-/// 12:00:00+00
-/// 12:00:00Z
-/// 12:00Z
-/// 12Z
-/// 12:00:00-01
-///
-/// no:
-/// 12:00:00.0000000000Z
-/// 12:00:00-0000
-/// 12:0:0Z
-/// 12:00:00+01:02:03
-/// 12:00:00+00:00\[Europe/Berlin]
-fn build_time_validator(s: &str) -> Option<Result<ValidateValueFn>> {
-    if s == "*" {
-        return Some(Ok(Box::new(|msg| match msg {
-            PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
-                match (tag, fields.as_slice()) {
-                    (&TAG_LOCAL_TIME, [PackStreamValue::Integer(_)]) => Ok(()),
-                    (&TAG_TIME, [PackStreamValue::Integer(_), PackStreamValue::Integer(_)]) => {
-                        Ok(())
-                    }
-                    _ => Err(anyhow!("Expected any time struct found {msg:?}")),
-                }
-            }
-            _ => Err(anyhow!("Expected any time struct found {msg:?}")),
-        })));
-    }
-    let bolt_time = opt_res_ret!(JoltTime::parse(s));
-    let expected_struct = opt_res_ret!(bolt_time.as_struct());
-    Some(Ok(build_struct_match_validator(expected_struct)))
-}
-
-/// yes:
-/// `<date_re>T<time_re><timezone_name>`
-/// where `<date_re>` is anything that works for [`build_date_validator`], `<time_re>`
-/// is anything that works for [`build_time_validator`] and `<timezone_name>` (optional) is any
-/// timezone name in square brackets, e.g., `[Europe/Stockholm]`. `<timezone_name>` may only be
-/// present, when `<time_re>` has a time offset.
-///
-/// no:
-/// anything else
-fn build_date_time_validator(
-    s: &str,
-    jolt_version: JoltVersion,
-) -> Option<Result<ValidateValueFn>> {
-    if s == "*" {
-        return Some(Ok(Box::new(move |msg| match msg {
-            PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
-                match (jolt_version, tag, fields.as_slice()) {
-                    (
-                        JoltVersion::V1,
-                        0x66,
-                        [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::String(_)],
-                    ) => Ok(()),
-                    (
-                        JoltVersion::V2,
-                        0x69,
-                        [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::String(_)],
-                    ) => Ok(()),
-                    (
-                        JoltVersion::V1,
-                        0x46,
-                        [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::Integer(_)],
-                    ) => Ok(()),
-                    (
-                        JoltVersion::V2,
-                        0x49,
-                        [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::Integer(_)],
-                    ) => Ok(()),
-                    (_, 0x64, [PackStreamValue::Integer(_), PackStreamValue::Integer(_)]) => Ok(()),
-                    _ => Err(anyhow!("Expected any date time struct found {msg:?}")),
-                }
-            }
-            _ => Err(anyhow!("Expected any date time struct found {msg:?}")),
-        })));
-    }
-    let bolt_date_time = opt_res_ret!(JoltDateTime::parse(s));
-    let expected_struct = opt_res_ret!(bolt_date_time.into_struct(jolt_version));
-    Some(Ok(build_struct_match_validator(expected_struct)))
-}
-
-/// yes:
-/// P12Y13M40DT10H70M80.000000000S
-/// P12Y-13M40DT-10H70M80.000000000S
-/// P12Y
-/// PT70M
-/// P12DT10H70M
-///
-/// no:
-/// P12Y13M40DT10H70M80.0000000000S
-/// P12Y13M40DT10H70.1M10S
-/// P5W
-fn build_duration_validator(s: &str) -> Option<Result<ValidateValueFn>> {
-    if s == "*" {
-        return Some(Ok(Box::new(|msg| match msg {
-            PackStreamValue::Struct(PackStreamStruct { tag, fields }) => {
-                match (tag, fields.as_slice()) {
-                    (
-                        &TAG_DURATION,
-                        [PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::Integer(_), PackStreamValue::Integer(_)],
-                    ) => Ok(()),
-                    _ => Err(anyhow!("Expected any duration struct found {msg:?}")),
-                }
-            }
-            _ => Err(anyhow!("Expected any duration struct found {msg:?}")),
-        })));
-    }
-    let JoltDuration {
-        months,
-        days,
-        seconds,
-        nanos,
-    } = opt_res_ret!(JoltDuration::parse(s));
-    let total_nanos = i128::from(seconds) * 1_000_000_000 + i128::from(nanos);
-    Some(Ok(Box::new(move |msg| match msg {
-        PackStreamValue::Struct(received) => {
-            if received.tag != TAG_DURATION {
-                return Err(anyhow!(
-                    "Expected duration (tag {TAG_DURATION:#X}), found {msg:?}",
-                ));
-            }
-            fn get_int_field(
-                i: usize,
-                name: &str,
-                received: &PackStreamStruct,
-            ) -> anyhow::Result<i64> {
-                match received.fields.get(i) {
-                    None => Err(anyhow!(
-                        "Received invalid duration: {:?} (missing {name})",
-                        received
-                    )),
-                    Some(PackStreamValue::Integer(value)) => Ok(*value),
-                    Some(_) => Err(anyhow!(
-                        "Received invalid duration: {:?} ({name} not integer)",
-                        received
-                    )),
-                }
-            }
-            let received_months = get_int_field(0, "months", received)?;
-            let received_days = get_int_field(1, "days", received)?;
-            let received_seconds = get_int_field(2, "seconds", received)?;
-            let received_nanos = get_int_field(3, "nanoseconds", received)?;
-            let received_total_nanos =
-                i128::from(received_seconds) * 1_000_000_000 + i128::from(received_nanos);
-            if received_months != months {
-                return Err(anyhow!(
-                    "Expected duration months: {months}, found {received_months} in {received:?}",
-                ));
-            }
-            if received_days != days {
-                return Err(anyhow!(
-                    "Expected duration days: {days}, found {received_days} in {received:?}",
-                ));
-            }
-            if received_total_nanos != total_nanos {
-                return Err(anyhow!(
-                    "Expected duration with total nanoseconds: {total_nanos}, \
-                    found {received_total_nanos} in {received:?}",
-                ));
-            }
-            Ok(())
-        }
-        _ => Err(anyhow!("Expected duration, found {:?}", msg)),
-    })))
-}
-
-fn build_struct_match_validator(expected: PackStreamStruct) -> ValidateValueFn {
-    let expected = PackStreamValue::Struct(expected);
-    Box::new(move |msg| match msg == &expected {
-        true => Ok(()),
-        false => Err(anyhow!("Expected {:?} found {:?}", expected, msg)),
-    })
-}
-
-struct ParsedMapKey {
-    pub is_optional: bool,
-    pub is_ordered: bool,
-    pub unescaped: String,
-}
-
-impl ParsedMapKey {
-    fn parse(key: &str) -> Self {
-        thread_local! {
-            static UNESCAPE_RE: LazyCell<Regex> = LazyCell::new(|| {
-                Regex::new(r"\\([\{\}\[\]\\])").unwrap()
-            });
-        }
-        let unescaped = UNESCAPE_RE.with(|re| re.replace_all(key, r"$1"));
-        let mut unescaped_ref = unescaped.as_ref();
-
-        thread_local! {
-            static FLAGS_RE: LazyCell<Regex> = LazyCell::new(|| {
-                Regex::new(r"^(\[)?(?:\\[\\\{}\}\[\]]|[^\\])*?(\{\})?(\])?$").unwrap()
-            });
-        }
-        let flags = FLAGS_RE.with(|re| re.captures(key).expect("regex matches anything"));
-        let is_optional = flags.get(1).is_some() && flags.get(3).is_some();
-        let is_ordered = flags.get(2).is_some();
-
-        if is_optional {
-            unescaped_ref = &unescaped_ref[1..unescaped.len() - 1]
-        }
-        if is_ordered {
-            unescaped_ref = &unescaped_ref[..unescaped_ref.len() - 2]
-        }
-
-        Self {
-            is_optional,
-            is_ordered,
-            unescaped: unescaped_ref.to_string(),
-        }
-    }
-}
-
-fn validate_str_field_eq(expected: &str, received: &str) -> anyhow::Result<()> {
-    #[inline]
-    fn match_(expected: &str, received: &str) -> anyhow::Result<()> {
-        match expected == received {
-            true => Ok(()),
-            false => Err(anyhow!("Expected {:?} found {:?}", expected, received)),
-        }
-    }
-    if !expected.contains(r"\") {
-        match_(expected, received)
-    } else {
-        let escaped = expected.replace(r"\\", r"\");
-        match_(&escaped, received)
-    }
-}
-
-fn build_fields_validator(
-    msg_body: Option<(Context, &str)>,
-    config: &ActorConfig,
-) -> Result<ValidateValuesFn> {
-    let Some((ctx, line)) = msg_body else {
-        return Ok(Box::new(build_no_fields_validator));
-    };
-    // RUN "RETURN $n AS n" {"n": 1}
-    let field_validators: Vec<_> = load_json_values(line, ctx)?
-        .into_iter()
-        .map(|field| build_field_validator(field, config))
-        .collect::<Result<_>>()?;
-
-    Ok(Box::new(move |fields| {
-        if fields.len() != field_validators.len() {
-            return Err(anyhow!(
-                "Expected {} fields, but found {}",
-                fields.len(),
-                field_validators.len()
-            ));
-        }
-        for (field, field_validator) in fields.iter().zip(&field_validators) {
-            field_validator(field)?;
-        }
-        Ok(())
-    }))
 }
 
 fn is_skippable(block: &ActorBlock) -> bool {
@@ -2060,8 +1562,7 @@ fn has_deterministic_end(block: &ActorBlock) -> bool {
                 && condition_block
                     .else_
                     .as_ref()
-                    .map(|(_, else_block)| has_deterministic_end(else_block))
-                    .unwrap_or(true)
+                    .is_none_or(|(_, else_block)| has_deterministic_end(else_block))
         }
     }
 }
@@ -2095,8 +1596,7 @@ fn is_action_block(block: &ActorBlock) -> bool {
                 || condition_block
                     .else_
                     .as_ref()
-                    .map(|(_, else_block)| is_action_block(else_block))
-                    .unwrap_or(false)
+                    .is_some_and(|(_, else_block)| is_action_block(else_block))
         }
         ActorBlock::Optional(_, block) => is_action_block(block),
         ActorBlock::Repeat(_, block, _) => is_action_block(block),
@@ -2143,7 +1643,7 @@ fn is_empty(block: &ActorBlock) -> BoolIsh {
             let mut res = True;
             for block in blocks {
                 match is_empty(block) {
-                    True => continue,
+                    True => {}
                     False => return False,
                     Maybe => res = Maybe,
                 }
@@ -2166,11 +1666,7 @@ fn is_empty(block: &ActorBlock) -> BoolIsh {
             debug_assert!(blocks.iter().all(|b| is_empty(b) == False));
             False
         }
-        ActorBlock::Optional(_, block) => {
-            debug_assert!(is_empty(block) == False);
-            False
-        }
-        ActorBlock::Repeat(_, block, _) => {
+        ActorBlock::Optional(_, block) | ActorBlock::Repeat(_, block, _) => {
             debug_assert!(is_empty(block) == False);
             False
         }
@@ -2251,7 +1747,7 @@ mod test {
             handshake_delay: None,
             allow_restart: false,
             allow_concurrent: false,
-            auto_responses: Default::default(),
+            auto_responses: IndexMap::default(),
             py_lines: Vec::new(),
         };
         let validator = create_validator(ctx, tag, Some((ctx, body)), &cfg).unwrap();
@@ -2264,7 +1760,7 @@ mod test {
             BoltVersion::V5_0,
         );
 
-        validator.validate(&cm).unwrap()
+        validator.validate(&cm).unwrap();
     }
 
     #[test]
@@ -2279,54 +1775,18 @@ mod test {
     }
 
     #[test]
-    fn remove_optional_marker() {
-        let key = "[jeff]";
-        let escaped = ParsedMapKey::parse(key);
-        assert_eq!(escaped.unescaped, "jeff")
-    }
-
-    #[test]
-    fn remove_ordered_marker() {
-        let key = "jeff{}";
-        let escaped = ParsedMapKey::parse(key);
-        assert_eq!(escaped.unescaped, "jeff")
-    }
-
-    #[test]
-    fn remove_both_marker() {
-        let key = "[jeff{}]";
-
-        let escaped = ParsedMapKey::parse(key);
-        assert_eq!(escaped.unescaped, "jeff")
-    }
-
-    #[test]
-    fn remove_optional_marker_with_escaped() {
-        let key = r"[jeff\{\}]";
-        let escaped = ParsedMapKey::parse(key);
-        assert_eq!(escaped.unescaped, "jeff{}")
-    }
-
-    #[test]
-    fn handle_doubled_slash() {
-        let key = r"jeff\{}";
-        let escaped = ParsedMapKey::parse(key);
-        assert_eq!(escaped.unescaped, "jeff{}")
-    }
-
-    #[test]
     fn test_parse_path() {
         let config = ActorConfig {
             bolt_version: BoltVersion::V4_4,
             bolt_version_raw: (4, 4),
-            bolt_capabilities: Default::default(),
+            bolt_capabilities: BoltCapabilities::default(),
             handshake_manifest_version: None,
             handshake: None,
             handshake_response: None,
             handshake_delay: None,
             allow_restart: false,
             allow_concurrent: false,
-            auto_responses: Default::default(),
+            auto_responses: IndexMap::default(),
             py_lines: vec![],
         };
         let input = r#"{"..": [{"()": [1, ["l"], {}]}, {"->": [2, 1, "RELATES_TO", 3, {}]}, {"()": [3, ["l"], {}]}, {"->": [4, 3, "RELATES_TO", 1, {}]}, {"()": [1, ["l"], {}]}]}"#;

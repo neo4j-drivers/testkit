@@ -48,18 +48,17 @@ impl Error for ParseError {}
 impl From<serde_json::Error> for ParseError {
     fn from(err: serde_json::Error) -> Self {
         let line = err.line();
-        match line {
-            0 => Self::new(err.to_string()),
-            _ => {
-                let col = err.column();
-                let ctx = Context {
-                    start_line_number: line - 1,
-                    end_line_number: line - 1,
-                    start_byte: col.saturating_sub(1),
-                    end_byte: col.saturating_sub(1),
-                };
-                Self::new_ctx(ctx, err.to_string())
-            }
+        if line == 0 {
+            Self::new(err.to_string())
+        } else {
+            let col = err.column();
+            let ctx = Context {
+                start_line_number: line - 1,
+                end_line_number: line - 1,
+                start_byte: col.saturating_sub(1),
+                end_byte: col.saturating_sub(1),
+            };
+            Self::new_ctx(ctx, err.to_string())
         }
     }
 }

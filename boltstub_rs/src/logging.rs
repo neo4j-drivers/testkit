@@ -156,6 +156,7 @@ impl Log for ColoredLogger {
     }
 }
 
+#[allow(clippy::pedantic, reason = "Copied code")]
 // Copied from fern 0.7.1
 // License: MIT
 // Copyright (c) 2014-2017 David Ross

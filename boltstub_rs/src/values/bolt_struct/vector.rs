@@ -188,9 +188,10 @@ impl BoltVector {
 
 #[cfg(test)]
 mod test {
-    use crate::bolt_version::BoltVersion;
-
+    use indexmap::IndexMap;
     use rstest::rstest;
+
+    use crate::bolt_version::{BoltCapabilities, BoltVersion};
 
     use super::*;
 
@@ -198,15 +199,15 @@ mod test {
         ActorConfig {
             bolt_version: BoltVersion::V6_0,
             bolt_version_raw: (6, 0),
-            bolt_capabilities: Default::default(),
-            handshake_manifest_version: Default::default(),
-            handshake: Default::default(),
-            handshake_response: Default::default(),
-            handshake_delay: Default::default(),
-            allow_restart: Default::default(),
-            allow_concurrent: Default::default(),
-            auto_responses: Default::default(),
-            py_lines: Default::default(),
+            bolt_capabilities: BoltCapabilities::default(),
+            handshake_manifest_version: None,
+            handshake: None,
+            handshake_response: None,
+            handshake_delay: None,
+            allow_restart: false,
+            allow_concurrent: false,
+            auto_responses: IndexMap::default(),
+            py_lines: Vec::default(),
         }
     }
 
@@ -271,7 +272,7 @@ mod test {
     }
 
     #[rstest]
-    #[case::wrong_type(r#"1"#)]
+    #[case::wrong_type("1")]
     #[case::array_too_short(r#"["i8"]"#)]
     #[case::array_too_long(r#"["i8", "", ""]"#)]
     #[case::wrong_inner_type_type(r#"[1, ""]"#)]

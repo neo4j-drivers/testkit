@@ -1,0 +1,22 @@
+!: BOLT 6.0
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Idempotent", "message": "Something went wrong, but nothing's broken", "diagnostic_record": { "_idempotent": true}, "gql_status": "gql_status", "description": "description" }
+{?
+    # For drivers that pipeline a PULL after RUN
+    C: PULL {"n": {"Z": "*"}}
+    S: IGNORED
+?}
++: RESET
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: FAILURE {"neo4j_code": "Neo.ClientError.MadeUp.Code", "message": "Something went wrong...", "diagnostic_record": { "_idempotent": true}, "gql_status": "gql_status", "description": "description" }
+{?
+    # For drivers that pipeline a PULL after RUN
+    C: PULL {"n": {"Z": "*"}}
+    S: IGNORED
+?}
++: RESET
+?: GOODBYE

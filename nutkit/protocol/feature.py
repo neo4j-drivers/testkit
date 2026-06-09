@@ -84,6 +84,10 @@ class Feature(Enum):
     # The result summary provides a way to access the transaction's
     # GqlStatusObject.
     API_SUMMARY_GQL_STATUS_OBJECTS = "Feature:API:Summary:GqlStatusObjects"
+    # The profile in the summary provides a way to discern absent values for
+    # fields `rows`, `dbHits`, `time`, and `pageCacheHits`.
+    API_SUMMARY_PROFILE_OPTIONAL_STATS = \
+        "Feature:API:Summary:Profile:OptionalStats"
     # The driver supports sending and receiving geospatial data types.
     API_TYPE_SPATIAL = "Feature:API:Type.Spatial"
     # The driver supports sending and receiving temporal data types.
@@ -144,6 +148,8 @@ class Feature(Enum):
     # The driver support connecting to the HTTP/Query API
     # using content type `application/vnd.neo4j.query.v1.0`
     HTTP_QUERY_API_1_0 = "Feature:HTTP:QueryAPI:1.0"
+    # The driver retries idempotent errors on session run
+    IDEMPOTENT_RETRIES = "Feature:IdempotentRetries"
     # The driver supports impersonation
     IMPERSONATION = "Feature:Impersonation"
     # The driver supports TLS 1.1 connections.

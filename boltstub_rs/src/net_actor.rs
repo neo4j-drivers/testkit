@@ -83,13 +83,12 @@ impl From<anyhow::Error> for NetActorError {
 mod private {
     use crate::web_socket_stream::WebSocketStream;
 
-    pub(super) trait Sealed {}
+    pub trait Sealed {}
     impl Sealed for tokio::net::TcpStream {}
     impl Sealed for tokio::io::BufStream<tokio::net::TcpStream> {}
     impl<RW: Sealed> Sealed for WebSocketStream<RW> {}
 }
 
-#[allow(private_bounds)]
 pub trait Connection: AsyncRead + AsyncWrite + Unpin + private::Sealed {
     fn addresses(&self) -> io::Result<(SocketAddr, SocketAddr)>;
 }
@@ -164,9 +163,8 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 debug!(self, "Handshake failed: {err:#}");
                 return Err(err.into());
             }
-            Ok(res) => {
+            Ok(()) => {
                 debug!(self, "Handshake completed.");
-                res
             }
         }
         let mut block = BlockWithState::new(&self.script.tree);
@@ -282,236 +280,30 @@ impl<'a, C: Connection> NetActor<'a, C> {
     /// bool indicates if a message could be consumed `true` or there was a script mismatch `false`
     async fn try_consume(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<bool> {
         match block {
-            BlockWithState::BlockList(ctx, blocks, initial_size) => loop {
-                let Some(block) = blocks.front_mut() else {
-                    return Ok(false);
-                };
-                if Box::pin(self.try_consume(block)).await? {
-                    if block.done() {
-                        blocks.pop_front();
-                        debug!(
-                            self,
-                            "list child block done: moving block list ({ctx}) to \
-                                {}/{initial_size}",
-                            initial_size.saturating_sub(blocks.len()),
-                        );
-                    }
-                    return Ok(true);
-                }
-                if !block.can_skip() {
-                    return Ok(false);
-                }
-                blocks.pop_front();
-                debug!(
-                    self,
-                    "list child block didn't match, but is skippable: \
-                        moving block list ({ctx}) to {}/{initial_size}",
-                    initial_size.saturating_sub(blocks.len()),
-                );
-            },
-            BlockWithState::ClientMessageValidate(state, ctx, validator) => match state.done {
-                true => Ok(false),
-                false => {
-                    let peeked_message = Self::peek_message(
-                        self.logging_ctx(),
-                        &self.ct,
-                        &mut self.conn,
-                        &mut self.peeked_message,
-                        self.script.config.bolt_version,
-                    )
-                    .await?;
-                    if validator.validate(peeked_message).is_err() {
-                        return Ok(false);
-                    }
-                    _ = self.read_message(*validator).await?; // consume the message
-                    debug!(self, "client line ({ctx}) matched: done");
-                    state.done = true;
-                    Ok(true)
-                }
-            },
-            BlockWithState::Condition(state, ctx) => match state {
-                ConditionState::Init(init_state) => {
-                    match init_state.choose_branch(&self.script.script)? {
-                        None => {
-                            debug!(
-                                self,
-                                "conditional block ({ctx}) no branch is True: moving to Done"
-                            );
-                            *state = ConditionState::Done;
-                            Ok(false)
-                        }
-                        Some((ctx_b, body)) => {
-                            debug!(
-                            self,
-                            "conditional block ({ctx}) chose branch ({ctx_b}): moving to Chosen"
-                        );
-                            let mut body = Box::new(body.clone());
-                            let res = Box::pin(self.try_consume(&mut body)).await;
-                            if body.done() {
-                                debug!(self, "conditional body ({ctx_b}) done: moving to Done");
-                                *state = ConditionState::Done
-                            } else {
-                                *state = ConditionState::Chosen(ctx_b, body);
-                            }
-                            res
-                        }
-                    }
-                }
-                ConditionState::Chosen(ctx, b) => {
-                    let res = Box::pin(self.try_consume(b)).await;
-                    if b.done() {
-                        debug!(self, "conditional body ({ctx}) done: moving to Done");
-                        *state = ConditionState::Done
-                    }
-                    res
-                }
-                ConditionState::Done => Ok(false),
-            },
-            BlockWithState::Alt(state, ctx, blocks) => match state {
-                BranchState::Init => {
-                    for (i, block) in blocks.iter_mut().enumerate() {
-                        if Box::pin(self.try_consume(block)).await? {
-                            if block.done() {
-                                debug!(
-                                    self,
-                                    "alt block ({ctx}) child {} started and done: moving to Done",
-                                    i + 1
-                                );
-                                *state = BranchState::Done;
-                            } else {
-                                debug!(
-                                    self,
-                                    "alt block ({ctx}) child {} started: moving to InBlock",
-                                    i + 1
-                                );
-                                *state = BranchState::InBlock(i);
-                            }
-                            return Ok(true);
-                        }
-                    }
-                    Ok(false)
-                }
-                BranchState::InBlock(i) => {
-                    let res = Box::pin(self.try_consume(&mut blocks[*i])).await;
-                    if blocks[*i].done() {
-                        debug!(
-                            self,
-                            "alt block ({ctx}) child {} done: moving to Done",
-                            *i + 1
-                        );
-                        *state = BranchState::Done;
-                    }
-                    res
-                }
-                BranchState::Done => Ok(false),
-            },
-            BlockWithState::Parallel(state, ctx, blocks) => {
-                if state.done {
-                    return Ok(false);
-                }
-                let mut matched = false;
-                for block in blocks.iter_mut() {
-                    if block.done() {
-                        continue;
-                    }
-                    if Box::pin(self.try_consume(block)).await? {
-                        matched = true;
-                        break;
-                    }
-                }
-                if blocks.iter().all(BlockWithState::done) {
-                    debug!(
-                        self,
-                        "parallel block ({ctx}) all children done: moving to Done"
-                    );
-                    state.done = true;
-                }
-                Ok(matched)
+            BlockWithState::BlockList(ctx, blocks, initial_size) => {
+                self.try_consume_block_list(ctx, blocks, *initial_size)
+                    .await
             }
-            BlockWithState::Optional(state, ctx, block) => match state {
-                OptionalState::Init | OptionalState::Started => {
-                    let res = Box::pin(self.try_consume(block)).await?;
-                    if res {
-                        debug!(
-                            self,
-                            "optional block ({ctx}) child stared: moving to Started"
-                        );
-                        *state = OptionalState::Started;
-                    }
-                    if block.done() {
-                        debug!(self, "optional block ({ctx}) child done: moving to Done");
-                        *state = OptionalState::Done;
-                    }
-                    Ok(res)
-                }
-                OptionalState::Done => Ok(false),
-            },
+            BlockWithState::ClientMessageValidate(state, ctx, validator) => {
+                self.try_consume_client_message_validate(state, ctx, *validator)
+                    .await
+            }
+            BlockWithState::Condition(state, ctx) => self.try_consume_condition(state, ctx).await,
+            BlockWithState::Alt(state, ctx, blocks) => {
+                self.try_consume_alt(state, ctx, blocks).await
+            }
+            BlockWithState::Parallel(state, ctx, blocks) => {
+                self.try_consume_parallel(state, ctx, blocks).await
+            }
+            BlockWithState::Optional(state, ctx, block) => {
+                self.try_consume_optional(state, ctx, block).await
+            }
             BlockWithState::Repeat(state, ctx, block, count) => {
-                if Box::pin(self.try_consume(block)).await? {
-                    debug!(
-                        self,
-                        "repeat{count} block ({ctx}) child consumed message: InBlock count {}",
-                        state.count
-                    );
-                    state.in_block = true;
-                    return Ok(true);
-                }
-                if state.in_block && block.can_skip() {
-                    // try form the top
-                    let peeked_message = Self::peek_message(
-                        self.logging_ctx(),
-                        &self.ct,
-                        &mut self.conn,
-                        &mut self.peeked_message,
-                        self.script.config.bolt_version,
-                    )
-                    .await?;
-                    match Self::can_consume(
-                        state.initial_state.as_ref(),
-                        peeked_message,
-                        &self.script.script,
-                    )? {
-                        true => {
-                            *block = state.initial_state.clone();
-                            state.count += 1;
-                            assert!(Box::pin(self.try_consume(block)).await?);
-                            debug!(
-                                self,
-                                "repeat{count} block ({ctx}) looping around: InBlock count {}",
-                                state.count
-                            );
-                            state.in_block = true;
-                            Ok(true)
-                        }
-                        false => Ok(false),
-                    }
-                } else {
-                    Ok(false)
-                }
+                self.try_consume_repeat(state, ctx, block, *count).await
             }
             BlockWithState::AutoMessage(state, ctx, auto_handler) => {
-                let peeked_message = Self::peek_message(
-                    self.logging_ctx(),
-                    &self.ct,
-                    &mut self.conn,
-                    &mut self.peeked_message,
-                    self.script.config.bolt_version,
-                )
-                .await?;
-                if auto_handler
-                    .client_validator
-                    .validate(peeked_message)
-                    .is_err()
-                {
-                    return Ok(false);
-                }
-                _ = self.read_message(&*auto_handler.client_validator).await?; // consume the message
-                self.write_message(&*auto_handler.server_sender)
+                self.try_consume_auto_message(state, ctx, auto_handler)
                     .await
-                    .with_context(|| format!("Reading on {ctx}"))?;
-                debug!(self, "auto message ({ctx}) matched: done");
-                state.done = true;
-                Ok(true)
             }
             BlockWithState::ServerMessageSend(..)
             | BlockWithState::ServerActionLine(..)
@@ -520,6 +312,291 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 panic!("Should've called server_action before {block:?}")
             }
         }
+    }
+
+    async fn try_consume_block_list(
+        &mut self,
+        ctx: &Context,
+        blocks: &mut VecDeque<BlockWithState<'_>>,
+        initial_size: usize,
+    ) -> NetActorResult<bool> {
+        loop {
+            let Some(block) = blocks.front_mut() else {
+                return Ok(false);
+            };
+            if Box::pin(self.try_consume(block)).await? {
+                if block.done() {
+                    blocks.pop_front();
+                    debug!(
+                        self,
+                        "list child block done: moving block list ({ctx}) to \
+                            {}/{initial_size}",
+                        initial_size.saturating_sub(blocks.len()),
+                    );
+                }
+                return Ok(true);
+            }
+            if !block.can_skip() {
+                return Ok(false);
+            }
+            blocks.pop_front();
+            debug!(
+                self,
+                "list child block didn't match, but is skippable: \
+                    moving block list ({ctx}) to {}/{initial_size}",
+                initial_size.saturating_sub(blocks.len()),
+            );
+        }
+    }
+
+    async fn try_consume_client_message_validate(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        validator: &dyn ClientMessageValidator,
+    ) -> NetActorResult<bool> {
+        if state.done {
+            Ok(false)
+        } else {
+            let peeked_message = Self::peek_message(
+                self.logging_ctx(),
+                &self.ct,
+                &mut self.conn,
+                &mut self.peeked_message,
+                self.script.config.bolt_version,
+            )
+            .await?;
+            if validator.validate(peeked_message).is_err() {
+                return Ok(false);
+            }
+            _ = self.read_message(validator).await?; // consume the message
+            debug!(self, "client line ({ctx}) matched: done");
+            state.done = true;
+            Ok(true)
+        }
+    }
+
+    async fn try_consume_condition(
+        &mut self,
+        state: &mut ConditionState<'_>,
+        ctx: &Context,
+    ) -> NetActorResult<bool> {
+        match state {
+            ConditionState::Init(init_state) => {
+                match init_state.choose_branch(&self.script.script)? {
+                    None => {
+                        debug!(
+                            self,
+                            "conditional block ({ctx}) no branch is True: moving to Done"
+                        );
+                        *state = ConditionState::Done;
+                        Ok(false)
+                    }
+                    Some((ctx_b, body)) => {
+                        debug!(
+                            self,
+                            "conditional block ({ctx}) chose branch ({ctx_b}): moving to Chosen"
+                        );
+                        let mut body = Box::new(body.clone());
+                        let res = Box::pin(self.try_consume(&mut body)).await;
+                        if body.done() {
+                            debug!(self, "conditional body ({ctx_b}) done: moving to Done");
+                            *state = ConditionState::Done;
+                        } else {
+                            *state = ConditionState::Chosen(ctx_b, body);
+                        }
+                        res
+                    }
+                }
+            }
+            ConditionState::Chosen(ctx, b) => {
+                let res = Box::pin(self.try_consume(b)).await;
+                if b.done() {
+                    debug!(self, "conditional body ({ctx}) done: moving to Done");
+                    *state = ConditionState::Done;
+                }
+                res
+            }
+            ConditionState::Done => Ok(false),
+        }
+    }
+
+    async fn try_consume_alt(
+        &mut self,
+        state: &mut BranchState,
+        ctx: &Context,
+        blocks: &mut Vec<BlockWithState<'_>>,
+    ) -> NetActorResult<bool> {
+        match state {
+            BranchState::Init => {
+                for (i, block) in blocks.iter_mut().enumerate() {
+                    if Box::pin(self.try_consume(block)).await? {
+                        if block.done() {
+                            debug!(
+                                self,
+                                "alt block ({ctx}) child {} started and done: moving to Done",
+                                i + 1
+                            );
+                            *state = BranchState::Done;
+                        } else {
+                            debug!(
+                                self,
+                                "alt block ({ctx}) child {} started: moving to InBlock",
+                                i + 1
+                            );
+                            *state = BranchState::InBlock(i);
+                        }
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            }
+            BranchState::InBlock(i) => {
+                let res = Box::pin(self.try_consume(&mut blocks[*i])).await;
+                if blocks[*i].done() {
+                    debug!(
+                        self,
+                        "alt block ({ctx}) child {} done: moving to Done",
+                        *i + 1
+                    );
+                    *state = BranchState::Done;
+                }
+                res
+            }
+            BranchState::Done => Ok(false),
+        }
+    }
+
+    async fn try_consume_parallel(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        blocks: &mut Vec<BlockWithState<'_>>,
+    ) -> NetActorResult<bool> {
+        if state.done {
+            return Ok(false);
+        }
+        let mut matched = false;
+        for block in blocks.iter_mut() {
+            if block.done() {
+                continue;
+            }
+            if Box::pin(self.try_consume(block)).await? {
+                matched = true;
+                break;
+            }
+        }
+        if blocks.iter().all(BlockWithState::done) {
+            debug!(
+                self,
+                "parallel block ({ctx}) all children done: moving to Done"
+            );
+            state.done = true;
+        }
+        Ok(matched)
+    }
+
+    async fn try_consume_optional(
+        &mut self,
+        state: &mut OptionalState,
+        ctx: &Context,
+        block: &mut BlockWithState<'_>,
+    ) -> NetActorResult<bool> {
+        match state {
+            OptionalState::Init | OptionalState::Started => {
+                let res = Box::pin(self.try_consume(block)).await?;
+                if res {
+                    debug!(
+                        self,
+                        "optional block ({ctx}) child stared: moving to Started"
+                    );
+                    *state = OptionalState::Started;
+                }
+                if block.done() {
+                    debug!(self, "optional block ({ctx}) child done: moving to Done");
+                    *state = OptionalState::Done;
+                }
+                Ok(res)
+            }
+            OptionalState::Done => Ok(false),
+        }
+    }
+
+    async fn try_consume_repeat<'b>(
+        &mut self,
+        state: &mut RepeatState<'b>,
+        ctx: &Context,
+        block: &mut BlockWithState<'b>,
+        count: usize,
+    ) -> NetActorResult<bool> {
+        if Box::pin(self.try_consume(block)).await? {
+            debug!(
+                self,
+                "repeat{count} block ({ctx}) child consumed message: InBlock count {}", state.count
+            );
+            state.in_block = true;
+            return Ok(true);
+        }
+        if state.in_block && block.can_skip() {
+            // try form the top
+            let peeked_message = Self::peek_message(
+                self.logging_ctx(),
+                &self.ct,
+                &mut self.conn,
+                &mut self.peeked_message,
+                self.script.config.bolt_version,
+            )
+            .await?;
+            if Self::can_consume(
+                state.initial_state.as_ref(),
+                peeked_message,
+                &self.script.script,
+            )? {
+                block.clone_from(&state.initial_state);
+                state.count += 1;
+                assert!(Box::pin(self.try_consume(block)).await?);
+                debug!(
+                    self,
+                    "repeat{count} block ({ctx}) looping around: InBlock count {}", state.count
+                );
+                state.in_block = true;
+                Ok(true)
+            } else {
+                Ok(false)
+            }
+        } else {
+            Ok(false)
+        }
+    }
+
+    async fn try_consume_auto_message(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        auto_handler: &AutoMessageHandler,
+    ) -> NetActorResult<bool> {
+        let peeked_message = Self::peek_message(
+            self.logging_ctx(),
+            &self.ct,
+            &mut self.conn,
+            &mut self.peeked_message,
+            self.script.config.bolt_version,
+        )
+        .await?;
+        if auto_handler
+            .client_validator
+            .validate(peeked_message)
+            .is_err()
+        {
+            return Ok(false);
+        }
+        _ = self.read_message(&*auto_handler.client_validator).await?; // consume the message
+        self.write_message(&*auto_handler.server_sender)
+            .await
+            .with_context(|| format!("Reading on {ctx}"))?;
+        debug!(self, "auto message ({ctx}) matched: done");
+        state.done = true;
+        Ok(true)
     }
 
     async fn try_auto_bang_handler(&mut self) -> NetActorResult<bool> {
@@ -561,181 +638,273 @@ impl<'a, C: Connection> NetActor<'a, C> {
     async fn server_action(&mut self, block: &mut BlockWithState<'_>) -> NetActorResult<()> {
         match block {
             BlockWithState::BlockList(ctx, blocks, initial_size) => {
-                let mut error = None;
-                loop {
-                    let Some(block) = blocks.front_mut() else {
-                        break;
-                    };
-                    let res = Box::pin(self.server_action(block)).await;
-                    if let Err(err) = res {
-                        error.get_or_insert(err);
-                    }
-                    if !block.done() {
-                        break;
-                    }
-                    blocks.pop_front();
-                    debug!(
-                        self,
-                        "list child block done: moving block list ({ctx}) to {}/{initial_size}",
-                        initial_size.saturating_sub(blocks.len()),
-                    );
-                    if error.is_some() {
-                        break;
-                    }
-                }
-                error.map_or_else(|| Ok(()), Err)
+                self.server_action_block_list(ctx, blocks, initial_size)
+                    .await
             }
-            BlockWithState::ServerMessageSend(state, ctx, sender) => match state.done {
-                true => Ok(()),
-                false => {
-                    let res = self
-                        .write_message(*sender)
-                        .await
-                        .inspect_err(|err| info!(self, "Error sending message: {err}"));
-                    state.done = true;
-                    debug!(self, "server line ({ctx}): done");
-                    res
-                }
-            },
-            BlockWithState::ServerActionLine(state, ctx, action) => match state.done {
-                true => Ok(()),
-                false => {
-                    let res = self
-                        .server_action_line(*action)
-                        .await
-                        .inspect_err(|err| info!(self, "Error on server action: {err}"));
-                    state.done = true;
-                    debug!(self, "server action ({ctx}): done");
-                    res
-                }
-            },
-            BlockWithState::Python(state, ctx, command) => match state.done {
-                true => Ok(()),
-                false => {
-                    state.done = true;
-                    run_python(*ctx, command, &self.script.script)
-                }
-            },
-            BlockWithState::Condition(state, ctx) => match state {
-                ConditionState::Init(init_state) => {
-                    match init_state.choose_branch(&self.script.script)? {
-                        None => {
-                            debug!(
-                                self,
-                                "conditional block ({ctx}) no branch is True: moving to Done"
-                            );
-                            *state = ConditionState::Done;
-                            Ok(())
-                        }
-                        Some((ctx_b, body)) => {
-                            debug!(
-                            self,
-                            "conditional block ({ctx}) chose branch ({ctx_b}): moving to Chosen"
-                        );
-                            let mut body = Box::new(body.clone());
-                            let res = Box::pin(self.server_action(&mut body)).await;
-                            if body.done() {
-                                debug!(self, "conditional body ({ctx_b}) done: moving to Done");
-                                *state = ConditionState::Done
-                            } else {
-                                *state = ConditionState::Chosen(ctx_b, body);
-                            }
-                            res
-                        }
-                    }
-                }
-                ConditionState::Chosen(ctx, b) => {
-                    let res = Box::pin(self.server_action(b)).await;
-                    if b.done() {
-                        debug!(self, "conditional body ({ctx}) done: moving to Done");
-                        *state = ConditionState::Done
-                    }
-                    res
-                }
-                ConditionState::Done => Ok(()),
-            },
-            BlockWithState::Alt(state, ctx, blocks) => match state {
-                BranchState::Init => {
-                    for block in blocks.iter_mut() {
-                        Box::pin(self.server_action(block)).await?;
-                        assert!(!block.done())
-                    }
-                    Ok(())
-                }
-                BranchState::InBlock(i) => {
-                    let res = Box::pin(self.server_action(&mut blocks[*i])).await;
-                    if blocks[*i].done() {
-                        debug!(
-                            self,
-                            "alt block ({ctx}) child {} done: moving to Done",
-                            *i + 1
-                        );
-                        *state = BranchState::Done
-                    }
-                    res
-                }
-                BranchState::Done => Ok(()),
-            },
-            BlockWithState::Parallel(state, ctx, blocks) => match state.done {
-                true => Ok(()),
-                false => {
-                    let mut error = None;
-                    for block in blocks.iter_mut() {
-                        block.ensure_branched(self.logging_ctx(), &self.script.script)?;
-                        if block.done() {
-                            continue;
-                        }
-                        let res = Box::pin(self.server_action(block)).await;
-                        if let Err(err) = res {
-                            error.get_or_insert(err);
-                        }
-                    }
-                    if blocks.iter().all(BlockWithState::done) {
-                        debug!(
-                            self,
-                            "parallel block ({ctx}) all children done: moving to Done"
-                        );
-                        state.done = true;
-                    }
-                    match error {
-                        None => Ok(()),
-                        Some(err) => Err(err),
-                    }
-                }
-            },
-            BlockWithState::Optional(state, ctx, block) => match state {
-                // optional block children cannot start with an action block
-                OptionalState::Init => Ok(()),
-                OptionalState::Started => {
-                    let res = Box::pin(self.server_action(block)).await;
-                    if block.done() {
-                        debug!(self, "optional block ({ctx}) child done: moving to Done");
-                        *state = OptionalState::Done;
-                    }
-                    res
-                }
-                OptionalState::Done => Ok(()),
-            },
-            BlockWithState::Repeat(state, ctx, block, count) => match state.in_block {
-                true => {
-                    let res = Box::pin(self.server_action(block)).await;
-                    if block.done() {
-                        *block = state.initial_state.clone();
-                        state.in_block = false;
-                        state.count += 1;
-                        debug!(
-                            self,
-                            "repeat{count} block ({ctx}) reached end: count {}", state.count
-                        );
-                    }
-                    res
-                }
-                // repeat block children cannot start with an action block
-                false => Ok(()),
-            },
+            BlockWithState::ServerMessageSend(state, ctx, sender) => {
+                self.server_action_server_message_send(state, ctx, *sender)
+                    .await
+            }
+            BlockWithState::ServerActionLine(state, ctx, action) => {
+                self.server_action_server_action_line(state, ctx, *action)
+                    .await
+            }
+            BlockWithState::Python(state, ctx, command) => {
+                self.server_action_python(state, ctx, command)
+            }
+            BlockWithState::Condition(state, ctx) => self.server_action_condition(state, ctx).await,
+            BlockWithState::Alt(state, ctx, blocks) => {
+                self.server_action_alt(state, ctx, blocks).await
+            }
+            BlockWithState::Parallel(state, ctx, blocks) => {
+                self.server_action_parallel(state, ctx, blocks).await
+            }
+            BlockWithState::Optional(state, ctx, block) => {
+                self.server_action_optional(state, ctx, block).await
+            }
+            BlockWithState::Repeat(state, ctx, block, count) => {
+                self.server_action_repeat(state, ctx, block, *count).await
+            }
             BlockWithState::ClientMessageValidate(..)
             | BlockWithState::AutoMessage(..)
             | BlockWithState::NoOp(..) => Ok(()),
+        }
+    }
+
+    async fn server_action_block_list(
+        &mut self,
+        ctx: &Context,
+        blocks: &mut VecDeque<BlockWithState<'_>>,
+        initial_size: &mut usize,
+    ) -> NetActorResult<()> {
+        let mut error = None;
+        loop {
+            let Some(block) = blocks.front_mut() else {
+                break;
+            };
+            let res = Box::pin(self.server_action(block)).await;
+            if let Err(err) = res {
+                error.get_or_insert(err);
+            }
+            if !block.done() {
+                break;
+            }
+            blocks.pop_front();
+            debug!(
+                self,
+                "list child block done: moving block list ({ctx}) to {}/{initial_size}",
+                initial_size.saturating_sub(blocks.len()),
+            );
+            if error.is_some() {
+                break;
+            }
+        }
+        error.map_or_else(|| Ok(()), Err)
+    }
+
+    async fn server_action_server_message_send(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        sender: &dyn ServerMessageSender,
+    ) -> NetActorResult<()> {
+        if state.done {
+            Ok(())
+        } else {
+            let res = self
+                .write_message(sender)
+                .await
+                .inspect_err(|err| info!(self, "Error sending message: {err}"));
+            state.done = true;
+            debug!(self, "server line ({ctx}): done");
+            res
+        }
+    }
+
+    async fn server_action_server_action_line(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        action: &dyn ServerActionLine,
+    ) -> NetActorResult<()> {
+        if state.done {
+            Ok(())
+        } else {
+            let res = self
+                .server_action_line(action)
+                .await
+                .inspect_err(|err| info!(self, "Error on server action: {err}"));
+            state.done = true;
+            debug!(self, "server action ({ctx}): done");
+            res
+        }
+    }
+
+    fn server_action_python(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        command: &str,
+    ) -> NetActorResult<()> {
+        if state.done {
+            Ok(())
+        } else {
+            state.done = true;
+            run_python(*ctx, command, &self.script.script)
+        }
+    }
+
+    async fn server_action_condition(
+        &mut self,
+        state: &mut ConditionState<'_>,
+        ctx: &Context,
+    ) -> NetActorResult<()> {
+        match state {
+            ConditionState::Init(init_state) => {
+                match init_state.choose_branch(&self.script.script)? {
+                    None => {
+                        debug!(
+                            self,
+                            "conditional block ({ctx}) no branch is True: moving to Done"
+                        );
+                        *state = ConditionState::Done;
+                        Ok(())
+                    }
+                    Some((ctx_b, body)) => {
+                        debug!(
+                            self,
+                            "conditional block ({ctx}) chose branch ({ctx_b}): moving to Chosen"
+                        );
+                        let mut body = Box::new(body.clone());
+                        let res = Box::pin(self.server_action(&mut body)).await;
+                        if body.done() {
+                            debug!(self, "conditional body ({ctx_b}) done: moving to Done");
+                            *state = ConditionState::Done;
+                        } else {
+                            *state = ConditionState::Chosen(ctx_b, body);
+                        }
+                        res
+                    }
+                }
+            }
+            ConditionState::Chosen(ctx, b) => {
+                let res = Box::pin(self.server_action(b)).await;
+                if b.done() {
+                    debug!(self, "conditional body ({ctx}) done: moving to Done");
+                    *state = ConditionState::Done;
+                }
+                res
+            }
+            ConditionState::Done => Ok(()),
+        }
+    }
+
+    async fn server_action_alt(
+        &mut self,
+        state: &mut BranchState,
+        ctx: &Context,
+        blocks: &mut Vec<BlockWithState<'_>>,
+    ) -> NetActorResult<()> {
+        match state {
+            BranchState::Init => {
+                for block in blocks.iter_mut() {
+                    Box::pin(self.server_action(block)).await?;
+                    assert!(!block.done());
+                }
+                Ok(())
+            }
+            BranchState::InBlock(i) => {
+                let res = Box::pin(self.server_action(&mut blocks[*i])).await;
+                if blocks[*i].done() {
+                    debug!(
+                        self,
+                        "alt block ({ctx}) child {} done: moving to Done",
+                        *i + 1
+                    );
+                    *state = BranchState::Done;
+                }
+                res
+            }
+            BranchState::Done => Ok(()),
+        }
+    }
+
+    async fn server_action_parallel(
+        &mut self,
+        state: &mut OneShotState,
+        ctx: &Context,
+        blocks: &mut Vec<BlockWithState<'_>>,
+    ) -> NetActorResult<()> {
+        if state.done {
+            Ok(())
+        } else {
+            let mut error = None;
+            for block in blocks.iter_mut() {
+                block.ensure_branched(self.logging_ctx(), &self.script.script)?;
+                if block.done() {
+                    continue;
+                }
+                let res = Box::pin(self.server_action(block)).await;
+                if let Err(err) = res {
+                    error.get_or_insert(err);
+                }
+            }
+            if blocks.iter().all(BlockWithState::done) {
+                debug!(
+                    self,
+                    "parallel block ({ctx}) all children done: moving to Done"
+                );
+                state.done = true;
+            }
+            match error {
+                None => Ok(()),
+                Some(err) => Err(err),
+            }
+        }
+    }
+
+    async fn server_action_optional(
+        &mut self,
+        state: &mut OptionalState,
+        ctx: &Context,
+        block: &mut BlockWithState<'_>,
+    ) -> NetActorResult<()> {
+        match state {
+            // optional block children cannot start with an action block
+            OptionalState::Init => Ok(()),
+            OptionalState::Started => {
+                let res = Box::pin(self.server_action(block)).await;
+                if block.done() {
+                    debug!(self, "optional block ({ctx}) child done: moving to Done");
+                    *state = OptionalState::Done;
+                }
+                res
+            }
+            OptionalState::Done => Ok(()),
+        }
+    }
+
+    async fn server_action_repeat<'b>(
+        &mut self,
+        state: &mut RepeatState<'b>,
+        ctx: &Context,
+        block: &mut BlockWithState<'b>,
+        count: usize,
+    ) -> NetActorResult<()> {
+        if state.in_block {
+            let res = Box::pin(self.server_action(block)).await;
+            if block.done() {
+                block.clone_from(&state.initial_state);
+                state.in_block = false;
+                state.count += 1;
+                debug!(
+                    self,
+                    "repeat{count} block ({ctx}) reached end: count {}", state.count
+                );
+            }
+            res
+        } else {
+            Ok(())
         }
     }
 
@@ -790,7 +959,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 self,
                 "Failed to fully resolve currently accepted messages. \
             The list might be incomplete! {e:#}"
-            )
+            );
         }
         self.script
             .config
@@ -818,7 +987,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
     ) -> anyhow::Result<()> {
         match block {
             BlockWithState::BlockList(_, blocks, _) => {
-                for block in blocks.iter() {
+                for block in blocks {
                     self.current_verifiers(block, res)?;
                     if !block.can_skip() {
                         break;
@@ -860,7 +1029,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
             }
             BlockWithState::Optional(state, _, block) => match state {
                 OptionalState::Init | OptionalState::Started => {
-                    self.current_verifiers(block, res)?
+                    self.current_verifiers(block, res)?;
                 }
                 OptionalState::Done => {}
             },
@@ -879,7 +1048,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                 self.current_verifiers(&state_from_top, &mut sub_res)?;
                 let mut reported_verifiers = HashSet::with_capacity(sub_res.len());
                 for verifier in sub_res {
-                    if reported_verifiers.insert(verifier as *const _) {
+                    if reported_verifiers.insert(std::ptr::from_ref(verifier)) {
                         res.push(verifier);
                     }
                 }
@@ -906,7 +1075,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
     ) -> NetActorResult<bool> {
         match block {
             BlockWithState::BlockList(_, blocks, _) => {
-                for block in blocks.iter() {
+                for block in blocks {
                     if Self::can_consume(block, message, script)? {
                         return Ok(true);
                     }
@@ -969,7 +1138,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
     async fn read_message(&mut self, line: &dyn ScriptLine) -> anyhow::Result<BoltMessage> {
         trace!(self, "read_message: {line:?}");
         if let Some(peeked) = self.peeked_message.take() {
-            info!(self, "{}", self.fmt_reader_message(&peeked, line));
+            info!(self, "{}", Self::fmt_reader_message(&peeked, line));
             return Ok(peeked);
         }
         let res = Self::read_unbuffered_message(
@@ -980,11 +1149,11 @@ impl<'a, C: Connection> NetActor<'a, C> {
         )
         .await
         .inspect_err(|err| info!(self, "Error reading message: {err}"))?;
-        info!(self, "{}", self.fmt_reader_message(&res, line));
+        info!(self, "{}", Self::fmt_reader_message(&res, line));
         Ok(res)
     }
 
-    fn fmt_reader_message(&self, msg: &BoltMessage, sender: &dyn ScriptLine) -> String {
+    fn fmt_reader_message(msg: &BoltMessage, sender: &dyn ScriptLine) -> String {
         let line = msg.repr();
         match sender.line_number() {
             None => format!("(   ?) C: {line}"),
@@ -1036,11 +1205,13 @@ impl<'a, C: Connection> NetActor<'a, C> {
         let mut data: &[u8] = &full_data;
         while !data.is_empty() {
             let chunk_size = data.len().min(0xFFFF);
+            #[allow(clippy::cast_possible_truncation, reason = "min guarantees fit")]
+            let chunk_size_u16 = chunk_size as u16;
             cancelable_io(
                 "writing chunk header",
                 self.logging_ctx(),
                 &self.ct,
-                self.conn.write_all(&(chunk_size as u16).to_be_bytes()),
+                self.conn.write_all(&chunk_size_u16.to_be_bytes()),
             )
             .await?;
             cancelable_io(
@@ -1072,15 +1243,13 @@ impl<'a, C: Connection> NetActor<'a, C> {
     }
 
     fn fmt_sender_message(&self, sender: &dyn ServerMessageSender, data: &[u8]) -> String {
-        let line = sender
-            .line_repr(self.script.script.input)
-            .map(Cow::Borrowed)
-            .unwrap_or_else(
-                || match parse_message(data, self.script.config.bolt_version) {
-                    Ok(message) => message.repr().into(),
-                    Err(e) => format!("??? ({e:#?})").into(),
-                },
-            );
+        let line = sender.line_repr(self.script.script.input).map_or_else(
+            || match parse_message(data, self.script.config.bolt_version) {
+                Ok(message) => message.repr().into(),
+                Err(e) => format!("??? ({e:#?})").into(),
+            },
+            Cow::Borrowed,
+        );
         match sender.line_number() {
             None => format!("(AUTO) S: {line}"),
             Some(line_number) => format!("({line_number:4}) S: {line}"),
@@ -1144,8 +1313,8 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     duration.as_secs_f64()
                 );
                 select! {
-                    _ = tokio::time::sleep(*duration) => {Ok(())}
-                    _ = self.ct.cancelled() => {
+                    () = tokio::time::sleep(*duration) => {Ok(())}
+                    () = self.ct.cancelled() => {
                         let msg = "Sleeping cancelled";
                         debug!(self, "{msg}");
                         Err(NetActorError::from_cancellation(String::from(msg)))
@@ -1159,7 +1328,7 @@ impl<'a, C: Connection> NetActor<'a, C> {
                     duration.as_secs_f64()
                 );
                 select! {
-                    _ = tokio::time::sleep(*duration) => {Ok(())}
+                    () = tokio::time::sleep(*duration) => {Ok(())}
                     peeked_message = Self::peek_message(
                         self.logging_ctx(),
                         &self.ct,
@@ -1217,7 +1386,7 @@ enum BlockWithState<'a> {
     Optional(OptionalState, Context, Box<BlockWithState<'a>>),
     Repeat(RepeatState<'a>, Context, Box<BlockWithState<'a>>, usize),
     AutoMessage(OneShotState, Context, &'a AutoMessageHandler),
-    NoOp(#[allow(dead_code)] Context),
+    NoOp(#[allow(dead_code, reason = "for debugging")] Context),
 }
 
 /*
@@ -1255,25 +1424,20 @@ impl BlockWithState<'_> {
             BlockWithState::Python(_, _, _) => Ok(()),
             BlockWithState::Condition(ConditionState::Init(state), ctx) => {
                 let branch = state.choose_branch(script)?;
-                *self = BlockWithState::Condition(
-                    match branch {
-                        Some((ctx_b, body)) => {
-                            debug!(
-                            logging_ctx,
-                            "conditional block ({ctx}) chose branch ({ctx_b}): moving to Chosen"
-                        );
-                            ConditionState::Chosen(ctx_b, Box::new(body.clone()))
-                        }
-                        None => {
-                            debug!(
-                                logging_ctx,
-                                "conditional block ({ctx}) no branch is True: moving to Done"
-                            );
-                            ConditionState::Done
-                        }
-                    },
-                    *ctx,
-                );
+                let new_state = if let Some((ctx_b, body)) = branch {
+                    debug!(
+                        logging_ctx,
+                        "conditional block ({ctx}) chose branch ({ctx_b}): moving to Chosen"
+                    );
+                    ConditionState::Chosen(ctx_b, Box::new(body.clone()))
+                } else {
+                    debug!(
+                        logging_ctx,
+                        "conditional block ({ctx}) no branch is True: moving to Done"
+                    );
+                    ConditionState::Done
+                };
+                *self = BlockWithState::Condition(new_state, *ctx);
                 Ok(())
             }
             BlockWithState::Condition(_, _) => Ok(()),
@@ -1284,12 +1448,15 @@ impl BlockWithState<'_> {
                 BranchState::InBlock(i) => blocks[*i].ensure_branched(logging_ctx, script),
                 BranchState::Done => Ok(()),
             },
-            BlockWithState::Parallel(state, _, blocks) => match state.done {
-                true => Ok(()),
-                false => blocks
-                    .iter_mut()
-                    .try_for_each(|b| b.ensure_branched(logging_ctx, script)),
-            },
+            BlockWithState::Parallel(state, _, blocks) => {
+                if state.done {
+                    Ok(())
+                } else {
+                    blocks
+                        .iter_mut()
+                        .try_for_each(|b| b.ensure_branched(logging_ctx, script))
+                }
+            }
             BlockWithState::Optional(state, _, block) => match state {
                 OptionalState::Init | OptionalState::Started => {
                     block.ensure_branched(logging_ctx, script)
@@ -1364,7 +1531,7 @@ impl<'a> ConditionStateInit<'a> {
         if condition_python(*ctx, cond, script)? {
             return Ok(Some((*ctx, body)));
         }
-        for (ctx, cond, body) in self.else_if.iter() {
+        for (ctx, cond, body) in &self.else_if {
             if condition_python(*ctx, cond, script)? {
                 return Ok(Some((*ctx, body)));
             }
@@ -1383,15 +1550,17 @@ impl<'a> BlockWithState<'a> {
                 Self::BlockList(*ctx, blocks.iter().map(Self::new).collect(), blocks.len())
             }
             ActorBlock::ClientMessageValidate(ctx, validator) => {
-                Self::ClientMessageValidate(Default::default(), *ctx, validator.as_ref())
+                Self::ClientMessageValidate(OneShotState::default(), *ctx, validator.as_ref())
             }
             ActorBlock::ServerMessageSend(ctx, sender) => {
-                Self::ServerMessageSend(Default::default(), *ctx, sender.as_ref())
+                Self::ServerMessageSend(OneShotState::default(), *ctx, sender.as_ref())
             }
             ActorBlock::ServerActionLine(ctx, line) => {
-                Self::ServerActionLine(Default::default(), *ctx, line.as_ref())
+                Self::ServerActionLine(OneShotState::default(), *ctx, line.as_ref())
             }
-            ActorBlock::Python(ctx, command) => Self::Python(Default::default(), *ctx, command),
+            ActorBlock::Python(ctx, command) => {
+                Self::Python(OneShotState::default(), *ctx, command)
+            }
             ActorBlock::Condition(ctx, cond) => Self::Condition(
                 ConditionState::Init({
                     ConditionStateInit {
@@ -1415,17 +1584,17 @@ impl<'a> BlockWithState<'a> {
                 *ctx,
             ),
             ActorBlock::Alt(ctx, blocks) => Self::Alt(
-                Default::default(),
+                BranchState::default(),
                 *ctx,
                 blocks.iter().map(Self::new).collect(),
             ),
             ActorBlock::Parallel(ctx, blocks) => Self::Parallel(
-                Default::default(),
+                OneShotState::default(),
                 *ctx,
                 blocks.iter().map(Self::new).collect(),
             ),
             ActorBlock::Optional(ctx, block) => {
-                Self::Optional(Default::default(), *ctx, Box::new(Self::new(block)))
+                Self::Optional(OptionalState::default(), *ctx, Box::new(Self::new(block)))
             }
             ActorBlock::Repeat(ctx, block, rep) => Self::Repeat(
                 RepeatState::new(Box::new(Self::new(block))),
@@ -1434,7 +1603,7 @@ impl<'a> BlockWithState<'a> {
                 *rep,
             ),
             ActorBlock::AutoMessage(ctx, handler) => {
-                Self::AutoMessage(Default::default(), *ctx, handler)
+                Self::AutoMessage(OneShotState::default(), *ctx, handler)
             }
             ActorBlock::NoOp(ctx) => Self::NoOp(*ctx),
         }
@@ -1491,10 +1660,13 @@ impl<'a> BlockWithState<'a> {
                 OptionalState::Init | OptionalState::Done => true,
                 OptionalState::Started => block.can_skip(),
             },
-            BlockWithState::Repeat(state, _, block, rep) => match state.in_block {
-                true => block.can_skip(),
-                false => state.count >= *rep,
-            },
+            BlockWithState::Repeat(state, _, block, rep) => {
+                if state.in_block {
+                    block.can_skip()
+                } else {
+                    state.count >= *rep
+                }
+            }
             BlockWithState::ClientMessageValidate(state, _, _)
             | BlockWithState::AutoMessage(state, _, _) => state.done,
             BlockWithState::NoOp(_)
@@ -1518,8 +1690,7 @@ fn parse_message(data: &[u8], bolt_version: BoltVersion) -> NetActorResult<BoltM
         value
     else {
         return Err(NetActorError::Anyhow(anyhow!(
-            "Expected a bolt message but got: {:?}.",
-            value
+            "Expected a bolt message but got: {value:?}."
         )));
     };
     let msg = BoltMessage::new(tag, fields, bolt_version);
@@ -1544,7 +1715,7 @@ async fn cancelable_io<'a, T, F: Future<Output = Result<T, io::Error>> + 'a>(
                 }
             }
         },
-        _ = ct.cancelled() => {
+        () = ct.cancelled() => {
             let msg = format!("IO cancelled {ctx}");
             debug!(logging_ctx, "{msg}");
             Err(NetActorError::from_cancellation(msg))
@@ -1607,9 +1778,10 @@ mod tests {
 
         impl ClientMessageValidator for TestValidator {
             fn validate(&self, _: &BoltMessage) -> anyhow::Result<()> {
-                match self.valid {
-                    true => Ok(()),
-                    false => Err(anyhow!("Not valid")),
+                if self.valid {
+                    Ok(())
+                } else {
+                    Err(anyhow!("Not valid"))
                 }
             }
         }

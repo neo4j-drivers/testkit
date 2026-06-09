@@ -43,20 +43,20 @@ impl BangLine {
 
         match self {
             BangLine::Version(ctx, (ctx_arg1, _), Some((ctx_arg2, _))) => {
-                add_offset_ctx([ctx, ctx_arg1, ctx_arg2], lines, bytes)
+                add_offset_ctx([ctx, ctx_arg1, ctx_arg2], lines, bytes);
             }
             BangLine::Version(ctx, (ctx_arg1, _), None) => {
-                add_offset_ctx([ctx, ctx_arg1], lines, bytes)
+                add_offset_ctx([ctx, ctx_arg1], lines, bytes);
             }
             BangLine::HandshakeManifest(ctx, (ctx_arg, _)) => {
-                add_offset_ctx([ctx, ctx_arg], lines, bytes)
+                add_offset_ctx([ctx, ctx_arg], lines, bytes);
             }
             BangLine::Handshake(ctx, (ctx_arg, _)) => add_offset_ctx([ctx, ctx_arg], lines, bytes),
             BangLine::HandshakeResponse(ctx, (ctx_arg, _)) => {
-                add_offset_ctx([ctx, ctx_arg], lines, bytes)
+                add_offset_ctx([ctx, ctx_arg], lines, bytes);
             }
             BangLine::HandshakeDelay(ctx, (ctx_arg, _)) => {
-                add_offset_ctx([ctx, ctx_arg], lines, bytes)
+                add_offset_ctx([ctx, ctx_arg], lines, bytes);
             }
             BangLine::Auto(ctx, (ctx_arg, _)) => add_offset_ctx([ctx, ctx_arg], lines, bytes),
             BangLine::AllowRestart(ctx) => add_offset_ctx([ctx], lines, bytes),

@@ -26,7 +26,6 @@ use crate::jolt::JoltSigil;
 use crate::str_bytes;
 use crate::values::bolt_struct::BoltStruct;
 
-#[allow(unused)]
 #[derive(Debug, Clone)]
 #[non_exhaustive]
 pub enum PackStreamValue {
@@ -137,7 +136,7 @@ impl<T: Into<PackStreamValue>> From<IndexMap<String, T>> for PackStreamValue {
 
 impl<T: Into<PackStreamValue>> From<Vec<T>> for PackStreamValue {
     fn from(value: Vec<T>) -> Self {
-        PackStreamValue::List(value.into_iter().map(|v| v.into()).collect())
+        PackStreamValue::List(value.into_iter().map(std::convert::Into::into).collect())
     }
 }
 
@@ -184,7 +183,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_bool(self) -> Result<bool, Self> {
         self.try_into()
     }
@@ -217,7 +216,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_int(self) -> Result<i64, Self> {
         self.try_into()
     }
@@ -250,7 +249,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_float(self) -> Result<f64, Self> {
         self.try_into()
     }
@@ -283,7 +282,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_bytes(self) -> Result<Vec<u8>, Self> {
         self.try_into()
     }
@@ -316,7 +315,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_string(self) -> Result<String, Self> {
         self.try_into()
     }
@@ -349,7 +348,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_list(self) -> Result<Vec<PackStreamValue>, Self> {
         self.try_into()
     }
@@ -382,7 +381,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_map(self) -> Result<IndexMap<String, PackStreamValue>, Self> {
         self.try_into()
     }
@@ -415,7 +414,7 @@ impl PackStreamValue {
     }
 
     #[inline]
-    #[allow(clippy::result_large_err)]
+    #[allow(clippy::result_large_err, reason = "DX over performance")]
     pub fn try_into_struct(self) -> Result<PackStreamStruct, Self> {
         self.try_into()
     }
@@ -466,6 +465,7 @@ impl<'a> PackStreamDecoder<'a> {
 
         Ok(match marker {
             // tiny int
+            #[allow(clippy::cast_possible_wrap, reason = "deliberate wrapping")]
             _ if marker as i8 >= -16 => (marker as i8).into(),
             NULL => PackStreamValue::Null,
             FLOAT_64 => self.read_f64()?.into(),
@@ -477,15 +477,15 @@ impl<'a> PackStreamDecoder<'a> {
             INT_64 => self.read_i64()?.into(),
             BYTES_8 => {
                 let len = self.read_u8()?;
-                self.read_bytes(len)?
+                self.read_bytes(len)
             }
             BYTES_16 => {
                 let len = self.read_u16()?;
-                self.read_bytes(len)?
+                self.read_bytes(len)
             }
             BYTES_32 => {
                 let len = self.read_u32()?;
-                self.read_bytes(len)?
+                self.read_bytes(len)
             }
             _ if high_nibble == TINY_STRING => self.read_string((marker & 0x0F).into())?,
             STRING_8 => {
@@ -556,17 +556,17 @@ impl<'a> PackStreamDecoder<'a> {
         Ok(key_value_pairs.into())
     }
 
-    fn read_bytes(&mut self, length: usize) -> Result<PackStreamValue> {
+    fn read_bytes(&mut self, length: usize) -> PackStreamValue {
         let data = self.bytes.get(self.index..self.index + length);
         self.index += length;
-        Ok(data.into())
+        data.into()
     }
 
     fn read_struct(&mut self, length: usize) -> Result<PackStreamValue> {
         let tag = self.read_byte()?;
         let mut fields = Vec::with_capacity(length);
         for _ in 0..length {
-            fields.push(self.read()?)
+            fields.push(self.read()?);
         }
         let bolt_struct = PackStreamValue::Struct(PackStreamStruct { tag, fields });
         Ok(bolt_struct)
@@ -580,7 +580,7 @@ impl<'a> PackStreamDecoder<'a> {
             STRING_8 => self.read_u8(),
             STRING_16 => self.read_u16(),
             STRING_32 => self.read_u32(),
-            _ => Err(anyhow!("Invalid string length marker: {}", marker)),
+            _ => Err(anyhow!("Invalid string length marker: {marker}")),
         }
     }
 
@@ -647,7 +647,7 @@ impl<'a> PackStreamDecoder<'a> {
 
     fn read_raw_string(&mut self, length: usize) -> Result<String> {
         if length == 0 {
-            return Ok("".into());
+            return Ok(String::new());
         }
         let data = self
             .bytes
@@ -714,23 +714,24 @@ impl<'a> PackStreamSerializer<'a> {
     }
 
     fn write_bool(&mut self, b: bool) {
-        self.write_all(match b {
-            false => &[0xC2],
-            true => &[0xC3],
-        });
+        self.write_all(if b { &[0xC3] } else { &[0xC2] });
     }
 
     fn write_int(&mut self, i: i64) {
         if (-16..=127).contains(&i) {
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&i8::to_be_bytes(i as i8));
         } else if (-128..=127).contains(&i) {
             self.write_all(&[0xC8]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&i8::to_be_bytes(i as i8));
         } else if (-32_768..=32_767).contains(&i) {
             self.write_all(&[0xC9]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&i16::to_be_bytes(i as i16));
         } else if (-2_147_483_648..=2_147_483_647).contains(&i) {
             self.write_all(&[0xCA]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&i32::to_be_bytes(i as i32));
         } else {
             self.write_all(&[0xCB]);
@@ -747,12 +748,15 @@ impl<'a> PackStreamSerializer<'a> {
         let size = b.len();
         if size <= 255 {
             self.write_all(&[0xCC]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u8::to_be_bytes(size as u8));
         } else if size <= 65_535 {
             self.write_all(&[0xCD]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u16::to_be_bytes(size as u16));
         } else if size <= 2_147_483_647 {
             self.write_all(&[0xCE]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u32::to_be_bytes(size as u32));
         } else {
             panic!("bytes exceed max size of 2,147,483,647");
@@ -764,15 +768,19 @@ impl<'a> PackStreamSerializer<'a> {
         let bytes = s.as_bytes();
         let size = bytes.len();
         if size <= 15 {
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&[0x80 + size as u8]);
         } else if size <= 255 {
             self.write_all(&[0xD0]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u8::to_be_bytes(size as u8));
         } else if size <= 65_535 {
             self.write_all(&[0xD1]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u16::to_be_bytes(size as u16));
         } else if size <= 2_147_483_647 {
             self.write_all(&[0xD2]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u32::to_be_bytes(size as u32));
         } else {
             panic!("string exceeds max size of 2,147,483,647 bytes");
@@ -782,15 +790,19 @@ impl<'a> PackStreamSerializer<'a> {
 
     fn write_list_header(&mut self, size: u64) {
         if size <= 15 {
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&[0x90 + size as u8]);
         } else if size <= 255 {
             self.write_all(&[0xD4]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u8::to_be_bytes(size as u8));
         } else if size <= 65_535 {
             self.write_all(&[0xD5]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u16::to_be_bytes(size as u16));
         } else if size <= 2_147_483_647 {
             self.write_all(&[0xD6]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u32::to_be_bytes(size as u32));
         } else {
             panic!("list exceeds max size of 2,147,483,647");
@@ -799,15 +811,19 @@ impl<'a> PackStreamSerializer<'a> {
 
     fn write_dict_header(&mut self, size: u64) {
         if size <= 15 {
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&[0xA0 + size as u8]);
         } else if size <= 255 {
             self.write_all(&[0xD8]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u8::to_be_bytes(size as u8));
         } else if size <= 65_535 {
             self.write_all(&[0xD9]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u16::to_be_bytes(size as u16));
         } else if size <= 2_147_483_647 {
             self.write_all(&[0xDA]);
+            #[allow(clippy::cast_possible_truncation, reason = "range checked")]
             self.write_all(&u32::to_be_bytes(size as u32));
         } else {
             panic!("map exceeds max size of 2,147,483,647");

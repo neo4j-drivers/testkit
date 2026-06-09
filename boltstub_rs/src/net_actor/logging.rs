@@ -26,7 +26,7 @@ pub(super) struct LoggingCtx {
 }
 
 impl LoggingCtx {
-    pub(super) fn fmt_ports(&self) -> impl Display {
+    pub(super) fn fmt_ports(self) -> impl Display {
         struct PortsDisplay {
             peer_port: u16,
             local_port: u16,
@@ -47,7 +47,7 @@ impl LoggingCtx {
 
 macro_rules! log {
     ($lvl:expr, $actor:ident, $($arg:tt)+) => {{
-        #[allow(unused_imports)]
+        #[allow(unused_imports, reason = "might already be in scope")]
         use crate::net_actor::logging::HasLoggingCtx;
         let ctx = $actor.logging_ctx();
         log::log!(

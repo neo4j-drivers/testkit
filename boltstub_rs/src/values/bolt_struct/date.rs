@@ -33,26 +33,24 @@ impl JoltDate {
                 .as_str(),
         )
         .expect("regex enforces year to be i32");
-        let month = captures
-            .get(2)
-            .map(|m| u32::from_str(m.as_str()).expect("regex enforces month to be u32"))
-            .unwrap_or(1);
-        let day = captures
-            .get(3)
-            .map(|d| u32::from_str(d.as_str()).expect("regex enforces day to be u32"))
-            .unwrap_or(1);
+        let month = captures.get(2).map_or(1, |m| {
+            u32::from_str(m.as_str()).expect("regex enforces month to be u32")
+        });
+        let day = captures.get(3).map_or(1, |d| {
+            u32::from_str(d.as_str()).expect("regex enforces day to be u32")
+        });
         let Some(date) = NaiveDate::from_ymd_opt(year, month, day) else {
             return Some(Err(ParseError::new(format!("Unparsable date {s:?}"))));
         };
         Some(Ok(Self { date }))
     }
 
-    pub(crate) fn as_struct(&self) -> Option<Result<PackStreamStruct, ParseError>> {
+    pub(crate) fn as_struct(self) -> PackStreamStruct {
         let days_since_epoch = self.date - UNIX_EPOCH_DATE;
-        Some(Ok(PackStreamStruct {
+        PackStreamStruct {
             tag: TAG_DATE,
             fields: vec![PackStreamValue::Integer(days_since_epoch.num_days())],
-        }))
+        }
     }
 }
 
@@ -90,7 +88,7 @@ impl BoltDate {
         JoltFormatter { this: self }
     }
 
-    pub(super) fn repr_inner(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    pub(super) fn repr_inner(self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Display::fmt(&self.0.date.format("%Y-%m-%d"), f)
     }
 }
