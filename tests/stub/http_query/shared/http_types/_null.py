@@ -39,7 +39,7 @@ class Null(HttpType):
             value_dict.invalid_value(f"must be None, was {type(v)}")
             return None
 
-        return None
+        return cls()
 
     @classmethod
     def _from_native(

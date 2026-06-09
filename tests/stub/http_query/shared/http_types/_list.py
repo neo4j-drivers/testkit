@@ -51,7 +51,7 @@ class List(HttpType):
         for idx, item in enumerate(raw):
             http_item = HttpType.deserialize(item, protocol_version)
             if http_item is None:
-                vd.invalid_value(f"invalid list item at index {idx}")
+                vd.invalid_value(f"invalid list item at index {idx}: {item!r}")
                 return None
             elements.append(http_item)
 
