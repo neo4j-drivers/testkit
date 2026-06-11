@@ -1,5 +1,6 @@
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import _TestTypesBase
+from tests.neo4j.shared import requires_tx_support
 from tests.shared import get_driver_name
 
 
@@ -153,6 +154,7 @@ class TestDataTypes(_TestTypesBase):
         self._create_driver_and_session()
         self._verify_can_echo(types.CypherList(test_lists))
 
+    @requires_tx_support
     def test_should_echo_node(self):
         def work(tx):
             result = tx.run(
@@ -181,6 +183,7 @@ class TestDataTypes(_TestTypesBase):
             })
         )
 
+    @requires_tx_support
     def test_should_echo_relationship(self):
         def work(tx):
             result = tx.run("CREATE (a)-[r:KNOWS {since:1999}]->(b) "
@@ -213,6 +216,7 @@ class TestDataTypes(_TestTypesBase):
             {"since": types.CypherInt(1999)}
         ))
 
+    @requires_tx_support
     def test_should_echo_path(self):
         def work(tx):
             result = tx.run("CREATE p=(a)-[ab:X]->(b)-[bc:X]->(c) "

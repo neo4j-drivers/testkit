@@ -6,6 +6,7 @@ from tests.neo4j.shared import (
     get_driver,
     get_password,
     get_user,
+    requires_tx_support,
     with_retries,
 )
 from tests.shared import (
@@ -33,6 +34,7 @@ class TestAuthenticationBasic(TestkitTestCase):
             "r", database=get_auto_resolved_db()
         )
 
+    @requires_tx_support
     def verify_connectivity(self, auth_token, use_tx=False):
         def dummy_query(tx_or_session):
             return tx_or_session.run("RETURN 2 as Number").next()

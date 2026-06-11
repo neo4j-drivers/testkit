@@ -2,6 +2,7 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     get_auto_resolved_db,
     get_driver,
+    get_server_info,
     requires_tx_metadata_support,
     requires_tx_timeout_support,
     with_retries,
@@ -419,7 +420,12 @@ class TestSessionRun(TestkitTestCase):
                 self.assertEqual(
                     result.next(), types.Record(values=[types.CypherInt(1)])
                 )
-
+        server_info = get_server_info()
+        if server_info.is_http and server_info.parsed_version() < (2026, 1):
+            self.skipTest(
+                "Bug in HTTP/Query API does not properly handle errors in "
+                "result streams"
+            )
         with_retries(work)
 
     def test_updates_last_bookmark(self):

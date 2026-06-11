@@ -50,6 +50,7 @@ def initialise_configurations(settings):
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
         image = f"neo4j:{version}{'-enterprise' if enterprise else ''}"
+        version = ".".join(version.split(".")[:2])
         return neo4j.Config(
             name=name,
             image=image,
@@ -124,11 +125,19 @@ def initialise_configurations(settings):
             # ("2025.10",   True,        True,     "neo4j",  0),
 
             # HTTP Query API
-            # first iteration - broken >.<
+            # first iteration - behind feature flag
+            # records are returned flattened => not worth supporting
             # ("5.19",      True,        False,     "http",   0),
+            # enabled by default
+            ("5.25",      True,        False,     "http",   0),
+            # added transaction support
+            ("5.26.0",    True,        False,     "http",   0),
+            # application/vnd.neo4j.query.v1.0
+            ("2025.10",   True,        False,     "http",   0),
             # application/vnd.neo4j.query.v1.1
-            # ("2025.11",   True,        False,     "http",   0),
-            # ("2026.03",   True,        False,     "http",   0),
+            ("2025.11",   True,        False,     "http",   0),
+            # fixed conflating of zoned and offset date times
+            ("2026.04",   True,        False,     "http",   0),
         )
     ]
     configurations += [

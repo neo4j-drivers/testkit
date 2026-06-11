@@ -4,6 +4,7 @@ import nutkit.protocol as types
 from tests.neo4j.shared import (
     get_auto_resolved_db,
     get_driver,
+    requires_tx_support,
     with_retries,
 )
 from tests.shared import (
@@ -29,6 +30,7 @@ class TestBookmarks(TestkitTestCase):
             access_mode, bookmarks, database=get_auto_resolved_db()
         )
 
+    @requires_tx_support
     def test_can_obtain_bookmark_after_commit(self):
         def work(session):
             tx = session.begin_transaction()
@@ -40,6 +42,7 @@ class TestBookmarks(TestkitTestCase):
         bookmarks = with_retries(work, self._session)
         self.assertTrue(bookmarks)
 
+    @requires_tx_support
     def test_can_pass_bookmark_into_next_session(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -76,6 +79,7 @@ class TestBookmarks(TestkitTestCase):
         self.assertEqual(thing.props.value["uuid"],
                          types.CypherString(unique_id))
 
+    @requires_tx_support
     def test_no_bookmark_after_rollback(self):
         def work(session):
             tx = session.begin_transaction()
@@ -87,6 +91,7 @@ class TestBookmarks(TestkitTestCase):
         bookmarks = with_retries(work, self._session)
         self.assertEqual(len(bookmarks), 0)
 
+    @requires_tx_support
     def test_fails_on_invalid_bookmark(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["javascript"]:
@@ -120,6 +125,7 @@ class TestBookmarks(TestkitTestCase):
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmark",
                          exc.exception.code)
 
+    @requires_tx_support
     def test_fails_on_invalid_bookmark_using_tx_func(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["go"]:
@@ -155,6 +161,7 @@ class TestBookmarks(TestkitTestCase):
         self.assertEqual("Neo.ClientError.Transaction.InvalidBookmark",
                          exc.exception.code)
 
+    @requires_tx_support
     def test_can_handle_multiple_bookmarks(self):
         bookmarks = []
         expected_node_count = 5
@@ -188,6 +195,7 @@ class TestBookmarks(TestkitTestCase):
         count = self._session.execute_read(get_node_count)
         self.assertEqual(types.CypherInt(expected_node_count), count)
 
+    @requires_tx_support
     def test_can_pass_write_bookmark_into_write_session(self):
         test_execution_id = uuid4().hex
 
@@ -221,6 +229,7 @@ class TestBookmarks(TestkitTestCase):
         node_count = with_retries(read, self._session)
         self.assertEqual(types.CypherInt(1), node_count)
 
+    @requires_tx_support
     def test_can_pass_read_bookmark_into_write_session(self):
         test_execution_id = uuid4().hex
 

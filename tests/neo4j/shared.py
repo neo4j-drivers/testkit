@@ -239,6 +239,10 @@ class ServerInfo:
     def is_bolt(self):
         bool(_BOLT_SCHEME_RE.match(self.scheme))
 
+    @property
+    def is_encrypted_protocol(self):
+        return bool(re.match(r"^(?:bolt|neo4j)\+s(?:sc)?|https$", self.scheme))
+
 
 def get_server_info():
     return ServerInfo(
@@ -278,6 +282,16 @@ def http_only_test(func):
     return _make_skip_decorator(func, check)
 
 
+def unencrypted_only_test(func):
+    def check(test_case):
+        if get_server_info().is_encrypted_protocol:
+            test_case.skipTest(
+                f"Test does not support encrypted scheme {get_neo4j_scheme()}"
+            )
+
+    return _make_skip_decorator(func, check)
+
+
 def requires_multi_db_support(func):
     def check(test_case):
         if not has_multi_db_support(test_case):
@@ -311,6 +325,22 @@ def has_vector_support(test_case):
     return protocol_support and version_support
 
 
+def requires_tx_support(func):
+    def check(test_case):
+        if not has_tx_support(test_case):
+            test_case.skipTest("Test requires support transactions.")
+
+    return _make_skip_decorator(func, check)
+
+
+def has_tx_support(test_case):
+    server_info = get_server_info()
+    if server_info.is_bolt:
+        return True
+    assert server_info.is_http, f"Unhandled scheme: {server_info.scheme}"
+    return server_info.parsed_version() >= (5, 26)
+
+
 def requires_tx_timeout_support(func):
     def check(test_case):
         if not has_tx_timeout_support(test_case):
@@ -320,7 +350,7 @@ def requires_tx_timeout_support(func):
 
 
 def has_tx_timeout_support(test_case):
-    return not get_server_info().is_http
+    return has_tx_support(test_case) and not get_server_info().is_http
 
 
 def requires_tx_metadata_support(func):
@@ -332,7 +362,7 @@ def requires_tx_metadata_support(func):
 
 
 def has_tx_metadata_support(test_case):
-    return not get_server_info().is_http
+    return has_tx_support(test_case) and not get_server_info().is_http
 
 
 def requires_summary_timers_support(func):
@@ -365,10 +395,11 @@ def require_min_protocol_version(test_case, *, bolt, http):
 
 
 def has_min_protocol_version(test_case, *, bolt, http):
-    if get_server_info().is_bolt:
+    server_info = get_server_info()
+    if server_info.is_bolt:
         return has_min_bolt_version(test_case, bolt)
-    else:
-        return has_min_query_api_version(test_case, http)
+    assert server_info.is_http, f"Unhandled scheme: {server_info.scheme}"
+    return has_min_query_api_version(test_case, http)
 
 
 def requires_summary_query_type_support(func):
@@ -487,7 +518,7 @@ def query_api_versions_in_features(features):
 def _skip_reason_min_query_api_version(test_case, min_version):
     if isinstance(min_version, str):
         min_version = parse_version(min_version)
-    server_max_version = get_server_info().max_protocol_version
+    server_max_version = get_server_info().max_query_api_version
     all_version_features = query_api_versions_in_features(protocol.Feature)
     all_viable_versions = [
         feature

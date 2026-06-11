@@ -1,5 +1,6 @@
 from nutkit import protocol as types
 from tests.neo4j.shared import (
+    bolt_only_test,
     cluster_unsafe_test,
     get_auto_resolved_db,
     get_default_db,
@@ -10,6 +11,8 @@ from tests.neo4j.shared import (
     has_summary_query_type_support,
     QueryBuilder,
     requires_multi_db_support,
+    requires_tx_support,
+    unencrypted_only_test,
     with_retries,
 )
 from tests.shared import (
@@ -41,6 +44,8 @@ class TestDirectDriver(TestkitTestCase):
         )
 
     @cluster_unsafe_test
+    @bolt_only_test  # custom resolver is ignored via HTTP
+    @unencrypted_only_test
     def test_custom_resolver(self):
         # TODO unify this
         if get_driver_name() in ["javascript", "dotnet"]:
@@ -87,6 +92,7 @@ class TestDirectDriver(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
 
+    @requires_tx_support
     def test_supports_multi_db(self):
         def work(tx):
             return tx.run("RETURN 1 as n").consume()
