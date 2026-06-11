@@ -1,14 +1,20 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::Debug;
 
 use indexmap::IndexMap;
+use serde::ser::SerializeSeq;
+use serde::Serialize;
 use serde_json::Value as JsonValue;
 
 use super::_parsing::{check_last_json_field, next_json_field, next_pack_stream_field};
 use crate::bolt_version::JoltVersion;
+use crate::jolt::JoltSigil;
 use crate::parse_error::ParseError;
 use crate::parser::ActorConfig;
 use crate::values::bolt_struct::TAG_UNSUPPORTED_TYPE;
+use crate::values::jolt_ser::JoltSigilMapSer;
 use crate::values::pack_stream_value::{PackStreamStruct, PackStreamValue};
+
+const SIGIL: &str = JoltSigil::UnsupportedType.str();
 
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -17,6 +23,14 @@ pub(crate) struct JoltUnsupportedType {
     pub(crate) minimum_protocol_major: i64,
     pub(crate) minimum_protocol_minor: i64,
     pub(crate) message: Option<String>,
+    pub(super) jolt_version: JoltVersion,
+}
+
+fn supported_jolt_version(jolt_version: JoltVersion) -> bool {
+    match jolt_version {
+        JoltVersion::V1 | JoltVersion::V2 => false,
+        JoltVersion::V3 | JoltVersion::V4 => true,
+    }
 }
 
 impl JoltUnsupportedType {
@@ -25,44 +39,43 @@ impl JoltUnsupportedType {
         jolt_version: JoltVersion,
         config: &ActorConfig,
     ) -> Result<Self, ParseError> {
-        match jolt_version {
-            JoltVersion::V1 | JoltVersion::V2 => {
-                return Err(ParseError::new(format!(
-                    "Sigil \"UT\" (unsupported type) can only be parsed in JoltVersion::V3,
-                    using {jolt_version:?}"
-                )));
-            }
-            JoltVersion::V3 => {}
+        if !supported_jolt_version(jolt_version) {
+            return Err(ParseError::new(format!(
+                "Sigil \"{SIGIL}\" (unsupported type) can only be parsed in
+                JoltVersion::V3, using {jolt_version:?}"
+            )));
         }
         let JsonValue::Array(fields) = v else {
-            return Err(ParseError::new(
-                "Expected array after sigil \"UT\", but found {v:?}",
-            ));
+            return Err(ParseError::new(format!(
+                "Expected array after sigil \"{SIGIL}\", but found {v:?}"
+            )));
         };
         let mut fields = fields.into_iter().enumerate().peekable();
         let i = 0;
 
-        let (i, name) = next_json_field::<String>(&mut fields, "name", i, "UT", config)?;
+        let (i, name) = next_json_field::<String>(&mut fields, "name", i, SIGIL, config)?;
         let (i, minimum_protocol_major) =
-            next_json_field::<i64>(&mut fields, "minimum_protocol_major", i, "UT", config)?;
+            next_json_field::<i64>(&mut fields, "minimum_protocol_major", i, SIGIL, config)?;
         let (i, minimum_protocol_minor) =
-            next_json_field::<i64>(&mut fields, "minimum_protocol_minor", i, "UT", config)?;
+            next_json_field::<i64>(&mut fields, "minimum_protocol_minor", i, SIGIL, config)?;
         if fields.peek().is_none() {
-            check_last_json_field(&mut fields, i, "UT")?;
+            check_last_json_field(&mut fields, i, SIGIL)?;
             return Ok(Self {
                 name,
                 minimum_protocol_major,
                 minimum_protocol_minor,
                 message: None,
+                jolt_version,
             });
         }
-        let (i, message) = next_json_field::<String>(&mut fields, "message", i, "UT", config)?;
-        check_last_json_field(&mut fields, i, "UT")?;
+        let (i, message) = next_json_field::<String>(&mut fields, "message", i, SIGIL, config)?;
+        check_last_json_field(&mut fields, i, SIGIL)?;
         Ok(Self {
             name,
             minimum_protocol_major,
             minimum_protocol_minor,
             message: Some(message),
+            jolt_version,
         })
     }
 
@@ -84,15 +97,10 @@ impl JoltUnsupportedType {
             fields,
         }
     }
-}
-#[derive(Debug, Clone)]
-#[cfg_attr(test, derive(PartialEq))]
-pub(super) struct BoltUnsupportedType(pub(super) JoltUnsupportedType);
-impl BoltUnsupportedType {
+
     pub(super) fn from_struct(s: &PackStreamStruct, jolt_version: JoltVersion) -> Option<Self> {
-        match jolt_version {
-            JoltVersion::V1 | JoltVersion::V2 => return None,
-            JoltVersion::V3 => {}
+        if !supported_jolt_version(jolt_version) || s.tag != TAG_UNSUPPORTED_TYPE {
+            return None;
         }
         let mut fields = s.fields.iter();
         let name: &str = next_pack_stream_field(&mut fields)?;
@@ -100,57 +108,71 @@ impl BoltUnsupportedType {
         let minimum_protocol_minor: i64 = next_pack_stream_field(&mut fields)?;
         let extra: &IndexMap<String, PackStreamValue> = next_pack_stream_field(&mut fields)?;
         let Some(PackStreamValue::String(ref message)) = extra.get("message") else {
-            return Some(Self(JoltUnsupportedType {
+            return Some(JoltUnsupportedType {
                 name: name.to_string(),
                 minimum_protocol_major,
                 minimum_protocol_minor,
                 message: None,
-            }));
+                jolt_version,
+            });
         };
-        Some(Self(JoltUnsupportedType {
+        Some(JoltUnsupportedType {
             name: name.to_string(),
             minimum_protocol_major,
             minimum_protocol_minor,
             message: Some(message.clone()),
-        }))
+            jolt_version,
+        })
     }
 
-    pub(super) fn jolt_fmt(&self, _jolt_version: JoltVersion) -> impl Display + '_ {
-        struct JoltFormatter<'a> {
-            this: &'a JoltUnsupportedType,
-        }
+    pub(super) fn jolt_serialize<S>(
+        &self,
+        serializer: S,
+        jolt_version: JoltVersion,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        struct DataSer<'a>(&'a JoltUnsupportedType);
 
-        impl Display for JoltFormatter<'_> {
-            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-                f.write_str(r#"{"UT": [""#)?;
-                f.write_str(&self.this.name)?;
-
-                f.write_str(r#"", "#)?;
-                Display::fmt(&self.this.minimum_protocol_major, f)?;
-
-                f.write_str(", ")?;
-                Display::fmt(&self.this.minimum_protocol_minor, f)?;
-                if let Some(message) = &self.this.message {
-                    f.write_str(r#", ""#)?;
-                    f.write_str(message)?;
-                    f.write_str(r#"""#)?;
+        impl serde::Serialize for DataSer<'_> {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: serde::Serializer,
+            {
+                let len = if self.0.message.is_none() { 3 } else { 4 };
+                let mut seq = serializer.serialize_seq(Some(len))?;
+                seq.serialize_element(&self.0.name)?;
+                seq.serialize_element(&self.0.minimum_protocol_major)?;
+                seq.serialize_element(&self.0.minimum_protocol_minor)?;
+                if let Some(message) = &self.0.message {
+                    seq.serialize_element(message)?;
                 }
-                f.write_str("]}")
+                seq.end()
             }
         }
 
-        JoltFormatter { this: &self.0 }
+        let body = DataSer(self);
+        let map = JoltSigilMapSer::new(SIGIL, self.jolt_version, jolt_version, &body);
+        map.serialize(serializer)
     }
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use indexmap::IndexMap;
     use rstest::rstest;
-
-    use crate::bolt_version::{BoltCapabilities, BoltVersion};
+    use rstest_reuse::apply;
 
     use super::*;
+
+    use crate::bolt_version::{BoltCapabilities, BoltVersion};
+    use crate::ext::serde_json::support_pub::JoltSerializer;
+    use crate::values::tests::{
+        all_jolt_versions, jolt_serializer,
+        jolt_versions_v2_and_down as jolt_versions_without_unsupported_type,
+        jolt_versions_v3_and_up as jolt_versions_with_unsupported_type,
+    };
 
     fn actor_config() -> ActorConfig {
         ActorConfig {
@@ -168,14 +190,15 @@ mod test {
         }
     }
 
-    #[rstest]
+    #[apply(jolt_versions_with_unsupported_type)]
     #[case::no_message(
         r#"["Quantum Integer", 6, 10]"#,
         JoltUnsupportedType {
             name: "Quantum Integer".to_string(),
             minimum_protocol_major: 6,
             minimum_protocol_minor: 10,
-            message: None
+            message: None,
+            jolt_version: JoltVersion::V3,
         },
     )]
     #[case::with_message(
@@ -184,15 +207,29 @@ mod test {
             name: "Quantum Integer".to_string(),
             minimum_protocol_major: 6,
             minimum_protocol_minor: 10,
-            message: Some("From the future".to_string())
+            message: Some("From the future".to_string()),
+            jolt_version: JoltVersion::V3,
+        },
+    )]
+    #[case::json_escaping(
+        r#"["\"\\", 6, 10, "\\\""]"#,
+        JoltUnsupportedType {
+            name: "\"\\".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: Some("\\\"".to_string()),
+            jolt_version: JoltVersion::V3,
         },
     )]
     fn test_jolt_unsupported_type_parse(
         #[case] input: &str,
-        #[case] expected: JoltUnsupportedType,
+        #[case] mut expected: JoltUnsupportedType,
+        jolt_version: JoltVersion,
     ) {
+        expected.jolt_version = jolt_version;
         let json = serde_json::from_str(input).unwrap();
         let jolt_version = JoltVersion::V3;
+        expected.jolt_version = jolt_version;
         let config = actor_config();
 
         let result = JoltUnsupportedType::parse(json, jolt_version, &config).unwrap();
@@ -225,40 +262,75 @@ mod test {
         JoltUnsupportedType::parse(json, jolt_version, &config).unwrap_err();
     }
 
-    #[rstest]
-    #[case::v1(JoltVersion::V1)]
-    #[case::v2(JoltVersion::V2)]
-    fn test_jolt_unsupported_type_parse_invalid_jolt_version(#[case] jolt_version: JoltVersion) {
+    #[apply(jolt_versions_without_unsupported_type)]
+    fn test_jolt_unsupported_type_parse_invalid_jolt_version(jolt_version: JoltVersion) {
         let json = serde_json::from_str(r#"["Quantum Integer", 6, 10]"#).unwrap();
         let config = actor_config();
 
         JoltUnsupportedType::parse(json, jolt_version, &config).unwrap_err();
     }
 
-    #[rstest]
-    #[case::no_message(
+    #[apply(all_jolt_versions)]
+    #[case::no_message_v3(
         JoltUnsupportedType {
             name: "Quantum Integer".to_string(),
             minimum_protocol_major: 6,
             minimum_protocol_minor: 10,
-            message: None
+            message: None,
+            jolt_version: JoltVersion::V3,
         },
         r#"{"UT": ["Quantum Integer", 6, 10]}"#,
+        r#"{"UTv3": ["Quantum Integer", 6, 10]}"#,
     )]
-    #[case::with_message(
+    #[case::with_message_v3(
         JoltUnsupportedType {
             name: "Quantum Integer".to_string(),
             minimum_protocol_major: 6,
             minimum_protocol_minor: 10,
-            message: Some("From the future".to_string())
+            message: Some("From the future".to_string()),
+            jolt_version: JoltVersion::V3,
         },
         r#"{"UT": ["Quantum Integer", 6, 10, "From the future"]}"#,
+        r#"{"UTv3": ["Quantum Integer", 6, 10, "From the future"]}"#,
     )]
-    fn test_jolt_fmt(#[case] jolt_unsupported_type: JoltUnsupportedType, #[case] expected: &str) {
-        let jolt_version = JoltVersion::V3;
-        let bolt_unsupported_type = BoltUnsupportedType(jolt_unsupported_type);
-        let formatted = bolt_unsupported_type.jolt_fmt(jolt_version).to_string();
-        assert_eq!(formatted, expected);
+    #[case::no_message_v4(
+        JoltUnsupportedType {
+            name: "Quantum Integer".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: None,
+            jolt_version: JoltVersion::V4,
+        },
+        r#"{"UT": ["Quantum Integer", 6, 10]}"#,
+        r#"{"UTv4": ["Quantum Integer", 6, 10]}"#,
+    )]
+    #[case::with_message_v4(
+        JoltUnsupportedType {
+            name: "Quantum Integer".to_string(),
+            minimum_protocol_major: 6,
+            minimum_protocol_minor: 10,
+            message: Some("From the future".to_string()),
+            jolt_version: JoltVersion::V4,
+        },
+        r#"{"UT": ["Quantum Integer", 6, 10, "From the future"]}"#,
+        r#"{"UTv4": ["Quantum Integer", 6, 10, "From the future"]}"#,
+    )]
+    fn test_jolt_fmt(
+        #[case] jolt_unsupported_type: JoltUnsupportedType,
+        #[case] expected: &str,
+        #[case] expected_versioned: &str,
+        jolt_version: JoltVersion,
+        mut jolt_serializer: JoltSerializer<Vec<u8>>,
+    ) {
+        jolt_unsupported_type
+            .jolt_serialize(jolt_serializer.ser(), jolt_version)
+            .expect("Failed to serialize Jolt");
+        let formatted = jolt_serializer.into_string();
+        if jolt_version == jolt_unsupported_type.jolt_version {
+            assert_eq!(formatted, expected);
+        } else {
+            assert_eq!(formatted, expected_versioned);
+        }
     }
 
     #[rstest]
@@ -282,13 +354,14 @@ mod test {
             ],
         };
         assert_eq!(
-            BoltUnsupportedType::from_struct(&structure, JoltVersion::V3),
-            Some(BoltUnsupportedType(JoltUnsupportedType {
+            JoltUnsupportedType::from_struct(&structure, JoltVersion::V3),
+            Some(JoltUnsupportedType {
                 name: String::from("Quantum Integer"),
                 minimum_protocol_major: 6,
                 minimum_protocol_minor: 10,
                 message,
-            }))
+                jolt_version: JoltVersion::V3,
+            })
         );
     }
 }

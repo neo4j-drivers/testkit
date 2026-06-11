@@ -56,6 +56,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["java"]:
             expected_type = \
                 "org.neo4j.driver.exceptions.SecurityRetryableException"
+        elif driver in ["ruby"]:
+            expected_type = \
+                "Neo4j::Driver::Exceptions::SecurityRetryableException"
         elif driver in ["go"]:
             expected_type = "Neo4jError"
         else:
@@ -105,6 +108,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["java"]:
             expected_type = \
                 "org.neo4j.driver.exceptions.SecurityRetryableException"
+        elif driver in ["ruby"]:
+            expected_type = \
+                "Neo4j::Driver::Exceptions::SecurityRetryableException"
         elif driver == "go":
             expected_type = "TokenExpiredError"
         else:
@@ -131,6 +137,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["java"]:
             expected_type = \
                 "org.neo4j.driver.exceptions.AuthenticationException"
+        elif driver in ["ruby"]:
+            expected_type = \
+                "Neo4j::Driver::Exceptions::AuthenticationException"
         elif driver in ["go"]:
             expected_type = "Neo4jError"
         else:
@@ -151,6 +160,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["java"]:
             expected_type = \
                 "org.neo4j.driver.exceptions.SecurityRetryableException"
+        elif driver in ["ruby"]:
+            expected_type = \
+                "Neo4j::Driver::Exceptions::SecurityRetryableException"
         elif driver in ["go"]:
             expected_type = "Neo4jError"
         else:
@@ -176,6 +188,8 @@ class AuthorizationBase(TestkitTestCase):
             expected_type = "OtherSecurityException"
         elif driver in ["java"]:
             expected_type = "org.neo4j.driver.exceptions.SecurityException"
+        elif driver in ["ruby"]:
+            expected_type = "Neo4j::Driver::Exceptions::SecurityException"
         elif driver in ["go"]:
             expected_type = "Neo4jError"
         else:
@@ -194,6 +208,9 @@ class AuthorizationBase(TestkitTestCase):
         elif driver in ["java"]:
             expected_type = \
                 "org.neo4j.driver.exceptions.SecurityRetryableException"
+        elif driver in ["ruby"]:
+            expected_type = \
+                "Neo4j::Driver::Exceptions::SecurityRetryableException"
         elif driver in ["dotnet"]:
             expected_type = "OtherSecurityException"
         elif driver in ["go"]:
@@ -216,6 +233,8 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["java"]:
             expected_type = "org.neo4j.driver.exceptions.TransientException"
+        elif driver in ["ruby"]:
+            expected_type = "Neo4j::Driver::Exceptions::TransientException"
         elif driver in ["dotnet"]:
             expected_type = "DriverError"
         elif driver in ["go"]:
@@ -238,6 +257,8 @@ class AuthorizationBase(TestkitTestCase):
             pass
         elif driver in ["java"]:
             expected_type = "org.neo4j.driver.exceptions.ClientException"
+        elif driver in ["ruby"]:
+            expected_type = "Neo4j::Driver::Exceptions::ClientException"
         elif driver in ["dotnet"]:
             expected_type = "ClientError"
         elif driver in ["go"]:

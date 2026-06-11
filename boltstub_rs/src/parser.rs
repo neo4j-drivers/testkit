@@ -10,6 +10,7 @@ use indexmap::IndexMap;
 use log::{trace, warn};
 use regex::Regex;
 use serde_json::{Deserializer, Map as JsonMap, Value as JsonValue};
+use uuid::Uuid;
 
 use crate::bang_line::BangLine;
 use crate::bolt_version::{BoltCapabilities, BoltVersion, JoltVersion};
@@ -22,14 +23,16 @@ use crate::types::actor_types::{
     ActorBlock, AutoMessageHandler, ClientMessageValidator, ConditionBlock, ScriptLine,
     ServerAction, ServerActionLine, ServerMessageSender,
 };
-use crate::types::{BoolIsh, BoolIsh::*, Branch, Resolvable, ScanBlock, Script};
+#[allow(clippy::enum_glob_use, reason = "Essential variants (like Some/Err)")]
+use crate::types::BoolIsh::*;
+use crate::types::{BoolIsh, Branch, Resolvable, ScanBlock, Script};
 use crate::util::opt_res_ret;
-use crate::values::bolt_message::BoltMessage;
+use crate::values::bolt_message::{BoltMessage, SerializedBoltMessage};
 use crate::values::bolt_struct::{
     JoltDate, JoltDateTime, JoltDuration, JoltNode, JoltPath, JoltPoint, JoltRelationship,
-    JoltTime, JoltUnsupportedType, JoltVector,
+    JoltStruct, JoltTime, JoltUnsupportedType, JoltVector,
 };
-use crate::values::pack_stream_value::PackStreamValue;
+use crate::values::pack_stream_value::{PackStreamValue, PackStreamVersion};
 use jolt_validators::build_fields_validator;
 
 mod jolt_validators;
@@ -389,10 +392,7 @@ fn parse_auto_bang_line(
         request_tag,
         AutoBangLineHandler {
             ctx: ctx_msg,
-            sender: Box::new(SenderBytes::new_auto_response(
-                response_resolver,
-                bolt_version,
-            )),
+            sender: Box::new(SenderBytes::new_auto_response(response_resolver)),
         },
     ))
 }
@@ -405,12 +405,8 @@ fn parse_bolt_version(ctx: Context, s: &str) -> Result<((u8, u8), BoltVersion)> 
     ) -> Result<((u8, u8), BoltVersion)> {
         let version = BoltVersion::match_valid_version(major, minor).ok_or_else(|| {
             let version = match minor {
-                None => {
-                    format!("{major}")
-                }
-                Some(minor) => {
-                    format!("{major}.{minor}")
-                }
+                None => format!("{major}"),
+                Some(minor) => format!("{major}.{minor}"),
             };
             ParseError::new_ctx(ctx, format!("Unknown BOLT version {version}"))
         })?;
@@ -807,10 +803,7 @@ fn create_auto_message_handler(
     let response_resolver = config
         .bolt_version
         .message_auto_response(client_message_tag);
-    let server_sender = Box::new(SenderBytes::new_auto_response(
-        response_resolver,
-        config.bolt_version,
-    ));
+    let server_sender = Box::new(SenderBytes::new_auto_response(response_resolver));
     Ok(AutoMessageHandler {
         client_validator,
         server_sender,
@@ -836,7 +829,12 @@ fn create_message_sender(
             )
         })?;
     let fields = transcode_body(message_body, config)?;
-    let data = BoltMessage::new(tag, fields, config.bolt_version).into_data();
+    let data = BoltMessage::new(tag, fields, config.bolt_version)
+        .into_serialized()
+        .map_err(|e| {
+            ParseError::new_ctx(message_name_ctx, format!("Cannot serialize message: {e}"))
+        })?
+        .data;
 
     Ok(Box::new(SenderBytes::new(
         data,
@@ -857,9 +855,8 @@ enum SenderBytes {
         line: SenderBytesLine,
     },
     Dynamic {
-        data: Box<dyn Fn() -> (u8, Vec<PackStreamValue>) + Send + Sync>,
+        data: Box<dyn Fn() -> SerializedBoltMessage + Send + Sync>,
         repr: String,
-        bolt_version: BoltVersion,
     },
 }
 
@@ -880,22 +877,17 @@ impl SenderBytes {
         Self::Static { data, line }
     }
 
-    pub fn new_auto_response(
-        resolver: Resolvable<(u8, Vec<PackStreamValue>)>,
-        bolt_version: BoltVersion,
-    ) -> Self {
+    pub fn new_auto_response(resolver: Resolvable<SerializedBoltMessage>) -> Self {
         match resolver {
-            Resolvable::Static((tag, fields)) => {
-                let response_message = BoltMessage::new(tag, fields, bolt_version);
+            Resolvable::Static(message) => {
+                let SerializedBoltMessage {
+                    message: response_message,
+                    data: response_data,
+                } = message;
                 let response_repr = response_message.repr();
-                let response_data = response_message.into_data();
                 Self::new(response_data, SenderBytesLine::Repr(response_repr))
             }
-            Resolvable::Dynamic { func, repr } => Self::Dynamic {
-                data: func,
-                repr,
-                bolt_version,
-            },
+            Resolvable::Dynamic { func, repr } => Self::Dynamic { data: func, repr },
         }
     }
 }
@@ -930,15 +922,10 @@ impl Debug for SenderBytes {
                 .field("data", data)
                 .field("line", line)
                 .finish(),
-            Self::Dynamic {
-                repr,
-                bolt_version,
-                data: _,
-            } => f
+            Self::Dynamic { data: _, repr } => f
                 .debug_struct("SenderBytes::Dynamic")
                 .field("data", &"...")
                 .field("repr", repr)
-                .field("bolt_version", bolt_version)
                 .finish(),
         }
     }
@@ -948,14 +935,9 @@ impl ServerMessageSender for SenderBytes {
     fn send(&self) -> anyhow::Result<Cow<'_, [u8]>> {
         Ok(match self {
             SenderBytes::Static { data, line: _ } => data.into(),
-            SenderBytes::Dynamic {
-                data,
-                repr: _,
-                bolt_version,
-            } => {
-                let (tag, fields) = data();
-                let message = BoltMessage::new(tag, fields, *bolt_version);
-                message.into_data().into()
+            SenderBytes::Dynamic { data, repr: _ } => {
+                let SerializedBoltMessage { message: _, data } = data();
+                data.into()
             }
         })
     }
@@ -1037,10 +1019,10 @@ fn transcode_jolt_value(
     }
     let (sigil, value) = value.into_iter().next().expect("non-empty check above");
     let (versionless_sigil, jolt_version) = parse_jolt_sigil(&sigil, config)?;
-    let Some(sigil) = JoltSigil::from_str(versionless_sigil) else {
+    let Some(parsed_sigil) = JoltSigil::from_str(versionless_sigil, jolt_version) else {
         return Ok(IsJoltValue::No([(sigil, value)].into_iter().collect()));
     };
-    match sigil {
+    match parsed_sigil {
         JoltSigil::Bool => transcode_jolt_value_bool(value, config),
         JoltSigil::Integer => transcode_jolt_value_int(value, config),
         JoltSigil::Float => transcode_jolt_value_float(value),
@@ -1049,7 +1031,7 @@ fn transcode_jolt_value(
         JoltSigil::List => transcode_jolt_value_list(value, config),
         JoltSigil::Dict => transcode_jolt_value_dict(value, config),
         JoltSigil::Temporal => transcode_jolt_value_temporal(value, jolt_version),
-        JoltSigil::Spatial => transcode_jolt_value_spatial(value),
+        JoltSigil::Spatial => transcode_jolt_value_spatial(value, jolt_version),
         JoltSigil::Node => transcode_jolt_value_node(value, jolt_version, config),
         JoltSigil::RelationshipForward => {
             transcode_jolt_value_relationship_forward(value, jolt_version, config)
@@ -1059,9 +1041,11 @@ fn transcode_jolt_value(
         }
         JoltSigil::Path => transcode_jolt_value_path(value, jolt_version, config),
         JoltSigil::Vector => transcode_jolt_value_vector(value, jolt_version, config),
+        JoltSigil::Uuid => transcode_jolt_value_uuid(value, config),
         JoltSigil::UnsupportedType => {
             transcode_jolt_value_unsupported_type(value, jolt_version, config)
         }
+        JoltSigil::Struct => transcode_jolt_value_struct(value, jolt_version, config),
     }
 }
 
@@ -1144,10 +1128,10 @@ fn transcode_jolt_value_temporal(
             "Expected temporal string after sigil \"T\", but found {value:?}",
         )));
     };
-    let value = transcode_jolt_value_date(&value)
-        .or_else(|| transcode_jolt_value_time(&value))
+    let value = transcode_jolt_value_date(&value, jolt_version)
+        .or_else(|| transcode_jolt_value_time(&value, jolt_version))
         .or_else(|| transcode_jolt_value_date_time(&value, jolt_version))
-        .or_else(|| transcode_jolt_value_duration(&value))
+        .or_else(|| transcode_jolt_value_duration(&value, jolt_version))
         .transpose()?
         .ok_or_else(|| {
             ParseError::new(format!(
@@ -1157,14 +1141,20 @@ fn transcode_jolt_value_temporal(
     Ok(IsJoltValue::Yes(value))
 }
 
-fn transcode_jolt_value_date(s: &str) -> Option<Result<PackStreamValue>> {
-    let bolt_date = opt_res_ret!(JoltDate::parse(s));
+fn transcode_jolt_value_date(
+    s: &str,
+    jolt_version: JoltVersion,
+) -> Option<Result<PackStreamValue>> {
+    let bolt_date = opt_res_ret!(JoltDate::parse(s, jolt_version));
     let value_struct = bolt_date.as_struct();
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
 
-fn transcode_jolt_value_time(s: &str) -> Option<Result<PackStreamValue>> {
-    let bolt_time = opt_res_ret!(JoltTime::parse(s));
+fn transcode_jolt_value_time(
+    s: &str,
+    jolt_version: JoltVersion,
+) -> Option<Result<PackStreamValue>> {
+    let bolt_time = opt_res_ret!(JoltTime::parse(s, jolt_version));
     let value_struct = opt_res_ret!(bolt_time.as_struct());
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
@@ -1173,24 +1163,30 @@ fn transcode_jolt_value_date_time(
     s: &str,
     jolt_version: JoltVersion,
 ) -> Option<Result<PackStreamValue>> {
-    let bolt_date_time = opt_res_ret!(JoltDateTime::parse(s));
-    let value_struct = opt_res_ret!(bolt_date_time.into_struct(jolt_version));
+    let bolt_date_time = opt_res_ret!(JoltDateTime::parse(s, jolt_version));
+    let value_struct = opt_res_ret!(bolt_date_time.into_struct());
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
 
-fn transcode_jolt_value_duration(s: &str) -> Option<Result<PackStreamValue>> {
-    let bolt_duration = opt_res_ret!(JoltDuration::parse(s));
+fn transcode_jolt_value_duration(
+    s: &str,
+    jolt_version: JoltVersion,
+) -> Option<Result<PackStreamValue>> {
+    let bolt_duration = opt_res_ret!(JoltDuration::parse(s, jolt_version));
     let value_struct = bolt_duration.as_struct();
     Some(Ok(PackStreamValue::Struct(value_struct)))
 }
 
-fn transcode_jolt_value_spatial(value: JsonValue) -> Result<IsJoltValue> {
+fn transcode_jolt_value_spatial(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+) -> Result<IsJoltValue> {
     let JsonValue::String(value) = value else {
         return Err(ParseError::new(format!(
             "Expected spatial string after sigil \"@\", but found {value:?}",
         )));
     };
-    let bolt_point = JoltPoint::parse(&value)?;
+    let bolt_point = JoltPoint::parse(&value, jolt_version)?;
     Ok(IsJoltValue::Yes(PackStreamValue::Struct(
         bolt_point.as_struct(),
     )))
@@ -1252,12 +1248,44 @@ fn transcode_jolt_value_vector(
     )))
 }
 
+fn transcode_jolt_value_uuid(value: JsonValue, config: &ActorConfig) -> Result<IsJoltValue> {
+    let packstream_version = config.bolt_version.packstream_version();
+    if packstream_version < PackStreamVersion::V2 {
+        return Err(ParseError::new(format!(
+            "UUID is not supported in {packstream_version}"
+        )));
+    }
+
+    let JsonValue::String(value) = value else {
+        return Err(ParseError::new(format!(
+            "Expected string after sigil \"UU\", but found {value:?}",
+        )));
+    };
+    let uuid = Uuid::parse_str(&value).map_err(|e| {
+        ParseError::new(format!(
+            "Failed to parse UUID string after sigil \"UU\": {value:?}: {e}",
+        ))
+    })?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Uuid(uuid)))
+}
+
 fn transcode_jolt_value_unsupported_type(
     value: JsonValue,
     jolt_version: JoltVersion,
     config: &ActorConfig,
 ) -> Result<IsJoltValue> {
     let bolt_unsupported_type = JoltUnsupportedType::parse(value, jolt_version, config)?;
+    Ok(IsJoltValue::Yes(PackStreamValue::Struct(
+        bolt_unsupported_type.into_struct(),
+    )))
+}
+
+fn transcode_jolt_value_struct(
+    value: JsonValue,
+    jolt_version: JoltVersion,
+    config: &ActorConfig,
+) -> Result<IsJoltValue> {
+    let bolt_unsupported_type = JoltStruct::parse(value, jolt_version, config)?;
     Ok(IsJoltValue::Yes(PackStreamValue::Struct(
         bolt_unsupported_type.into_struct(),
     )))
@@ -1721,7 +1749,7 @@ fn missing_leading_if(ctx: Context, block_name: &str) -> ParseError {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use indexmap::indexmap;
     use serde_json::Number;
 

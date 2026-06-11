@@ -41,6 +41,11 @@ class TestBasicQuery(TestkitTestCase):
         if get_driver_name() in ["java"]:
             self.assertEqual("java.lang.IllegalStateException",
                              exc.exception.errorType)
+        if get_driver_name() in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::IllegalStateException",
+                exc.exception.errorType
+            )
 
     @contextmanager
     def _get_session(self, script_path, vars_=None):

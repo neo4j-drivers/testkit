@@ -22,16 +22,19 @@ from codecs import decode
 from io import BytesIO
 from struct import pack as struct_pack
 from struct import unpack as struct_unpack
+from uuid import UUID
 
 from .simple_jolt.common import jolt_types as jolt_common_types
 from .simple_jolt.v1 import jolt_types as jolt_v1_types
 from .simple_jolt.v2 import jolt_types as jolt_v2_types
 from .simple_jolt.v3 import jolt_types as jolt_v3_types
+from .simple_jolt.v4 import jolt_types as jolt_v4_types
 
 _jolt_types = {
     1: jolt_v1_types,
     2: jolt_v2_types,
     3: jolt_v3_types,
+    4: jolt_v4_types
 }
 
 
@@ -54,6 +57,7 @@ UNPACKED_MARKERS.update({bytes(bytearray([z])): z for z in range(0x00, 0x80)})
 UNPACKED_MARKERS.update({bytes(bytearray([z + 256])): z
                          for z in range(-0x10, 0x00)})
 
+UUID_MARKER = b"\xE0"
 
 INT64_MIN = -(2 ** 63)
 INT64_MAX = 2 ** 63
@@ -105,7 +109,7 @@ class Structure:
         self.fields = list(fields)
         self._packstream_version = packstream_version
         self._verified = verified
-        if packstream_version not in (None, 1, 2, 3):
+        if packstream_version not in (None, 1, 2, 3, 4):
             raise ValueError("Unknown packstream version: %s"
                              % packstream_version)
 
@@ -123,6 +127,8 @@ class Structure:
             PackstreamV2StructureValidator.verify_fields(self)
         elif self._packstream_version == 3:
             PackstreamV3StructureValidator.verify_fields(self)
+        elif self._packstream_version == 4:
+            PackstreamV4StructureValidator.verify_fields(self)
 
     @property
     def verified(self):
@@ -440,6 +446,13 @@ class Structure:
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     @classmethod
+    def _from_jolt_v4_type(cls, jolt: jolt_v4_types.JoltType):
+        # jolt v4 does not include new structure types, just the UUID
+        # type, which is a packstream primitive, so this function should
+        # never be called.
+        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+
+    @classmethod
     def from_jolt_type(cls, jolt: jolt_common_types.JoltType):
         if isinstance(jolt, jolt_v1_types.JoltType):
             return cls._from_jolt_v1_type(jolt)
@@ -447,6 +460,8 @@ class Structure:
             return cls._from_jolt_v2_type(jolt)
         elif isinstance(jolt, jolt_v3_types.JoltType):
             return cls._from_jolt_v3_type(jolt)
+        elif isinstance(jolt, jolt_v4_types.JoltType):
+            return cls._from_jolt_v4_type(jolt)
         raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
 
     def _to_jolt_v1_type(self):
@@ -584,6 +599,9 @@ class Structure:
             )
         raise TypeError("Unsupported struct type: {}".format(self.tag))
 
+    def _to_jolt_v4_type(self):
+        return self._to_jolt_v3_type()
+
     def to_jolt_type(self):
         if not self._verified:
             raise ValueError("Can only convert verified struct to jolt type")
@@ -593,9 +611,11 @@ class Structure:
             return self._to_jolt_v2_type()
         elif self._packstream_version == 3:
             return self._to_jolt_v3_type()
+        elif self._packstream_version == 4:
+            return self._to_jolt_v4_type()
         raise ValueError(
-            "JOLT encoding is only defined for packstream_version 1 and 2, "
-            "not {}".format(self._packstream_version)
+            "JOLT encoding is not defined for packstream_version "
+            "{}".format(self._packstream_version)
         )
 
     def fields_to_jolt_types(self):
@@ -606,6 +626,8 @@ class Structure:
                 return list(map(transform_field, field))
             if isinstance(field, Structure):
                 return field.to_jolt_type()
+            if isinstance(field, UUID):
+                return jolt_v4_types.JoltUuid(str(field))
             return field
 
         return transform_field(self.fields)
@@ -840,6 +862,10 @@ class PackstreamV3StructureValidator(PackstreamV2StructureValidator):
         if tag in field_validator:
             field_validator[tag](structure, fields)
         return True
+
+
+class PackstreamV4StructureValidator(PackstreamV3StructureValidator):
+    packstream_version = 4
 
 
 class Packer:
@@ -1144,6 +1170,9 @@ class Unpacker:
     def read(self, n=1):
         return self.unpackable.read(n)
 
+    def peek(self, n=1):
+        return self.unpackable.peek(n)
+
     def read_u8(self):
         return self.unpackable.read_u8()
 
@@ -1368,6 +1397,12 @@ class UnpackableBuffer:
         else:
             return -1
 
+    def peek(self, n=1):
+        old_p = self.p
+        buf = self.read(n)
+        self.p = old_p
+        return buf
+
     def pop_u16(self):
         """Remove and return last 2 bytes as big-endian 16 bit unsigned int."""
         if self.used >= 2:
@@ -1387,6 +1422,28 @@ class UnpackableBuffer:
             if n == 0:
                 raise OSError("No data")
             self.used += n
+
+
+class UnpackerV4(Unpacker):
+    def _unpack(self, verify_struct=True):
+        marker = self.peek()
+        if marker == UUID_MARKER:
+            self.read_u8()
+            return UUID(bytes=self.read(16).tobytes())
+        return super()._unpack(verify_struct)
+
+
+class PackerV4(Packer):
+    def _pack(self, value):
+        if isinstance(value, UUID):
+            self._write(UUID_MARKER)
+            self._write(value.bytes)
+        else:
+            super()._pack(value)
+
+
+_PACKERS = {1: Packer, 2: Packer, 3: Packer, 4: PackerV4}
+_UNPACKERS = {1: Unpacker, 2: Unpacker, 3: Unpacker, 4: UnpackerV4}
 
 
 class PackStream:
@@ -1416,7 +1473,8 @@ class PackStream:
                 break
         buffer = UnpackableBuffer(b"".join(self.data_buffer))
         self.data_buffer = []
-        unpacker = Unpacker(buffer, self.packstream_version)
+        unpacker_cls = _UNPACKERS[self.packstream_version]
+        unpacker = unpacker_cls(buffer, self.packstream_version)
         return unpacker.unpack_message()
 
     def write_message(self, message):
@@ -1428,7 +1486,8 @@ class PackStream:
         if not isinstance(message, Structure):
             raise TypeError("Message must be a Structure instance")
         b = BytesIO()
-        packer = Packer(b)
+        packer_cls = _PACKERS[self.packstream_version]
+        packer = packer_cls(b)
         packer.pack(message)
         data = b.getvalue()
         while len(data) > 65535:

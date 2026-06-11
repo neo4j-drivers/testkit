@@ -507,6 +507,11 @@ class TestTxRun(TestkitTestCase):
                 "org.neo4j.driver.exceptions.ClientException",
                 e.exception.errorType
             )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::ClientException",
+                e.exception.errorType
+            )
         elif driver in ["python"]:
             if e.exception.code.endswith(".SyntaxError"):
                 self.assertEqual(
@@ -533,6 +538,11 @@ class TestTxRun(TestkitTestCase):
         if driver in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.TransactionTerminatedException",
+                e.exception.errorType
+            )
+        elif driver in ["ruby"]:
+            self.assertEqual(
+                "Neo4j::Driver::Exceptions::TransactionTerminatedException",
                 e.exception.errorType
             )
         elif driver in ["python"]:

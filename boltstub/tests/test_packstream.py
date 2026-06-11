@@ -17,6 +17,7 @@
 
 
 import inspect
+import uuid
 
 import pytest
 
@@ -24,6 +25,7 @@ from ..bolt_protocol import Structure
 from ..simple_jolt.v1 import jolt_types as jolt_v1_types
 from ..simple_jolt.v2 import jolt_types as jolt_v2_types
 from ..simple_jolt.v3 import jolt_types as jolt_v3_types
+from ..simple_jolt.v4 import jolt_types as jolt_v4_types
 
 
 @pytest.mark.parametrize(("packstream_version", "fields", "res"), (
@@ -237,6 +239,30 @@ from ..simple_jolt.v3 import jolt_types as jolt_v3_types
         [Structure(b"\x59", 123, 1.2, 3.4, 5.6, packstream_version=2)],
         [jolt_v2_types.JoltPoint("SRID=123;POINT(1.2 3.4 5.6)")]
     ),
+    # UUID (v4 primitive, appears as a field value inside a struct)
+    (
+        4,
+        [uuid.UUID("00000000-0000-0000-0000-000000000000")],
+        [jolt_v4_types.JoltUuid("00000000-0000-0000-0000-000000000000")],
+    ),
+    (
+        4,
+        [uuid.UUID("ffffffff-ffff-ffff-ffff-ffffffffffff")],
+        [jolt_v4_types.JoltUuid("ffffffff-ffff-ffff-ffff-ffffffffffff")],
+    ),
+    (
+        4,
+        [uuid.UUID("550e8400-e29b-41d4-a716-446655440000")],
+        [jolt_v4_types.JoltUuid("550e8400-e29b-41d4-a716-446655440000")],
+    ),
+    # UUID inside a raw dict field (exercises the recursive dict path)
+    (
+        4,
+        [{"uid": uuid.UUID("550e8400-e29b-41d4-a716-446655440000")}],
+        [{"uid": jolt_v4_types.JoltUuid(
+            "550e8400-e29b-41d4-a716-446655440000"
+        )}],
+    ),
     # Vector
     (
         1,
@@ -329,3 +355,28 @@ def test_struct_to_jolt_type(packstream_version, fields, res):
             jolt_types[i].__class__ == res[i].__class__
             for i in range(len(res))
         )
+
+
+def test_can_display_translated_structure_with_uuid_in_map():
+    from ..bolt_protocol import TranslatedStructure
+    uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+    struct = TranslatedStructure(
+        "NODE", b"\x4E",
+        1,                          # node id
+        ["Thing"],                  # labels
+        {"uid": uuid_val},          # properties (map containing a UUID)
+        "element-1",                # element_id
+        packstream_version=4
+    )
+    str(struct)
+
+
+def test_can_display_translated_structure_with_uuid_in_list():
+    from ..bolt_protocol import TranslatedStructure
+    uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+    struct = TranslatedStructure(
+        "LIST", b"\x00",
+        [uuid_val],                 # list containing a UUID
+        packstream_version=4
+    )
+    str(struct)
