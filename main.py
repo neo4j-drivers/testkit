@@ -68,7 +68,7 @@ def initialise_configurations(settings):
         if not in_teamcity:
             return None
         assert (cluster and scheme == "neo4j"
-                or not cluster and scheme in ("neo4j", "bolt"))
+                or not cluster and scheme in {"neo4j", "bolt", "http"})
         edition = "enterprise" if enterprise else "community"
         name = "%s-tc-%s%s-%s" % (version, edition,
                                   "-cluster" if cluster else "", scheme)
@@ -132,6 +132,8 @@ def initialise_configurations(settings):
             ("5.25",      True,        False,     "http",   0),
             # added transaction support
             ("5.26.0",    True,        False,     "http",   0),
+            # LTS version
+            ("5.26",      True,        False,     "http",   0),
             # application/vnd.neo4j.query.v1.0
             ("2025.10",   True,        False,     "http",   0),
             # application/vnd.neo4j.query.v1.1
@@ -148,6 +150,7 @@ def initialise_configurations(settings):
             # nightly build of official backwards-compatible version(s)
             ("5.26",     "5",      True,        False,    "neo4j",  0),
             ("5.26",     "5",      True,        True,     "neo4j", 60),
+            ("5.26", "2026",   True,        True,     "http",   0),
             # nightly build of matching version(s)
             ("2026.dev", "2026",   False,       False,    "bolt",   0),
             ("2026.dev", "2026",   False,       False,    "neo4j",  0),
