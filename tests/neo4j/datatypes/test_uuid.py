@@ -2,6 +2,7 @@ import uuid
 
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import _TestTypesBase
+from tests.neo4j.shared import requires_min_bolt_version
 
 
 class TestUuidTypes(_TestTypesBase):
@@ -11,6 +12,7 @@ class TestUuidTypes(_TestTypesBase):
         types.Feature.BOLT_6_1,
     )
 
+    @requires_min_bolt_version("6.1")
     def test_should_echo_uuid(self):
         values = [
             uuid.UUID("00000000-0000-0000-0000-000000000000"),  # nil UUID
@@ -23,6 +25,7 @@ class TestUuidTypes(_TestTypesBase):
             with self.subTest(value=str(value)):
                 self._verify_can_echo(types.CypherUUID(value))
 
+    @requires_min_bolt_version("6.1")
     def test_uuid_in_list(self):
         self._create_driver_and_session()
         nil = uuid.UUID("00000000-0000-0000-0000-000000000000")
@@ -34,6 +37,7 @@ class TestUuidTypes(_TestTypesBase):
         ])
         self._verify_can_echo(data)
 
+    @requires_min_bolt_version("6.1")
     def test_uuid_in_map(self):
         value = uuid.uuid4()
         self._create_driver_and_session()
@@ -41,12 +45,14 @@ class TestUuidTypes(_TestTypesBase):
             types.CypherMap({"id": types.CypherUUID(value)})
         )
 
+    @requires_min_bolt_version("6.1")
     def test_cypher_created_uuid(self):
         self._create_driver_and_session()
         values = self._read_query_values("RETURN uuid()")
         self.assertEqual(len(values), 1)
         self.assertIsInstance(values[0], types.CypherUUID)
 
+    @requires_min_bolt_version("6.1")
     def test_uuid_stored_on_node(self):
         uid = uuid.uuid4()
         self._create_driver_and_session()
