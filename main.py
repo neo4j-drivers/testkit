@@ -120,8 +120,7 @@ def initialise_configurations(settings):
             # LTS version
             ("5.26",      True,        True,     "neo4j",  0),
             # Bolt 6.0
-            # TODO: uncomment when server is released
-            # ("2025.10",   True,        True,     "neo4j",  0),
+            ("2025.10",   True,        True,     "neo4j",  0),
         )
     ]
     configurations += [
