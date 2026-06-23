@@ -257,6 +257,16 @@ class Core:
                     "NO_BALANCING",  # noqa: E131
             })
 
+        # TODO: remove once UUID is GA
+        # [uuid-preview] search tag for removal of UUID preview workarounds
+        if (2026, 4) < self._version:
+            env_map.update({
+                "NEO4J_internal_dbms_latest__runtime__version": "2147483647",
+                "NEO4J_internal_dbms_latest__kernel__version": "254",
+                "NEO4J_internal_cypher_uuid__type__enabled": "true",
+                "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
+            })
+
         logs_path = join(self._artifacts_path, "logs")
         os.makedirs(logs_path, exist_ok=True)
 
