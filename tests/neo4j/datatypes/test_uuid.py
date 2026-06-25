@@ -47,10 +47,21 @@ class TestUuidTypes(_TestTypesBase):
 
     @requires_min_bolt_version("6.1")
     def test_cypher_created_uuid(self):
+        raw_uuids = [
+            "00000000-0000-0000-0000-000000000000",  # nil UUID
+            "ffffffff-ffff-ffff-ffff-ffffffffffff",  # all-ones
+            "01020304-0506-0708-090a-0b0c0d0e0f12",  # sequential
+        ]
         self._create_driver_and_session()
-        values = self._read_query_values("RETURN uuid()")
+        values = self._read_query_values(
+            "UNWIND $raw_uuids AS raw_uuid RETURN collect(uuid(raw_uuid))",
+            {"raw_uuids": types.as_cypher_type(raw_uuids)},
+        )
         self.assertEqual(len(values), 1)
-        self.assertIsInstance(values[0], types.CypherUUID)
+        self.assertIsInstance(values, list)
+        values = values[0].value
+        for value, expected in zip(values, raw_uuids):
+            self.assertEqual(value, types.CypherUUID(uuid.UUID(expected)))
 
     @requires_min_bolt_version("6.1")
     def test_uuid_stored_on_node(self):
