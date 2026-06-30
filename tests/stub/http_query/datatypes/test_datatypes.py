@@ -3,7 +3,6 @@ from __future__ import annotations
 import typing as t
 
 from nutkit import protocol as types
-from testkit.tests.shared import get_driver_name
 from tests.stub.http_query.datatypes._test_case import HttpDataTypeTestCase
 from tests.stub.http_query.shared import http_types
 
@@ -50,17 +49,12 @@ class TestTypes(HttpDataTypeTestCase):
                 float("nan"),
                 1,
                 -1,
+                2**1023,
+                2**-1022,
+                9007199254740991,
+                -9007199254740991,
+                -(2 + 1 + 2e-51),
             ]
-
-            # skipping these values for dotnet as they can't be represented as doubles
-            if get_driver_name() not in ["dotnet"]:
-                values.extend([
-                    2**1023,
-                    2**-1022,
-                    9007199254740991,
-                    -9007199254740991,
-                    -(2 + 1 + 2e-51),
-                ])
 
             for value in values:
                 with self.subTest(x=value):
