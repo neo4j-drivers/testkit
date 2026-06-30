@@ -46,7 +46,7 @@ class TestTemporal(HttpTestCase):
 
     def test_zoned_time(self):
         with self.server() as server:
-            for cypher_value, http_value in (
+            cases = [
                 (
                     types.CypherTime(13, 45, 30, 123456789, 0),
                     http_types.ZonedTime(13, 45, 30, 123456789, 0),
@@ -91,8 +91,12 @@ class TestTemporal(HttpTestCase):
                     types.CypherTime(0, 0, 0, 0, 64920),
                     http_types.ZonedTime(0, 0, 0, 0, 64920),
                 ),
-            ):
-                with self.subTest(x=cypher_value):
+            ]
+
+            for cypher_value, http_value in cases:
+                if not self.should_run_subtest(x=cypher_value):
+                    continue
+                with self.uncheckedSubTest(x=cypher_value):
                     self._echo_session_run(
                         server,
                         cypher_value,
