@@ -147,6 +147,8 @@ class HttpQueryEndpoint(HttpEndpoint):
         counters: CountersMap | AutoRespond | None = field(
             default_factory=AutoRespond
         )
+        result_available_after: int | None = None
+        result_consumed_after: int | None = None
         plan: Plan | None = None
         profile: Profile | None = None
         notifications: list[Notification] | None = None
@@ -311,6 +313,11 @@ class HttpQueryEndpoint(HttpEndpoint):
             counters = self._res._get_counters(req)
             if counters is not None:
                 body["counters"] = counters
+
+            if self._res.result_available_after is not None:
+                body["resultAvailableAfter"] = self._res.result_available_after
+            if self._res.result_consumed_after is not None:
+                body["resultConsumedAfter"] = self._res.result_consumed_after
 
             if self._res.plan is not None:
                 body["queryPlan"] = self._res.plan.json_dict(

@@ -4,7 +4,10 @@ import dataclasses
 import typing as t
 
 from nutkit import protocol as types
-from tests.shared import get_dns_resolved_server_address
+from tests.shared import (
+    get_dns_resolved_server_address,
+    MAX_INT64,
+)
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -708,6 +711,172 @@ class TestSummaryServer(_SummaryTestBase):
             version="🐒 <3 🍌"
         )
         self._assert_summary_server(summary, "🐒 <3 🍌", server_address)
+
+
+class TestSummaryTimers(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints(
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> HttpQueryEndpoint:
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                query=DEFAULT_QUERY_TEXT,
+                db=DEFAULT_DB,
+                auth=AUTH,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+                result_available_after=result_available_after,
+                result_consumed_after=result_consumed_after,
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint(
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> HttpEndpoint:
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                DEFAULT_QUERY_TEXT,
+                ["n"],
+                [[http_types.Int(1)]],
+                result_available_after=result_available_after,
+                result_consumed_after=result_consumed_after,
+            )
+            .with_commit()
+            .build()
+        )
+
+    def _assert_expected_timers_in_summary(
+        self,
+        summary: types.Summary,
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> None:
+        actual_available_after = summary.result_available_after
+        actual_consumed_after = summary.result_consumed_after
+
+        if result_available_after is None:
+            self.assertIn(actual_available_after, (-1, 0, None))
+        else:
+            self.assertEqual(actual_available_after, result_available_after)
+
+        if result_consumed_after is None:
+            self.assertIn(actual_consumed_after, (-1, 0, None))
+        else:
+            self.assertEqual(actual_consumed_after, result_consumed_after)
+
+    @staticmethod
+    def _make_session_server_setup(
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryTimers._make_query_endpoints(
+                    result_available_after,
+                    result_consumed_after,
+                ),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryTimers._make_tx_endpoint(
+                    result_available_after,
+                    result_consumed_after,
+                ),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_timers_session_run(
+        self,
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_session_server_setup(
+                result_available_after, result_consumed_after
+            )(server)
+            summaries = super()._get_summary_session_run(server)
+            assert len(summaries) == 1
+            return summaries[0]
+
+    def _get_summary_with_timers_tx(
+        self,
+        result_available_after: int | None,
+        result_consumed_after: int | None,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_tx_server_setup(
+                result_available_after,
+                result_consumed_after,
+            )(server)
+            summaries = super()._get_summary_tx(server)
+            assert len(summaries) == 1
+            server._server.port
+            return summaries[0]
+
+    def test_fallback_timers(self):
+        summary = self._get_summary_with_timers_session_run(None, None)
+        self._assert_expected_timers_in_summary(summary, None, None)
+
+    def test_fallback_timers_tx(self):
+        summary = self._get_summary_with_timers_tx(None, None)
+        self._assert_expected_timers_in_summary(summary, None, None)
+
+    def test_timers(self):
+        for available, consumed in (
+            (0, 0),
+            (1, 1),
+            (1337, 1337),
+            # max i64 nanoseconds, while the server *could* send up to i64,
+            # it's unrealistic to ever encounter a query that slower than
+            # what's tested here (which is roughly 300 years).
+            (MAX_INT64 // 1_000_000, MAX_INT64 // 1_000_000),
+        ):
+            with self.subTest(
+                avaiable_after=available, consumed_after=consumed
+            ):
+                summary = self._get_summary_with_timers_session_run(
+                    available, consumed
+                )
+                self._assert_expected_timers_in_summary(
+                    summary, available, consumed
+                )
+
+    def test_timers_tx(self):
+        for available, consumed in (
+            (0, 0),
+            (1, 1),
+            (1337, 1337),
+            # max i64 nanoseconds, while the server *could* send up to i64,
+            # it's unrealistic to ever encounter a query that slower than
+            # what's tested here (which is roughly 300 years).
+            (MAX_INT64 // 1_000_000, MAX_INT64 // 1_000_000),
+        ):
+            with self.subTest(
+                avaiable_after=available, consumed_after=consumed
+            ):
+                summary = self._get_summary_with_timers_tx(available, consumed)
+                self._assert_expected_timers_in_summary(
+                    summary, available, consumed
+                )
 
 
 class TestSummaryPlan(_SummaryTestBase):

@@ -30,7 +30,10 @@
     * [x] server
       * [x] agent string
       * [x] address
+    * [ ] query type
+    * [x] timers (`resultAvailableAfter`, `resultConsumedAfter`)
   * [ ] verify connectivity
+  * [ ] verify authentication
   * [x] errors
     * [x] via all APIs
       * [ ] amend: tx commit & rollback
@@ -56,7 +59,4 @@
   * [ ] Transaction config
     * [ ] meta data
     * [ ] tx timeout
-  * [ ] summary
-    * [ ] query type
-    * [ ] timers
   * [ ] UUID
