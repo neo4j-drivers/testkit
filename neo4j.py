@@ -79,6 +79,16 @@ class Standalone:
                 )
             })
 
+        # TODO: remove once UUID is GA
+        # [uuid-preview] search tag for removal of UUID preview workarounds
+        if (2026, 4) < self._version:
+            env_map.update({
+                "NEO4J_internal_dbms_latest__runtime__version": "2147483647",
+                "NEO4J_internal_dbms_latest__kernel__version": "254",
+                "NEO4J_internal_cypher_uuid__type__enabled": "true",
+                "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
+            })
+
         logs_path = join(self._artifacts_path, "logs")
         self._container = docker.run(
             self._image, self._hostname,
@@ -265,6 +275,25 @@ class Core:
             env_map.update({
                 "NEO4J_dbms_cluster_raft_leader__transfer_balancing__strategy":
                     "NO_BALANCING",  # noqa: E131
+            })
+
+        if (5, 19) <= self._version < (5, 25):
+            # these version need explicit enabling of the HTTP Query API
+            env_map.update({
+                "NEO4J_server_http__enabled__modules": (  # noqa: PAR001
+                    "TRANSACTIONAL_ENDPOINTS,UNMANAGED_EXTENSIONS,BROWSER,"
+                    "ENTERPRISE_MANAGEMENT_ENDPOINTS,QUERY_API_ENDPOINTS"
+                )
+            })
+
+        # TODO: remove once UUID is GA
+        # [uuid-preview] search tag for removal of UUID preview workarounds
+        if (2026, 4) < self._version:
+            env_map.update({
+                "NEO4J_internal_dbms_latest__runtime__version": "2147483647",
+                "NEO4J_internal_dbms_latest__kernel__version": "254",
+                "NEO4J_internal_cypher_uuid__type__enabled": "true",
+                "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
             })
 
         logs_path = join(self._artifacts_path, "logs")

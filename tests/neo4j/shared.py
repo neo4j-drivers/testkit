@@ -172,8 +172,12 @@ class ServerInfo:
     @property
     def max_protocol_version(self):
         if self.edition == "aura" and self.is_dev_version:
-            return 5, 8
+            return 6, 0
         version = self.parsed_version()
+        if version >= (2026, 5):
+            # TODO: adjust version when Bolt 6.1 goes GA
+            # [uuid-preview] search tag for removal of UUID preview workarounds
+            return 6, 1
         if version >= (2025, 10):
             return 6, 0
         if version >= (5, 26):

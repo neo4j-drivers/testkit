@@ -123,6 +123,8 @@ def initialise_configurations(settings):
             # Bolt 6.0
             # TODO: uncomment when server is released
             # ("2025.10",   True,        True,     "neo4j",  0),
+            # TODO: add first version with Bolt 6.1 GA when released
+            # [uuid-preview] search tag for removal of UUID preview workarounds
 
             # HTTP Query API
             # first iteration - behind feature flag
