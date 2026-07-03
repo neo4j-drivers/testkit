@@ -7,13 +7,13 @@ from nutkit.frontend import Driver
 from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
-    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
+from tests.stub.summary._base import _TestSummaryBase
 
 
-class _TestSummaryBase(TestkitTestCase):
-    """Test result summary contents."""
+class _TestSummaryBaseBolt(_TestSummaryBase):
+    """Test result summary contents via BOLT."""
 
     full_notifications_feat = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
     version_folder = ()

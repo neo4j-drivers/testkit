@@ -28,6 +28,7 @@ from tests.stub.http_query.shared.http_endpoints import (
     Profile,
 )
 from tests.stub.http_query.shared.http_server import HandlerType
+from tests.stub.summary._base import _TestSummaryBase
 
 if t.TYPE_CHECKING:
     from tests.stub.http_query.shared.http_endpoints import TOptionalValue
@@ -60,7 +61,7 @@ class QueryResult:
     summary: types.Summary
 
 
-class _SummaryTestBase(HttpTestCase):
+class _SummaryTestBase(HttpTestCase, _TestSummaryBase):
     def _get_summary_session_run(
         self,
         server: HTTPServer,
@@ -1262,7 +1263,7 @@ class TestSummaryProfile(_SummaryTestBase):
             server._server.port
             return summaries[0]
 
-    def _test_profile_1(
+    def _test_profile(
         self,
         get_summary: t.Callable[[Profile], types.Summary],
     ) -> None:
@@ -1320,9 +1321,8 @@ class TestSummaryProfile(_SummaryTestBase):
                 ],
             )
         )
-        profile = summary.profile
-        self.assertEqual(
-            profile,
+        self.assert_plan_equal(
+            summary.profile,
             {
                 "dbHits": 1,
                 "rows": 1,
@@ -1369,11 +1369,341 @@ class TestSummaryProfile(_SummaryTestBase):
             },
         )
 
-    def test_session_profile_1(self) -> None:
-        self._test_profile_1(self._get_summary_with_profile_session_run)
+    def test_session_profile(self) -> None:
+        self._test_profile(self._get_summary_with_profile_session_run)
 
-    def test_tx_profile_1(self) -> None:
-        self._test_profile_1(self._get_summary_with_profile_tx)
+    def test_tx_profile(self) -> None:
+        self._test_profile(self._get_summary_with_profile_tx)
+
+    def _test_profile_with_optional_stats(
+        self,
+        get_summary: t.Callable[[Profile], types.Summary],
+    ) -> None:
+        summary = get_summary(
+            Profile(
+                db_hits=1,
+                records=1,
+                has_page_cache_stats=False,
+                page_cache_hits=0,
+                page_cache_misses=0,
+                page_cache_hit_ratio=0.0,
+                time=0,
+                identifiers=["n"],
+                operator_type="ProduceResults@neo4j",
+                arguments={
+                    "GlobalMemory": http_types.Int(136),
+                    "planner-impl": http_types.Str("IDP"),
+                    "runtime": http_types.Str("PIPELINED"),
+                    "runtime-impl": http_types.Str("PIPELINED"),
+                    "version": http_types.Str("CYPHER 4.3"),
+                    "DbHits": http_types.Int(1),
+                    "Details": http_types.Str("n"),
+                    "PipelineInfo": http_types.Str("Fused in Pipeline 0"),
+                    "planner-version": http_types.Str("4.3"),
+                    "runtime-version": http_types.Str("4.3"),
+                    "EstimatedRows": http_types.Float(1.1),
+                    "planner": http_types.Str("COST"),
+                    "Rows": http_types.Int(1),
+                },
+                children=[
+                    Profile(
+                        db_hits=None,
+                        records=1,
+                        has_page_cache_stats=True,
+                        page_cache_hits=0,
+                        page_cache_misses=1,
+                        page_cache_hit_ratio=0.1,
+                        time=0,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                    Profile(
+                        db_hits=0,
+                        records=None,
+                        has_page_cache_stats=False,
+                        page_cache_hits=0,
+                        page_cache_misses=0,
+                        page_cache_hit_ratio=0.0,
+                        time=0,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                    Profile(
+                        db_hits=0,
+                        records=0,
+                        has_page_cache_stats=False,
+                        page_cache_hits=None,
+                        page_cache_misses=0,
+                        page_cache_hit_ratio=0.0,
+                        time=0,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                    Profile(
+                        db_hits=0,
+                        records=0,
+                        has_page_cache_stats=False,
+                        page_cache_hits=0,
+                        page_cache_misses=None,
+                        page_cache_hit_ratio=0.0,
+                        time=0,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                    Profile(
+                        db_hits=0,
+                        records=0,
+                        has_page_cache_stats=False,
+                        page_cache_hits=0,
+                        page_cache_misses=0,
+                        page_cache_hit_ratio=None,
+                        time=0,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                    Profile(
+                        db_hits=0,
+                        records=0,
+                        has_page_cache_stats=True,
+                        page_cache_hits=0,
+                        page_cache_misses=1,
+                        page_cache_hit_ratio=1.0,
+                        time=None,
+                        identifiers=["n"],
+                        operator_type="Create@neo4j",
+                        arguments={
+                            "Details": http_types.Str("(n)"),
+                            "PipelineInfo": http_types.Str(
+                                "Fused in Pipeline 0"
+                            ),
+                            "Time": http_types.Int(0),
+                            "PageCacheMisses": http_types.Int(0),
+                            "EstimatedRows": http_types.Float(1.1),
+                            "DbHits": http_types.Int(1),
+                            "Rows": http_types.Int(1),
+                            "PageCacheHits": http_types.Int(0),
+                        },
+                        children=[],
+                    ),
+                ],
+            )
+        )
+        self.assert_plan_equal(
+            summary.profile,
+            {
+                "dbHits": 1,
+                "rows": 1,
+                "time": 0,
+                "identifiers": ["n"],
+                "operatorType": "ProduceResults@neo4j",
+                "args": {
+                    "GlobalMemory": 136,
+                    "planner-impl": "IDP",
+                    "runtime": "PIPELINED",
+                    "runtime-impl": "PIPELINED",
+                    "version": "CYPHER 4.3",
+                    "DbHits": 1,
+                    "Details": "n",
+                    "PipelineInfo": "Fused in Pipeline 0",
+                    "planner-version": "4.3",
+                    "runtime-version": "4.3",
+                    "EstimatedRows": 1.1,
+                    "planner": "COST",
+                    "Rows": 1,
+                },
+                "children": [
+                    {
+                        "rows": 1,
+                        "pageCacheHits": 0,
+                        "pageCacheMisses": 1,
+                        "pageCacheHitRatio": 0.1,
+                        "time": 0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                    {
+                        "dbHits": 0,
+                        "pageCacheHits": 0,
+                        "pageCacheMisses": 0,
+                        "pageCacheHitRatio": 0.0,
+                        "time": 0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                    {
+                        "dbHits": 0,
+                        "rows": 0,
+                        "pageCacheMisses": 0,
+                        "pageCacheHitRatio": 0.0,
+                        "time": 0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                    {
+                        "dbHits": 0,
+                        "rows": 0,
+                        "pageCacheHits": 0,
+                        "pageCacheHitRatio": 0.0,
+                        "time": 0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                    {
+                        "dbHits": 0,
+                        "rows": 0,
+                        "pageCacheHits": 0,
+                        "pageCacheMisses": 0,
+                        "time": 0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                    {
+                        "dbHits": 0,
+                        "rows": 0,
+                        "pageCacheHits": 0,
+                        "pageCacheMisses": 1,
+                        "pageCacheHitRatio": 1.0,
+                        "identifiers": ["n"],
+                        "operatorType": "Create@neo4j",
+                        "args": {
+                            "Details": "(n)",
+                            "PipelineInfo": "Fused in Pipeline 0",
+                            "Time": 0,
+                            "PageCacheMisses": 0,
+                            "EstimatedRows": 1.1,
+                            "DbHits": 1,
+                            "Rows": 1,
+                            "PageCacheHits": 0,
+                        },
+                    },
+                ],
+            },
+        )
+
+    def test_session_profile_with_optional_stats(self) -> None:
+        self._test_profile_with_optional_stats(
+            self._get_summary_with_profile_session_run
+        )
+
+    def test_tx_profile_with_optional_stats(self) -> None:
+        self._test_profile_with_optional_stats(
+            self._get_summary_with_profile_tx
+        )
 
 
 class TestSummaryNotifications(_SummaryTestBase):

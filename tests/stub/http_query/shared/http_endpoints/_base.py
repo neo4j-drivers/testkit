@@ -138,13 +138,13 @@ class Plan:
 
 @dataclasses.dataclass
 class Profile:
-    db_hits: int = 0
-    records: int = 0
+    db_hits: int | None = 0
+    records: int | None = 0
     has_page_cache_stats: bool = False
-    page_cache_hits: int = 0
-    page_cache_misses: int = 0
-    page_cache_hit_ratio: float = 0.0
-    time: int = 0
+    page_cache_hits: int | None = 0
+    page_cache_misses: int | None = 0
+    page_cache_hit_ratio: float | None = 0.0
+    time: int | None = 0
     identifiers: list[str] = dataclasses.field(default_factory=list)
     operator_type: str = "ProduceResults@neo4j"
     arguments: dict[str, HttpType] = dataclasses.field(default_factory=dict)
@@ -154,14 +154,7 @@ class Profile:
         self,
         protocol_version: ProtocolVersion,
     ) -> dict[str, object]:
-        return {
-            "dbHits": self.db_hits,
-            "records": self.records,
-            "hasPageCacheStats": self.has_page_cache_stats,
-            "pageCacheHits": self.page_cache_hits,
-            "pageCacheMisses": self.page_cache_misses,
-            "pageCacheHitRatio": self.page_cache_hit_ratio,
-            "time": self.time,
+        res: dict[str, object] = {
             "identifiers": self.identifiers,
             "operatorType": self.operator_type,
             "arguments": {
@@ -172,6 +165,21 @@ class Profile:
                 child.json_dict(protocol_version) for child in self.children
             ],
         }
+        if self.db_hits is not None:
+            res["dbHits"] = self.db_hits
+        if self.records is not None:
+            res["records"] = self.records
+        if self.has_page_cache_stats is not None:
+            res["hasPageCacheStats"] = self.has_page_cache_stats
+        if self.page_cache_hits is not None:
+            res["pageCacheHits"] = self.page_cache_hits
+        if self.page_cache_misses is not None:
+            res["pageCacheMisses"] = self.page_cache_misses
+        if self.page_cache_hit_ratio is not None:
+            res["pageCacheHitRatio"] = self.page_cache_hit_ratio
+        if self.time is not None:
+            res["time"] = self.time
+        return res
 
 
 @dataclasses.dataclass
