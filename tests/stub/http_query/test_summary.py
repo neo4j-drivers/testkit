@@ -6,6 +6,7 @@ import typing as t
 from nutkit import protocol as types
 from tests.shared import (
     get_dns_resolved_server_address,
+    get_driver_name,
     MAX_INT64,
 )
 from tests.stub.http_query.shared import (
@@ -589,6 +590,158 @@ class TestSummaryQuery(_SummaryTestBase):
         self._assert_queries(summary, queries)
 
 
+class TestSummaryQueryType(_SummaryTestBase):
+    @staticmethod
+    def _make_query_endpoints(
+        query_type: str | None,
+    ) -> HttpQueryEndpoint:
+        return HttpQueryEndpoint(
+            HttpQueryEndpoint.RequestData(
+                query=DEFAULT_QUERY_TEXT,
+                db=DEFAULT_DB,
+                auth=AUTH,
+            ),
+            HttpQueryEndpoint.ResponseData(
+                fields=["n"],
+                records=[[http_types.Int(1)]],
+                query_type=query_type,
+            ),
+        )
+
+    @staticmethod
+    def _make_tx_endpoint(
+        query_type: str | None,
+    ) -> HttpEndpoint:
+        return (
+            TxEndpointBuilder(DEFAULT_DB, AUTH)
+            .with_query(
+                DEFAULT_QUERY_TEXT,
+                ["n"],
+                [[http_types.Int(1)]],
+                query_type=query_type,
+            )
+            .with_commit()
+            .build()
+        )
+
+    def _assert_expected_query_type_in_summary(
+        self,
+        summary: types.Summary,
+        query_type: str | None,
+    ) -> None:
+        actual_query_type = summary.query_type
+
+        if query_type is None:
+            self.assertIn(actual_query_type, (None, ""))
+        else:
+            self.assertEqual(actual_query_type, query_type)
+
+    @staticmethod
+    def _make_session_server_setup(
+        query_type: str | None,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryQueryType._make_query_endpoints(query_type),
+                handler_type=HandlerType.ONESHOT,
+            )
+
+        return setup
+
+    @staticmethod
+    def _make_tx_server_setup(
+        query_type: str | None,
+    ) -> t.Callable[[HTTPServer], None]:
+        def setup(server: HTTPServer) -> None:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                TestSummaryQueryType._make_tx_endpoint(query_type),
+                handler_type=HandlerType.PERMANENT,
+            )
+
+        return setup
+
+    def _get_summary_with_query_type_session_run(
+        self,
+        query_type: str | None,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_session_server_setup(query_type)(server)
+            summaries = super()._get_summary_session_run(server)
+            assert len(summaries) == 1
+            return summaries[0]
+
+    def _get_summary_with_query_type_tx(
+        self,
+        query_type: str | None,
+    ) -> types.Summary:
+        with self.server() as server:
+            self._make_tx_server_setup(query_type)(server)
+            summaries = super()._get_summary_tx(server)
+            assert len(summaries) == 1
+            server._server.port
+            return summaries[0]
+
+    def test_fallback_query_type(self) -> None:
+        summary = self._get_summary_with_query_type_session_run(None)
+        self._assert_expected_query_type_in_summary(summary, None)
+
+    def test_fallback_timers_tx(self) -> None:
+        summary = self._get_summary_with_query_type_tx(None)
+        self._assert_expected_query_type_in_summary(summary, None)
+
+    def test_valid_values(self) -> None:
+        for query_type in ("r", "w", "rw", "s"):
+            with self.subTest(query_type=query_type):
+                summary = self._get_summary_with_query_type_session_run(
+                    query_type
+                )
+                self._assert_expected_query_type_in_summary(
+                    summary, query_type
+                )
+
+    def test_valid_values_tx(self) -> None:
+        for query_type in ("r", "w", "rw", "s"):
+            with self.subTest(query_type=query_type):
+                summary = self._get_summary_with_query_type_tx(query_type)
+                self._assert_expected_query_type_in_summary(
+                    summary, query_type
+                )
+
+    def test_invalid_values(self) -> None:
+        for query_type in ("", "wr"):
+            with self.subTest(query_type=query_type):
+                with self.assertRaises(types.DriverError) as exc:
+                    self._get_summary_with_query_type_session_run(query_type)
+                self._assert_invalid_query_type_exc(exc.exception, query_type)
+
+    def test_invalid_values_tx(self) -> None:
+        for query_type in ("", "wr"):
+            with self.subTest(query_type=query_type):
+                with self.assertRaises(types.DriverError) as exc:
+                    self._get_summary_with_query_type_tx(query_type)
+                self._assert_invalid_query_type_exc(exc.exception, query_type)
+
+    def _assert_invalid_query_type_exc(
+        self,
+        exc: types.DriverError,
+        query_type: str,
+    ) -> None:
+        driver_name = get_driver_name()
+        message = str(exc).lower()
+        self.assertFalse(exc.retryable)
+        if driver_name in ["python"]:
+            self.assertEqual(
+                exc.errorType,
+                "<class 'neo4j._exceptions.BoltProtocolError'>",
+            )
+            self.assertIn(query_type, message)
+            self.assertIn("query type", message)
+        else:
+            raise NotImplementedError(f"Add error mapping for {driver_name}")
+
+
 class Address(t.NamedTuple):
     host: str
     port: int
@@ -811,7 +964,8 @@ class TestSummaryTimers(_SummaryTestBase):
     ) -> types.Summary:
         with self.server() as server:
             self._make_session_server_setup(
-                result_available_after, result_consumed_after
+                result_available_after,
+                result_consumed_after,
             )(server)
             summaries = super()._get_summary_session_run(server)
             assert len(summaries) == 1
@@ -832,15 +986,15 @@ class TestSummaryTimers(_SummaryTestBase):
             server._server.port
             return summaries[0]
 
-    def test_fallback_timers(self):
+    def test_fallback_timers(self) -> None:
         summary = self._get_summary_with_timers_session_run(None, None)
         self._assert_expected_timers_in_summary(summary, None, None)
 
-    def test_fallback_timers_tx(self):
+    def test_fallback_timers_tx(self) -> None:
         summary = self._get_summary_with_timers_tx(None, None)
         self._assert_expected_timers_in_summary(summary, None, None)
 
-    def test_timers(self):
+    def test_timers(self) -> None:
         for available, consumed in (
             (0, 0),
             (1, 1),
@@ -860,7 +1014,7 @@ class TestSummaryTimers(_SummaryTestBase):
                     summary, available, consumed
                 )
 
-    def test_timers_tx(self):
+    def test_timers_tx(self) -> None:
         for available, consumed in (
             (0, 0),
             (1, 1),

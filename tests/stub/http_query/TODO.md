@@ -30,7 +30,7 @@
     * [x] server
       * [x] agent string
       * [x] address
-    * [ ] query type
+    * [x] query type
     * [x] timers (`resultAvailableAfter`, `resultConsumedAfter`)
   * [ ] verify connectivity
   * [ ] verify authentication

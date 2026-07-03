@@ -149,6 +149,7 @@ class HttpQueryEndpoint(HttpEndpoint):
         )
         result_available_after: int | None = None
         result_consumed_after: int | None = None
+        query_type: str | None = None
         plan: Plan | None = None
         profile: Profile | None = None
         notifications: list[Notification] | None = None
@@ -318,6 +319,9 @@ class HttpQueryEndpoint(HttpEndpoint):
                 body["resultAvailableAfter"] = self._res.result_available_after
             if self._res.result_consumed_after is not None:
                 body["resultConsumedAfter"] = self._res.result_consumed_after
+
+            if self._res.query_type is not None:
+                body["queryType"] = self._res.query_type
 
             if self._res.plan is not None:
                 body["queryPlan"] = self._res.plan.json_dict(
