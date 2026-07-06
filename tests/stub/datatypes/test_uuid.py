@@ -143,5 +143,8 @@ class TestUuid6x0(_UuidTestCase):
         elif driver_name in ["java"]:
             self.assertIn("unknown packstream", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker byte
+        elif driver_name in ["go"]:
+            self.assertIn("packstream", msg)
+            self.assertIn("e0", msg)  # UUID PackStream type marker byte
         else:
             raise NotImplementedError(f"Add error assertion for {driver_name}")
