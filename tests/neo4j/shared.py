@@ -245,7 +245,7 @@ class ServerInfo:
 
     @property
     def is_bolt(self):
-        bool(_BOLT_SCHEME_RE.match(self.scheme))
+        return bool(_BOLT_SCHEME_RE.match(self.scheme))
 
     @property
     def is_encrypted_protocol(self):
