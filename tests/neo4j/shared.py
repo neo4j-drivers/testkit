@@ -329,10 +329,10 @@ def requires_vector_support(func):
 def has_vector_support(test_case):
     server_info = get_server_info()
     protocol_support = has_min_protocol_version(
-        test_case, bolt=(4, 0), http=(1, 1)
+        test_case, bolt=(6, 0), http=(1, 1)
     )
-    version_support = server_info.edition in {"enterprise", "aura"}
-    return protocol_support and version_support
+    edition_support = server_info.edition in {"enterprise", "aura"}
+    return protocol_support and edition_support
 
 
 def requires_tx_support(func):
