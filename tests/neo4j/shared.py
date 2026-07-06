@@ -410,8 +410,10 @@ def has_min_protocol_version(test_case, *, bolt, http):
     server_info = get_server_info()
     if server_info.is_bolt:
         return has_min_bolt_version(test_case, bolt)
-    assert server_info.is_http, f"Unhandled scheme: {server_info.scheme}"
-    return has_min_query_api_version(test_case, http)
+    elif server_info.is_http:
+        return has_min_query_api_version(test_case, http)
+    else:
+        raise NotImplementedError(f"Unhandled scheme {server_info.scheme!r}")
 
 
 def requires_summary_query_type_support(func):
