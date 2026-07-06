@@ -150,9 +150,8 @@ class Feature(Enum):
     BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
-    # The driver support connecting to the HTTP/Query API
-    # using content type `application/vnd.neo4j.query.v1.0`
-    HTTP_QUERY_API_1_0 = "Feature:HTTP:QueryAPI:1.0"
+    # The driver support connecting to the HTTP/Query API as initially released
+    HTTP_QUERY_API_2_0 = "Feature:HTTP:QueryAPI:2.0"
     # The driver retries idempotent errors on session run
     IDEMPOTENT_RETRIES = "Feature:IdempotentRetries"
     # The driver supports impersonation
