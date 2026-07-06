@@ -1,4 +1,5 @@
 """Enumerate all the capabilities in the drivers."""
+
 from enum import Enum
 
 

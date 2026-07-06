@@ -1,4 +1,3 @@
-from nutkit.protocol.feature import Feature
 from tests.neo4j.shared import (
     get_neo4j_scheme,
     get_server_info,
@@ -14,10 +13,9 @@ def main():
     features = get_driver_features(backend, silence_error=False)
 
     if get_neo4j_scheme() in {"http", "https"}:
-        query_api_features = {
-            feature.name.startswith("HTTP_QUERY_API") for feature in Feature
-        }
-        if not any(query_api_features):
+        if not any(
+            feature.name.startswith("HTTP_QUERY_API") for feature in features
+        ):
             print(
                 "Driver does not support HTTP Query API features, skipping "
                 "protocol version check."
