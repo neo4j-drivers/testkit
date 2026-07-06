@@ -17,7 +17,6 @@ TEST_NEO4J_CLUSTER     Whether the Neo4j server is a cluster, default "False"
 TEST_NEO4J_DEFAULT_DB  Default database name, default "neo4j"
 """
 
-
 import os
 import re
 import traceback
@@ -125,15 +124,18 @@ def get_client_certificate():
     client_certificate_key = os.environ.get(env_neo4j_client_key)
     client_certificate_cert = os.environ.get(env_neo4j_client_cert)
     if client_certificate_cert is None or client_certificate_key is None:
-        if client_certificate_cert is not None or \
-                client_certificate_key is not None:
+        if (
+            client_certificate_cert is not None
+            or client_certificate_key is not None
+        ):
             raise Exception("Miss configuration of client certificate.")
         return None
     return ClientCertificate(client_certificate_cert, client_certificate_key)
 
 
-def get_driver(backend, uri=None, auth=None,
-               client_certificate=None, **kwargs):
+def get_driver(
+    backend, uri=None, auth=None, client_certificate=None, **kwargs
+):
     """Return default driver for tests that do not test this aspect."""
     if uri is None:
         scheme = get_neo4j_scheme()
@@ -143,8 +145,9 @@ def get_driver(backend, uri=None, auth=None,
         auth = get_authorization()
     if client_certificate is None:
         client_certificate = get_client_certificate()
-    return Driver(backend, uri, auth, client_certificate=client_certificate,
-                  **kwargs)
+    return Driver(
+        backend, uri, auth, client_certificate=client_certificate, **kwargs
+    )
 
 
 class ServerInfo:
@@ -220,7 +223,8 @@ class ServerInfo:
         driver_bolt_features = bolt_versions_in_features(driver_features)
         max_server_protocol_version = self.max_protocol_version
         return [
-            version for (version, _feature) in driver_bolt_features
+            version
+            for (version, _feature) in driver_bolt_features
             if version <= max_server_protocol_version
         ]
 
@@ -252,8 +256,10 @@ def get_server_info():
     return ServerInfo(
         version=os.environ.get(env_neo4j_version, "5.0"),
         edition=os.environ.get(env_neo4j_edition, "enterprise"),
-        cluster=(os.environ.get(env_neo4j_cluster, "False").lower()
-                 in ("true", "yes", "y", "1")),
+        cluster=(
+            os.environ.get(env_neo4j_cluster, "False").lower()
+            in ("true", "yes", "y", "1")
+        ),
         scheme=get_neo4j_scheme(),
     )
 
@@ -341,8 +347,10 @@ def has_tx_support(test_case):
     server_info = get_server_info()
     if server_info.is_bolt:
         return True
-    assert server_info.is_http, f"Unhandled scheme: {server_info.scheme}"
-    return server_info.parsed_version() >= (5, 26)
+    elif server_info.is_http:
+        return server_info.parsed_version() >= (5, 26)
+    else:
+        raise NotImplementedError(f"Unhandled scheme {server_info.scheme!r}")
 
 
 def requires_tx_timeout_support(func):
@@ -583,7 +591,7 @@ class QueryBuilder:
         return "CREATE DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
             " IF NOT EXISTS" if if_not_exists else "",
-            QueryBuilder._wait_clause(version) if wait else ""
+            QueryBuilder._wait_clause(version) if wait else "",
         )
 
     @staticmethod
@@ -592,7 +600,7 @@ class QueryBuilder:
         return "DROP  DATABASE {}{}{}".format(
             QueryBuilder.escape_identifier(database),
             " IF EXISTS" if if_exists else "",
-            QueryBuilder._wait_clause(version) if wait else ""
+            QueryBuilder._wait_clause(version) if wait else "",
         )
 
     @staticmethod
@@ -600,24 +608,11 @@ class QueryBuilder:
         version = get_server_info().parsed_version()
         imports = ", ".join(list(map(QueryBuilder.escape_identifier, imports)))
         if not imports:
-            return (
-                f"CALL {{\n"
-                f"    {subquery}\n"
-                "}"
-            )
+            return f"CALL {{\n    {subquery}\n}}"
         if version >= (5, 23):
-            return (
-                f"CALL ({imports}) {{\n"
-                f"    {subquery}\n"
-                "}"
-            )
+            return f"CALL ({imports}) {{\n    {subquery}\n}}"
         else:
-            return (
-                f"CALL {{\n"
-                f"    WITH {imports}\n"
-                f"    {subquery}\n"
-                "}"
-            )
+            return f"CALL {{\n    WITH {imports}\n    {subquery}\n}}"
 
 
 def with_retries(work, *args, **kwargs):
