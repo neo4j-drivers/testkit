@@ -27,7 +27,7 @@ class HttpTestCase(TestkitTestCase):
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        cls.required_features += (protocol.Feature.HTTP_QUERY_API_1_0,)
+        cls.required_features += (protocol.Feature.HTTP_QUERY_API_2_0,)
 
     @contextmanager
     def server(self) -> t.Generator[HTTPServer]:
