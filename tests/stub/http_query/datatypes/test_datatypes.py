@@ -49,8 +49,10 @@ class TestTypes(HttpDataTypeTestCase):
                 float("nan"),
                 1,
                 -1,
+                # max/min exponent
                 2**1023,
                 2**-1022,
+                # max/min mantissa
                 9007199254740991,
                 -9007199254740991,
                 -(2 + 1 + 2e-51),
