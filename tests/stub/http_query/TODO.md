@@ -49,7 +49,7 @@
   * [x] client agent string is not transmitted
 * [x] Test cluster affinity header (must be optional)
 * [x] Basic ITs (probably only types and basic APIs)
-* [ ] v1.1
+* [ ] Content type `application/vnd.neo4j.query.v1.1`
   * [ ] test new types
     * [ ] vectors
     * [ ] unsupported type
