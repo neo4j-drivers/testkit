@@ -174,7 +174,7 @@ class ServerInfo:
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_protocol_version(self):
-        if self.edition == "aura" and self.is_dev_version:
+        if self.edition == "aura":
             return 6, 0
         version = self.parsed_version()
         if version >= (2026, 5):
@@ -210,7 +210,7 @@ class ServerInfo:
     # [bolt-version-bump] search tag when updating IT matrix
     @property
     def max_query_api_version(self):
-        if self.edition == "aura" and self.is_dev_version:
+        if self.edition == "aura":
             return 1, 1
         version = self.parsed_version()
         if version >= (2025, 11):
@@ -341,6 +341,23 @@ def requires_tx_support(func):
             test_case.skipTest("Test requires support transactions.")
 
     return _make_skip_decorator(func, check)
+
+
+def requires_uuid_support(func):
+    def check(test_case):
+        if not has_uuid_support(test_case):
+            test_case.skipTest("Test requires support uuid type.")
+
+    return _make_skip_decorator(func, check)
+
+
+def has_uuid_support(test_case):
+    server_info = get_server_info()
+    protocol_support = has_min_protocol_version(
+        test_case, bolt=(6, 1), http=(1, 2)
+    )
+    edition_support = server_info.edition in {"enterprise", "aura"}
+    return protocol_support and edition_support
 
 
 def has_tx_support(test_case):
