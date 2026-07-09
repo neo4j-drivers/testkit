@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 import traceback
 import typing as t
@@ -94,7 +95,8 @@ class HTTPServer:
     _server: TestKitStubHttpServer
 
     def __init__(self) -> None:
-        self._server = TestKitStubHttpServer()
+        host = os.environ.get("TEST_STUB_HOST", "127.0.0.1")
+        self._server = TestKitStubHttpServer(host=host)
         self._server.handlers
 
     def start(self) -> None:
