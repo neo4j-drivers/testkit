@@ -140,7 +140,7 @@ class TestUuid6x0(_UuidTestCase):
         elif driver_name in ["javascript"]:
             self.assertIn("unknown packed", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker byte
-        elif driver_name in ["java"]:
+        elif driver_name in ["java", "ruby"]:
             self.assertIn("unknown packstream", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker byte
         elif driver_name in ["go"]:
