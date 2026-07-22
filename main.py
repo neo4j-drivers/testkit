@@ -464,26 +464,30 @@ def main(settings, configurations):
             # Start a Neo4j server
             if cluster:
                 print("\n    Starting neo4j cluster (%s)\n" % server_name)
-                server = neo4j.Cluster(neo4j_config.image,
-                                       server_name,
-                                       neo4j_artifacts_path,
-                                       neo4j_config.version)
+                server = neo4j.Cluster(
+                    neo4j_config.image, server_name, neo4j_artifacts_path,
+                    neo4j_config.version, neo4j_config.scheme,
+                )
             else:
                 print("\n    Starting neo4j standalone server (%s)\n"
                       % server_name)
                 server = neo4j.Standalone(
                     neo4j_config.image, server_name, neo4j_artifacts_path,
-                    "neo4jserver", 7687, neo4j_config.version,
-                    neo4j_config.edition
+                    "neo4jserver", 7687, 7474, neo4j_config.version,
+                    neo4j_config.edition, neo4j_config.scheme,
                 )
             server.start(networks[0])
+            addresses_bolt = server.addresses_bolt()
             addresses = server.addresses()
+            hostname_bolt, port_bolt = addresses_bolt[0]
             hostname, port = addresses[0]
 
             # Wait until server is listening before running tests
             # Use driver container to check for Neo4j availability since
             # connect will be done from there
-            for address in addresses:
+            for address, address_bolt in zip(
+                addresses, addresses_bolt, strict=True
+            ):
                 print("Waiting for neo4j service at %s to be available"
                       % (address,))
                 driver_container.poll_host_and_port_until_available(*address)
@@ -493,7 +497,7 @@ def main(settings, configurations):
                 # port will be available before queries can be executed for
                 # clusters and for the enterprise edition in stand-alone mode.
                 if int(neo4j_config.version.split(".", 1)[0]) >= 5:
-                    core_address, core_port = address
+                    core_address, core_port = address_bolt
                     waiter_container.wait_for_all_dbs(
                         core_address, core_port, neo4j.username, neo4j.password
                     )

@@ -29,14 +29,16 @@ password = "pass"
 class Standalone:
     """Single instance Neo4j server."""
 
-    def __init__(self, image, name, artifacts_path, hostname, port, version,
-                 edition):
+    def __init__(self, image, name, artifacts_path, hostname, port_bolt,
+                 port_http, version, edition, scheme):
         self.name = name
         self._image = image
         self._artifacts_path = join(artifacts_path, name)
         self._container = None
         self._hostname = hostname
-        self._port = port
+        self._port_bolt = port_bolt
+        self._port_http = port_http
+        self._scheme = scheme
         match = re.match(r"(\d+)\.dev", version)
         if match:
             self._version = (int(match.group(1)), float("inf"))
@@ -53,13 +55,17 @@ class Standalone:
         if self._version < (5, 0):
             env_map.update({
                 "NEO4J_dbms_connector_bolt_advertised__address":
-                    "%s:%d" % (self._hostname, self._port),
+                    "%s:%d" % (self._hostname, self._port_bolt),
+                "NEO4J_dbms_connector_http_advertised__address":
+                    "%s:%d" % (self._hostname, self._port_http),
             })
         else:
             # Config options renamed in 5.0
             env_map.update({
                 "NEO4J_server_bolt_advertised__address":
-                    f"{self._hostname}:{self._port}",
+                    f"{self._hostname}:{self._port_bolt}",
+                "NEO4J_server_http_advertised__address":
+                    f"{self._hostname}:{self._port_http}",
             })
         if self._version >= (5, 3) and len(password) < 8:
             env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
@@ -98,7 +104,17 @@ class Standalone:
         )
 
     def addresses(self):
-        return [(self._hostname, self._port)]
+        if self._scheme in {"bolt", "neo4j"}:
+            return self.addresses_bolt()
+        if self._scheme == "http":
+            return self.addresses_http()
+        raise NotImplementedError(f"scheme {self._scheme} not supported")
+
+    def addresses_bolt(self):
+        return [(self._hostname, self._port_bolt)]
+
+    def addresses_http(self):
+        return [(self._hostname, self._port_http)]
 
     def stop(self):
         self._container.rm()
@@ -108,11 +124,13 @@ class Standalone:
 class Cluster:
     """Cluster of Neo4j servers."""
 
-    def __init__(self, image, name, artifacts_path, version, num_cores=3):
+    def __init__(self, image, name, artifacts_path, version, scheme,
+                 num_cores=3):
         self.name = name
         self._image = image
         self._artifacts_path = join(artifacts_path, name)
         self._version = version
+        self._scheme = scheme
         self._num_cores = num_cores
         self._cores = []
 
@@ -127,7 +145,17 @@ class Cluster:
             core.start(self._image, initial_members, network)
 
     def addresses(self):
+        if self._scheme in {"bolt", "neo4j"}:
+            return self.addresses_bolt()
+        if self._scheme == "http":
+            return self.addresses_http()
+        raise NotImplementedError(f"scheme {self._scheme} not supported")
+
+    def addresses_bolt(self):
         return [("core%d" % i, 7687) for i in range(self._num_cores)]
+
+    def addresses_http(self):
+        return [("core%d" % i, 7474) for i in range(self._num_cores)]
 
     def stop(self):
         for core in self._cores:
@@ -186,11 +214,15 @@ class Core:
             env_map.update({
                 "NEO4J_dbms_connector_bolt_advertised__address":
                     f"{self.name}:7687",
+                "NEO4J_dbms_connector_http_advertised__address":
+                    f"{self.name}:7474",
             })
         else:
             env_map.update({
                 "NEO4J_server_bolt_advertised__address":
                     f"{self.name}:7687",
+                "NEO4J_server_http_advertised__address":
+                    f"{self.name}:7474",
             })
 
         # Configure clustering
