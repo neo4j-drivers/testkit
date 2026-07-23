@@ -49,9 +49,9 @@ class Standalone:
 
     def start(self, network):
         # Environment variables passed to the Neo4j docker container
-        env_map = {
-            "NEO4J_AUTH": f"{username}/{password}",
-        }
+        accept_license = self._edition != "community"
+        env_map = _get_base_env_map(self._version, accept_license)
+
         if self._version < (5, 0):
             env_map.update({
                 "NEO4J_dbms_connector_bolt_advertised__address":
@@ -66,33 +66,6 @@ class Standalone:
                     f"{self._hostname}:{self._port_bolt}",
                 "NEO4J_server_http_advertised__address":
                     f"{self._hostname}:{self._port_http}",
-            })
-        if self._version >= (5, 3) and len(password) < 8:
-            env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
-                str(len(password))
-        if self._version >= (5, 13):
-            env_map["NEO4J_server_bolt_telemetry_enabled"] = "true"
-
-        if self._edition != "community":
-            env_map["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
-
-        if (5, 19) <= self._version < (5, 25):
-            # these version need explicit enabling of the HTTP Query API
-            env_map.update({
-                "NEO4J_server_http__enabled__modules": (  # noqa: PAR001
-                    "TRANSACTIONAL_ENDPOINTS,UNMANAGED_EXTENSIONS,BROWSER,"
-                    "ENTERPRISE_MANAGEMENT_ENDPOINTS,QUERY_API_ENDPOINTS"
-                )
-            })
-
-        # TODO: remove once UUID is GA
-        # [uuid-preview] search tag for removal of UUID preview workarounds
-        if (2026, 4) < self._version:
-            env_map.update({
-                "NEO4J_internal_dbms_latest__runtime__version": "2147483647",
-                "NEO4J_internal_dbms_latest__kernel__version": "254",
-                "NEO4J_internal_cypher_uuid__type__enabled": "true",
-                "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
             })
 
         logs_path = join(self._artifacts_path, "logs")
@@ -187,15 +160,7 @@ class Core:
             assert len(self._version) == 2
 
     def start(self, image, initial_members, network):
-        env_map = {
-            "NEO4J_ACCEPT_LICENSE_AGREEMENT": "yes",
-            "NEO4J_AUTH": f"{username}/{password}",
-        }
-
-        # Allow password to be short for testing
-        if self._version >= (5, 3) and len(password) < 8:
-            env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
-                str(len(password))
+        env_map = _get_base_env_map(self._version, accept_license=True)
 
         # Configure networking
         if self._version < (5, 0):
@@ -309,25 +274,6 @@ class Core:
                     "NO_BALANCING",  # noqa: E131
             })
 
-        if (5, 19) <= self._version < (5, 25):
-            # these version need explicit enabling of the HTTP Query API
-            env_map.update({
-                "NEO4J_server_http__enabled__modules": (  # noqa: PAR001
-                    "TRANSACTIONAL_ENDPOINTS,UNMANAGED_EXTENSIONS,BROWSER,"
-                    "ENTERPRISE_MANAGEMENT_ENDPOINTS,QUERY_API_ENDPOINTS"
-                )
-            })
-
-        # TODO: remove once UUID is GA
-        # [uuid-preview] search tag for removal of UUID preview workarounds
-        if (2026, 4) < self._version:
-            env_map.update({
-                "NEO4J_internal_dbms_latest__runtime__version": "2147483647",
-                "NEO4J_internal_dbms_latest__kernel__version": "254",
-                "NEO4J_internal_cypher_uuid__type__enabled": "true",
-                "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
-            })
-
         logs_path = join(self._artifacts_path, "logs")
         os.makedirs(logs_path, exist_ok=True)
 
@@ -340,3 +286,46 @@ class Core:
     def stop(self):
         self._container.rm()
         self._container = None
+
+
+def _get_base_env_map(version, accept_license):
+    env_map = {"NEO4J_AUTH": f"{username}/{password}"}
+
+    if accept_license:
+        env_map["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
+
+    # Allow password to be short for testing
+    if version >= (5, 3) and len(password) < 8:
+        env_map["NEO4J_dbms_security_auth__minimum__password__length"] = \
+            str(len(password))
+
+    if version >= (5, 13):
+        env_map["NEO4J_server_bolt_telemetry_enabled"] = "true"
+
+    if (5, 19) <= version < (5, 25):
+        # these version need explicit enabling of the HTTP Query API
+        env_map.update({
+            "NEO4J_server_http__enabled__modules": (  # noqa: PAR001
+                "TRANSACTIONAL_ENDPOINTS,UNMANAGED_EXTENSIONS,BROWSER,"
+                "ENTERPRISE_MANAGEMENT_ENDPOINTS,QUERY_API_ENDPOINTS"
+            )
+        })
+
+    # TODO: remove once UUID is GA
+    # [uuid-preview] search tag for removal of UUID preview workarounds
+    if (2026, 4) < version:
+        env_map.update({
+            "NEO4J_internal_dbms_latest__runtime__version": "2147483647",
+            "NEO4J_internal_dbms_latest__kernel__version": "254",
+            "NEO4J_internal_cypher_uuid__type__enabled": "true",
+            "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
+        })
+
+    if (2026, 4) < version:
+        # Increase HTTP/Query API transaction identifier length: 4 -> 6.
+        # 6 is the modern default and allows for hitting the API harder
+        env_map.update({
+            "NEO4J_internal_server_queryapi_transactionid__length": "6",
+        })
+
+    return env_map
