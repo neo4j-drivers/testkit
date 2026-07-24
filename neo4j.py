@@ -321,7 +321,7 @@ def _get_base_env_map(version, accept_license):
             "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
         })
 
-    if (2026, 4) < version:
+    if version < (2026, 4):
         # Increase HTTP/Query API transaction identifier length: 4 -> 6.
         # 6 is the modern default and allows for hitting the API harder
         env_map.update({
