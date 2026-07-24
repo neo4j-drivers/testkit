@@ -310,6 +310,12 @@ def _get_base_env_map(version, accept_license):
                 "ENTERPRISE_MANAGEMENT_ENDPOINTS,QUERY_API_ENDPOINTS"
             )
         })
+    if (2025, 1) <= version < (2026, 4):
+        # Increase HTTP/Query API transaction identifier length: 4 -> 6.
+        # 6 is the modern default and allows for hitting the API harder
+        env_map.update({
+            "NEO4J_internal_server_queryapi_transactionid__length": "6",
+        })
 
     # TODO: remove once UUID is GA
     # [uuid-preview] search tag for removal of UUID preview workarounds
@@ -319,13 +325,6 @@ def _get_base_env_map(version, accept_license):
             "NEO4J_internal_dbms_latest__kernel__version": "254",
             "NEO4J_internal_cypher_uuid__type__enabled": "true",
             "NEO4J_internal_dbms_bolt_max__protocol__version": "6.1",
-        })
-
-    if version < (2026, 4):
-        # Increase HTTP/Query API transaction identifier length: 4 -> 6.
-        # 6 is the modern default and allows for hitting the API harder
-        env_map.update({
-            "NEO4J_internal_server_queryapi_transactionid__length": "6",
         })
 
     return env_map
