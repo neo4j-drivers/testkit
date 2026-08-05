@@ -84,3 +84,16 @@ class TestPropertyEncryption(TestkitTestCase):
         second = driver.encrypt_to_bytes(value, key_alias="k1")
 
         self.assertNotEqual(first, second)
+
+    def test_decrypt_raises_on_wrong_aad(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("aad-bound"),
+            aad=types.CypherString("row-42"),
+            key_alias="k1"
+        )
+
+        with self.assertRaises(types.DriverError):
+            driver.decrypt(encrypted, aad=types.CypherString("row-999"))
