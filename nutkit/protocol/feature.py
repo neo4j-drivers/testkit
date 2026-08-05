@@ -44,6 +44,10 @@ class Feature(Enum):
     API_DRIVER_SUPPORTS_SESSION_AUTH = "Feature:API:Driver.SupportsSessionAuth"
     # The driver supports connection liveness check.
     API_LIVENESS_CHECK = "Feature:API:Liveness.Check"
+    # The driver offers a public API for client-side property encryption:
+    # encrypting and decrypting individual property values, and managing
+    # encapsulated data encryption keys.
+    API_PROPERTY_ENCRYPTION = "Feature:API:PropertyEncryption"
     # The driver offers a method for the result to return all records as a list
     # or array. This method should exhaust the result.
     API_RESULT_LIST = "Feature:API:Result.List"

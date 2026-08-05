@@ -24,7 +24,8 @@ class Driver:
                  notifications_disabled_categories=None,
                  telemetry_disabled=None,
                  client_certificate=None,
-                 disable_auto_commit_retries=None):
+                 disable_auto_commit_retries=None,
+                 property_encryption_profiles=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -54,6 +55,12 @@ class Driver:
             else:
                 client_certificate_provider_id_ = client_certificate.id
 
+        property_encryption_profiles_ = None
+        if property_encryption_profiles is not None:
+            property_encryption_profiles_ = [
+                {"name": name} for name in property_encryption_profiles
+            ]
+
         req = protocol.NewDriver(
             uri, self._auth_token, auth_token_manager_id,
             userAgent=user_agent, resolverRegistered=resolver_fn is not None,
@@ -71,6 +78,7 @@ class Driver:
             client_certificate=client_certificate_,
             client_certificate_provider_id=client_certificate_provider_id_,
             disable_auto_commit_retries=disable_auto_commit_retries,
+            property_encryption_profiles=property_encryption_profiles_,
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -187,6 +195,36 @@ class Driver:
         if not isinstance(res, protocol.DriverIsEncrypted):
             raise Exception(f"Should be DriverIsEncrypted but was {res}")
         return res.encrypted
+
+    def encrypt_to_bytes(self, value, *, aad=None, profile_name=None,
+                         key_alias=None, key_id=None):
+        req = protocol.EncryptToBytes(
+            self._driver.id, value, aad=aad, profile_name=profile_name,
+            key_alias=key_alias, key_id=key_id
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncryptedValue):
+            raise Exception(f"Should be EncryptedValue but was: {res}")
+        return res.encrypted_bytes
+
+    def decrypt(self, value, *, aad=None, use_persisted_aad=False):
+        req = protocol.Decrypt(
+            self._driver.id, value, aad=aad,
+            use_persisted_aad=use_persisted_aad
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.DecryptedValue):
+            raise Exception(f"Should be DecryptedValue but was: {res}")
+        return res.decrypted_value
+
+    def create_encapsulated_key(self, alias, *, profile_name=None):
+        req = protocol.CreateEncapsulatedKey(
+            self._driver.id, alias, profile_name=profile_name
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncapsulatedKey):
+            raise Exception(f"Should be EncapsulatedKey but was: {res}")
+        return res
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)
