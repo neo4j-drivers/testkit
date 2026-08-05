@@ -350,8 +350,8 @@ class EncryptedValue:
     Sent in response to an EncryptToBytes request.
     """
 
-    def __init__(self, encrypted_bytes):
-        self.encrypted_bytes = encrypted_bytes
+    def __init__(self, encryptedBytes):
+        self.encrypted_bytes = encryptedBytes
 
 
 class DecryptedValue:
@@ -361,8 +361,8 @@ class DecryptedValue:
     Sent in response to a Decrypt request.
     """
 
-    def __init__(self, decrypted_value):
-        self.decrypted_value = decrypted_value
+    def __init__(self, decryptedValue):
+        self.decrypted_value = decryptedValue
 
 
 class EncapsulatedKey:
@@ -372,10 +372,10 @@ class EncapsulatedKey:
     Sent in response to a CreateEncapsulatedKey request.
     """
 
-    def __init__(self, id, alias, encapsulated_bytes, metadata):
+    def __init__(self, id, alias, encapsulatedBytes, metadata):
         self.id = id
         self.alias = alias
-        self.encapsulated_bytes = encapsulated_bytes
+        self.encapsulated_bytes = encapsulatedBytes
         self.metadata = metadata
 
 
