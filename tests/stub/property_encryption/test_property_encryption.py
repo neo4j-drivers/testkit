@@ -97,3 +97,35 @@ class TestPropertyEncryption(TestkitTestCase):
 
         with self.assertRaises(types.DriverError):
             driver.decrypt(encrypted, aad=types.CypherString("row-999"))
+
+    def test_encrypt_raises_on_unknown_alias(self):
+        driver = self._new_driver()
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello world"), key_alias="no-such-key"
+            )
+
+    def test_encrypt_raises_when_alias_belongs_to_a_different_profile(self):
+        driver = self._new_driver(profiles=("p1", "p2"))
+        driver.create_encapsulated_key("k1", profile_name="p1")
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello world"),
+                profile_name="p2", key_alias="k1"
+            )
+
+    def test_encrypt_raises_on_unknown_key_id(self):
+        driver = self._new_driver()
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello world"), key_id="no-such-id"
+            )
+
+    def test_key_manager_raises_when_ambiguous_and_no_profile_given(self):
+        driver = self._new_driver(profiles=("p1", "p2"))
+
+        with self.assertRaises(types.DriverError):
+            driver.create_encapsulated_key("k1")
