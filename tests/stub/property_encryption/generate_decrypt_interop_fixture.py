@@ -1,11 +1,10 @@
 """
 Generates an entry for the fixture list in decrypt_interop_fixtures.py.
 
-Make sure the backend is running. Edit the value at the top of the script to
-whatever you like, then run the script. The script connects to the backend
-and pretends to be starting a test, and creates a driver. The connection
-details are nonsense because it's not actually going to try to connect to a
-database, just using the encryption property.
+Make sure the backend is running, then run the script. The script connects to
+the backend and pretends to be starting a test, and creates a driver. The
+connection details are nonsense because it's not actually going to try to
+connect to a database, just using the encryption property.
 
 If your backend is passing the encryption stub tests then this script will
 work, and it will print out an entry for you to paste into the FIXTURES list
@@ -22,9 +21,6 @@ from tests.stub.property_encryption.decrypt_interop_fixtures import (
     INTEROP_PROFILE_NAME,
 )
 
-string_to_encrypt = "hello from dotnet!"
-
-
 def main():
     backend = new_backend()
     try:
@@ -33,6 +29,7 @@ def main():
             types.StartTest("generate_decrypt_interop_fixture")
         )
 
+        string_to_encrypt = f"hello from {get_driver_name()}!"
         kek = secrets.token_bytes(32)
         value = types.CypherString(string_to_encrypt)
         auth = types.AuthorizationToken(
