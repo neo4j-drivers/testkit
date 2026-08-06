@@ -3,6 +3,10 @@ import random
 import nutkit.protocol as types
 from nutkit.frontend import Driver
 from tests.shared import TestkitTestCase
+from tests.stub.property_encryption.decrypt_interop_fixtures import (
+    DECRYPT_INTEROP_TEST_CASES,
+    INTEROP_PROFILE_NAME,
+)
 from tests.stub.shared import StubServer
 
 
@@ -129,3 +133,50 @@ class TestPropertyEncryption(TestkitTestCase):
 
         with self.assertRaises(types.DriverError):
             driver.create_encapsulated_key("k1")
+
+    def test_imported_key_decrypts_with_a_fixed_kek(self):
+        kek = bytes(range(32))
+
+        driver_1 = self._new_driver(
+            profiles=({"name": "fx", "fixed_kek": kek},)
+        )
+        key = driver_1.create_encapsulated_key("k1", profile_name="fx")
+        encrypted = driver_1.encrypt_to_bytes(
+            types.CypherString("hello world"),
+            profile_name="fx", key_alias="k1"
+        )
+        driver_1.close()
+
+        driver_2 = self._new_driver(
+            profiles=({"name": "fx", "fixed_kek": kek},)
+        )
+        driver_2.import_encapsulated_key(
+            "k1", key.encapsulated_bytes, key.metadata, profile_name="fx"
+        )
+
+        decrypted = driver_2.decrypt(encrypted, use_persisted_aad=True)
+
+        self.assertEqual(decrypted, types.CypherString("hello world"))
+
+    def test_decrypts_values_produced_by_other_drivers(self):
+        for case in DECRYPT_INTEROP_TEST_CASES:
+            with self.subTest(driver=case.driver):
+                driver = self._new_driver(
+                    profiles=({"name": INTEROP_PROFILE_NAME, "fixed_kek": case.kek},)
+                )
+                driver.import_encapsulated_key(
+                    "k", types.CypherBytes(case.encapsulation), case.metadata,
+                    profile_name=INTEROP_PROFILE_NAME
+                )
+
+                decrypted = driver.decrypt(
+                    types.CypherBytes(case.encrypted), use_persisted_aad=True
+                )
+
+                self.assertEqual(
+                    decrypted, case.value,
+                    "Could not decrypt value encrypted by driver: "
+                    f"{case.driver}"
+                )
+                driver.close()
+        self._driver = None

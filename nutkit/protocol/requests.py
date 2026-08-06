@@ -966,3 +966,33 @@ class CreateEncapsulatedKey:
         self.driverId = driver_id
         self.alias = alias
         self.profileName = profile_name
+
+
+class ImportEncapsulatedKey:
+    """
+    Request to register a pre-existing encapsulated data encryption key.
+
+    Unlike CreateEncapsulatedKey, this does not generate a new key via the
+    profile's KeyEncapsulationService; it seeds the profile's
+    EncapsulatedKeyRepository directly with an encapsulation obtained
+    elsewhere (e.g. a fixture, or a prior CreateEncapsulatedKey response).
+
+    The backend should respond with an EncapsulatedKey or an Error response.
+
+    :param driver_id: The id of the driver to import the key into.
+    :param alias: The alias to bind to the imported key.
+    :param encapsulation: The encapsulated (wrapped) data encryption key
+        bytes.
+    :param metadata: The key encapsulation service's metadata for the
+        encapsulation.
+    :param profile_name: The name of the encryption profile to import the
+        key into, or None to use the sole configured profile.
+    """
+
+    def __init__(self, driver_id, alias, encapsulation, metadata,
+                 profile_name=None):
+        self.driverId = driver_id
+        self.alias = alias
+        self.encapsulation = encapsulation
+        self.metadata = metadata
+        self.profileName = profile_name

@@ -58,7 +58,8 @@ class Driver:
         property_encryption_profiles_ = None
         if property_encryption_profiles is not None:
             property_encryption_profiles_ = [
-                {"name": name} for name in property_encryption_profiles
+                self._encryption_profile_wire(p)
+                for p in property_encryption_profiles
             ]
 
         req = protocol.NewDriver(
@@ -85,6 +86,16 @@ class Driver:
             raise Exception("Should be Driver but was %s" % res)
         self._driver = res
         self._closed = False
+
+    @staticmethod
+    def _encryption_profile_wire(profile):
+        if isinstance(profile, str):
+            return {"name": profile}
+        wire = {"name": profile["name"]}
+        fixed_kek = profile.get("fixed_kek")
+        if fixed_kek is not None:
+            wire["fixedKek"] = protocol.CypherBytes(fixed_kek)
+        return wire
 
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
         while True:
@@ -220,6 +231,17 @@ class Driver:
     def create_encapsulated_key(self, alias, *, profile_name=None):
         req = protocol.CreateEncapsulatedKey(
             self._driver.id, alias, profile_name=profile_name
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncapsulatedKey):
+            raise Exception(f"Should be EncapsulatedKey but was: {res}")
+        return res
+
+    def import_encapsulated_key(self, alias, encapsulation, metadata, *,
+                                profile_name=None):
+        req = protocol.ImportEncapsulatedKey(
+            self._driver.id, alias, encapsulation, metadata,
+            profile_name=profile_name
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.EncapsulatedKey):
