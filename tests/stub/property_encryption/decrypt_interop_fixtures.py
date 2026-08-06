@@ -13,7 +13,6 @@ from dataclasses import dataclass
 
 import nutkit.protocol as types
 
-
 # don't change this or the interop decryption test will break
 INTEROP_PROFILE_NAME = "interop"
 

@@ -16,10 +16,14 @@ import secrets
 
 import nutkit.protocol as types
 from nutkit.frontend import Driver
-from tests.shared import get_driver_name, new_backend
+from tests.shared import (
+    get_driver_name,
+    new_backend,
+)
 from tests.stub.property_encryption.decrypt_interop_fixtures import (
     INTEROP_PROFILE_NAME,
 )
+
 
 def main():
     backend = new_backend()

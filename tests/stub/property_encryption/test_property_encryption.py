@@ -162,7 +162,12 @@ class TestPropertyEncryption(TestkitTestCase):
         for case in DECRYPT_INTEROP_TEST_CASES:
             with self.subTest(driver=case.driver):
                 driver = self._new_driver(
-                    profiles=({"name": INTEROP_PROFILE_NAME, "fixed_kek": case.kek},)
+                    profiles=(
+                        {
+                            "name": INTEROP_PROFILE_NAME,
+                            "fixed_kek": case.kek,
+                        },
+                    )
                 )
                 driver.import_encapsulated_key(
                     "k", types.CypherBytes(case.encapsulation), case.metadata,
