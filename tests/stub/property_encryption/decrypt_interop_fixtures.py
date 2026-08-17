@@ -53,4 +53,25 @@ DECRYPT_INTEROP_TEST_CASES = [
         ),
         value=types.CypherString("hello from dotnet!"),
     ),
+    DecryptInteropFixture(
+        driver="javascript",
+        kek=bytes.fromhex(
+            "6f00997851909b4e7ceaa63b399a45e2e6"
+            "4a9dc7321244505906f989c6f7fd1b"
+        ),
+        encapsulation=bytes.fromhex(
+            "028d6c222298dc221c810d0bb8e02a3f3f7"
+            "356b2a4b6d3dd3955a1d1d3c29865546226"
+            "ead30bda65ebde5ac348e01131"
+        ),
+        metadata={"iv": "VBmseht6oyo67NdQ"},
+        encrypted=bytes.fromhex(
+            "01b66587696e7465726f70cc285e928af746"
+            "a3671c31685941d3b104d8ef043a4424b57c"
+            "c198bf40caa76ad7504fa0304490cb7dbd86"
+            "535452494e470100a2826976cc0cae08418d"
+            "b8f165e9ce44b679866b65795f69648130"
+        ),
+        value=types.CypherString("hello from javascript!"),
+    ),
 ]
