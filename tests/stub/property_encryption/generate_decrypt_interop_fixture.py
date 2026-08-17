@@ -76,14 +76,25 @@ def main():
 
 def print_fixture_literal(*, driver, kek, encapsulation, metadata, encrypted,
                           value):
-    print("DecryptInteropFixture(")
-    print(f"    driver={driver!r},")
-    print(f"    kek=bytes.fromhex({kek.hex()!r}),")
-    print(f"    encapsulation=bytes.fromhex({encapsulation.hex()!r}),")
-    print(f"    metadata={metadata!r},")
-    print(f"    encrypted=bytes.fromhex({encrypted.hex()!r}),")
-    print(f"    value=types.CypherString({value!r}),")
-    print("),")
+    metadata_literal = ", ".join(
+        f'"{key}": "{val}"' for key, val in metadata.items()
+    )
+    print("    DecryptInteropFixture(")
+    print(f'        driver="{driver}",')
+    print_bytes_literal("kek", kek)
+    print_bytes_literal("encapsulation", encapsulation)
+    print(f"        metadata={{{metadata_literal}}},")
+    print_bytes_literal("encrypted", encrypted)
+    print(f'        value=types.CypherString("{value}"),')
+    print("    ),")
+
+
+def print_bytes_literal(field, value):
+    print(f"        {field}=bytes.fromhex(")
+    hex_string = value.hex()
+    for i in range(0, len(hex_string), 32):
+        print(f'            "{hex_string[i:i + 32]}"')
+    print("        ),")
 
 
 if __name__ == "__main__":

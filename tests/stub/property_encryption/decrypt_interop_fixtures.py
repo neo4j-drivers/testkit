@@ -60,18 +60,18 @@ DECRYPT_INTEROP_TEST_CASES = [
             "ed77c5ed9620b383e4b63665286302f9"
         ),
         encapsulation=bytes.fromhex(
-            "4320112f90e2228f4dabffdc82c904bff"
-            "f33eb70b4b162354474cb6a389717e9df"
-            "e3077d9255913ee6d0e30f2a9f55f0"
+            "4320112f90e2228f4dabffdc82c904bf"
+            "ff33eb70b4b162354474cb6a389717e9"
+            "dfe3077d9255913ee6d0e30f2a9f55f0"
         ),
         metadata={"iv": "lL9ga7QC9WWcKXH6"},
         encrypted=bytes.fromhex(
-            "01b66587696e7465726f70cc28e4d50c7"
-            "76bdf240ccb0afd823376dfda1b55ba68"
-            "2601933fe5fc15a9276dcdd20e2cda276"
-            "8236a1686535452494e470100a2826976"
-            "cc0c343f2b095b3385d0d7adf455866b6"
-            "5795f69648130"
+            "01b66587696e7465726f70cc28e4d50c"
+            "776bdf240ccb0afd823376dfda1b55ba"
+            "682601933fe5fc15a9276dcdd20e2cda"
+            "2768236a1686535452494e470100a282"
+            "6976cc0c343f2b095b3385d0d7adf455"
+            "866b65795f69648130"
         ),
         value=types.CypherString("hello from javascript!"),
     ),
