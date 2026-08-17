@@ -10,6 +10,13 @@ If your backend is passing the encryption stub tests then this script will
 work, and it will print out an entry for you to paste into the FIXTURES list
 in decrypt_interop_fixtures.py. The actual test in test_property_encryption.py
 picks it up from there.
+
+Run as a module from the repo root with your backend already listening on
+:9876:
+
+    cd ~/dev/testkit # repo root
+    python3 -m tests.stub.property_encryption.generate_decrypt_interop_fixture
+
 """
 
 import secrets

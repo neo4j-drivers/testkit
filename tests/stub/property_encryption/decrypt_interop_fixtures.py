@@ -56,21 +56,22 @@ DECRYPT_INTEROP_TEST_CASES = [
     DecryptInteropFixture(
         driver="javascript",
         kek=bytes.fromhex(
-            "6f00997851909b4e7ceaa63b399a45e2e6"
-            "4a9dc7321244505906f989c6f7fd1b"
+            "ac4828b563d2dd626d34214c3dcd8168"
+            "ed77c5ed9620b383e4b63665286302f9"
         ),
         encapsulation=bytes.fromhex(
-            "028d6c222298dc221c810d0bb8e02a3f3f7"
-            "356b2a4b6d3dd3955a1d1d3c29865546226"
-            "ead30bda65ebde5ac348e01131"
+            "4320112f90e2228f4dabffdc82c904bff"
+            "f33eb70b4b162354474cb6a389717e9df"
+            "e3077d9255913ee6d0e30f2a9f55f0"
         ),
-        metadata={"iv": "VBmseht6oyo67NdQ"},
+        metadata={"iv": "lL9ga7QC9WWcKXH6"},
         encrypted=bytes.fromhex(
-            "01b66587696e7465726f70cc285e928af746"
-            "a3671c31685941d3b104d8ef043a4424b57c"
-            "c198bf40caa76ad7504fa0304490cb7dbd86"
-            "535452494e470100a2826976cc0cae08418d"
-            "b8f165e9ce44b679866b65795f69648130"
+            "01b66587696e7465726f70cc28e4d50c7"
+            "76bdf240ccb0afd823376dfda1b55ba68"
+            "2601933fe5fc15a9276dcdd20e2cda276"
+            "8236a1686535452494e470100a2826976"
+            "cc0c343f2b095b3385d0d7adf455866b6"
+            "5795f69648130"
         ),
         value=types.CypherString("hello from javascript!"),
     ),
