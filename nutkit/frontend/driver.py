@@ -25,8 +25,7 @@ class Driver:
                  telemetry_disabled=None,
                  client_certificate=None,
                  disable_auto_commit_retries=None,
-                 property_encryption_profiles=None,
-                 mock_random=False):
+                 property_encryption_profiles=None):
         self._backend = backend
         self._resolver_fn = resolver_fn
         self._domain_name_resolver_fn = domain_name_resolver_fn
@@ -81,7 +80,6 @@ class Driver:
             client_certificate_provider_id=client_certificate_provider_id_,
             disable_auto_commit_retries=disable_auto_commit_retries,
             property_encryption_profiles=property_encryption_profiles_,
-            mock_random=mock_random,
         )
         res = backend.send_and_receive(req)
         if not isinstance(res, protocol.Driver):
@@ -210,15 +208,13 @@ class Driver:
         return res.encrypted
 
     def encrypt_to_bytes(self, value, *, aad=None, profile_name=None,
-                         key_alias=None, key_id=None,
-                         mock_random_bytes=None):
-        randoms = None
-        if mock_random_bytes is not None:
-            randoms = protocol.CypherBytes(mock_random_bytes)
+                         key_alias=None, key_id=None, fixed_iv=None):
+        fixed_iv_ = None
+        if fixed_iv is not None:
+            fixed_iv_ = protocol.CypherBytes(fixed_iv)
         req = protocol.EncryptToBytes(
             self._driver.id, value, aad=aad, profile_name=profile_name,
-            key_alias=key_alias, key_id=key_id,
-            mock_random_bytes=randoms
+            key_alias=key_alias, key_id=key_id, fixed_iv=fixed_iv_
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.EncryptedValue):
