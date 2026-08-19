@@ -7,6 +7,13 @@ from tests.stub.property_encryption.decrypt_interop_fixtures import (
     DECRYPT_INTEROP_TEST_CASES,
     INTEROP_PROFILE_NAME,
 )
+from tests.stub.property_encryption.deterministic_fixtures import (
+    DETERMINISTIC_ENCAPSULATION,
+    DETERMINISTIC_KEK,
+    DETERMINISTIC_KEY_METADATA,
+    DETERMINISTIC_PROFILE_NAME,
+    DETERMINISTIC_TEST_CASES,
+)
 from tests.stub.shared import StubServer
 
 
@@ -168,6 +175,31 @@ class TestPropertyEncryption(TestkitTestCase):
         decrypted = driver_2.decrypt(encrypted, use_persisted_aad=True)
 
         self.assertEqual(decrypted, types.CypherString("hello world"))
+
+    def test_encrypts_to_known_bytes(self):
+        driver = self._new_driver(
+            profiles=(
+                {
+                    "name": DETERMINISTIC_PROFILE_NAME,
+                    "fixed_kek": DETERMINISTIC_KEK,
+                },
+            )
+        )
+        driver.import_encapsulated_key(
+            "k", types.CypherBytes(DETERMINISTIC_ENCAPSULATION),
+            DETERMINISTIC_KEY_METADATA,
+            profile_name=DETERMINISTIC_PROFILE_NAME
+        )
+
+        for case in DETERMINISTIC_TEST_CASES:
+            with self.subTest(value=case.value):
+                encrypted = driver.encrypt_to_bytes(
+                    case.value, profile_name=DETERMINISTIC_PROFILE_NAME,
+                    key_alias="k", fixed_iv=case.iv, aad=case.aad
+                )
+                self.assertEqual(
+                    encrypted, types.CypherBytes(case.encrypted)
+                )
 
     def test_decrypts_values_produced_by_other_drivers(self):
         for case in DECRYPT_INTEROP_TEST_CASES:
