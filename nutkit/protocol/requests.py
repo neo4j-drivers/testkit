@@ -80,6 +80,7 @@ class NewDriver:
         client_certificate=None, client_certificate_provider_id=None,
         disable_auto_commit_retries=None,
         property_encryption_profiles=None,
+        mock_random=False,
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -113,6 +114,10 @@ class NewDriver:
             self.disableAutoCommitRetries = disable_auto_commit_retries
         if property_encryption_profiles is not None:
             self.propertyEncryptionProfiles = property_encryption_profiles
+        # (bool) whether the driver's property-encryption CSPRNG seam is
+        # replaced with a backend-side mock that TestKit feeds via
+        # EncryptToBytes.mockRandomBytes
+        self.mockRandom = mock_random
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -913,16 +918,22 @@ class EncryptToBytes:
     :param key_id: The repository-assigned id of the data encryption key to
         encrypt with. Mutually exclusive with key_alias; exactly one of the
         two must be set.
+    :param mock_random_bytes: The exact bytes for the driver's mocked CSPRNG
+        seam to hand back for this encrypt call, or None to draw real
+        randomness. Only valid when the driver was created with
+        NewDriver(mock_random=True); the backend raises if the driver's
+        random draws don't consume exactly these bytes.
     """
 
     def __init__(self, driver_id, value, aad=None, profile_name=None,
-                 key_alias=None, key_id=None):
+                 key_alias=None, key_id=None, mock_random_bytes=None):
         self.driverId = driver_id
         self.value = value
         self.aad = aad
         self.profileName = profile_name
         self.keyAlias = key_alias
         self.keyId = key_id
+        self.mockRandomBytes = mock_random_bytes
 
 
 class Decrypt:

@@ -254,6 +254,11 @@ class Feature(Enum):
     # FakeTimeTick protocol messages and provides a way to mock the system
     # time. This is mainly used for testing various timeouts.
     BACKEND_MOCK_TIME = "Backend:MockTime"
+    # The backend understands NewDriver.mockRandom and
+    # EncryptToBytes.mockRandomBytes, letting TestKit supply the exact bytes
+    # a property-encryption driver draws from its random generator. Used to
+    # assert byte-exact ciphertext for the deterministic encryption tests.
+    BACKEND_MOCK_RANDOM = "Backend:MockRandom"
     # The backend understands the GetRoutingTable protocol message and provides
     # a way for TestKit to request the routing table (for testing only, should
     # not be exposed to the user).

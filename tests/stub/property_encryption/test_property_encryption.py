@@ -2,7 +2,10 @@ import random
 
 import nutkit.protocol as types
 from nutkit.frontend import Driver
-from tests.shared import TestkitTestCase
+from tests.shared import (
+    driver_feature,
+    TestkitTestCase,
+)
 from tests.stub.property_encryption.decrypt_interop_fixtures import (
     DECRYPT_INTEROP_TEST_CASES,
     INTEROP_PROFILE_NAME,
@@ -23,13 +26,14 @@ class TestPropertyEncryption(TestkitTestCase):
             self._driver.close()
         return super().tearDown()
 
-    def _new_driver(self, profiles=("default",)):
+    def _new_driver(self, profiles=("default",), mock_random=False):
         auth = types.AuthorizationToken("basic", principal="neo4j",
                                         credentials="pass")
         uri = "bolt://%s" % self._server.address
         self._driver = Driver(
             self._backend, uri, auth,
-            property_encryption_profiles=list(profiles)
+            property_encryption_profiles=list(profiles),
+            mock_random=mock_random
         )
         return self._driver
 
@@ -88,6 +92,37 @@ class TestPropertyEncryption(TestkitTestCase):
         second = driver.encrypt_to_bytes(value, key_alias="k1")
 
         self.assertNotEqual(first, second)
+
+    @driver_feature(types.Feature.BACKEND_MOCK_RANDOM)
+    def test_mock_random_produces_identical_ciphertext_for_identical_bytes(
+        self
+    ):
+        driver = self._new_driver(mock_random=True)
+        driver.create_encapsulated_key("k1")
+
+        iv = bytes(range(12))
+        value = types.CypherString("hello world")
+        first = driver.encrypt_to_bytes(
+            value, key_alias="k1", mock_random_bytes=iv
+        )
+        second = driver.encrypt_to_bytes(
+            value, key_alias="k1", mock_random_bytes=iv
+        )
+
+        self.assertEqual(first, second)
+
+    @driver_feature(types.Feature.BACKEND_MOCK_RANDOM)
+    def test_encrypt_raises_when_mock_random_bytes_given_without_mock_random(
+        self
+    ):
+        driver = self._new_driver(mock_random=False)
+        driver.create_encapsulated_key("k1")
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello world"), key_alias="k1",
+                mock_random_bytes=bytes(range(12))
+            )
 
     def test_decrypt_raises_on_wrong_aad(self):
         driver = self._new_driver()
