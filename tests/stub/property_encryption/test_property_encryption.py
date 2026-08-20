@@ -107,6 +107,19 @@ class TestPropertyEncryption(TestkitTestCase):
 
         self.assertEqual(first, second)
 
+    def test_decrypts_an_aad_bound_value_with_the_persisted_aad(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("aad-bound"),
+            aad=types.CypherString("row-42"),
+            key_alias="k1"
+        )
+        decrypted = driver.decrypt(encrypted, use_persisted_aad=True)
+
+        self.assertEqual(decrypted, types.CypherString("aad-bound"))
+
     def test_decrypt_raises_on_wrong_aad(self):
         driver = self._new_driver()
         driver.create_encapsulated_key("k1")
