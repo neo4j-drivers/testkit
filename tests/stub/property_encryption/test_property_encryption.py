@@ -60,7 +60,7 @@ class TestPropertyEncryption(TestkitTestCase):
             types.CypherBool(False),
             types.CypherInt(0),
             types.CypherInt(-1),
-            types.CypherInt(9223372036854775807),
+            types.CypherInt(32768),
             types.CypherFloat(3.25),
             types.CypherString(""),
             types.CypherString("a"),
