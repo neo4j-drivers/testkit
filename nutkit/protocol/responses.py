@@ -351,7 +351,7 @@ class EncryptedValue:
     """
 
     def __init__(self, encryptedBytes):
-        self.encrypted_bytes = encryptedBytes
+        self.encrypted_bytes = bytes.fromhex(encryptedBytes)
 
 
 class DecryptedValue:
@@ -375,7 +375,7 @@ class EncapsulatedKey:
     def __init__(self, id, alias, encapsulatedBytes, metadata):
         self.id = id
         self.alias = alias
-        self.encapsulated_bytes = encapsulatedBytes
+        self.encapsulated_bytes = bytes.fromhex(encapsulatedBytes)
         self.metadata = metadata
 
 

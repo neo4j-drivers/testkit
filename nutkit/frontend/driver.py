@@ -92,9 +92,9 @@ class Driver:
         if isinstance(profile, str):
             return {"name": profile}
         wire = {"name": profile["name"]}
-        fixed_kek = profile.get("fixed_kek")
-        if fixed_kek is not None:
-            wire["fixedKek"] = protocol.CypherBytes(fixed_kek)
+        kek = profile.get("kek")
+        if kek is not None:
+            wire["kek"] = kek.hex(" ")
         return wire
 
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
@@ -208,13 +208,11 @@ class Driver:
         return res.encrypted
 
     def encrypt_to_bytes(self, value, *, aad=None, profile_name=None,
-                         key_alias=None, key_id=None, fixed_iv=None):
-        fixed_iv_ = None
-        if fixed_iv is not None:
-            fixed_iv_ = protocol.CypherBytes(fixed_iv)
+                         key_alias=None, key_id=None, iv=None):
+        iv_ = iv.hex(" ") if iv is not None else None
         req = protocol.EncryptToBytes(
             self._driver.id, value, aad=aad, profile_name=profile_name,
-            key_alias=key_alias, key_id=key_id, fixed_iv=fixed_iv_
+            key_alias=key_alias, key_id=key_id, iv=iv_
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.EncryptedValue):
@@ -223,7 +221,7 @@ class Driver:
 
     def decrypt(self, value, *, aad=None, use_persisted_aad=False):
         req = protocol.Decrypt(
-            self._driver.id, value, aad=aad,
+            self._driver.id, value.hex(" "), aad=aad,
             use_persisted_aad=use_persisted_aad
         )
         res = self.send_and_receive(req, allow_resolution=False)
@@ -243,7 +241,7 @@ class Driver:
     def import_encapsulated_key(self, alias, encapsulation, metadata, *,
                                 profile_name=None):
         req = protocol.ImportEncapsulatedKey(
-            self._driver.id, alias, encapsulation, metadata,
+            self._driver.id, alias, encapsulation.hex(" "), metadata,
             profile_name=profile_name
         )
         res = self.send_and_receive(req, allow_resolution=False)

@@ -49,7 +49,7 @@ def main():
         driver = Driver(
             backend, "bolt://localhost:9999", auth,
             property_encryption_profiles=[
-                {"name": INTEROP_PROFILE_NAME, "fixed_kek": kek}
+                {"name": INTEROP_PROFILE_NAME, "kek": kek}
             ],
         )
         try:
@@ -65,9 +65,9 @@ def main():
         print_fixture_literal(
             driver=get_driver_name(),
             kek=kek,
-            encapsulation=bytes.fromhex(key.encapsulated_bytes.value),
+            encapsulation=key.encapsulated_bytes,
             metadata=key.metadata,
-            encrypted=bytes.fromhex(encrypted.value),
+            encrypted=encrypted,
             value=string_to_encrypt,
         )
     finally:

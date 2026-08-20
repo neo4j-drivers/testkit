@@ -102,8 +102,8 @@ class TestPropertyEncryption(TestkitTestCase):
 
         iv = bytes(range(12))
         value = types.CypherString("hello world")
-        first = driver.encrypt_to_bytes(value, key_alias="k1", fixed_iv=iv)
-        second = driver.encrypt_to_bytes(value, key_alias="k1", fixed_iv=iv)
+        first = driver.encrypt_to_bytes(value, key_alias="k1", iv=iv)
+        second = driver.encrypt_to_bytes(value, key_alias="k1", iv=iv)
 
         self.assertEqual(first, second)
 
@@ -169,7 +169,7 @@ class TestPropertyEncryption(TestkitTestCase):
         kek = bytes(range(32))
 
         driver_1 = self._new_driver(
-            profiles=({"name": "fx", "fixed_kek": kek},)
+            profiles=({"name": "fx", "kek": kek},)
         )
         key = driver_1.create_encapsulated_key("k1", profile_name="fx")
         encrypted = driver_1.encrypt_to_bytes(
@@ -179,7 +179,7 @@ class TestPropertyEncryption(TestkitTestCase):
         driver_1.close()
 
         driver_2 = self._new_driver(
-            profiles=({"name": "fx", "fixed_kek": kek},)
+            profiles=({"name": "fx", "kek": kek},)
         )
         driver_2.import_encapsulated_key(
             "k1", key.encapsulated_bytes, key.metadata, profile_name="fx"
@@ -194,12 +194,12 @@ class TestPropertyEncryption(TestkitTestCase):
             profiles=(
                 {
                     "name": DETERMINISTIC_PROFILE_NAME,
-                    "fixed_kek": DETERMINISTIC_KEK,
+                    "kek": DETERMINISTIC_KEK,
                 },
             )
         )
         driver.import_encapsulated_key(
-            "k", types.CypherBytes(DETERMINISTIC_ENCAPSULATION),
+            "k", DETERMINISTIC_ENCAPSULATION,
             DETERMINISTIC_KEY_METADATA,
             profile_name=DETERMINISTIC_PROFILE_NAME
         )
@@ -208,11 +208,9 @@ class TestPropertyEncryption(TestkitTestCase):
             with self.subTest(value=case.value):
                 encrypted = driver.encrypt_to_bytes(
                     case.value, profile_name=DETERMINISTIC_PROFILE_NAME,
-                    key_alias="k", fixed_iv=case.iv, aad=case.aad
+                    key_alias="k", iv=case.iv, aad=case.aad
                 )
-                self.assertEqual(
-                    encrypted, types.CypherBytes(case.encrypted)
-                )
+                self.assertEqual(encrypted, case.encrypted)
 
     def test_decrypts_values_produced_by_other_drivers(self):
         for case in DECRYPT_INTEROP_TEST_CASES:
@@ -221,17 +219,17 @@ class TestPropertyEncryption(TestkitTestCase):
                     profiles=(
                         {
                             "name": INTEROP_PROFILE_NAME,
-                            "fixed_kek": case.kek,
+                            "kek": case.kek,
                         },
                     )
                 )
                 driver.import_encapsulated_key(
-                    "k", types.CypherBytes(case.encapsulation), case.metadata,
+                    "k", case.encapsulation, case.metadata,
                     profile_name=INTEROP_PROFILE_NAME
                 )
 
                 decrypted = driver.decrypt(
-                    types.CypherBytes(case.encrypted), use_persisted_aad=True
+                    case.encrypted, use_persisted_aad=True
                 )
 
                 self.assertEqual(

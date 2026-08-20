@@ -913,7 +913,7 @@ class EncryptToBytes:
     :param key_id: The repository-assigned id of the data encryption key to
         encrypt with. Mutually exclusive with key_alias; exactly one of the
         two must be set.
-    :param fixed_iv: The exact 12-byte IV the driver must use for this
+    :param iv: The exact 12-byte IV the driver must use for this
         encrypt call, or None to draw a random one. The backend raises if
         the IV is not exactly 12 bytes or the operation doesn't consume it.
         Used to assert byte-exact ciphertext in the deterministic
@@ -921,14 +921,14 @@ class EncryptToBytes:
     """
 
     def __init__(self, driver_id, value, aad=None, profile_name=None,
-                 key_alias=None, key_id=None, fixed_iv=None):
+                 key_alias=None, key_id=None, iv=None):
         self.driverId = driver_id
         self.value = value
         self.aad = aad
         self.profileName = profile_name
         self.keyAlias = key_alias
         self.keyId = key_id
-        self.fixedIv = fixed_iv
+        self.iv = iv
 
 
 class Decrypt:
