@@ -7,15 +7,15 @@ import nutkit.protocol as types
 DETERMINISTIC_PROFILE_NAME = "deterministic"
 
 DETERMINISTIC_KEK = bytes.fromhex(
-    "a5be5a4e954ce4bad98c9fda44d6888c"
-    "26e811b64daffec8918676f3ebf6220e"
+    "f0de94eb5a2d4da6f17ea74b14e9e556"
+    "d367cb22b053e01798aa2677bfcf5761"
 )
 DETERMINISTIC_ENCAPSULATION = bytes.fromhex(
-    "f1b17045c1163d57cd611a26149439a8"
-    "9ba087d37a4d4aa77dc6087e06c6f7fd"
-    "eac9827f50e93a5361f6d5923bf2923b"
+    "9e1f562dee78c6c2d47f4378d2949774"
+    "c3a56339b824abaf276c4ca7fcf5a8cd"
+    "63976ae348104d6757b9e419bf9ea325"
 )
-DETERMINISTIC_KEY_METADATA = {"iv": "U81P4B2CvQt2ykg3"}
+DETERMINISTIC_KEY_METADATA = {"iv": "P02Pc7vInYIQ7k93"}
 
 
 @dataclass(frozen=True)
@@ -34,10 +34,10 @@ DETERMINISTIC_TEST_CASES = [
         ),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc11aaf92b0356bb039bb881e09c11"
-            "6a9ef99687424f4f4c45414e0100a286"
-            "6b65795f69648130826976cc0c000102"
-            "030405060708090a0b"
+            "63cc11877fe22670d0d3433e2a9c4dd5"
+            "fd17994b87424f4f4c45414e0100a282"
+            "6976cc0c000102030405060708090a0b"
+            "866b65795f69648130"
         ),
     ),
     DeterministicFixture(
@@ -47,10 +47,10 @@ DETERMINISTIC_TEST_CASES = [
         ),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc150eb3e58bb9d7ffec21f8dbb7ec"
-            "c8d41a9d0fd4b4b787494e5445474552"
-            "0100a2866b65795f69648130826976cc"
-            "0c0c0d0e0f1011121314151617"
+            "63cc153022e4a29e68285f6fddac8604"
+            "5e26b63ba5da995087494e5445474552"
+            "0100a2826976cc0c0c0d0e0f10111213"
+            "14151617866b65795f69648130"
         ),
     ),
     DeterministicFixture(
@@ -60,10 +60,10 @@ DETERMINISTIC_TEST_CASES = [
         ),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc19a835184ebf41b0e024656da074"
-            "b80d02379b4fd866290068eb85464c4f"
-            "41540100a2866b65795f696481308269"
-            "76cc0c18191a1b1c1d1e1f20212223"
+            "63cc1959a942a76621fe2aa1f2d388ab"
+            "4e91010e4b39b48520328e9585464c4f"
+            "41540100a2826976cc0c18191a1b1c1d"
+            "1e1f20212223866b65795f69648130"
         ),
     ),
     DeterministicFixture(
@@ -73,11 +73,11 @@ DETERMINISTIC_TEST_CASES = [
         ),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc1c46d9914fd25236d444f2a0f59e"
-            "a321611003d9b08f79acaeb1975e6a86"
-            "535452494e470100a2866b65795f6964"
-            "8130826976cc0c2425262728292a2b2c"
-            "2d2e2f"
+            "63cc1c19b0e5f67ee23e78eb73899546"
+            "4420a6fd3626fc052501e325cee12586"
+            "535452494e470100a2826976cc0c2425"
+            "262728292a2b2c2d2e2f866b65795f69"
+            "648130"
         ),
     ),
     DeterministicFixture(
@@ -87,10 +87,10 @@ DETERMINISTIC_TEST_CASES = [
         ),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc1585b226048348bcbc289d6e46cf"
-            "0d7f1fb9d0e105188542595445530100"
-            "a2866b65795f69648130826976cc0c30"
-            "3132333435363738393a3b"
+            "63cc1529ea2acd117b82841138917fc8"
+            "9cdf15cb4f0d809d8542595445530100"
+            "a2826976cc0c30313233343536373839"
+            "3a3b866b65795f69648130"
         ),
     ),
     DeterministicFixture(
@@ -100,10 +100,10 @@ DETERMINISTIC_TEST_CASES = [
         ),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc1340f23b075078ae0cceccacb3e5"
-            "1073a65227ef844c4953540100a2866b"
-            "65795f69648130826976cc0c3c3d3e3f"
-            "4041424344454647"
+            "63cc13b5011505031e789718bd92136f"
+            "766baa191036844c4953540100a28269"
+            "76cc0c3c3d3e3f404142434445464786"
+            "6b65795f69648130"
         ),
     ),
     DeterministicFixture(
@@ -114,15 +114,15 @@ DETERMINISTIC_TEST_CASES = [
         aad=types.CypherString("row-42"),
         encrypted=bytes.fromhex(
             "01b6658d64657465726d696e69737469"
-            "63cc1ae485f081fdbbc772219eb19708"
-            "193afbc72f29d7e958caf65f1f865354"
-            "52494e470100a5866b65795f69648130"
-            "826976cc0c48494a4b4c4d4e4f505152"
-            "5383616164cc0786726f772d3432d019"
-            "6161645f656e636f64696e675f736368"
-            "656d655f6d616a6f7201d0196161645f"
-            "656e636f64696e675f736368656d655f"
-            "6d696e6f7200"
+            "63cc1a3a8af0d3820a0a549d75e42e59"
+            "6a18ff85ee74fb51dce4bc0300865354"
+            "52494e470100a583616164cc0786726f"
+            "772d3432d0196161645f656e636f6469"
+            "6e675f736368656d655f6d616a6f7201"
+            "d0196161645f656e636f64696e675f73"
+            "6368656d655f6d696e6f7200826976cc"
+            "0c48494a4b4c4d4e4f50515253866b65"
+            "795f69648130"
         ),
     ),
 ]
