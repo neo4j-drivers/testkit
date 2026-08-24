@@ -16,7 +16,7 @@ DETERMINISTIC_ENCAPSULATION = bytes.fromhex(
     "63976ae348104d6757b9e419bf9ea325"
 )
 DETERMINISTIC_KEY_METADATA = {"iv": "P02Pc7vInYIQ7k93"}
-DETERMINISTIC_KEY_ID = "0"
+DETERMINISTIC_KEY_ID = "testkit-key"
 
 
 @dataclass(frozen=True)
@@ -38,7 +38,8 @@ DETERMINISTIC_TEST_CASES = [
             "63cc11877fe22670d0d3433e2a9c4dd5"
             "fd17994b87424f4f4c45414e0100a282"
             "6976cc0c000102030405060708090a0b"
-            "866b65795f69648130"
+            "866b65795f69648b746573746b69742d"
+            "6b6579"
         ),
     ),
     DeterministicFixture(
@@ -51,7 +52,8 @@ DETERMINISTIC_TEST_CASES = [
             "63cc153022e4a29e68285f6fddac8604"
             "5e26b63ba5da995087494e5445474552"
             "0100a2826976cc0c0c0d0e0f10111213"
-            "14151617866b65795f69648130"
+            "14151617866b65795f69648b74657374"
+            "6b69742d6b6579"
         ),
     ),
     DeterministicFixture(
@@ -64,7 +66,8 @@ DETERMINISTIC_TEST_CASES = [
             "63cc1959a942a76621fe2aa1f2d388ab"
             "4e91010e4b39b48520328e9585464c4f"
             "41540100a2826976cc0c18191a1b1c1d"
-            "1e1f20212223866b65795f69648130"
+            "1e1f20212223866b65795f69648b7465"
+            "73746b69742d6b6579"
         ),
     ),
     DeterministicFixture(
@@ -78,7 +81,7 @@ DETERMINISTIC_TEST_CASES = [
             "4420a6fd3626fc052501e325cee12586"
             "535452494e470100a2826976cc0c2425"
             "262728292a2b2c2d2e2f866b65795f69"
-            "648130"
+            "648b746573746b69742d6b6579"
         ),
     ),
     DeterministicFixture(
@@ -91,7 +94,8 @@ DETERMINISTIC_TEST_CASES = [
             "63cc1529ea2acd117b82841138917fc8"
             "9cdf15cb4f0d809d8542595445530100"
             "a2826976cc0c30313233343536373839"
-            "3a3b866b65795f69648130"
+            "3a3b866b65795f69648b746573746b69"
+            "742d6b6579"
         ),
     ),
     DeterministicFixture(
@@ -104,7 +108,8 @@ DETERMINISTIC_TEST_CASES = [
             "63cc13b5011505031e789718bd92136f"
             "766baa191036844c4953540100a28269"
             "76cc0c3c3d3e3f404142434445464786"
-            "6b65795f69648130"
+            "6b65795f69648b746573746b69742d6b"
+            "6579"
         ),
     ),
     DeterministicFixture(
@@ -123,7 +128,7 @@ DETERMINISTIC_TEST_CASES = [
             "d0196161645f656e636f64696e675f73"
             "6368656d655f6d696e6f7200826976cc"
             "0c48494a4b4c4d4e4f50515253866b65"
-            "795f69648130"
+            "795f69648b746573746b69742d6b6579"
         ),
     ),
 ]
