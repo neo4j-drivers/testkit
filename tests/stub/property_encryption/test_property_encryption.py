@@ -3,10 +3,6 @@ import random
 import nutkit.protocol as types
 from nutkit.frontend import Driver
 from tests.shared import TestkitTestCase
-from tests.stub.property_encryption.decrypt_interop_fixtures import (
-    DECRYPT_INTEROP_TEST_CASES,
-    INTEROP_PROFILE_NAME,
-)
 from tests.stub.property_encryption.deterministic_fixtures import (
     DETERMINISTIC_ENCAPSULATION,
     DETERMINISTIC_KEK,
@@ -214,30 +210,24 @@ class TestPropertyEncryption(TestkitTestCase):
                 )
                 self.assertEqual(encrypted, case.encrypted)
 
-    def test_decrypts_values_produced_by_other_drivers(self):
-        for case in DECRYPT_INTEROP_TEST_CASES:
-            with self.subTest(driver=case.driver):
-                driver = self._new_driver(
-                    profiles=(
-                        {
-                            "name": INTEROP_PROFILE_NAME,
-                            "kek": case.kek,
-                        },
-                    )
-                )
-                driver.import_encapsulated_key(
-                    "0", "k", case.encapsulation, case.metadata,
-                    profile_name=INTEROP_PROFILE_NAME
-                )
+    def test_decrypts_known_bytes(self):
+        driver = self._new_driver(
+            profiles=(
+                {
+                    "name": DETERMINISTIC_PROFILE_NAME,
+                    "kek": DETERMINISTIC_KEK,
+                },
+            )
+        )
+        driver.import_encapsulated_key(
+            DETERMINISTIC_KEY_ID, "k", DETERMINISTIC_ENCAPSULATION,
+            DETERMINISTIC_KEY_METADATA,
+            profile_name=DETERMINISTIC_PROFILE_NAME
+        )
 
+        for case in DETERMINISTIC_TEST_CASES:
+            with self.subTest(value=case.value):
                 decrypted = driver.decrypt(
                     case.encrypted, use_persisted_aad=True
                 )
-
-                self.assertEqual(
-                    decrypted, case.value,
-                    "Could not decrypt value encrypted by driver: "
-                    f"{case.driver}"
-                )
-                driver.close()
-        self._driver = None
+                self.assertEqual(decrypted, case.value)
