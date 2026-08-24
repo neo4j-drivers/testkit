@@ -238,10 +238,10 @@ class Driver:
             raise Exception(f"Should be EncapsulatedKey but was: {res}")
         return res
 
-    def import_encapsulated_key(self, alias, encapsulation, metadata, *,
-                                profile_name=None):
+    def import_encapsulated_key(self, key_id, alias, encapsulation, metadata,
+                                *, profile_name=None):
         req = protocol.ImportEncapsulatedKey(
-            self._driver.id, alias, encapsulation.hex(" "), metadata,
+            self._driver.id, key_id, alias, encapsulation.hex(" "), metadata,
             profile_name=profile_name
         )
         res = self.send_and_receive(req, allow_resolution=False)

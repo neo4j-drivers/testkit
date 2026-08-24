@@ -10,6 +10,7 @@ from tests.stub.property_encryption.decrypt_interop_fixtures import (
 from tests.stub.property_encryption.deterministic_fixtures import (
     DETERMINISTIC_ENCAPSULATION,
     DETERMINISTIC_KEK,
+    DETERMINISTIC_KEY_ID,
     DETERMINISTIC_KEY_METADATA,
     DETERMINISTIC_PROFILE_NAME,
     DETERMINISTIC_TEST_CASES,
@@ -182,7 +183,8 @@ class TestPropertyEncryption(TestkitTestCase):
             profiles=({"name": "fx", "kek": kek},)
         )
         driver_2.import_encapsulated_key(
-            "k1", key.encapsulated_bytes, key.metadata, profile_name="fx"
+            key.id, "k1", key.encapsulated_bytes, key.metadata,
+            profile_name="fx"
         )
 
         decrypted = driver_2.decrypt(encrypted, use_persisted_aad=True)
@@ -199,7 +201,7 @@ class TestPropertyEncryption(TestkitTestCase):
             )
         )
         driver.import_encapsulated_key(
-            "k", DETERMINISTIC_ENCAPSULATION,
+            DETERMINISTIC_KEY_ID, "k", DETERMINISTIC_ENCAPSULATION,
             DETERMINISTIC_KEY_METADATA,
             profile_name=DETERMINISTIC_PROFILE_NAME
         )
@@ -224,7 +226,7 @@ class TestPropertyEncryption(TestkitTestCase):
                     )
                 )
                 driver.import_encapsulated_key(
-                    "k", case.encapsulation, case.metadata,
+                    "0", "k", case.encapsulation, case.metadata,
                     profile_name=INTEROP_PROFILE_NAME
                 )
 
