@@ -369,14 +369,13 @@ class EncapsulatedKey:
     """
     An encapsulated data encryption key.
 
-    Sent in response to a CreateEncapsulatedKey request.
+    Sent in response to a CreateEncapsulatedKey or ImportEncapsulatedKey
+    request.
     """
 
-    def __init__(self, id, alias, encapsulatedBytes, metadata):
+    def __init__(self, id, alias):
         self.id = id
         self.alias = alias
-        self.encapsulated_bytes = bytes.fromhex(encapsulatedBytes)
-        self.metadata = metadata
 
 
 class Result:

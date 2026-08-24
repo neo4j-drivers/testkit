@@ -37,6 +37,22 @@ class TestPropertyEncryption(TestkitTestCase):
         )
         return self._driver
 
+    def _new_deterministic_driver(self):
+        driver = self._new_driver(
+            profiles=(
+                {
+                    "name": DETERMINISTIC_PROFILE_NAME,
+                    "kek": DETERMINISTIC_KEK,
+                },
+            )
+        )
+        driver.import_encapsulated_key(
+            DETERMINISTIC_KEY_ID, "k", DETERMINISTIC_ENCAPSULATION,
+            DETERMINISTIC_KEY_METADATA,
+            profile_name=DETERMINISTIC_PROFILE_NAME
+        )
+        return driver
+
     def test_round_trips_a_single_value(self):
         driver = self._new_driver()
         driver.create_encapsulated_key("k1")
@@ -163,44 +179,20 @@ class TestPropertyEncryption(TestkitTestCase):
             driver.create_encapsulated_key("k1")
 
     def test_imported_key_decrypts_with_a_fixed_kek(self):
-        kek = bytes(range(32))
-
-        driver_1 = self._new_driver(
-            profiles=({"name": "fx", "kek": kek},)
-        )
-        key = driver_1.create_encapsulated_key("k1", profile_name="fx")
+        driver_1 = self._new_deterministic_driver()
         encrypted = driver_1.encrypt_to_bytes(
             types.CypherString("hello world"),
-            profile_name="fx", key_alias="k1"
+            profile_name=DETERMINISTIC_PROFILE_NAME, key_alias="k"
         )
         driver_1.close()
 
-        driver_2 = self._new_driver(
-            profiles=({"name": "fx", "kek": kek},)
-        )
-        driver_2.import_encapsulated_key(
-            key.id, "k1", key.encapsulated_bytes, key.metadata,
-            profile_name="fx"
-        )
-
+        driver_2 = self._new_deterministic_driver()
         decrypted = driver_2.decrypt(encrypted, use_persisted_aad=True)
 
         self.assertEqual(decrypted, types.CypherString("hello world"))
 
     def test_encrypts_to_known_bytes(self):
-        driver = self._new_driver(
-            profiles=(
-                {
-                    "name": DETERMINISTIC_PROFILE_NAME,
-                    "kek": DETERMINISTIC_KEK,
-                },
-            )
-        )
-        driver.import_encapsulated_key(
-            DETERMINISTIC_KEY_ID, "k", DETERMINISTIC_ENCAPSULATION,
-            DETERMINISTIC_KEY_METADATA,
-            profile_name=DETERMINISTIC_PROFILE_NAME
-        )
+        driver = self._new_deterministic_driver()
 
         for case in DETERMINISTIC_TEST_CASES:
             with self.subTest(value=case.value):
@@ -211,19 +203,7 @@ class TestPropertyEncryption(TestkitTestCase):
                 self.assertEqual(encrypted, case.encrypted)
 
     def test_decrypts_known_bytes(self):
-        driver = self._new_driver(
-            profiles=(
-                {
-                    "name": DETERMINISTIC_PROFILE_NAME,
-                    "kek": DETERMINISTIC_KEK,
-                },
-            )
-        )
-        driver.import_encapsulated_key(
-            DETERMINISTIC_KEY_ID, "k", DETERMINISTIC_ENCAPSULATION,
-            DETERMINISTIC_KEY_METADATA,
-            profile_name=DETERMINISTIC_PROFILE_NAME
-        )
+        driver = self._new_deterministic_driver()
 
         for case in DETERMINISTIC_TEST_CASES:
             with self.subTest(value=case.value):
