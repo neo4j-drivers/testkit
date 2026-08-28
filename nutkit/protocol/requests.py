@@ -986,7 +986,7 @@ class ImportEncapsulatedKey:
     The backend should respond with an EncapsulatedKey or an Error response.
 
     :param driver_id: The id of the driver to import the key into.
-    :param key_id: The id to store the imported key under. Explicit so the
+    :param id: The id to store the imported key under. Explicit so the
         key id recorded in the Encrypted structure's metadata is predictable
         regardless of the backend repository's own id-generation scheme,
         which byte-exact encryption tests depend on.
@@ -999,10 +999,10 @@ class ImportEncapsulatedKey:
         key into, or None to use the sole configured profile.
     """
 
-    def __init__(self, driver_id, key_id, alias, encapsulation, metadata,
+    def __init__(self, driver_id, id, alias, encapsulation, metadata,
                  profile_name=None):
         self.driverId = driver_id
-        self.keyId = key_id
+        self.id = id
         self.alias = alias
         self.encapsulation = encapsulation
         self.metadata = metadata
