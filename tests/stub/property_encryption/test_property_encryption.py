@@ -133,6 +133,18 @@ class TestPropertyEncryption(TestkitTestCase):
 
         self.assertEqual(decrypted, types.CypherString("aad-bound"))
 
+    def test_decrypt_resolves_the_profile_from_the_encrypted_bytes(self):
+        driver = self._new_driver(profiles=("p1", "p2"))
+        driver.create_encapsulated_key("k1", profile_name="p2")
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("hello world"),
+            profile_name="p2", key_alias="k1"
+        )
+        decrypted = driver.decrypt(encrypted, use_persisted_aad=True)
+
+        self.assertEqual(decrypted, types.CypherString("hello world"))
+
     def test_decrypt_raises_on_wrong_aad(self):
         driver = self._new_driver()
         driver.create_encapsulated_key("k1")
@@ -172,6 +184,15 @@ class TestPropertyEncryption(TestkitTestCase):
                 types.CypherString("hello world"), key_id="no-such-id"
             )
 
+    def test_encrypt_raises_when_ambiguous_and_no_profile_given(self):
+        driver = self._new_driver(profiles=("p1", "p2"))
+        driver.create_encapsulated_key("k1", profile_name="p1")
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello world"), key_alias="k1"
+            )
+
     def test_key_manager_raises_when_ambiguous_and_no_profile_given(self):
         driver = self._new_driver(profiles=("p1", "p2"))
 
@@ -190,6 +211,42 @@ class TestPropertyEncryption(TestkitTestCase):
         decrypted = driver_2.decrypt(encrypted, use_persisted_aad=True)
 
         self.assertEqual(decrypted, types.CypherString("hello world"))
+
+    def test_imports_into_the_sole_profile_when_no_profile_is_named(self):
+        driver = self._new_driver(
+            profiles=(
+                {
+                    "name": DETERMINISTIC_PROFILE_NAME,
+                    "kek": DETERMINISTIC_KEK,
+                },
+            )
+        )
+        driver.import_encapsulated_key(
+            DETERMINISTIC_KEY_ID, "k", DETERMINISTIC_ENCAPSULATION,
+            DETERMINISTIC_KEY_METADATA
+        )
+
+        case = DETERMINISTIC_TEST_CASES[0]
+        decrypted = driver.decrypt(case.encrypted, use_persisted_aad=True)
+
+        self.assertEqual(decrypted, case.value)
+
+    def test_an_unconsumed_fixed_iv_is_replaced_by_the_next_one(self):
+        driver = self._new_deterministic_driver()
+        case = DETERMINISTIC_TEST_CASES[0]
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                case.value, profile_name=DETERMINISTIC_PROFILE_NAME,
+                key_alias="no-such-key", iv=case.iv
+            )
+
+        encrypted = driver.encrypt_to_bytes(
+            case.value, profile_name=DETERMINISTIC_PROFILE_NAME,
+            key_alias="k", iv=case.iv, aad=case.aad
+        )
+
+        self.assertEqual(encrypted, case.encrypted)
 
     def test_encrypts_to_known_bytes(self):
         driver = self._new_deterministic_driver()
