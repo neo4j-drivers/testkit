@@ -193,6 +193,17 @@ class TestPropertyEncryption(TestkitTestCase):
                 types.CypherString("hello world"), key_alias="k1"
             )
 
+    def test_raises_when_two_profiles_share_a_name(self):
+        # Both statements are inside the block because the ADR requires
+        # profile names to be unique but says nothing about when a driver
+        # must reject a duplicate, so rejecting at construction and
+        # rejecting at first use are both conforming. The profile is named
+        # so that a duplicate is the only thing left to fail on; omitting it
+        # would also be ambiguous, and the test would pass either way.
+        with self.assertRaises(types.DriverError):
+            driver = self._new_driver(profiles=("dup", "dup"))
+            driver.create_encapsulated_key("k1", profile_name="dup")
+
     def test_key_manager_raises_when_ambiguous_and_no_profile_given(self):
         driver = self._new_driver(profiles=("p1", "p2"))
 
