@@ -343,6 +343,41 @@ class Transaction:
         self.id = id
 
 
+class EncryptedValue:
+    """
+    The result of encrypting a value with client-side property encryption.
+
+    Sent in response to an EncryptToBytes request.
+    """
+
+    def __init__(self, encryptedBytes):
+        self.encrypted_bytes = bytes.fromhex(encryptedBytes)
+
+
+class DecryptedValue:
+    """
+    The result of decrypting a value with client-side property encryption.
+
+    Sent in response to a Decrypt request.
+    """
+
+    def __init__(self, decryptedValue):
+        self.decrypted_value = decryptedValue
+
+
+class EncapsulatedKey:
+    """
+    An encapsulated data encryption key.
+
+    Sent in response to a CreateEncapsulatedKey or ImportEncapsulatedKey
+    request.
+    """
+
+    def __init__(self, id, alias):
+        self.id = id
+        self.alias = alias
+
+
 class Result:
     """Represents a result instance on the backend."""
 

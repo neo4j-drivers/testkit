@@ -79,6 +79,7 @@ class NewDriver:
         telemetry_disabled=None,
         client_certificate=None, client_certificate_provider_id=None,
         disable_auto_commit_retries=None,
+        property_encryption_profiles=None,
     ):
         # Neo4j URI to connect to
         self.uri = uri
@@ -110,6 +111,8 @@ class NewDriver:
             self.telemetryDisabled = telemetry_disabled
         if disable_auto_commit_retries is not None:
             self.disableAutoCommitRetries = disable_auto_commit_retries
+        if property_encryption_profiles is not None:
+            self.propertyEncryptionProfiles = property_encryption_profiles
         # (bool) whether to enable or disable encryption
         # field missing in message: use driver default (should be False)
         if encrypted is not None:
@@ -891,3 +894,116 @@ class FakeTimeUninstall:
     """
 
     pass
+
+
+class EncryptToBytes:
+    """
+    Request to encrypt a value using client-side property encryption.
+
+    The backend should respond with an EncryptedValue or an Error response.
+
+    :param driver_id: The id of the driver to encrypt with.
+    :param value: The property value to encrypt.
+    :param aad: The additional authenticated data (AAD) to bind to the
+        ciphertext, or None for no AAD.
+    :param profile_name: The name of the encryption profile to use, or None
+        to use the sole configured profile.
+    :param key_alias: The alias of the data encryption key to encrypt with.
+        Mutually exclusive with key_id; exactly one of the two must be set.
+    :param key_id: The repository-assigned id of the data encryption key to
+        encrypt with. Mutually exclusive with key_alias; exactly one of the
+        two must be set.
+    :param iv: The exact 12-byte IV the driver must use for this
+        encrypt call, or None to draw a random one. The backend raises if
+        the IV is not exactly 12 bytes or the operation doesn't consume it.
+        Used to assert byte-exact ciphertext in the deterministic
+        encryption tests.
+    """
+
+    def __init__(self, driver_id, value, aad=None, profile_name=None,
+                 key_alias=None, key_id=None, iv=None):
+        self.driverId = driver_id
+        self.value = value
+        self.aad = aad
+        self.profileName = profile_name
+        self.keyAlias = key_alias
+        self.keyId = key_id
+        self.iv = iv
+
+
+class Decrypt:
+    """
+    Request to decrypt a value using client-side property encryption.
+
+    The backend should respond with a DecryptedValue or an Error response.
+
+    :param driver_id: The id of the driver to decrypt with.
+    :param value: The encrypted value to decrypt, as returned by
+        EncryptToBytes.
+    :param aad: The additional authenticated data (AAD) to reproduce, or
+        None to use the AAD persisted alongside the encrypted value.
+        Mutually exclusive with use_persisted_aad; exactly one of the two
+        must be set.
+    :param use_persisted_aad: Whether to use the AAD persisted alongside the
+        encrypted value. Mutually exclusive with aad; exactly one of the two
+        must be set.
+    """
+
+    def __init__(self, driver_id, value, aad=None, use_persisted_aad=False):
+        self.driverId = driver_id
+        self.value = value
+        self.aad = aad
+        self.usePersistedAad = use_persisted_aad
+
+
+class CreateEncapsulatedKey:
+    """
+    Request to create a new encapsulated data encryption key.
+
+    The backend should respond with an EncapsulatedKey or an Error response.
+
+    :param driver_id: The id of the driver to create the key with.
+    :param alias: The alias to bind to the new key.
+    :param profile_name: The name of the encryption profile to create the
+        key for, or None to use the sole configured profile.
+    """
+
+    def __init__(self, driver_id, alias, profile_name=None):
+        self.driverId = driver_id
+        self.alias = alias
+        self.profileName = profile_name
+
+
+class ImportEncapsulatedKey:
+    """
+    Request to register a pre-existing encapsulated data encryption key.
+
+    Unlike CreateEncapsulatedKey, this does not generate a new key via the
+    profile's KeyEncapsulationService; it seeds the profile's
+    EncapsulatedKeyRepository directly with an encapsulation obtained
+    elsewhere (e.g. a fixture, or a prior CreateEncapsulatedKey response).
+
+    The backend should respond with an EncapsulatedKey or an Error response.
+
+    :param driver_id: The id of the driver to import the key into.
+    :param id: The id to store the imported key under. Explicit so the
+        key id recorded in the Encrypted structure's metadata is predictable
+        regardless of the backend repository's own id-generation scheme,
+        which byte-exact encryption tests depend on.
+    :param alias: The alias to bind to the imported key.
+    :param encapsulation: The encapsulated (wrapped) data encryption key
+        bytes.
+    :param metadata: The key encapsulation service's metadata for the
+        encapsulation.
+    :param profile_name: The name of the encryption profile to import the
+        key into, or None to use the sole configured profile.
+    """
+
+    def __init__(self, driver_id, id, alias, encapsulation, metadata,
+                 profile_name=None):
+        self.driverId = driver_id
+        self.id = id
+        self.alias = alias
+        self.encapsulation = encapsulation
+        self.metadata = metadata
+        self.profileName = profile_name
