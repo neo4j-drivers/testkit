@@ -302,7 +302,7 @@ class HttpEndpoint(abc.ABC):
         elif protocol_version == ProtocolVersion.V1_1:
             return content_type == "application/vnd.neo4j.query.v1.1"
         else:
-            NotImplementedError("TODO")
+            raise NotImplementedError("TODO")
 
     @classmethod
     def _version_as_header(
@@ -318,7 +318,7 @@ class HttpEndpoint(abc.ABC):
                 "Content-Type": "application/vnd.neo4j.query.v1.1",
             }
         else:
-            NotImplementedError("TODO")
+            raise NotImplementedError("TODO")
 
 
 class HttpEndpointStateful(HttpEndpoint, abc.ABC):
