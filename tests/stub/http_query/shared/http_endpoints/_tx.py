@@ -175,7 +175,7 @@ class HttpTxEndpoint(HttpEndpoint):
             if isinstance(self.counters, AutoRespond):
                 body = req.get_json(force=True)
                 if body.get("includeCounters") is True and isinstance(
-                    body.get("query"), str
+                    body.get("statement"), str
                 ):
                     return CountersMap().json_dict()
                 return None
