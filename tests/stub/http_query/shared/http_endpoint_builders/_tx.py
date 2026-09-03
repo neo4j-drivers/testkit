@@ -231,6 +231,9 @@ class TxEndpointBuilder:
         bookmarks: list[str] | None = None,
         errors: list[dict[str, object]] | None = None,
         status_code: int | None = None,
+        extra_header_verification: tuple[
+            t.Callable[[Headers], bool], ...
+        ] = (),
     ) -> t.Self:
         self._finishing_handler = HttpTxCommitEndpoint(
             HttpTxCommitEndpoint.RequestData(
@@ -238,6 +241,10 @@ class TxEndpointBuilder:
             ),
             HttpTxCommitEndpoint.ResponseData(
                 bookmarks=bookmarks, errors=errors, status_code=status_code
+            ),
+            extra_header_verification=(
+                *self._extra_header_verification,
+                *extra_header_verification,
             ),
         )
         return self
@@ -248,6 +255,9 @@ class TxEndpointBuilder:
         legacy_response: bool = False,
         errors: list[dict[str, object]] | None = None,
         status_code: int | None = None,
+        extra_header_verification: tuple[
+            t.Callable[[Headers], bool], ...
+        ] = (),
     ) -> t.Self:
         self._finishing_handler = HttpTxRollbackEndpoint(
             HttpTxRollbackEndpoint.RequestData(
@@ -257,6 +267,10 @@ class TxEndpointBuilder:
                 legacy=legacy_response,
                 errors=errors,
                 status_code=status_code,
+            ),
+            extra_header_verification=(
+                *self._extra_header_verification,
+                *extra_header_verification,
             ),
         )
         return self
