@@ -159,7 +159,7 @@ class HttpQueryEndpoint(HttpEndpoint):
         def _get_counters(self, req: Request) -> t.Any:
             if isinstance(self.counters, AutoRespond):
                 body = req.get_json(force=True)
-                if body.get("include_counters") is True:
+                if body.get("includeCounters") is True:
                     return CountersMap().json_dict()
                 return None
 
