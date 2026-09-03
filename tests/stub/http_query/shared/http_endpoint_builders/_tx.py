@@ -280,7 +280,7 @@ class TxEndpointBuilder:
         return self
 
     def build(self) -> HttpEndpoint:
-        assert self._sequential_handlers, "initialized non-empty int __init__"
+        assert self._sequential_handlers, "initialized non-empty in __init__"
         if self._used:
             raise RuntimeError(
                 "This builder has already been used to build an endpoint"

@@ -54,7 +54,7 @@ __all__: tuple[str, ...] = (
 @dataclasses.dataclass
 class MaybeNull(t.Generic[T]):
     """
-    Instruct a matcher to accept requests with this value missing/bein None.
+    Instruct a matcher to accept requests with this value missing/being None.
 
     E.g., ``MaybeNull({})`` is supposed to match json values ``null``, ``{}``,
     and omission of the key-value if inside an object.
