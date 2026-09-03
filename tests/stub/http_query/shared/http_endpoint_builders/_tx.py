@@ -46,7 +46,7 @@ class TxEndpointBuilder:
     _tx_id: str
     _pipelined_handlers: list[HttpEndpoint]
     _sequential_handlers: list[HttpEndpoint]
-    _finishing_handler: HttpEndpoint | None
+    finishing_handler: HttpEndpoint | None
     _used: bool = False
     _impersonated_user: str | None
     _access_mode: TOptionalValue[str] | AnyValue
@@ -82,7 +82,7 @@ class TxEndpointBuilder:
         self._auth = auth
         self._pipeline_begin = pipeline_begin
         self._tx_id = tx_id
-        self._finishing_handler = None
+        self.finishing_handler = None
         self._impersonated_user = impersonated_user
         self._access_mode = access_mode
         self._bookmarks = bookmarks
@@ -235,7 +235,7 @@ class TxEndpointBuilder:
             t.Callable[[Headers], bool], ...
         ] = (),
     ) -> t.Self:
-        self._finishing_handler = HttpTxCommitEndpoint(
+        self.finishing_handler = HttpTxCommitEndpoint(
             HttpTxCommitEndpoint.RequestData(
                 db=self._db, tx_id=self._tx_id, auth=self._auth
             ),
@@ -259,7 +259,7 @@ class TxEndpointBuilder:
             t.Callable[[Headers], bool], ...
         ] = (),
     ) -> t.Self:
-        self._finishing_handler = HttpTxRollbackEndpoint(
+        self.finishing_handler = HttpTxRollbackEndpoint(
             HttpTxRollbackEndpoint.RequestData(
                 db=self._db, tx_id=self._tx_id, auth=self._auth
             ),
@@ -276,7 +276,7 @@ class TxEndpointBuilder:
         return self
 
     def without_finishing_handler(self) -> t.Self:
-        self._finishing_handler = None
+        self.finishing_handler = None
         return self
 
     def build(self) -> HttpEndpoint:
@@ -296,8 +296,8 @@ class TxEndpointBuilder:
             )
         else:
             endpoints.extend(self._sequential_handlers)
-        if self._finishing_handler is not None:
-            endpoints.append(self._finishing_handler)
+        if self.finishing_handler is not None:
+            endpoints.append(self.finishing_handler)
         return self._make_sequential(endpoints)
 
     def _make_tx_handler(

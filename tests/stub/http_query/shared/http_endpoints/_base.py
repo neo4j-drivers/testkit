@@ -28,6 +28,9 @@ if t.TYPE_CHECKING:
 
     from ..http_server import TestKitStubHttpServer
 
+    T_Handler: t.TypeAlias = t.Callable[[Request], Response]
+
+
 T = t.TypeVar("T")
 
 

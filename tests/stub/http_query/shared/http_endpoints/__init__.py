@@ -17,6 +17,7 @@ from ._base import (
     TestKitRequestMatcher,
 )
 from ._either import HttpEitherEndpoint
+from ._incomplete import HttpIncompleteEndpoint
 from ._query import HttpQueryEndpoint
 from ._sequence import HttpSequenceEndpoint
 from ._tx import HttpTxEndpoint
@@ -31,6 +32,7 @@ __all__: tuple[str, ...] = (
     "CustomAuthToken",
     "HttpEitherEndpoint",
     "HttpEndpoint",
+    "HttpIncompleteEndpoint",
     "HttpQueryEndpoint",
     "HttpSequenceEndpoint",
     "HttpTxCommitEndpoint",

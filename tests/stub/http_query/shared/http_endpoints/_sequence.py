@@ -16,14 +16,13 @@ if t.TYPE_CHECKING:
     from werkzeug import Request
 
     from ..http_server import TestKitStubHttpServer
-
-    _T_Handler: t.TypeAlias = t.Callable[[Request], Response]
+    from ._base import T_Handler
 
 
 class HttpSequenceEndpoint(HttpEndpointStateful):
     _endpoints: tuple[HttpEndpoint, ...]
     _matchers: tuple[RequestMatcher, ...]
-    _handlers: tuple[_T_Handler, ...]
+    _handlers: tuple[T_Handler, ...]
     _idx: int = 0
 
     def __init__(
@@ -81,9 +80,9 @@ class HttpSequenceEndpoint(HttpEndpointStateful):
                     f"Request: {request!r}, matchers: {self._matchers!r}"
                 )
 
-            handler = self._handlers[self._idx]
+            handler_ = self._handlers[self._idx]
             endpoint = self._endpoints[self._idx]
-            res = handler(request)
+            res = handler_(request)
             if isinstance(endpoint, HttpEndpointStateful):
                 if endpoint.done():
                     self._idx += 1

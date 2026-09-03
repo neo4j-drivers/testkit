@@ -1,6 +1,6 @@
 # TODO
 
-* [ ] Test APIs
+* [-] Test APIs
   * [x] Explicit TX
     * [x] impersonation
     * [x] session auth
@@ -16,7 +16,12 @@
     * [x] session auth
     * [x] access mode
   * [x] bookmarks + session bookmark chaining
-  * [x] retries
+  * [-] retries
+    * [x] managed transactions retry transient errors
+    * [-] special handling (error class + no retie) for dropped connection on commit
+      * [x] Commit incomplete body
+      * [ ] Commit direct connection abort
+            (near impossible within the WSGI framework the current stub HTTP server operates in)
   * [x] db selection
     * [x] basic case
     * [x] driver rejects any DB name that doesn't match `^[a-zA-Z0-9.-]{3,}$`
@@ -60,3 +65,5 @@
     * [ ] meta data
     * [ ] tx timeout
   * [ ] UUID
+  * [ ] idempotent errors (incl. retries)
+* [ ] HTTPS tests

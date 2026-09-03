@@ -4,7 +4,10 @@ import enum
 import typing as t
 
 from nutkit import protocol as types
-from tests.shared import Potential
+from tests.shared import (
+    get_driver_name,
+    Potential,
+)
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -12,7 +15,10 @@ from tests.stub.http_query.shared import (
 from tests.stub.http_query.shared.http_endpoint_builders import (
     TxEndpointBuilder,
 )
-from tests.stub.http_query.shared.http_endpoints import HttpSequenceEndpoint
+from tests.stub.http_query.shared.http_endpoints import (
+    HttpIncompleteEndpoint,
+    HttpSequenceEndpoint,
+)
 from tests.stub.http_query.shared.http_server import HandlerType
 
 if t.TYPE_CHECKING:
@@ -28,10 +34,12 @@ RECORDS: list[list[http_types.HttpType]] = [[http_types.Int(1)]]
 
 
 class _FailPoint(enum.Enum):
+    PRE_TX_CREATION_INCOMPLETE = enum.auto()
     PRE_TX_CREATION = enum.auto()
     PRE_QUERY_HEADER = enum.auto()
     PRE_QUERY_RECORDS = enum.auto()
     POST_QUERY_RECORDS = enum.auto()
+    TX_COMMIT_INCOMPLETE = enum.auto()
 
 
 def _make_tx_endpoints(
@@ -72,7 +80,15 @@ def _make_tx_endpoint(
     query_errors = None
     fields = None
     records = None
-    if fail_point == _FailPoint.PRE_TX_CREATION:
+    wrapper: t.Callable[[TxEndpointBuilder], HttpEndpoint] | None = None
+    if fail_point == _FailPoint.PRE_TX_CREATION_INCOMPLETE:
+
+        def wrapper(builder: TxEndpointBuilder) -> HttpEndpoint:  # noqa: F811
+            return HttpIncompleteEndpoint(builder.build())
+
+        fields = FIELDS
+        records = RECORDS
+    elif fail_point == _FailPoint.PRE_TX_CREATION:
         tx_errors = errors
     elif fail_point == _FailPoint.PRE_QUERY_HEADER:
         query_errors = errors
@@ -81,6 +97,18 @@ def _make_tx_endpoint(
         fields = FIELDS
     elif fail_point == _FailPoint.POST_QUERY_RECORDS:
         query_errors = errors
+        fields = FIELDS
+        records = RECORDS
+    elif fail_point == _FailPoint.TX_COMMIT_INCOMPLETE:
+
+        def wrapper(builder: TxEndpointBuilder) -> HttpEndpoint:
+            builder.with_commit()
+            assert builder.finishing_handler is not None
+            builder.finishing_handler = HttpIncompleteEndpoint(
+                builder.finishing_handler
+            )
+            return builder.build()
+
         fields = FIELDS
         records = RECORDS
     else:
@@ -99,7 +127,7 @@ def _make_tx_endpoint(
             QUERY, fields, records, query_errors=query_errors
         )
 
-    return builder.build()
+    return builder.build() if wrapper is None else wrapper(builder)
 
 
 class TestRetries(HttpTestCase):
@@ -115,6 +143,8 @@ class TestRetries(HttpTestCase):
 
         with self.server() as server:
             for fail_point in list(_FailPoint):
+                if fail_point == _FailPoint.TX_COMMIT_INCOMPLETE:
+                    continue  # not supposed to be retried
                 with (
                     self.subTest(fail_point=fail_point),
                     self.server_session(server),
@@ -152,3 +182,42 @@ class TestRetries(HttpTestCase):
         self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
+
+    def test_no_retry_on_disconnect_on_commit(self) -> None:
+        tries = 0
+
+        def work(tx: Transaction) -> tuple[list[str], list[types.Record]]:
+            nonlocal tries
+            tries += 1
+            res = tx.run(QUERY)
+            keys = res.keys()
+            return keys, list(res)
+
+        with self.server() as server:
+            server.install_discovery_endpoint()
+            server.install_endpoint(
+                _make_tx_endpoints(
+                    [({}, _FailPoint.TX_COMMIT_INCOMPLETE)],
+                    pipeline_begin=Potential.MAYBE,
+                ),
+                handler_type=HandlerType.PERMANENT,
+            )
+            with (
+                self.driver(server, AUTH) as driver,
+                driver.session("w", database=DB) as session,
+                self.assertRaises(types.DriverError) as exc,
+            ):
+                session.execute_write(work)
+
+            self._assert_is_incomplete_commit_error(exc.exception)
+
+    def _assert_is_incomplete_commit_error(self, error: types.DriverError):
+        driver_name = get_driver_name()
+
+        if driver_name in ["python"]:
+            self.assertEqual(
+                "<class 'neo4j.exceptions.IncompleteCommit'>",
+                error.errorType,
+            )
+        else:
+            raise NotImplementedError(f"Add error assertion for {driver_name}")
