@@ -3,6 +3,11 @@ import subprocess
 
 import docker
 
+USE_RUST = (
+    os.environ.get("TEST_RUSTY_STUB", "").lower()
+    in ("true", "y", "yes", "1", "on")
+)
+
 
 def _ensure_image(testkit_path, branch_name, artifacts_path):
     """Ensure that an up-to-date Docker image exists."""
@@ -14,6 +19,7 @@ def _ensure_image(testkit_path, branch_name, artifacts_path):
         image_name,
         image_path,
         log_path=artifacts_path,
+        args={"BUILD_RUST_STUB": "true" if USE_RUST else "false"},
         build_contexts={"boltstub": boltstub_path},
     )
 
