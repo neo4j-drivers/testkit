@@ -109,7 +109,9 @@ STATUS_CODES = [
     # Some early server versions sometimes return errors with 2xx status codes.
     # Drivers should pick up the error anyway and throw.
     200,
+    202,
     400,
+    404,
 ]
 
 
