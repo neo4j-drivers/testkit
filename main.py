@@ -223,7 +223,8 @@ def parse_command_line(configurations, argv):
         servers_help += config.name + ", "
 
     run_only_help = (
-        "Runs only the selected tests "
+        "Runs only the selected tests. Accepts several whitespace-separated "
+        "test names, which lets CI shard a suite across parallel jobs "
         "(see https://docs.python.org/3/library/unittest.html#command-line-interface)"  # noqa: 501
     )
 

@@ -152,14 +152,18 @@ class Container:
         )
 
     def run_selected_stub_tests(self, testpattern):
-        self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
+        self._container.exec(
+            ["python3", "-m", "unittest", "-v", *testpattern.split()]
+        )
 
     def run_selected_tls_tests(self, testpattern):
         # Build TLS server
         self._container.exec(
             ["go", "build", "-v", "."], workdir="/testkit/tlsserver"
         )
-        self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
+        self._container.exec(
+            ["python3", "-m", "unittest", "-v", *testpattern.split()]
+        )
 
     def run_selected_neo4j_tests(self, test_pattern, hostname, username,
                                  password, neo4j_config):
