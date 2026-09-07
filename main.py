@@ -121,10 +121,12 @@ def initialise_configurations(settings):
             # LTS version
             ("5.26",      True,        True,     "neo4j",  0),
             # Bolt 6.0
-            # TODO: uncomment when server is released
-            # ("2025.10",   True,        True,     "neo4j",  0),
-            # TODO: add first version with Bolt 6.1 GA when released
-            # [uuid-preview] search tag for removal of UUID preview workarounds
+            ("2025.10",   True,        True,     "neo4j",  0),
+            # Bolt 6.1
+            # Bolt 6.1 went GA in 2026.07. However, UUID support in Cypher and
+            # Kernel was only enabled in 2026.08, therefore we test that
+            # version instead
+            ("2026.08",   True,        True,     "neo4j",  0),
 
             # HTTP Query API
             # first iteration - behind feature flag

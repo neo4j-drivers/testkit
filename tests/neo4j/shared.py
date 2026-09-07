@@ -177,9 +177,7 @@ class ServerInfo:
         if self.edition == "aura":
             return 6, 0
         version = self.parsed_version()
-        if version >= (2026, 5):
-            # TODO: adjust version when Bolt 6.1 goes GA
-            # [uuid-preview] search tag for removal of UUID preview workarounds
+        if version >= (2026, 7):
             return 6, 1
         if version >= (2025, 10):
             return 6, 0
@@ -357,7 +355,10 @@ def has_uuid_support(test_case):
         test_case, bolt=(6, 1), http=(1, 2)
     )
     edition_support = server_info.edition in {"enterprise", "aura"}
-    return protocol_support and edition_support
+    cypher_and_kernel_uuid_support = server_info.parsed_version() >= (2026, 8)
+    return (
+        protocol_support and edition_support and cypher_and_kernel_uuid_support
+    )
 
 
 def has_tx_support(test_case):
