@@ -122,7 +122,10 @@ def _make_tx_endpoint(
         tx_errors=tx_errors,
     )
 
-    if fail_point != _FailPoint.PRE_TX_CREATION:
+    if fail_point not in {
+        _FailPoint.PRE_TX_CREATION_INCOMPLETE,
+        _FailPoint.PRE_TX_CREATION,
+    }:
         builder = builder.with_query(
             QUERY, fields, records, query_errors=query_errors
         )

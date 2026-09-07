@@ -8,6 +8,7 @@ from werkzeug import Response
 from ._base import (
     HttpEndpoint,
     HttpEndpointStateful,
+    TestKitRequestMatcher,
 )
 
 if t.TYPE_CHECKING:
@@ -40,13 +41,26 @@ class HttpIncompleteEndpoint(HttpEndpointStateful):
         self._inner._set_server(server)
 
     def _matcher(self) -> RequestMatcher:
-        class IncompleteMatcher(RequestMatcher):
+        class IncompleteMatcher(TestKitRequestMatcher):
             def match(self, request: Request) -> bool:
                 return inner_matcher.match(request)
 
             def __repr__(self) -> str:
                 return f"<{self.__class__.__name__} {inner_matcher!r}>"
 
+            def pprint(self, prefix: str | None) -> str:
+                prefix = prefix or ""
+                top_state = " (DONE)" if this.done() else ""
+                inner_pprint = TestKitRequestMatcher.format_matcher(
+                    inner_matcher, f"{prefix}  "
+                )
+
+                return (
+                    f"{prefix}{self.__class__.__name__}{top_state}:\n"
+                    f"{inner_pprint}"
+                )
+
+        this = self
         inner_matcher = self._inner._matcher()
         return IncompleteMatcher(inner_matcher.uri)
 
