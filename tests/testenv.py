@@ -26,7 +26,7 @@ def parse_shard(spec):
     parts = [part.strip() for part in spec.split("/")]
     if len(parts) != 2 or not all(part.isdigit() for part in parts):
         raise ValueError(
-            'shard must look like "index/count", for example "2/5", got %r'
+            'shard must look like "index/count", for example "2/5", got "%r"'
             % (spec,)
         )
     index, count = (int(part) for part in parts)
@@ -40,12 +40,8 @@ def parse_shard(spec):
 
 
 def shard_suite(suite, spec):
-    """Take every count-th test from suite, starting at index.
-
-    Tests are taken round-robin over the discovery order rather than in
-    contiguous blocks, so a single expensive module is spread across every
-    shard instead of landing wholly in one.
-    """
+    # Tests are taken round-robin so tests from an expansive
+    # module are spread across shards.
     index, count = parse_shard(spec)
     tests = list(_flatten(suite))
     selected = tests[index - 1::count]
