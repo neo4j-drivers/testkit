@@ -39,14 +39,18 @@ def parse_shard(spec):
     return index, count
 
 
-def shard_suite(suite, spec):
-    # Tests are taken round-robin so tests from an expansive
-    # module are spread across shards.
+def shard_list(items, spec):
+    # Items are taken round-robin so a run of expensive items is spread
+    # across shards.
     index, count = parse_shard(spec)
+    return items[index - 1::count]
+
+
+def shard_suite(suite, spec):
     tests = list(_flatten(suite))
-    selected = tests[index - 1::count]
+    selected = shard_list(tests, spec)
     print(
-        "Shard %d/%d: running %d of %d tests"
-        % (index, count, len(selected), len(tests))
+        "Shard %s: running %d of %d tests"
+        % (spec.strip(), len(selected), len(tests))
     )
     return unittest.TestSuite(selected)
