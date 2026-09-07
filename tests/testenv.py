@@ -31,7 +31,7 @@ def parse_shard(spec):
         raise ValueError("shard count must be at least 1")
 
     if not 1 <= index <= count:
-        raise ValueError("shard index must be >= 1 and <= %d" % (count,))
+        raise ValueError(f"shard index must be >= 1 and <= {count}")
 
     return index, count
 
