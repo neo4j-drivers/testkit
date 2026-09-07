@@ -22,26 +22,21 @@ def _flatten(suite):
 
 
 def parse_shard(spec):
-    """Parse an "index/count" shard spec into a 1-based (index, count)."""
     parts = [part.strip() for part in spec.split("/")]
     if len(parts) != 2 or not all(part.isdigit() for part in parts):
-        raise ValueError(
-            'shard must look like "index/count", for example "2/5", got %r'
-            % (spec,)
-        )
+        raise ValueError('shard must be in the form "#/#"')
+
     index, count = (int(part) for part in parts)
     if count < 1:
-        raise ValueError("shard count must be at least 1, got %r" % (spec,))
+        raise ValueError("shard count must be at least 1")
+
     if not 1 <= index <= count:
-        raise ValueError(
-            "shard index must be between 1 and %d, got %r" % (count, spec)
-        )
+        raise ValueError("shard index must be >= 1 and <= %d")
+
     return index, count
 
 
 def shard_list(items, spec):
-    # Items are taken round-robin so a run of expensive items is spread
-    # across shards.
     index, count = parse_shard(spec)
     return items[index - 1::count]
 
