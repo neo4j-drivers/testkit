@@ -479,7 +479,6 @@ def main(settings, configurations):
             server.start(networks[0])
             addresses_bolt = server.addresses_bolt()
             addresses = server.addresses()
-            hostname_bolt, port_bolt = addresses_bolt[0]
             hostname, port = addresses[0]
 
             # Wait until server is listening before running tests
