@@ -126,7 +126,8 @@ def initialise_configurations(settings):
             # Bolt 6.1 went GA in 2026.07. However, UUID support in Cypher and
             # Kernel was only enabled in 2026.08, therefore we test that
             # version instead
-            ("2026.08",   True,        True,     "neo4j",  0),
+            # TODO: uncomment when 2026.08 is GA
+            # ("2026.08",   True,        True,     "neo4j",  0),
 
             # HTTP Query API
             # first iteration - behind feature flag
