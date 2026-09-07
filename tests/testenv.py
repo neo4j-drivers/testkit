@@ -26,7 +26,7 @@ def parse_shard(spec):
     parts = [part.strip() for part in spec.split("/")]
     if len(parts) != 2 or not all(part.isdigit() for part in parts):
         raise ValueError(
-            'shard must look like "index/count", for example "2/5", got "%r"'
+            'shard must look like "index/count", for example "2/5", got %r'
             % (spec,)
         )
     index, count = (int(part) for part in parts)
