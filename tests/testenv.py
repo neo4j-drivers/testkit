@@ -38,7 +38,14 @@ def parse_shard(spec):
 
 def shard_list(items, spec):
     index, count = parse_shard(spec)
-    return items[index - 1::count]
+    selected = items[index - 1::count]
+    if not selected:
+        raise ValueError(
+            f"shard {index}/{count} selects nothing: there are only "
+            f"{len(items)} items to shard"
+        )
+
+    return selected
 
 
 def shard_suite(suite, spec):
