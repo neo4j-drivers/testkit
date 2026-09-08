@@ -70,11 +70,14 @@ class Standalone:
         if self._edition != "community":
             env_map["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
         logs_path = join(self._artifacts_path, "logs")
+        os.makedirs(logs_path, exist_ok=True)
         self._container = docker.run(
             self._image, self._hostname,
             mount_map={logs_path: "/logs"},
             env_map=env_map,
-            network=network
+            network=network,
+            log_path=logs_path,
+            background=True,
         )
 
     def addresses(self):
@@ -204,8 +207,11 @@ class Core:
 
         self._container = docker.run(
             image, self.name,
-            env_map=env_map, network=network, mount_map={logs_path: "/logs"},
-            log_path=self._artifacts_path, background=True
+            env_map=env_map,
+            network=network,
+            mount_map={logs_path: "/logs"},
+            log_path=self._artifacts_path,
+            background=True,
         )
 
     def stop(self):
