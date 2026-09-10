@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Dict,
 )
 
 from ..backend import Backend
@@ -42,7 +41,7 @@ __all__ = [
 
 
 class AuthTokenManager:
-    _registry: ClassVar[Dict[Any, AuthTokenManager]] = {}
+    _registry: ClassVar[dict[Any, AuthTokenManager]] = {}
 
     def __init__(
         self,
@@ -104,7 +103,7 @@ class AuthTokenManager:
 
 
 class BasicAuthTokenManager:
-    _registry: ClassVar[Dict[Any, BasicAuthTokenManager]] = {}
+    _registry: ClassVar[dict[Any, BasicAuthTokenManager]] = {}
 
     def __init__(
         self,
@@ -161,7 +160,7 @@ class BasicAuthTokenManager:
 
 
 class BearerAuthTokenManager:
-    _registry: ClassVar[Dict[Any, BearerAuthTokenManager]] = {}
+    _registry: ClassVar[dict[Any, BearerAuthTokenManager]] = {}
 
     def __init__(
         self,
