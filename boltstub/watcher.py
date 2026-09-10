@@ -31,73 +31,73 @@ from sys import stdout
 
 
 def black(s):
-    return "\x1b[30m{:s}\x1b[0m".format(s)
+    return f"\x1b[30m{s:s}\x1b[0m"
 
 
 def red(s):
-    return "\x1b[31m{:s}\x1b[0m".format(s)
+    return f"\x1b[31m{s:s}\x1b[0m"
 
 
 def green(s):
-    return "\x1b[32m{:s}\x1b[0m".format(s)
+    return f"\x1b[32m{s:s}\x1b[0m"
 
 
 def yellow(s):
-    return "\x1b[33m{:s}\x1b[0m".format(s)
+    return f"\x1b[33m{s:s}\x1b[0m"
 
 
 def blue(s):
-    return "\x1b[34m{:s}\x1b[0m".format(s)
+    return f"\x1b[34m{s:s}\x1b[0m"
 
 
 def magenta(s):
-    return "\x1b[35m{:s}\x1b[0m".format(s)
+    return f"\x1b[35m{s:s}\x1b[0m"
 
 
 def cyan(s):
-    return "\x1b[36m{:s}\x1b[0m".format(s)
+    return f"\x1b[36m{s:s}\x1b[0m"
 
 
 def white(s):
-    return "\x1b[36m{:s}\x1b[0m".format(s)
+    return f"\x1b[36m{s:s}\x1b[0m"
 
 
 def bright_black(s):
-    return "\x1b[30;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[30;1m{s:s}\x1b[0m"
 
 
 def bright_red(s):
-    return "\x1b[31;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[31;1m{s:s}\x1b[0m"
 
 
 def bright_green(s):
-    return "\x1b[32;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[32;1m{s:s}\x1b[0m"
 
 
 def bright_yellow(s):
-    return "\x1b[33;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[33;1m{s:s}\x1b[0m"
 
 
 def bright_blue(s):
-    return "\x1b[34;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[34;1m{s:s}\x1b[0m"
 
 
 def bright_magenta(s):
-    return "\x1b[35;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[35;1m{s:s}\x1b[0m"
 
 
 def bright_cyan(s):
-    return "\x1b[36;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[36;1m{s:s}\x1b[0m"
 
 
 def bright_white(s):
-    return "\x1b[37;1m{:s}\x1b[0m".format(s)
+    return f"\x1b[37;1m{s:s}\x1b[0m"
 
 
 class ColourFormatter(Formatter):
 
     def format(self, record):
-        s = super(ColourFormatter, self).format(record)
+        s = super().format(record)
         bits = s.split("  ", maxsplit=1)
         bits[0] = bright_black(bits[0])
         if record.levelno == CRITICAL:
@@ -121,13 +121,13 @@ class ColourFormatter(Formatter):
         return f"{t}.{ms:03d}"
 
 
-class Watcher(object):
+class Watcher:
     """Log watcher for monitoring driver and protocol activity."""
 
     handlers = {}
 
     def __init__(self, logger_name):
-        super(Watcher, self).__init__()
+        super().__init__()
         self.logger_name = logger_name
         self.logger = getLogger(self.logger_name)
         self.formatter = ColourFormatter("%(asctime)s  %(message)s")
