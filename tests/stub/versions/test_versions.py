@@ -76,7 +76,7 @@ class TestProtocolVersions(TestkitTestCase):
         else:
             vars_["#MANIFEST_BANG#"] = ""
 
-        script_path = self.script_path("v{}_return_1.script".format(version))
+        script_path = self.script_path(f"v{version}_return_1.script")
         with self._get_session(script_path, vars_=vars_) as session:
             result = session.run("RETURN 1 AS n")
             if server_agent or check_version or check_server_address:

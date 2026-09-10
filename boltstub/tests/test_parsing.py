@@ -20,11 +20,7 @@ import copy
 import itertools
 import re
 from collections import defaultdict
-from typing import (
-    Iterator,
-    Optional,
-    Tuple,
-)
+from collections.abc import Iterator
 
 import lark
 import pytest
@@ -186,9 +182,9 @@ def assert_dialogue_blocks_block_list(block_list, lines=None):
 
 
 def whitespace_generator(n: int,
-                         optional_with_nl: Optional[set],
-                         optional_without_nl: Optional[set]) -> \
-        Iterator[Tuple[str]]:
+                         optional_with_nl: set | None,
+                         optional_without_nl: set | None) -> \
+        Iterator[tuple[str]]:
     if optional_with_nl is None:
         optional_with_nl = set()
     if optional_without_nl is None:

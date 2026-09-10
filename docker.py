@@ -251,8 +251,8 @@ def build_and_tag(tag_name, dockerfile_path, cwd=None,
         subprocess.check_call(cmd, cwd=cwd)
     else:
         clean_tag = re.sub(r"\W", "_", tag_name)
-        out_path = os.path.join(log_path, "build_{}_out.log".format(clean_tag))
-        err_path = os.path.join(log_path, "build_{}_err.log".format(clean_tag))
+        out_path = os.path.join(log_path, f"build_{clean_tag}_out.log")
+        err_path = os.path.join(log_path, f"build_{clean_tag}_err.log")
         with open(out_path, "w") as out_fd:
             with open(err_path, "w") as err_fd:
                 subprocess.check_call(cmd,

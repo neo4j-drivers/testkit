@@ -63,7 +63,7 @@ def get_bolt_protocol(version, features=None):
         ):
             return sub(features)
     raise BoltUnknownVersionError(
-        "unsupported bolt version {}".format(version)
+        f"unsupported bolt version {version}"
     )
 
 

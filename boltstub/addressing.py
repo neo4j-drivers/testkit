@@ -64,7 +64,7 @@ class Address(tuple):
             return "{}:{}".format(*self)
 
     def __repr__(self):
-        return "{}({!r})".format(self.__class__.__name__, tuple(self))
+        return f"{self.__class__.__name__}({tuple(self)!r})"
 
     @property
     def host(self):
@@ -119,7 +119,7 @@ class AddressList(list):
         return " ".join(str(Address(_)) for _ in self)
 
     def __repr__(self):
-        return "{}({!r})".format(self.__class__.__name__, list(self))
+        return f"{self.__class__.__name__}({list(self)!r})"
 
     def resolve(self, family=0):
         """Resolve all addresses into one or more resolved address tuples.

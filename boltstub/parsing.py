@@ -28,10 +28,6 @@ from copy import deepcopy
 from os import path
 from textwrap import wrap
 from time import sleep
-from typing import (
-    List,
-    Optional,
-)
 
 import lark
 
@@ -55,7 +51,7 @@ from .util import EvalContext
 
 def load_parser():
     grammar_path = path.join(path.dirname(__file__), "grammar.lark")
-    with open(grammar_path, "r", encoding="utf-8") as fd:
+    with open(grammar_path, encoding="utf-8") as fd:
         return lark.Lark(
             fd, propagate_positions=True  # , ambiguity="explicit"
         )
@@ -110,20 +106,19 @@ class LineError(lark.GrammarError):
 
 class Line(str, abc.ABC):
     def __new__(cls, line_number: int, raw_line, content: str):
-        obj = super(Line, cls).__new__(cls, raw_line)
+        obj = super().__new__(cls, raw_line)
         obj.line_number = line_number
         obj.content = content
         return obj
 
     def __str__(self):
-        return "({:4}) {}".format(self.line_number,
-                                  super(Line, self).__str__())
+        return f"({self.line_number:4}) {super().__str__()}"
 
     def __repr__(self):
-        return "<{}>{}".format(self.__class__.__name__, self.__str__())
+        return f"<{self.__class__.__name__}>{self.__str__()}"
 
     def __getnewargs__(self):
-        return self.line_number, super(Line, self).__str__(), self.content
+        return self.line_number, super().__str__(), self.content
 
     @abc.abstractmethod
     def canonical(self):
@@ -236,11 +231,11 @@ class BangLine(Line):
             obj._type = BangLine.TYPE_PYTHON
             obj._arg = obj.content[3:].strip()
         else:
-            raise LineError(obj, 'unsupported Bang line: "{}"'.format(obj))
+            raise LineError(obj, f'unsupported Bang line: "{obj}"')
         return obj
 
     def canonical(self):
-        return "!: {}".format(self.content)
+        return f"!: {self.content}"
 
     def update_context(self, ctx: "ScriptContext"):
         if self._type == BangLine.TYPE_AUTO:
@@ -454,7 +449,7 @@ class ServerLine(MessageLine):
     always_parse = False
 
     def __new__(cls, *args, **kwargs):
-        obj = super(ServerLine, cls).__new__(cls, *args, **kwargs)
+        obj = super().__new__(cls, *args, **kwargs)
         obj.command_match = re.match(r"^<(.+?)>(.*)$", obj.content)
         obj.is_command = bool(obj.command_match)
         if not obj.is_command:
@@ -507,7 +502,7 @@ class ServerLine(MessageLine):
 
     def canonical(self):
         if self.is_command:
-            return "S: {}".format(self.content)
+            return f"S: {self.content}"
         else:
             return " ".join(("S:", self.parsed[0],
                              *map(json.dumps, self.parsed[1])))
@@ -518,7 +513,7 @@ class ServerLine(MessageLine):
             args = args.strip()
             if tag == "EXIT":
                 raise ServerExit(
-                    "server exit as part of the script: {}".format(self)
+                    f"server exit as part of the script: {self}"
                 )
             elif tag == "NOOP":
                 channel.send_raw(b"\x00\x00")
@@ -537,7 +532,7 @@ class ServerLine(MessageLine):
 
 class PythonLine(Line):
     def canonical(self):
-        return "PY: {}".format(self.content)
+        return f"PY: {self.content}"
 
     def exec(self, eval_context: EvalContext):
         eval_context.exec(self.content.strip())
@@ -548,11 +543,11 @@ class Block(abc.ABC):
         self.line_number = line_number
 
     @abc.abstractmethod
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         pass
 
     @abc.abstractmethod
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         pass
 
     @abc.abstractmethod
@@ -614,15 +609,15 @@ class Block(abc.ABC):
 
 
 class ClientBlock(Block):
-    def __init__(self, lines: List[ClientLine], line_number: int):
+    def __init__(self, lines: list[ClientLine], line_number: int):
         super().__init__(line_number)
         self.lines = lines
         self.index = 0
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         return self.lines[self.index:(self.index + 1)]
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         return self.lines[0:1]
 
     def assert_no_init(self):
@@ -687,7 +682,7 @@ class AutoBlock(ClientBlock):
         #   A: RESET
         # This is to avoid ambiguity when it comes to `?:`, `*:`, and `+:`
         # macros.
-        super(AutoBlock, self).__init__([line], line_number)
+        super().__init__([line], line_number)
 
     def _consume(self, channel):
         msg = channel.consume(self.lines[self.index].line_number)
@@ -696,15 +691,15 @@ class AutoBlock(ClientBlock):
 
 
 class ServerBlock(Block):
-    def __init__(self, lines: List[ServerLine], line_number: int):
+    def __init__(self, lines: list[ServerLine], line_number: int):
         super().__init__(line_number)
         self.lines = lines
         self.index = 0
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         return []
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         return []
 
     def assert_no_init(self):
@@ -760,7 +755,7 @@ class ServerBlock(Block):
 
 
 class PythonBlock(ServerBlock):
-    def __init__(self, lines: List[PythonLine], line_number: int):
+    def __init__(self, lines: list[PythonLine], line_number: int):
         super().__init__(lines, line_number)
         self.lines = lines
         self.index = 0
@@ -787,19 +782,19 @@ class PythonBlock(ServerBlock):
 
 
 class AlternativeBlock(Block):
-    def __init__(self, block_lists: List["BlockList"], line_number: int):
+    def __init__(self, block_lists: list["BlockList"], line_number: int):
         super().__init__(line_number)
         self.block_lists = block_lists
         self.selection = None
         self.assert_no_init()
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         if self.selection is None:
             return sum((b.accepted_messages(channel)
                         for b in self.block_lists), [])
         return self.block_lists[self.selection].accepted_messages(channel)
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         return sum((b.accepted_messages_after_reset(channel)
                     for b in self.block_lists),
                    [])
@@ -868,16 +863,16 @@ class AlternativeBlock(Block):
 
 
 class ParallelBlock(Block):
-    def __init__(self, block_lists: List["BlockList"], line_number: int):
+    def __init__(self, block_lists: list["BlockList"], line_number: int):
         super().__init__(line_number)
         self.block_lists = block_lists
         self.assert_no_init()
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         return sum((b.accepted_messages(channel)
                     for b in self.block_lists), [])
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         return sum((b.accepted_messages_after_reset(channel)
                     for b in self.block_lists), [])
 
@@ -942,10 +937,10 @@ class OptionalBlock(Block):
         self.block_list = block_list
         self.assert_no_init()
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         return self.block_list.accepted_messages(channel)
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         return self.block_list.accepted_messages_after_reset(channel)
 
     def assert_no_init(self):
@@ -1012,7 +1007,7 @@ class _RepeatBlock(Block, abc.ABC):
         self.block_list = block_list
         self.assert_no_init()
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         res = OrderedDict((m, True)
                           for m in self.block_list.accepted_messages(channel))
         if (
@@ -1025,7 +1020,7 @@ class _RepeatBlock(Block, abc.ABC):
             )
         return list(res.keys())
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         return self.block_list.accepted_messages_after_reset(channel)
 
     def assert_no_init(self):
@@ -1132,7 +1127,7 @@ class Repeat1Block(_RepeatBlock):
 
 
 class ConditionalBlock(Block):
-    def __init__(self, conditions: List[str], blocks: List[Block],
+    def __init__(self, conditions: list[str], blocks: list[Block],
                  line_number: int):
         super().__init__(line_number)
         self.conditions = conditions
@@ -1141,7 +1136,7 @@ class ConditionalBlock(Block):
 
     def _get_selected_block(
         self, channel, selection, probing
-    ) -> Optional[int]:
+    ) -> int | None:
         if selection is not None:
             return selection
         for i, condition in enumerate(self.conditions):
@@ -1151,26 +1146,26 @@ class ConditionalBlock(Block):
             return len(self.conditions)
         return None
 
-    def _probe_selection(self, channel, selection) -> Optional[Block]:
+    def _probe_selection(self, channel, selection) -> Block | None:
         selection = self._get_selected_block(channel, selection, probing=True)
         if selection is None:
             return None
         return self.blocks[selection]
 
-    def _get_selection(self, channel, selection) -> Optional[Block]:
+    def _get_selection(self, channel, selection) -> Block | None:
         selection = self._get_selected_block(channel, selection, probing=False)
         self.selection = selection
         if selection is None:
             return None
         return self.blocks[selection]
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         block = self._probe_selection(channel, self.selection)
         if not block:
             return []
         return block.accepted_messages(channel)
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         block = self._probe_selection(channel, None)
         if not block:
             return []
@@ -1255,7 +1250,7 @@ class ConditionalBlock(Block):
 
 
 class BlockList(Block):
-    def __init__(self, blocks: List[Block], line_number: int):
+    def __init__(self, blocks: list[Block], line_number: int):
         super().__init__(line_number)
         self.blocks = blocks
         self.index = 0
@@ -1263,7 +1258,7 @@ class BlockList(Block):
             if not prev_block.has_deterministic_end():
                 next_block.assert_no_init()
 
-    def accepted_messages(self, channel) -> List[ClientLine]:
+    def accepted_messages(self, channel) -> list[ClientLine]:
         res = []
         if self.index >= len(self.blocks):
             return res
@@ -1274,7 +1269,7 @@ class BlockList(Block):
                 break
         return res
 
-    def accepted_messages_after_reset(self, channel) -> List[ClientLine]:
+    def accepted_messages_after_reset(self, channel) -> list[ClientLine]:
         res = []
         if not self.blocks:
             return res
@@ -1380,7 +1375,7 @@ class ScriptFailure(RuntimeError):
 
 
 class ScriptDeviation(ScriptFailure):
-    def __init__(self, expected_lines: List[Line], received: Line):
+    def __init__(self, expected_lines: list[Line], received: Line):
         assert expected_lines
         self.expected_lines = expected_lines
         self.received = received
@@ -1428,7 +1423,7 @@ class ScriptContext:
 
 
 class Script:
-    def __init__(self, bang_lines: List[BangLine], block_list: BlockList,
+    def __init__(self, bang_lines: list[BangLine], block_list: BlockList,
                  filename=None):
         self.context = ScriptContext()
         self._consume_bang_lines(bang_lines)
@@ -1687,7 +1682,7 @@ class ScriptTransformer(lark.Transformer):
         return ConditionalBlock(conditions, blocks, meta.line)
 
 
-def parse(script: str, substitutions: Optional[dict] = None) -> Script:
+def parse(script: str, substitutions: dict | None = None) -> Script:
     if substitutions:
         for match, replacement in substitutions.items():
             script = script.replace(match, replacement)
