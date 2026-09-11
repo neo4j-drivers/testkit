@@ -25,7 +25,10 @@ import runner
 import settings
 import waiter
 from teamcity.messages import test_suite
-from tests.testenv import in_teamcity
+from tests.testenv import (
+    in_teamcity,
+    shard_list,
+)
 
 # TODO: Move to docker.py
 networks = ["testkit_1", "testkit_2"]
@@ -242,6 +245,9 @@ def parse_command_line(configurations, argv):
     set_test_flags(args.tests, args.external_integration,
                    args.run_only_selected)
     configs = construct_configuration_list(configurations, args.configs)
+    config_shard = os.environ.get("TEST_CONFIG_SHARD")
+    if config_shard:
+        configs = shard_list(configs, config_shard)
     print("Accepted configurations:")
     for item in configs:
         print("     ", item.name)
