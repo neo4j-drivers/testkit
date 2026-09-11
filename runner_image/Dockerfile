@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:24.04 AS build
+FROM ubuntu:22.04
 
 ARG BUILD_RUST_STUB=true
 
@@ -21,7 +21,7 @@ else
 fi
 EOF
 
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \

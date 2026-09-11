@@ -462,7 +462,7 @@ class TestSessionRun(TestkitTestCase):
 
     def test_long_string(self):
         string = "A" * 2 ** 20
-        query = "RETURN '{}'".format(string)
+        query = f"RETURN '{string}'"
         for _ in range(6):
             with self._get_session("r") as session:
                 records = with_retries(lambda s: list(s.run(query)), session)

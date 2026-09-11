@@ -32,7 +32,6 @@ from socket import (
     AF_INET,
     AF_INET6,
     getservbyname,
-    timeout,
 )
 
 BOLT_PORT_NUMBER = 7687
@@ -41,7 +40,7 @@ MAGIC_WS_STRING = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 PONG = b"\x0A\x00"
 
 
-class ReadWakeup(timeout):
+class ReadWakeup(TimeoutError):
     pass
 
 
@@ -90,7 +89,7 @@ class Address(tuple):
     family = None
 
     def __repr__(self):
-        return "{}({!r})".format(self.__class__.__name__, tuple(self))
+        return f"{self.__class__.__name__}({tuple(self)!r})"
 
     @property
     def host(self):
@@ -297,7 +296,7 @@ class Wire:
             requested = max(required, 8192)
             try:
                 received = self._socket.recv(requested)
-            except timeout:
+            except TimeoutError:
                 raise ReadWakeup from None
             except OSError as exc:
                 self._broken = True
@@ -323,7 +322,7 @@ class Wire:
         while self._output:
             try:
                 n = self._socket.send(self._output)
-            except timeout:
+            except TimeoutError:
                 continue
             except OSError:
                 self._broken = True

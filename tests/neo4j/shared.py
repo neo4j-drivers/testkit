@@ -599,7 +599,7 @@ class QueryBuilder:
     @staticmethod
     def escape_identifier(identifier):
         identifier = identifier.replace("`", "``")
-        return "`{}`".format(identifier)
+        return f"`{identifier}`"
 
     @staticmethod
     def _wait_clause(version):

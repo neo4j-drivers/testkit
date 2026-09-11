@@ -8,6 +8,9 @@ USE_RUST = (
     in ("true", "y", "yes", "1", "on")
 )
 
+VENV_PATH = "/root/.venv"
+PYTHON_BIN = f"{VENV_PATH}/bin/python"
+
 
 def _ensure_image(testkit_path, branch_name, artifacts_path):
     """Ensure that an up-to-date Docker image exists."""
@@ -66,14 +69,22 @@ class Container:
         self._init_container()
 
     def _init_container(self):
-        self._container.exec(["pip3", "install", "-U", "pip"],
-                             log_path=self._build_artifacts_path)
-        self._container.exec(["pip3", "install", "-Ur",
-                              "/testkit/requirements.txt"],
-                             log_path=self._build_artifacts_path)
+        self._container.exec(
+            ["python3", "-m", "venv", VENV_PATH],
+            log_path=self._build_artifacts_path,
+        )
+        pip = (PYTHON_BIN, "-m", "pip")
+        self._container.exec(
+            [*pip, "install", "-U", "pip"],
+            log_path=self._build_artifacts_path,
+        )
+        self._container.exec(
+            [*pip, "install", "-Ur", "/testkit/requirements.txt"],
+            log_path=self._build_artifacts_path,
+        )
 
     def run_stub_tests(self):
-        self._container.exec(["python3", "-m", "tests.stub.suites"])
+        self._container.exec([PYTHON_BIN, "-m", "tests.stub.suites"])
 
     def run_tls_tests(self):
         # Build TLS server
@@ -83,14 +94,14 @@ class Container:
             env_map={"GO111MODULE": "off"},
         )
         self._container.exec(
-            ["python3", "-m", "tests.tls.suites"]
+            [PYTHON_BIN, "-m", "tests.tls.suites"]
         )
 
     def should_run_neo4j_tests(self, neo4j_config):
         self._update_neo4j_tests_env_config(neo4j_config)
         try:
             self._container.exec(
-                ["python3", "-m", "tests.neo4j.version_check"],
+                [PYTHON_BIN, "-m", "tests.neo4j.version_check"],
                 env_map=self._env
             )
         except subprocess.CalledProcessError as e:
@@ -109,7 +120,7 @@ class Container:
             hostname, username, password, neo4j_config
         )
         self._container.exec(
-            ["python3", "-m", "tests.neo4j.suites", suite, neo4j_config.name],
+            [PYTHON_BIN, "-m", "tests.neo4j.suites", suite, neo4j_config.name],
             env_map=self._env
         )
 
@@ -147,21 +158,22 @@ class Container:
         suite = os.environ.get("TEST_NEO4J_VERSION", "4.4")
         self._container.exec(
             [
-                "python3", "-m", "tests.neo4j.suites", suite,
+                PYTHON_BIN, "-m", "tests.neo4j.suites", suite,
                 f"external-{suite}"
             ],
             env_map=self._env
         )
 
     def run_selected_stub_tests(self, testpattern):
-        self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
+        self._container.exec([PYTHON_BIN, "-m", "unittest", "-v", testpattern])
 
     def run_selected_tls_tests(self, testpattern):
         # Build TLS server
         self._container.exec(
-            ["go", "build", "-v", "."], workdir="/testkit/tlsserver"
+            ["go", "build", "-buildvcs=false", "-v", "."],
+            workdir="/testkit/tlsserver",
         )
-        self._container.exec(["python3", "-m", "unittest", "-v", testpattern])
+        self._container.exec([PYTHON_BIN, "-m", "unittest", "-v", testpattern])
 
     def run_selected_neo4j_tests(self, test_pattern, hostname, username,
                                  password, neo4j_config):
@@ -177,7 +189,7 @@ class Container:
             "TEST_NEO4J_DEFAULT_DB": "neo4j",
         })
         self._container.exec(
-            ["python3", "-m", "unittest", "-v", test_pattern],
+            [PYTHON_BIN, "-m", "unittest", "-v", test_pattern],
             env_map=self._env
         )
 
@@ -194,6 +206,6 @@ class Container:
         if self._env.get("TEST_NEO4J_HOST") == "localhost":
             self._env.update({"TEST_NEO4J_HOST": "host.docker.internal"})
         self._container.exec(
-            ["python3", "-m", "unittest", "-v", test_pattern],
+            [PYTHON_BIN, "-m", "unittest", "-v", test_pattern],
             env_map=self._env
         )
