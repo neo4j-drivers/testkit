@@ -1,8 +1,12 @@
 import nutkit.protocol as types
 from nutkit.frontend import ApplicationCodeError
 from tests.neo4j.shared import (
+    get_auto_resolved_db,
     get_driver,
     get_server_info,
+    requires_tx_metadata_support,
+    requires_tx_support,
+    requires_tx_timeout_support,
 )
 from tests.shared import (
     get_driver_name,
@@ -24,6 +28,17 @@ class TestTxFuncRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    def _get_session(
+        self, access_mode, bookmarks=None, database=None, fetch_size=None
+    ):
+        if database is None:
+            database = get_auto_resolved_db()
+        return self._driver.session(
+            access_mode, bookmarks=bookmarks, database=database,
+            fetch_size=fetch_size
+        )
+
+    @requires_tx_support
     def test_simple_query(self):
         def work(tx):
             result = tx.run("UNWIND [1, 2, 3, 4] AS x RETURN x")
@@ -38,7 +53,7 @@ class TestTxFuncRun(TestkitTestCase):
         def _test():
             self._driver.close()
             self._driver = get_driver(self._backend, user_agent="test")
-            self._session1 = self._driver.session("r", fetch_size=2)
+            self._session1 = self._get_session("r", fetch_size=2)
             self._session1.execute_read(work)
             self._session1.close()
             self._session1 = None
@@ -47,15 +62,18 @@ class TestTxFuncRun(TestkitTestCase):
             with self.subTest(consume=consume):
                 _test()
 
+    @requires_tx_support
     def test_parameter(self):
         def work(tx):
             result = tx.run("RETURN $x", {"x": types.CypherInt(1)})
             self.assertEqual(list(result),
                              [types.Record([types.CypherInt(1)])])
 
-        self._session1 = self._driver.session("r")
+        self._session1 = self._get_session("r")
         self._session1.execute_read(work)
 
+    @requires_tx_support
+    @requires_tx_metadata_support
     def test_meta_data(self):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
@@ -66,11 +84,10 @@ class TestTxFuncRun(TestkitTestCase):
             self.assertIsInstance(record, types.Record)
             self.assertEqual(record.values, [types.CypherMap(metadata)])
 
-        self._session1 = self._driver.session("r")
-        self._session1.execute_read(
-            work, tx_meta=metadata,
-        )
+        self._session1 = self._get_session("r")
+        self._session1.execute_read(work, tx_meta=metadata)
 
+    @requires_tx_support
     def test_iteration_nested(self):
         # Verifies that it is possible to nest results with small fetch sizes
         # within a transaction function.
@@ -86,7 +103,7 @@ class TestTxFuncRun(TestkitTestCase):
                 params={"i": types.CypherInt(i), "n": types.CypherInt(n)}
             )
 
-        self._session1 = self._driver.session("r", fetch_size=2)
+        self._session1 = self._get_session("r", fetch_size=2)
 
         # Todo: stash away the results for each level and test the behaviour
         #       of the driver when using them outside of the transaction.
@@ -130,6 +147,7 @@ class TestTxFuncRun(TestkitTestCase):
         self.assertEqual(lasts, {0: 6, 1: 11, 2: 1001})
         self.assertEqual(x, "done")
 
+    @requires_tx_support
     def test_updates_last_bookmark_on_commit(self):
         # Verifies that last bookmark is set on the session upon succesful
         # commit using transactional function.
@@ -137,12 +155,13 @@ class TestTxFuncRun(TestkitTestCase):
         def run(tx):
             tx.run("CREATE (n:SessionNode) RETURN n")
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         self._session1.execute_write(run)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
+    @requires_tx_support
     def test_does_not_update_last_bookmark_on_rollback(self):
         # Verifies that last bookmarks still is empty when transactional
         # function rolls back transaction.
@@ -150,12 +169,13 @@ class TestTxFuncRun(TestkitTestCase):
             tx.run("CREATE (n:SessionNode) RETURN n")
             raise ApplicationCodeError("No thanks")
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with self.assertRaises(types.FrontendError):
             self._session1.execute_write(run)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @requires_tx_support
     def test_client_exception_rolls_back_change(self):
         node_id = -1
 
@@ -174,13 +194,15 @@ class TestTxFuncRun(TestkitTestCase):
             record = result.next()
             self.assertIsInstance(record, types.NullRecord)
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         expected_exc = types.FrontendError
         with self.assertRaises(expected_exc):
             self._session1.execute_write(run)
 
         self._session1.execute_read(assertion_query)
 
+    @requires_tx_metadata_support
+    @requires_tx_timeout_support
     def test_tx_func_configuration(self):
         def run(tx):
             values = []
@@ -198,10 +220,11 @@ class TestTxFuncRun(TestkitTestCase):
 
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         res = self._session1.execute_read(run, timeout=3000, tx_meta=metadata)
         self.assertEqual(res, list(map(types.CypherInt, range(1, 5))))
 
+    @requires_tx_timeout_support
     def test_tx_timeout(self):
         class WrappedError(Exception):
             def __init__(self, inner):
@@ -249,9 +272,9 @@ class TestTxFuncRun(TestkitTestCase):
 
         exc = None
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         db = self._session1.execute_write(create)
-        self._session2 = self._driver.session(
+        self._session2 = self._get_session(
             "w", bookmarks=self._session1.last_bookmarks(), database=db
         )
         self._session1.execute_write(update1)

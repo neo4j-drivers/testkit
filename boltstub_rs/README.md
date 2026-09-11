@@ -711,7 +711,7 @@ Requires JOLT version 3+.
 
 Example:
 ```json lines
-{"UT": ["Encrypted Data", 6, 10, "encypted data requires an updated driver."]}
+{"UT": ["Encrypted Data", 6, 10, "encrypted data requires an updated driver."]}
 {"UT": ["Quantum Integer", 11, 3]}
 ```
 

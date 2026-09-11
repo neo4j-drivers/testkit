@@ -7,13 +7,13 @@ from nutkit.frontend import Driver
 from tests.shared import (
     get_dns_resolved_server_address,
     get_driver_name,
-    TestkitTestCase,
 )
 from tests.stub.shared import StubServer
+from tests.stub.summary._base import _TestSummaryBase
 
 
-class _TestSummaryBase(TestkitTestCase):
-    """Test result summary contents."""
+class _TestSummaryBaseBolt(_TestSummaryBase):
+    """Test result summary contents via BOLT."""
 
     full_notifications_feat = types.Feature.API_DRIVER_NOTIFICATIONS_CONFIG
     version_folder = ()
@@ -95,7 +95,7 @@ class _TestSummaryBase(TestkitTestCase):
         self.assertEqual(actual, expected)
 
 
-class _TestSummaryDiscardMixin(_TestSummaryBase):
+class _TestSummaryDiscardMixin(_TestSummaryBaseBolt):
     def _get_summary(self, script, vars_=None):
         with self._get_session(script, vars_=vars_, fetch_size=1) as session:
             result = session.run("RETURN 1 AS n")
@@ -103,7 +103,7 @@ class _TestSummaryDiscardMixin(_TestSummaryBase):
             return result.consume()
 
 
-class TestSummaryBasicInfo(_TestSummaryBase):
+class TestSummaryBasicInfo(_TestSummaryBaseBolt):
     required_features = types.Feature.BOLT_4_4,
     version_folder = "v4x4",
 
@@ -209,7 +209,7 @@ class TestSummaryBasicInfoDiscard(
         super().test_no_times()
 
 
-class TestSummaryNotifications4x4(_TestSummaryBase):
+class TestSummaryNotifications4x4(_TestSummaryBaseBolt):
     required_features = types.Feature.BOLT_4_4,
     version_folder = "v4x4",
 
@@ -353,7 +353,7 @@ NO_DATA_GQL_STATUS_OBJECT = {
 }
 
 
-class TestSummaryNotifications5x6(_TestSummaryBase):
+class TestSummaryNotifications5x6(_TestSummaryBaseBolt):
     required_features = types.Feature.BOLT_5_6,
     version_folder = "v5x6",
 
@@ -568,7 +568,7 @@ class TestSummaryNotifications5x6Discard(
         super().test_multiple_notifications()
 
 
-class _TestSummaryGqlStatusObjectsBase(_TestSummaryBase):
+class _TestSummaryGqlStatusObjectsBase(_TestSummaryBaseBolt):
     def assert_is_non_notification_status(self, status):
         self.assertEqual(status.position, None)
         self.assertEqual(status.classification, "UNKNOWN")
@@ -1403,7 +1403,7 @@ class TestSummaryGqlStatusObjects5x6Discard(
         super().test_fill_diagnostic_record_values()
 
 
-class TestSummaryPlan4x4(_TestSummaryBase):
+class TestSummaryPlan4x4(_TestSummaryBaseBolt):
     required_features = (types.Feature.BOLT_4_4,)
     version_folder = ("v4x4",)
 
@@ -1502,7 +1502,7 @@ class TestSummaryPlanDiscard4x4(_TestSummaryDiscardMixin, TestSummaryPlan4x4):
         super().test_profile()
 
 
-class TestSummaryPlan6x0(_TestSummaryBase):
+class TestSummaryPlan6x0(_TestSummaryBaseBolt):
     required_features = (types.Feature.BOLT_6_0,)
     version_folder = ("v6x0",)
 
@@ -1811,7 +1811,7 @@ class TestSummaryPlanDiscard6x0(_TestSummaryDiscardMixin, TestSummaryPlan6x0):
         super().test_profile()
 
 
-class TestSummaryCounters(_TestSummaryBase):
+class TestSummaryCounters(_TestSummaryBaseBolt):
     required_features = types.Feature.BOLT_4_4,
     version_folder = "v4x4",
 

@@ -9,6 +9,7 @@ TEST_BACKEND_HOST  Hostname of backend, default is localhost
 TEST_BACKEND_PORT  Port on backend host, default is 9876
 """
 
+from __future__ import annotations
 
 import enum
 import functools
@@ -17,6 +18,7 @@ import os
 import re
 import socket
 import time
+import typing as t
 import unittest
 import warnings
 from contextlib import contextmanager
@@ -26,6 +28,13 @@ import ifaddr
 from nutkit import protocol
 from nutkit.backend import Backend
 from nutkit.frontend import FakeTime
+from nutkit.protocol.feature import Feature
+
+MIN_INT64: t.Final[int] = -(2**63)
+MAX_INT64: t.Final[int] = (2**63) - 1
+
+AVERAGE_SECONDS_IN_MONTH: t.Final[int] = 2629746
+AVERAGE_SECONDS_IN_DAY: t.Final[int] = 86400
 
 
 def get_backend_host_and_port():
@@ -149,7 +158,7 @@ def get_driver_name():
 
 class TestkitTestCase(unittest.TestCase):
 
-    required_features = ()
+    required_features: tuple[Feature, ...] = ()
     maxDiff = None
 
     def setUp(self):

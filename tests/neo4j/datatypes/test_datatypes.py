@@ -1,5 +1,6 @@
 import nutkit.protocol as types
 from tests.neo4j.datatypes._base import _TestTypesBase
+from tests.neo4j.shared import requires_tx_support
 from tests.shared import get_driver_name
 
 
@@ -34,7 +35,12 @@ class TestDataTypes(_TestTypesBase):
             types.CypherString("1"),
             types.CypherString("-17∂ßå®"),
             types.CypherString("String"),
+            types.CypherString("🐒💘🍌"),
             types.CypherString(""),
+            types.CypherString("é"),
+            types.CypherString("e\u0301"),  # 'e' + combining acute accent
+            types.CypherString("Å"),
+            types.CypherString("A\u030a"),  # 'A' + combining ring above
 
             types.CypherList([
                 types.CypherString("Hello"),
@@ -49,6 +55,7 @@ class TestDataTypes(_TestTypesBase):
             }),
 
             types.CypherBytes(bytearray([0x00, 0x33, 0x66, 0x99, 0xCC, 0xFF])),
+            types.CypherBytes(bytearray([])),
         ]
 
         self._create_driver_and_session()
@@ -147,6 +154,7 @@ class TestDataTypes(_TestTypesBase):
         self._create_driver_and_session()
         self._verify_can_echo(types.CypherList(test_lists))
 
+    @requires_tx_support
     def test_should_echo_node(self):
         def work(tx):
             result = tx.run(
@@ -175,6 +183,7 @@ class TestDataTypes(_TestTypesBase):
             })
         )
 
+    @requires_tx_support
     def test_should_echo_relationship(self):
         def work(tx):
             result = tx.run("CREATE (a)-[r:KNOWS {since:1999}]->(b) "
@@ -196,7 +205,7 @@ class TestDataTypes(_TestTypesBase):
 
         # TODO: will need to test elementId instead, once all drivers and
         #       backends support it.
-        self.assertNotEqual(a.id, b.id)
+        self.assertNotEqual(a.elementId, b.elementId)
 
         self.assertEqual(a.id, r.startNodeId)
         self.assertEqual(b.id, r.endNodeId)
@@ -207,6 +216,7 @@ class TestDataTypes(_TestTypesBase):
             {"since": types.CypherInt(1999)}
         ))
 
+    @requires_tx_support
     def test_should_echo_path(self):
         def work(tx):
             result = tx.run("CREATE p=(a)-[ab:X]->(b)-[bc:X]->(c) "
@@ -232,9 +242,9 @@ class TestDataTypes(_TestTypesBase):
 
         # TODO: will need to test elementId instead, once all drivers and
         #       backends support it.
-        self.assertNotEqual(a.id, b.id)
-        self.assertNotEqual(a.id, c.id)
-        self.assertNotEqual(b.id, c.id)
+        self.assertNotEqual(a.elementId, b.elementId)
+        self.assertNotEqual(a.elementId, c.elementId)
+        self.assertNotEqual(b.elementId, c.elementId)
 
         self.assertEqual(ab, types.CypherRelationship(
             ab.id, a.id, b.id, types.CypherString("X"), types.CypherMap({}),
@@ -286,7 +296,6 @@ class TestDataTypes(_TestTypesBase):
                                   "c": types.CypherFloat(3.3),
                                   "d": types.CypherString("Hello World"),
                                   "e": types.CypherNull(None)}),
-
         }
 
         self._create_driver_and_session()

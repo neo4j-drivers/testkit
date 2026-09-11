@@ -1,4 +1,5 @@
 """Enumerate all the capabilities in the drivers."""
+
 from enum import Enum
 
 
@@ -149,6 +150,8 @@ class Feature(Enum):
     BOLT_HANDSHAKE_MANIFEST_V1 = "Feature:Bolt:HandshakeManifestV1"
     # The driver supports patching DateTimes to use UTC for Bolt 4.3 and 4.4
     BOLT_PATCH_UTC = "Feature:Bolt:Patch:UTC"
+    # The driver support connecting to the HTTP/Query API as initially released
+    HTTP_QUERY_API_2_0 = "Feature:HTTP:QueryAPI:2.0"
     # The driver retries idempotent errors on session run
     IDEMPOTENT_RETRIES = "Feature:IdempotentRetries"
     # The driver supports impersonation
@@ -240,7 +243,7 @@ class Feature(Enum):
     # The driver understands and follow the connection hint
     # connection.recv_timeout_seconds which tells it to close the connection
     # after not receiving an answer on any request for longer than the given
-    # time period. On timout, the driver should remove the server from its
+    # time period. On timeout, the driver should remove the server from its
     # routing table and assume all other connections to the server are dead
     # as well.
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"

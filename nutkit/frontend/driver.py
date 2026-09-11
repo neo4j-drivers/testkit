@@ -35,14 +35,20 @@ class Driver:
             or auth_token is None
         ):
             self._auth_token = auth_token
-        else:
-            assert isinstance(
-                auth_token, (AuthTokenManager,
-                             BearerAuthTokenManager,
-                             BasicAuthTokenManager)
+        elif isinstance(
+            auth_token,
+            (
+                AuthTokenManager,
+                BearerAuthTokenManager,
+                BasicAuthTokenManager,
             )
+        ):
             self._auth_token_manager = auth_token
             auth_token_manager_id = auth_token.id
+        else:
+            raise TypeError(
+                f"auth_token has unsupported type {type(auth_token)}"
+            )
         client_certificate_, client_certificate_provider_id_ = None, None
         if client_certificate is not None:
             assert isinstance(
