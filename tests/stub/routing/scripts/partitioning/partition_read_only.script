@@ -1,0 +1,55 @@
+!: BOLT 5.8
+!: ALLOW CONCURRENT
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+
+*: RESET
+
+{*
+    C: ROUTE "*" "*" "*"
+    S: SUCCESS { "rt": { "ttl": 1000, "db": "neo4j", "servers": [{"addresses": ["#HOST#:9001", "#HOST#:9002"], "role":"ROUTE"}, {"addresses": ["#HOST#:9001", "#HOST#:9002"], "role":"READ"}, {"addresses": [], "role":"WRITE"}]}}
+
+    *: RESET
+*}
+
+{{
+    {{
+        C: BEGIN {"mode": "r", "[bookmarks]": {"[]": "*"}, "db": null}
+    ----
+        C: BEGIN {"mode": "r", "[bookmarks]": {"[]": "*"}, "[db]": "neo4j"}
+    }}
+    S: SUCCESS {"db": "neo4j"}
+    C: RUN "RETURN 1 AS n" {} {}
+    S: SUCCESS {"fields": ["n"]}
+    {{
+        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+        S: RECORD [1]
+    ----
+        C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+    }}
+    S: SUCCESS {"type": "r"}
+    {{
+        C: COMMIT
+    ----
+        C: ROLLBACK
+    }}
+    S: SUCCESS {}
+----
+    {{
+        C: RUN "RETURN 1 AS n" {} {"mode": "r", "db": null}
+    ----
+        C: RUN "RETURN 1 AS n" {} {"mode": "r", "[db]": "neo4j"}
+    }}
+    S: SUCCESS {"fields": ["n"], "db": "neo4j"}
+    {{
+        C: PULL {"n": {"Z": "*"}, "[qid]": -1}
+        S: RECORD [1]
+    ----
+        C: DISCARD {"n": {"Z": "*"}, "[qid]": -1}
+    }}
+    S: SUCCESS {"type": "r"}
+}}
+
+*: RESET
+?: GOODBYE
