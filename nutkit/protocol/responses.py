@@ -388,7 +388,7 @@ class Record:
         v = []
         for x in self.values:
             v.append(str(x))
-        return f"Record, values {" ".join(v)}"
+        return f"Record, values {" ".join(v)}"  # noqa: Q003 - false positive
 
     def __repr__(self):
         v = []

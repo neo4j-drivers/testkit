@@ -271,12 +271,12 @@ class HttpEndpoint(abc.ABC):
                 raise ValueError(
                     "Basic auth `realm` is not supported via HTTP"
                 )
-            auth_bytes = f"{username}:{password}".encode("utf-8")
+            auth_bytes = f"{username}:{password}".encode()
             b64_auth_bytes = base64.b64encode(auth_bytes).decode("ascii")
             return {"Authorization": f"Basic {b64_auth_bytes}"}
         if auth.scheme == "bearer":
             token = auth.credentials  # type: ignore
-            token_bytes = token.encode("utf-8")
+            token_bytes = str(token).encode()
             b64_token_bytes = base64.b64encode(token_bytes).decode("ascii")
             return {"Authorization": f"Bearer {b64_token_bytes}"}
 
