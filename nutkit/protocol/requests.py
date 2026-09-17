@@ -914,10 +914,10 @@ class EncryptToBytes:
         encrypt with. Mutually exclusive with key_alias; exactly one of the
         two must be set.
     :param iv: The exact 12-byte IV the driver must use for this
-        encrypt call, or None to draw a random one. The backend raises if
-        the IV is not exactly 12 bytes or the operation doesn't consume it.
-        Used to assert byte-exact ciphertext in the deterministic
-        encryption tests.
+        encrypt call, or None to draw a random one. A backend should reject
+        an IV that is not exactly 12 bytes, but is not expected to verify
+        that the IV was consumed. Used to assert byte-exact ciphertext in
+        the deterministic encryption tests.
     """
 
     def __init__(self, driver_id, value, aad=None, profile_name=None,
