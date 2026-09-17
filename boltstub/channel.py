@@ -17,8 +17,8 @@
 
 
 import traceback
+from collections.abc import Iterable
 from time import sleep
-from typing import Iterable
 
 from .bolt_protocol import (
     BoltProtocol,

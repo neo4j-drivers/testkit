@@ -448,7 +448,7 @@ class TestServerLine:
     def test_sleep_server_line(self, duration, channel_mock, mocker):
         sleep_path = __name__.rsplit(".", 2)[0] + ".parsing.sleep"
         with patch(sleep_path, return_value=None) as patched_sleep:
-            content = "<SLEEP> {}".format(duration)
+            content = f"<SLEEP> {duration}"
             line = ServerLine(10, "S: " + content, content)
             assert line.try_run_command(channel_mock)
             patched_sleep.assert_called_once_with(duration)

@@ -669,7 +669,7 @@ def test_manual_replies(server_version, request_tag, request_name,
     S: {} {{}}
     """.format(
         ".".join(map(str, server_version)),
-        "!: AUTO {}\n".format(request_name) if with_auto else "\n",
+        f"!: AUTO {request_name}\n" if with_auto else "\n",
         request_name,
         response_name
     ))

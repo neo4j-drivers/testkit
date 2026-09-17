@@ -189,7 +189,7 @@ class TestOptimizations(TestkitTestCase):
     def test_exactly_one_reset_on_failure(self):
         def test():
             script_path = self.script_path(
-                version, "failure_on_{}.script".format(fail_on)
+                version, f"failure_on_{fail_on}.script"
             )
             if routing:
                 self._router.start(

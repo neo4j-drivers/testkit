@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Dict,
 )
 
 from ..backend import Backend
@@ -33,7 +32,7 @@ class ClientCertificateHolder:
 
 
 class ClientCertificateProvider:
-    _registry: ClassVar[Dict[Any, ClientCertificateProvider]] = {}
+    _registry: ClassVar[dict[Any, ClientCertificateProvider]] = {}
     _backend: Any
     _handler: Callable[[], ClientCertificateHolder]
 

@@ -327,7 +327,7 @@ class Structure:
 
             return cls(StructTagV1.path, uniq_nodes, uniq_rels, ids,
                        packstream_version=1)
-        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+        raise TypeError(f"Unsupported jolt type: {type(jolt)}")
 
     @classmethod
     def _from_jolt_v2_type(cls, jolt: jolt_v2_types.JoltType):
@@ -416,7 +416,7 @@ class Structure:
 
             return cls(StructTagV2.path, uniq_nodes, uniq_rels, ids,
                        packstream_version=2)
-        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+        raise TypeError(f"Unsupported jolt type: {type(jolt)}")
 
     @classmethod
     def _from_jolt_v3_type(cls, jolt: jolt_v3_types.JoltType):
@@ -443,14 +443,14 @@ class Structure:
                 extra,
                 packstream_version=3,
             )
-        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+        raise TypeError(f"Unsupported jolt type: {type(jolt)}")
 
     @classmethod
     def _from_jolt_v4_type(cls, jolt: jolt_v4_types.JoltType):
         # jolt v4 does not include new structure types, just the UUID
         # type, which is a packstream primitive, so this function should
         # never be called.
-        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+        raise TypeError(f"Unsupported jolt type: {type(jolt)}")
 
     @classmethod
     def from_jolt_type(cls, jolt: jolt_common_types.JoltType):
@@ -462,7 +462,7 @@ class Structure:
             return cls._from_jolt_v3_type(jolt)
         elif isinstance(jolt, jolt_v4_types.JoltType):
             return cls._from_jolt_v4_type(jolt)
-        raise TypeError("Unsupported jolt type: {}".format(type(jolt)))
+        raise TypeError(f"Unsupported jolt type: {type(jolt)}")
 
     def _to_jolt_v1_type(self):
         if self.tag == StructTagV1.date:
@@ -511,7 +511,7 @@ class Structure:
                     last_node = nodes[idx]
                     path.append(nodes[idx].to_jolt_type())
             return jolt_v1_types.JoltPath(*path)
-        raise TypeError("Unsupported struct type: {}".format(self.tag))
+        raise TypeError(f"Unsupported struct type: {self.tag}")
 
     def _to_jolt_v2_type(self):
         if self.tag == StructTagV2.date:
@@ -562,7 +562,7 @@ class Structure:
                     last_node = nodes[idx]
                     path.append(nodes[idx].to_jolt_type())
             return jolt_v2_types.JoltPath(*path)
-        raise TypeError("Unsupported struct type: {}".format(self.tag))
+        raise TypeError(f"Unsupported struct type: {self.tag}")
 
     def _to_jolt_v3_type(self):
         if self.tag in (
@@ -597,7 +597,7 @@ class Structure:
             return jolt_v3_types.JoltUnsupportedType(
                 name, protocol_minimum_major, protocol_minimum_minor
             )
-        raise TypeError("Unsupported struct type: {}".format(self.tag))
+        raise TypeError(f"Unsupported struct type: {self.tag}")
 
     def _to_jolt_v4_type(self):
         return self._to_jolt_v3_type()

@@ -359,7 +359,9 @@ def test_struct_to_jolt_type(packstream_version, fields, res):
 
 def test_can_display_translated_structure_with_uuid_in_map():
     from ..bolt_protocol import TranslatedStructure
-    uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+
+    uuid_raw = "550e8400-e29b-41d4-a716-446655440000"
+    uuid_val = uuid.UUID(uuid_raw)
     struct = TranslatedStructure(
         "NODE", b"\x4E",
         1,                          # node id
@@ -368,15 +370,17 @@ def test_can_display_translated_structure_with_uuid_in_map():
         "element-1",                # element_id
         packstream_version=4
     )
-    str(struct)
+    assert uuid_raw in str(struct)
 
 
 def test_can_display_translated_structure_with_uuid_in_list():
     from ..bolt_protocol import TranslatedStructure
-    uuid_val = uuid.UUID("550e8400-e29b-41d4-a716-446655440000")
+
+    uuid_raw = "550e8400-e29b-41d4-a716-446655440000"
+    uuid_val = uuid.UUID(uuid_raw)
     struct = TranslatedStructure(
         "LIST", b"\x00",
         [uuid_val],                 # list containing a UUID
         packstream_version=4
     )
-    str(struct)
+    assert uuid_raw in str(struct)

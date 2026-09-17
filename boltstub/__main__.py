@@ -116,11 +116,11 @@ def main():
             for error in service.exceptions:
                 extra = ""
                 if hasattr(error, "script") and error.script.filename:
-                    extra += " in {!r}".format(error.script.filename)
+                    extra += f" in {error.script.filename!r}"
                 if isinstance(error, ScriptFailure):
-                    print("Script mismatch{}:\n{}\n".format(extra, error))
+                    print(f"Script mismatch{extra}:\n{error}\n")
                 else:
-                    print("Error{}:\n{}\n".format(extra, error))
+                    print(f"Error{extra}:\n{error}\n")
 
             return exit_(1)
 

@@ -115,27 +115,18 @@ class TestRetryClustering(TestkitTestCase):
         self._readServer.done()
 
     def test_retry_ForbiddenOnReadOnlyDatabase(self):  # noqa: N802
-        if get_driver_name() in ["dotnet"]:
-            self.skipTest("Behaves strange")
-
         self._run_with_transient_error(
             "retry_with_fail_after_pull.script",
             "Neo.ClientError.General.ForbiddenOnReadOnlyDatabase"
         )
 
     def test_retry_NotALeader(self):  # noqa: N802
-        if get_driver_name() in ["dotnet"]:
-            self.skipTest("Behaves strange")
-
         self._run_with_transient_error(
             "retry_with_fail_after_pull.script",
             "Neo.ClientError.Cluster.NotALeader"
         )
 
     def test_retry_ForbiddenOnReadOnlyDatabase_ChangingWriter(self):  # noqa: N802,E501
-        if get_driver_name() in ["dotnet"]:
-            self.skipTest("Behaves strange")
-
         self._routingServer.start(
             path=self.script_path("clustering",
                                   "router_swap_reader_and_writer.script"),

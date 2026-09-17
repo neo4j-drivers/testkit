@@ -90,7 +90,7 @@ class StubServer:
             if path:
                 self._last_rewritten_path = path
                 script_fn = os.path.basename(path)
-                with open(path, "r", encoding="utf-8") as f:
+                with open(path, encoding="utf-8") as f:
                     script = f.read()
             for v in vars_:
                 script = script.replace(v, str(vars_[v]))

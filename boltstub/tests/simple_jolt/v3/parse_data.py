@@ -282,7 +282,7 @@ V3_LOADS = (
     *(
         (
             f'{{"V": ["{dtype}", {values}]}}',
-            JoltVector(dtype, bytes())
+            JoltVector(dtype, b"")
         )
         for dtype in ("i8", "i16", "i32", "i64", "f32", "f64")
         for values in ("[]", '""')

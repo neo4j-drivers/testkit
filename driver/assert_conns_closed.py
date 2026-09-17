@@ -15,7 +15,7 @@ if __name__ == "__main__":
     remote = "%s:%s" % (addressx, portx)
 
     conns = subprocess.check_output(
-        ["cat", "/proc/net/tcp"], universal_newlines=True
+        ["cat", "/proc/net/tcp"], text=True
     )
     conns = conns.splitlines()[1:]  # Skip header
 

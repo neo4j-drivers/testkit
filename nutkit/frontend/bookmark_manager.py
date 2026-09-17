@@ -1,13 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
     ClassVar,
-    Dict,
-    List,
-    Optional,
 )
 
 from nutkit.backend import Backend
@@ -17,13 +14,13 @@ from .. import protocol
 
 @dataclass
 class Neo4jBookmarkManagerConfig:
-    initial_bookmarks: Optional[List[str]] = None
-    bookmarks_supplier: Optional[Callable[[], List[str]]] = None
-    bookmarks_consumer: Optional[Callable[[List[str]], None]] = None
+    initial_bookmarks: list[str] | None = None
+    bookmarks_supplier: Callable[[], list[str]] | None = None
+    bookmarks_consumer: Callable[[list[str]], None] | None = None
 
 
 class BookmarkManager:
-    _registry: ClassVar[Dict[Any, BookmarkManager]] = {}
+    _registry: ClassVar[dict[Any, BookmarkManager]] = {}
 
     def __init__(self, backend: Backend, config: Neo4jBookmarkManagerConfig):
         self._backend = backend

@@ -18,7 +18,7 @@
 
 import contextlib
 import itertools
-from typing import Iterable
+from collections.abc import Iterable
 
 import pytest
 
