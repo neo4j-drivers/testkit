@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:22.04
+FROM ubuntu:22.04 AS build
 
 ARG BUILD_RUST_STUB=true
 
@@ -35,6 +35,3 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /root/build/boltstub-bin /usr/local/bin/boltstub
 ENV PYTHON=python3
-RUN python3 -m venv /root/.venv
-ENV VIRTUAL_ENV=/root/.venv
-ENV PATH="/root/.venv/bin:${PATH}"
