@@ -37,6 +37,15 @@ repos:
       - id: isort
   - repo: local
     hooks:
+      - id: mypy
+        name: mypy
+        entry: mypy -p tests.stub.http_query
+        language: system
+        types: [python]
+        files: ^tests/stub/http_query
+        pass_filenames: false
+  - repo: local
+    hooks:
       - id: cargo-fmt
         name: cargo fmt
         entry: cargo fmt --manifest-path boltstub_rs/Cargo.toml --

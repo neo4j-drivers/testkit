@@ -2,8 +2,12 @@ import uuid
 
 import nutkit.protocol as types
 from tests.neo4j.shared import (
+    get_auto_resolved_db,
     get_driver,
     get_server_info,
+    requires_tx_metadata_support,
+    requires_tx_support,
+    requires_tx_timeout_support,
     with_retries,
 )
 from tests.shared import (
@@ -26,6 +30,16 @@ class TestTxRun(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    def _get_session(
+        self, access_mode, bookmarks=None, database=None, fetch_size=None
+    ):
+        if database is None:
+            database = get_auto_resolved_db()
+        return self._driver.session(
+            access_mode, bookmarks, database=database, fetch_size=fetch_size
+        )
+
+    @requires_tx_support
     def test_simple_query(self):
         def _test():
             def work():
@@ -46,7 +60,7 @@ class TestTxRun(TestkitTestCase):
 
             self._driver.close()
             self._driver = get_driver(self._backend, user_agent="test")
-            self._session1 = self._driver.session("r", fetch_size=2)
+            self._session1 = self._get_session("r", fetch_size=2)
             try:
                 with_retries(work)
             finally:
@@ -58,6 +72,7 @@ class TestTxRun(TestkitTestCase):
                 with self.subTest(consume=consume, rollback=rollback):
                     _test()
 
+    @requires_tx_support
     def test_can_commit_transaction(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -96,10 +111,11 @@ class TestTxRun(TestkitTestCase):
             self.assertEqual(len(record.values), 1)
             self.assertEqual(record.values[0], types.CypherString("bar"))
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         node_id = with_retries(create_and_update)
         with_retries(read, node_id)
 
+    @requires_tx_support
     def test_can_rollback_transaction(self):
         def create_and_update_rolled_back():
             with self._session1.begin_transaction() as tx:
@@ -130,10 +146,11 @@ class TestTxRun(TestkitTestCase):
             record = result.next()
             self.assertIsInstance(record, types.NullRecord)
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         node_id = with_retries(create_and_update_rolled_back)
         with_retries(read, node_id)
 
+    @requires_tx_support
     def test_updates_last_bookmark_on_commit(self):
         # Verifies that last bookmark is set on the session upon
         # successful commit.
@@ -142,12 +159,13 @@ class TestTxRun(TestkitTestCase):
                 tx.run("CREATE (n:SessionNode) RETURN n")
                 tx.commit()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 1)
         self.assertGreater(len(bookmarks[0]), 3)
 
+    @requires_tx_support
     def test_does_not_update_last_bookmark_on_rollback(self):
         # Verifies that last bookmark is set on the session upon
         # successful commit.
@@ -156,11 +174,12 @@ class TestTxRun(TestkitTestCase):
                 tx.run("CREATE (n:SessionNode) RETURN n")
                 tx.rollback()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @requires_tx_support
     def test_does_not_update_last_bookmark_on_failure(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -175,11 +194,12 @@ class TestTxRun(TestkitTestCase):
                         result.next()
                 tx.close()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
         bookmarks = self._session1.last_bookmarks()
         self.assertEqual(len(bookmarks), 0)
 
+    @requires_tx_support
     def test_should_be_able_to_rollback_a_failure(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -187,9 +207,10 @@ class TestTxRun(TestkitTestCase):
                     tx.run("RETURN").next()
                 tx.rollback()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_commit_a_failure(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -198,9 +219,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.commit()
 
-        self._session1 = self._driver.session("r")
+        self._session1 = self._get_session("r")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_rollback_a_rollbacked_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -209,9 +231,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.rollback()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_rollback_a_commited_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -220,9 +243,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.rollback()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_commit_a_commited_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -231,9 +255,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.commit()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_allow_run_on_a_commited_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -245,9 +270,10 @@ class TestTxRun(TestkitTestCase):
                     if get_driver_name() in ["javascript"]:
                         result.next()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_allow_run_on_a_rollbacked_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -259,9 +285,10 @@ class TestTxRun(TestkitTestCase):
                     if get_driver_name() in ["javascript"]:
                         result.next()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_not_run_valid_query_in_invalid_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -271,9 +298,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.run("RETURN 42").next()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_fail_run_in_a_commited_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -281,9 +309,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.run("RETURN 42").next()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_fail_run_in_a_rollbacked_tx(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -291,9 +320,10 @@ class TestTxRun(TestkitTestCase):
                 with self.assertRaises(types.responses.DriverError):
                     tx.run("RETURN 42").next()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(work)
 
+    @requires_tx_support
     def test_should_fail_to_run_query_for_invalid_bookmark(self):
         def get_bookmarks():
             with self._session1.begin_transaction() as tx1:
@@ -307,23 +337,24 @@ class TestTxRun(TestkitTestCase):
                 with self._session1.begin_transaction() as tx2:
                     tx2.run("CREATE ()").consume()
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         last_bookmarks = with_retries(get_bookmarks)
         assert len(last_bookmarks) == 1
         last_bookmark = last_bookmarks[0]
         invalid_bookmark = last_bookmark[:-1] + "-"
         self._session1.close()
 
-        self._session1 = self._driver.session("w", [invalid_bookmark])
+        self._session1 = self._get_session("w", [invalid_bookmark])
         with_retries(use_invalid_bookmark)
 
+    @requires_tx_support
     def test_broken_transaction_should_not_break_session(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
             self.skipTest("Raises syntax error on session.close in tearDown.")
 
         def test():
-            with self._driver.session("r") as session:
+            with self._get_session("r") as session:
                 tx = session.begin_transaction()
                 with self.assertRaises(types.DriverError):
                     result = tx.run("NOT CYPHER")
@@ -340,10 +371,12 @@ class TestTxRun(TestkitTestCase):
 
         with_retries(test)
 
+    @requires_tx_metadata_support
+    @requires_tx_timeout_support
     def test_tx_configuration(self):
         metadata = {"foo": types.CypherFloat(1.5),
                     "bar": types.CypherString("baz")}
-        self._session1 = self._driver.session("r")
+        self._session1 = self._get_session("r")
 
         def work():
             with self._session1.begin_transaction(
@@ -368,6 +401,7 @@ class TestTxRun(TestkitTestCase):
 
         with_retries(work)
 
+    @requires_tx_timeout_support
     def test_tx_timeout(self):
         def setup():
             tx0 = self._session1.begin_transaction()
@@ -384,10 +418,10 @@ class TestTxRun(TestkitTestCase):
                         result.consume()
                     return e
 
-        self._session1 = self._driver.session("w")
+        self._session1 = self._get_session("w")
         with_retries(setup)
 
-        self._session2 = self._driver.session(
+        self._session2 = self._get_session(
             "w", bookmarks=self._session1.last_bookmarks()
         )
         e = with_retries(work)
@@ -397,6 +431,7 @@ class TestTxRun(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ClientError'>")
 
+    @requires_tx_support
     def test_consume_after_commit(self):
         def work():
             with self._session1.begin_transaction() as tx:
@@ -416,12 +451,13 @@ class TestTxRun(TestkitTestCase):
                 #   - throw exception
                 #   - Commit should've buffered all records and return them now
 
-        self._session1 = self._driver.session("w", fetch_size=2)
+        self._session1 = self._get_session("w", fetch_size=2)
         with_retries(work)
 
+    @requires_tx_support
     def test_parallel_queries(self):
         def _test():
-            with self._driver.session("w", fetch_size=2) as session:
+            with self._get_session("w", fetch_size=2) as session:
                 with session.begin_transaction() as tx:
                     result1 = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
                     result2 = tx.run("UNWIND [5,6,7,8] AS x RETURN x")
@@ -445,9 +481,10 @@ class TestTxRun(TestkitTestCase):
             with self.subTest(invert_fetching=invert_fetching):
                 with_retries(_test)
 
+    @requires_tx_support
     def test_interwoven_queries(self):
         def _test():
-            with self._driver.session("w", fetch_size=2) as session:
+            with self._get_session("w", fetch_size=2) as session:
                 with session.begin_transaction() as tx:
                     result1 = tx.run("UNWIND [1,2,3,4] AS x RETURN x")
 
@@ -489,6 +526,7 @@ class TestTxRun(TestkitTestCase):
             with self.subTest(run_q2_before_q1_fetch=run_q2_before_q1_fetch):
                 with_retries(_test)
 
+    @requires_tx_support
     def test_unconsumed_result(self):
         # TODO: remove this block once all languages work
         if get_driver_name() in ["dotnet"]:
@@ -497,7 +535,7 @@ class TestTxRun(TestkitTestCase):
         def _test():
             uuid_ = str(uuid.uuid1())
 
-            with self._driver.session("w") as session:
+            with self._get_session("w") as session:
                 with session.begin_transaction() as tx:
                     tx.run("CREATE (a:Thing {uuid:$uuid})",
                            params={"uuid": types.CypherString(uuid_)})

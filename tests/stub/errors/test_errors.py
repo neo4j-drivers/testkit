@@ -12,6 +12,11 @@ from tests.shared import (
     driver_feature,
     TestkitTestCase,
 )
+from tests.stub.errors.shared import (
+    DEFAULT_DIAG_REC,
+    default_gql_error_description,
+    DEFAULT_GQL_ERROR_STATUS,
+)
 from tests.stub.shared import StubServer
 
 
@@ -68,13 +73,6 @@ class _ErrorTestCase(TestkitTestCase, ABC):
                     return exc.exception
 
 
-DEFAULT_DIAG_REC = {
-    "CURRENT_SCHEMA": "/",
-    "OPERATION": "",
-    "OPERATION_CODE": "0",
-}
-
-
 class TestError5x6(_ErrorTestCase):
     required_features = (
         types.Feature.BOLT_5_6,
@@ -108,12 +106,10 @@ class TestError5x6(_ErrorTestCase):
                 if supports_retryable_check:
                     self.assertEqual(exc.retryable, retryable)
                 if supports_bolt_5_7:
-                    self.assertEqual(exc.gql_status, "50N42")
+                    self.assertEqual(exc.gql_status, DEFAULT_GQL_ERROR_STATUS)
                     self.assertEqual(
                         exc.status_description,
-                        "error: "
-                        "general processing exception - unexpected error. "
-                        f"{error_message}",
+                        default_gql_error_description(error_message)
                     )
                     self.assertEqual(
                         exc.diagnostic_record,
