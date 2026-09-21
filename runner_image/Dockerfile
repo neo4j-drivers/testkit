@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:22.04 AS build
+FROM ubuntu:24.04 AS build
 
 ARG BUILD_RUST_STUB=true
 
@@ -26,12 +26,12 @@ FROM ubuntu:22.04
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y \
-        git \
-        tzdata \
-        python3 \
-        python3-pip \
-        python3-venv \
-        golang \
+    git \
+    tzdata \
+    python3 \
+    python3-pip \
+    python3-venv \
+    golang \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /root/build/boltstub-bin /usr/local/bin/boltstub
 ENV PYTHON=python3
