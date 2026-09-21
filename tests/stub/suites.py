@@ -4,7 +4,10 @@ import os
 import sys
 import unittest
 
-from tests.testenv import get_test_result_class
+from tests.testenv import (
+    assert_no_duplicate_tests,
+    get_test_result_class,
+)
 
 loader = unittest.TestLoader()
 
@@ -16,6 +19,8 @@ stub_suite.addTest(loader.discover(
         os.path.dirname(__file__), "..", ".."
     ))
 ))
+
+assert_no_duplicate_tests(stub_suite)
 
 if __name__ == "__main__":
     suite_name = "Stub tests"
