@@ -6,7 +6,10 @@ import sys
 import unittest
 
 from tests.neo4j.shared import env_neo4j_version
-from tests.testenv import get_test_result_class
+from tests.testenv import (
+    assert_no_duplicate_tests,
+    get_test_result_class,
+)
 
 #######################
 # Suite for Neo4j 3.5 #
@@ -21,6 +24,8 @@ suite_3x5.addTest(loader.discover(
         os.path.dirname(__file__), "..", ".."
     ))
 ))
+
+assert_no_duplicate_tests(suite_3x5)
 
 #######################
 # Suite for Neo4j 4.0 #
