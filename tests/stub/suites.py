@@ -5,6 +5,7 @@ import sys
 import unittest
 
 from tests.testenv import (
+    assert_no_duplicate_tests,
     get_test_result_class,
     shard_suite,
 )
@@ -19,6 +20,8 @@ stub_suite.addTest(loader.discover(
         os.path.dirname(__file__), "..", ".."
     ))
 ))
+
+assert_no_duplicate_tests(stub_suite)
 
 suite_name = "Stub tests"
 
