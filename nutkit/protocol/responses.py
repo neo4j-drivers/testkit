@@ -388,13 +388,13 @@ class Record:
         v = []
         for x in self.values:
             v.append(str(x))
-        return f"Record, values {" ".join(v)}"  # noqa: Q003 - false positive
+        return f"Record, values {' '.join(v)}"
 
     def __repr__(self):
         v = []
         for x in self.values:
             v.append(repr(x))
-        return "<Record values {}>".format(" ".join(v))
+        return f"<Record values {' '.join(v)}>"
 
 
 class Field:
