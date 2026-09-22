@@ -89,8 +89,9 @@ class Container:
     def run_tls_tests(self):
         # Build TLS server
         self._container.exec(
-            ["go", "build", "-buildvcs=false", "-v", "."],
+            ["go", "build", "-v", "."],
             workdir="/testkit/tlsserver",
+            env_map={"GO111MODULE": "off"},
         )
         self._container.exec(
             [PYTHON_BIN, "-m", "tests.tls.suites"]

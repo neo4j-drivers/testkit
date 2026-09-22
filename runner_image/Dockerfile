@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:22.04 AS build
+FROM ubuntu:24.04 AS build
 
 ARG BUILD_RUST_STUB=true
 
@@ -8,7 +8,7 @@ RUN --mount=from=boltstub,target=/tmp/boltstub <<EOF
 set -e
 if [ "$BUILD_RUST_STUB" = "true" ]; then
     apt-get update
-    apt-get install -y python3 python3-dev python3-pip curl
+    apt-get install -y python3 python3-dev gcc curl
     rm -rf /var/lib/apt/lists/*
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     export PATH="/root/.cargo/bin:$PATH"
@@ -21,7 +21,7 @@ else
 fi
 EOF
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
@@ -34,5 +34,4 @@ RUN apt-get update && \
         golang \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /root/build/boltstub-bin /usr/local/bin/boltstub
-
 ENV PYTHON=python3

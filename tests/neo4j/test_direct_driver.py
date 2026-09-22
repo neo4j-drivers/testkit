@@ -1,14 +1,18 @@
 from nutkit import protocol as types
 from tests.neo4j.shared import (
+    bolt_only_test,
     cluster_unsafe_test,
+    get_auto_resolved_db,
     get_default_db,
     get_driver,
-    get_neo4j_host_and_http_port,
     get_neo4j_host_and_port,
+    get_neo4j_host_and_wrong_port,
     get_neo4j_scheme,
-    get_server_info,
+    has_summary_query_type_support,
     QueryBuilder,
     requires_multi_db_support,
+    requires_tx_support,
+    unencrypted_only_test,
     with_retries,
 )
 from tests.shared import (
@@ -32,7 +36,16 @@ class TestDirectDriver(TestkitTestCase):
             self._driver.close()
         super().tearDown()
 
+    def _get_session(self, access_mode, database=None, bookmarks=None):
+        if database is None:
+            database = get_auto_resolved_db()
+        return self._driver.session(
+            access_mode, bookmarks=bookmarks, database=database
+        )
+
     @cluster_unsafe_test
+    @bolt_only_test  # custom resolver is ignored via HTTP
+    @unencrypted_only_test
     def test_custom_resolver(self):
         # TODO unify this
         if get_driver_name() in ["javascript", "dotnet"]:
@@ -52,10 +65,14 @@ class TestDirectDriver(TestkitTestCase):
                 "%s:%d" % (host, port),  # should succeed
             )
 
-        self._driver = get_driver(self._backend, uri="bolt://*",
+        # Fixing to `bolt` (as opposed to `get_neo4j_scheme()`) to avoid the
+        # resolver being called twice (once when fetching the routing table,
+        # once when establishing a connection for running the query).
+        uri = "bolt://*"
+        self._driver = get_driver(self._backend, uri=uri,
                                   resolver_fn=my_resolver,
                                   connection_timeout_ms=200)
-        self._session = self._driver.session("r")
+        self._session = self._get_session("r")
         result = self._session.run("RETURN 1")
         summary = result.consume()
 
@@ -63,12 +80,12 @@ class TestDirectDriver(TestkitTestCase):
         self.assertEqual(resolved_addresses, ["*:7687"])
 
     @driver_feature(types.Feature.API_DRIVER_VERIFY_CONNECTIVITY)
-    def test_fail_nicely_when_using_http_port(self):
+    def test_fail_nicely_when_using_wrong_port(self):
         # TODO add support and remove this block
         if get_driver_name() in ["go"]:
             self.skipTest("verifyConnectivity not implemented in backend")
         scheme = get_neo4j_scheme()
-        host, port = get_neo4j_host_and_http_port()
+        host, port = get_neo4j_host_and_wrong_port()
         uri = "%s://%s:%d" % (scheme, host, port)
         self._driver = get_driver(self._backend, uri=uri,
                                   connection_timeout_ms=500)
@@ -78,12 +95,13 @@ class TestDirectDriver(TestkitTestCase):
             self.assertEqual(e.exception.errorType,
                              "<class 'neo4j.exceptions.ServiceUnavailable'>")
 
+    @requires_tx_support
     def test_supports_multi_db(self):
         def work(tx):
             return tx.run("RETURN 1 as n").consume()
 
         self._driver = get_driver(self._backend)
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         summary = self._session.execute_read(work)
         result = self._driver.supports_multi_db()
 
@@ -92,17 +110,17 @@ class TestDirectDriver(TestkitTestCase):
         # Neo4j Server
         self.assertEqual(summary.database, get_default_db())
 
-        self.assertEqual(summary.query_type, "r")
+        if has_summary_query_type_support(self):
+            self.assertEqual(summary.query_type, "r")
 
+    @requires_multi_db_support
     def test_multi_db_non_existing(self):
-        if not get_server_info().supports_multi_db:
-            self.skipTest("Needs multi DB support")
         self._driver = get_driver(self._backend)
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
         self._session.run(QueryBuilder.drop_db("test-database")).consume()
         self._session.close()
 
-        self._session = self._driver.session("r", database="test-database")
+        self._session = self._get_session("r", database="test-database")
         with self.assertRaises(types.DriverError) as e:
             result = self._session.run("RETURN 1")
             result.next()
@@ -121,13 +139,13 @@ class TestDirectDriver(TestkitTestCase):
         create_db_query = QueryBuilder.create_db("test-database")
         drop_db_query = QueryBuilder.drop_db("test-database")
 
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
 
         with_retries(lambda: self._session.run(drop_db_query).consume())
         with_retries(lambda: self._session.run(create_db_query).consume())
         self._session.close()
 
-        self._session = self._driver.session("r", database="test-database")
+        self._session = self._get_session("r", database="test-database")
 
         def get_db_name(session):
             result = session.run("RETURN 1")
@@ -139,7 +157,7 @@ class TestDirectDriver(TestkitTestCase):
         self.assertEqual(db_name, "test-database")
 
         self._session.close()
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
         with_retries(lambda: self._session.run(drop_db_query).consume())
 
     @requires_multi_db_support
@@ -180,20 +198,20 @@ class TestDirectDriver(TestkitTestCase):
 
         self._driver = get_driver(self._backend)
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         # Test that default database is empty
         run_consume(self._session, wipe_all_query)
         names = with_retries(lambda: get_people_names(self._session))
         self.assertEqual(names, set())
         self._session.close()
 
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
         run_consume(self._session, drop_db_testa_query)
         run_consume(self._session, drop_db_testb_query)
         bookmarks = self._session.last_bookmarks()
         self._session.close()
-        self._session = self._driver.session("w", database="system",
-                                             bookmarks=bookmarks)
+        self._session = self._get_session("w", database="system",
+                                          bookmarks=bookmarks)
         names = with_retries(lambda: get_db_names(self._session))
         self.assertEqual(names, {"system", get_default_db()})
 
@@ -202,38 +220,38 @@ class TestDirectDriver(TestkitTestCase):
         bookmarks = self._session.last_bookmarks()
         self._session.close()
 
-        self._session = self._driver.session("w", database="testa",
-                                             bookmarks=bookmarks)
+        self._session = self._get_session("w", database="testa",
+                                          bookmarks=bookmarks)
         run_consume(self._session, 'CREATE (p:Person {name: "ALICE"})')
         self._session.close()
 
-        self._session = self._driver.session("w", database="testb")
+        self._session = self._get_session("w", database="testb")
         run_consume(self._session, 'CREATE (p:Person {name: "BOB"})')
         self._session.close()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         # Test that default database is still empty
         names = with_retries(lambda: get_people_names(self._session))
         self.assertEqual(names, set())
         self._session.close()
 
-        self._session = self._driver.session("w", database="testa")
+        self._session = self._get_session("w", database="testa")
         names = with_retries(lambda: get_people_names(self._session))
         self.assertEqual(names, {"ALICE"})
         self._session.close()
 
-        self._session = self._driver.session("w", database="testb")
+        self._session = self._get_session("w", database="testb")
         names = with_retries(lambda: get_people_names(self._session))
         self.assertEqual(names, {"BOB"})
         self._session.close()
 
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
         run_consume(self._session, drop_db_testa_query)
         self._session.close()
 
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
         run_consume(self._session, drop_db_testb_query)
         self._session.close()
 
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         run_consume(self._session, wipe_all_query)

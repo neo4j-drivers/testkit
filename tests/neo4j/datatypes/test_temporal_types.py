@@ -4,19 +4,20 @@ from time import sleep
 import pytz
 
 import nutkit.protocol as types
-from tests.neo4j.datatypes._base import (
-    _TestTypesBase,
-    MAX_INT64,
-    MIN_INT64,
-)
+from tests.neo4j.datatypes._base import _TestTypesBase
 from tests.neo4j.datatypes._util import TZ_IDS
 from tests.neo4j.shared import (
     get_server_info,
     has_min_bolt_version,
+    has_tx_support,
+    has_utc_patch,
     QueryBuilder,
+    with_retries,
 )
 from tests.shared import (
     get_driver_name,
+    MAX_INT64,
+    MIN_INT64,
     Potential,
 )
 
@@ -164,15 +165,46 @@ class TestDataTypes(_TestTypesBase):
         # Therefore, we can cache this costly operation.
         global _SERVER_SUPPORTED_TZ_IDS
         if not _SERVER_SUPPORTED_TZ_IDS:
-            if get_server_info().parsed_version() >= (5, 7):
+            server_info = get_server_info()
+            tz_id_candidates = [
+                tz_id for tz_id in TZ_IDS
+                if not self._is_broken_tz_id(tz_id, server_info)
+            ]
+            if server_info.parsed_version() >= (5, 7):
                 _SERVER_SUPPORTED_TZ_IDS = (
-                    self._timezone_server_support_batched(TZ_IDS)
+                    self._timezone_server_support_batched(tz_id_candidates)
                 )
             else:
-                for tz_id in TZ_IDS:
+                for tz_id in tz_id_candidates:
                     if self._timezone_server_support(tz_id):
                         _SERVER_SUPPORTED_TZ_IDS.append(tz_id)
         return _SERVER_SUPPORTED_TZ_IDS
+
+    def _is_broken_tz_id(self, tz_id, server_info):
+        if server_info.is_bolt:
+            return False
+        assert server_info.is_http, (
+            f"Unhandled scheme: {server_info.scheme}"
+        )
+        if server_info.parsed_version() >= (2026, 4):
+            return False
+        return (
+            tz_id.startswith("Etc/GMT")
+            or tz_id in {
+                "Etc/Greenwich",
+                "Etc/UCT",
+                "Etc/Universal",
+                "Etc/UTC",
+                "Etc/Zulu",
+                "GMT",
+                "GMT0",
+                "Greenwich",
+                "UCT",
+                "UTC",
+                "Universal",
+                "Zulu",
+            }
+        )
 
     def _server_accepted_wall_times(self, possible_naive_dts):
         """
@@ -202,8 +234,8 @@ class TestDataTypes(_TestTypesBase):
             for tz_id, naive_dts in possible_naive_dts.items()
         ]
 
-        def work(tx):
-            res = tx.run(
+        def work(runner):
+            res = runner.run(
                 "UNWIND $rows AS row\n"
                 "RETURN head([dt IN row.dts\n"
                 "WHERE toString(localdatetime(datetime(dt.with_tz))) "
@@ -231,7 +263,10 @@ class TestDataTypes(_TestTypesBase):
             return accepted_wall_times
 
         assert self._driver and self._session
-        return self._session.execute_read(work)
+        if has_tx_support(self):
+            return self._session.execute_read(work)
+        else:
+            return with_retries(work, self._session)
 
     def test_should_echo_all_timezone_ids(self):
         times = (
@@ -344,8 +379,8 @@ class TestDataTypes(_TestTypesBase):
             self.assertEqual(dt_.timezone_id, cypher_dt_.timezone_id)
             pass
 
-        def work(tx):
-            res = tx.run(
+        def work(runner):
+            res = runner.run(
                 "UNWIND $tz_ids AS tz_id\n"
                 "WITH "
                 "datetime('1970-01-01T10:08:09.000000001[' + tz_id + ']') "
@@ -379,7 +414,7 @@ class TestDataTypes(_TestTypesBase):
 
         self._create_driver_and_session()
 
-        server_supports_utc = get_server_info().has_utc_patch
+        server_supports_utc = has_utc_patch(self)
         tz_ids = []
         for tz_id in self._server_supported_tz_ids():
             if self.should_run_subtest(tz_id=tz_id):
@@ -388,7 +423,10 @@ class TestDataTypes(_TestTypesBase):
         if not tz_ids:
             self.skipTest("No timezones supported by both server and driver")
 
-        data = self._session.execute_read(work)
+        if has_tx_support(self):
+            data = self._session.execute_read(work)
+        else:
+            data = with_retries(work, self._session)
         for tz_id, datum in zip(tz_ids, data):
             with self.uncheckedSubTest(tz_id=tz_id):
                 dt, y, mo, d, h, m, s, ns, offset, tz = datum
@@ -404,6 +442,9 @@ class TestDataTypes(_TestTypesBase):
                     # => Wall clock times must be equal
                     assert_wall_time_equal(dt, cypher_dt)
                 else:  # Potential.MAYBE
+                    assert server_supports_utc == Potential.MAYBE, (
+                        f"Unhandled potential: {server_supports_utc}"
+                    )
                     # 4.4 and 4.3 protocol sends date times in
                     # wall clock time or UTC depending on server version,
                     # driver version and their handshake.

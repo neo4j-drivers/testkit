@@ -7,11 +7,11 @@ from nutkit.frontend import (
     FakeTime,
 )
 from tests.shared import driver_feature
-from tests.stub.authorization.test_authorization import AuthorizationBase
+from tests.stub.authorization.base import AuthorizationBaseBolt
 from tests.stub.shared import StubServer
 
 
-class TestBasicAuthManager5x1(AuthorizationBase):
+class TestBasicAuthManager5x1(AuthorizationBaseBolt):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.AUTH_MANAGED)

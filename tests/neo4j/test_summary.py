@@ -2,16 +2,23 @@ import re
 
 from nutkit import protocol as types
 from tests.neo4j.shared import (
+    bolt_only_test,
     bolt_versions_in_features,
     cluster_unsafe_test,
+    get_auto_resolved_db,
     get_default_db,
     get_driver,
     get_neo4j_host_and_port,
     get_neo4j_resolved_host_and_port,
     get_server_info,
+    has_summary_query_type_support,
+    has_tx_support,
     parse_version,
     QueryBuilder,
     requires_multi_db_support,
+    requires_summary_timers_support,
+    requires_tx_support,
+    with_retries,
 )
 from tests.shared import (
     driver_feature,
@@ -31,17 +38,23 @@ class TestSummary(TestkitTestCase):
         self._driver.close()
         super().tearDown()
 
+    def _get_session(self, access_mode, database=None):
+        if database is None:
+            database = get_auto_resolved_db()
+        return self._driver.session(access_mode, database=database)
+
     def clear_db(self):
-        def work(tx):
-            result = tx.run("MATCH (n) DETACH DELETE n")
+        def work(runner):
+            result = runner.run("MATCH (n) DETACH DELETE n")
             result.consume()
 
-        self._session = self._driver.session("w")
-        try:
-            return self._session.execute_write(work)
-        finally:
-            self._session.close()
+        with self._get_session("w") as session:
+            if has_tx_support(self):
+                session.execute_write(work)
+            else:
+                with_retries(work, session)
 
+    @requires_tx_support
     def get_summary(self, query, params=None, **kwargs):
         def work(tx):
             result = tx.run(query, params=params, **kwargs)
@@ -49,37 +62,57 @@ class TestSummary(TestkitTestCase):
                 pass
             summary = result.consume()
             return summary
+
         params = {} if params is None else params
-        self._session = self._driver.session("w")
+        self._session = self._get_session("w")
         return self._session.execute_write(work)
 
+    def get_summary_idempotent(self, query, params=None, **kwargs):
+        def work(runner):
+            result = runner.run(query, params=params, **kwargs)
+            for _ in result:
+                pass
+            summary = result.consume()
+            return summary
+
+        params = {} if params is None else params
+        self._session = self._get_session("w")
+        if has_tx_support(self):
+            return self._session.execute_write(work)
+        else:
+            return with_retries(work, self._session)
+
     def test_can_obtain_summary_after_consuming_result(self):
-        summary = self.get_summary("CREATE (n) RETURN n")
+        summary = self.get_summary_idempotent("CREATE (n) RETURN n")
         self.assertEqual(summary.query.text, "CREATE (n) RETURN n")
         self.assertEqual(summary.query.parameters, {})
-        self.assertEqual(summary.query_type, "rw")
+        if has_summary_query_type_support(self):
+            self.assertEqual(summary.query_type, "rw")
         self.assertEqual(summary.counters.nodes_created, 1)
 
     def test_no_plan_info(self):
-        summary = self.get_summary("CREATE (n) RETURN n")
+        summary = self.get_summary_idempotent("CREATE (n) RETURN n")
         self.assertIsNone(summary.plan)
         self.assertIsNone(summary.profile)
 
     def test_can_obtain_plan_info(self):
-        summary = self.get_summary("EXPLAIN CREATE (n) RETURN n")
+        summary = self.get_summary_idempotent("EXPLAIN CREATE (n) RETURN n")
         self.assertIsInstance(summary.plan, dict)
 
     def test_can_obtain_profile_info(self):
-        summary = self.get_summary("PROFILE CREATE (n) RETURN n")
+        summary = self.get_summary_idempotent("PROFILE CREATE (n) RETURN n")
         self.assertIsInstance(summary.profile, dict)
 
     def test_no_notification_info(self):
-        summary = self.get_summary("CREATE (n) RETURN n")
+        summary = self.get_summary_idempotent("CREATE (n) RETURN n")
         notifications = summary.notifications
         self.assertIn(notifications, (None, []))
 
-    def _test_status(self, query, expected_code):
-        summary = self.get_summary(query)
+    def _test_status(self, query, expected_code, *, idempotent=True):
+        if idempotent:
+            summary = self.get_summary_idempotent(query)
+        else:
+            summary = self.get_summary(query)
         statuses = summary.gql_status_objects
         self.assertEqual(len(statuses), 1)
         status = statuses[0]
@@ -88,27 +121,31 @@ class TestSummary(TestkitTestCase):
 
     @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
     def test_success_status(self):
-        self._test_status("CREATE (n) RETURN n", "00000")
+        self._test_status("CREATE (n) RETURN n", "00000", idempotent=True)
 
     @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
     def test_omitted_status(self):
-        self._test_status("CREATE (n)", "00001")
+        self._test_status("CREATE (n)", "00001", idempotent=True)
 
     @driver_feature(types.Feature.API_SUMMARY_GQL_STATUS_OBJECTS)
     def test_no_data_status(self):
         self.clear_db()
-        self._test_status("MATCH (n) RETURN n", "02000")
+        self._test_status("MATCH (n) RETURN n", "02000", idempotent=True)
 
     def test_can_obtain_notification_info(self):
-        summary = self.get_summary("EXPLAIN MATCH (n), (m) RETURN n, m")
+        summary = self.get_summary_idempotent(
+            "EXPLAIN MATCH (n), (m) RETURN n, m"
+        )
         notifications = summary.notifications
         self.assertIsInstance(notifications, list)
         self.assertEqual(len(notifications), 1)
         self.assertIsInstance(notifications[0], dict)
 
+    @requires_summary_timers_support
     def test_contains_time_information(self):
-        summary = self.get_summary("UNWIND range(1, 100) AS n "
-                                   "RETURN n AS number")
+        summary = self.get_summary_idempotent(
+            "UNWIND range(1, 100) AS n RETURN n AS number"
+        )
 
         self.assertIsInstance(summary.result_available_after, int)
         self.assertIsInstance(summary.result_consumed_after, int)
@@ -116,8 +153,9 @@ class TestSummary(TestkitTestCase):
         self.assertGreaterEqual(summary.result_available_after, 0)
         self.assertGreaterEqual(summary.result_consumed_after, 0)
 
+    @bolt_only_test
     def test_protocol_version_information(self):
-        summary = self.get_summary("RETURN 1 AS number")
+        summary = self.get_summary_idempotent("RETURN 1 AS number")
         raw_version = summary.server_info.protocol_version
 
         version_match = re.match(r"(\d+)\.(\d+)", raw_version)
@@ -159,7 +197,7 @@ class TestSummary(TestkitTestCase):
                 self.assertEqual(version, common_max_version)
 
     def test_agent_string(self):
-        summary = self.get_summary("RETURN 1 AS number")
+        summary = self.get_summary_idempotent("RETURN 1 AS number")
 
         agent = summary.server_info.agent
         self.assertIsInstance(agent, str)
@@ -177,7 +215,7 @@ class TestSummary(TestkitTestCase):
 
     @cluster_unsafe_test  # routing can lead us to another server (address)
     def test_address(self):
-        summary = self.get_summary("RETURN 1 AS number")
+        summary = self.get_summary_idempotent("RETURN 1 AS number")
         self.assertTrue(summary.server_info.address in
                         ["%s:%s" % get_neo4j_resolved_host_and_port(),
                          "%s:%s" % get_neo4j_host_and_port()])
@@ -198,13 +236,14 @@ class TestSummary(TestkitTestCase):
 
     def test_summary_counters_case_1(self):
         params = {"number": types.CypherInt(3)}
-
-        summary = self.get_summary("RETURN $number AS x", params=params)
+        summary = self.get_summary_idempotent("RETURN $number AS x",
+                                              params=params)
 
         self.assertEqual(summary.query.text, "RETURN $number AS x")
         self.assertEqual(summary.query.parameters, params)
 
-        self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
+        if has_summary_query_type_support(self):
+            self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
 
         self._assert_counters(summary)
 
@@ -215,7 +254,7 @@ class TestSummary(TestkitTestCase):
         new_index_syntax = version >= (4, 0)
         new_constraint_syntax = version >= (4, 4)
 
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
 
         drop_db_test_query = QueryBuilder.drop_db("test")
         create_db_test_query = QueryBuilder.create_db("test")
@@ -240,7 +279,8 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.query.text, "SHOW DATABASES")
         self.assertEqual(summary.query.parameters, {})
 
-        self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
+        if has_summary_query_type_support(self):
+            self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
 
         self._assert_counters(summary)
 
@@ -251,49 +291,50 @@ class TestSummary(TestkitTestCase):
         self.assertEqual(summary.query.text, create_db_test_query)
         self.assertEqual(summary.query.parameters, {})
 
-        self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
+        if has_summary_query_type_support(self):
+            self.assertIn(summary.query_type, ("r", "w", "rw", "s"))
 
         self._assert_counters(summary,
                               system_updates=1, contains_system_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run("CREATE (n)").consume()
         self._assert_counters(summary, nodes_created=1, contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run("MATCH (n) DELETE (n)").consume()
         self._assert_counters(summary, nodes_deleted=1, contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run("CREATE ()-[:KNOWS]->()").consume()
         self._assert_counters(summary, nodes_created=2,
                               relationships_created=1, contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run("MATCH ()-[r:KNOWS]->() "
                                     "DELETE r").consume()
         self._assert_counters(summary,
                               relationships_deleted=1, contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run("CREATE (n:ALabel)").consume()
         self._assert_counters(summary, nodes_created=1, labels_added=1,
                               contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run(
             "MATCH (n:ALabel) REMOVE n:ALabel"
         ).consume()
         self._assert_counters(summary, labels_removed=1, contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run("CREATE (n {magic: 42})").consume()
         self._assert_counters(summary, nodes_created=1, properties_set=1,
                               contains_updates=True)
@@ -303,7 +344,7 @@ class TestSummary(TestkitTestCase):
             query = "CREATE INDEX test_label_prop FOR (n:ALabel) ON (n.prop)"
         else:  # 3.5-
             query = "CREATE INDEX ON :ALabel (prop)"
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run(query).consume()
         self._assert_counters(summary, indexes_added=1, contains_updates=True)
         self._session.close()
@@ -312,7 +353,7 @@ class TestSummary(TestkitTestCase):
             query = "DROP INDEX test_label_prop"
         else:  # 3.5-
             query = "DROP INDEX ON :ALabel(prop)"
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run(query).consume()
         self._assert_counters(summary, indexes_removed=1,
                               contains_updates=True)
@@ -324,7 +365,7 @@ class TestSummary(TestkitTestCase):
         else:  # 4.3-
             query = ("CREATE CONSTRAINT ON (book:Book) "
                      "ASSERT book.isbn IS UNIQUE")
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run(query).consume()
         self._assert_counters(summary,
                               constraints_added=1, contains_updates=True)
@@ -335,11 +376,11 @@ class TestSummary(TestkitTestCase):
         else:  # 4.3-
             query = ("DROP CONSTRAINT ON (book:Book) "
                      "ASSERT book.isbn IS UNIQUE")
-        self._session = self._driver.session("w", database="test")
+        self._session = self._get_session("w", database="test")
         summary = self._session.run(query).consume()
         self._assert_counters(summary,
                               constraints_removed=1, contains_updates=True)
         self._session.close()
 
-        self._session = self._driver.session("w", database="system")
+        self._session = self._get_session("w", database="system")
         self._session.run(drop_db_test_query).consume()
