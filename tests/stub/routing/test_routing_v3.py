@@ -1,10 +1,10 @@
 import nutkit.protocol as types
 from nutkit.frontend import Driver
 from tests.shared import get_driver_name
-from tests.stub.routing.test_routing_v4x4 import RoutingV4x4
+from tests.stub.routing import test_routing_v4x4
 
 
-class RoutingV3(RoutingV4x4):
+class RoutingV3(test_routing_v4x4.RoutingV4x4):
 
     required_features = types.Feature.BOLT_3_0,
     bolt_version = "3"
