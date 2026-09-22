@@ -3,7 +3,7 @@
 ## Running all test suites within docker containers
 
 Requirements on host:
-  * Python >= 3.8
+  * Python >= 3.12
   * Docker >= 19.03
 
 Environment variables:
@@ -69,8 +69,8 @@ Environment variables used to control how tests are executed:
   * `TEST_NEO4J_SCHEME`  
     Scheme to build the URI when contacting the Neo4j server, default "bolt".
   * `TEST_NEO4J_HTTP_PORT`  
-    The port on which the Neo4j server is listening for HTTP requests. This is
-    just used to make sure the driver does not try to speak bolt over this port.
+    The port on which the Neo4j server is listening for HTTP requests, default
+    "7474".
   * `TEST_NEO4J_VERSION`  
     Version of the Neo4j server, default "4.4"
   * `TEST_NEO4J_EDITION`  

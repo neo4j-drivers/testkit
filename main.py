@@ -48,11 +48,12 @@ test_flags = {
 def initialise_configurations(settings):
     def generate_config(version, enterprise, cluster, scheme, stress_test):
         assert (cluster and scheme == "neo4j"
-                or not cluster and scheme in ("neo4j", "bolt"))
+                or not cluster and scheme in {"neo4j", "bolt", "http"})
         edition = "enterprise" if enterprise else "community"
         name = "%s-%s%s-%s" % (version, edition,
                                "-cluster" if cluster else "", scheme)
         image = f"neo4j:{version}{'-enterprise' if enterprise else ''}"
+        version = ".".join(version.split(".")[:2])
         return neo4j.Config(
             name=name,
             image=image,
@@ -70,7 +71,7 @@ def initialise_configurations(settings):
         if not in_teamcity:
             return None
         assert (cluster and scheme == "neo4j"
-                or not cluster and scheme in ("neo4j", "bolt"))
+                or not cluster and scheme in {"neo4j", "bolt", "http"})
         edition = "enterprise" if enterprise else "community"
         name = "%s-tc-%s%s-%s" % (version, edition,
                                   "-cluster" if cluster else "", scheme)
@@ -123,10 +124,30 @@ def initialise_configurations(settings):
             # LTS version
             ("5.26",      True,        True,     "neo4j",  0),
             # Bolt 6.0
-            # TODO: uncomment when server is released
-            # ("2025.10",   True,        True,     "neo4j",  0),
-            # TODO: add first version with Bolt 6.1 GA when released
-            # [uuid-preview] search tag for removal of UUID preview workarounds
+            ("2025.10",   True,        True,     "neo4j",  0),
+            # Bolt 6.1
+            # Bolt 6.1 went GA in 2026.07. However, UUID support in Cypher and
+            # Kernel was only enabled in 2026.08, therefore we test that
+            # version instead
+            # TODO: uncomment when 2026.08 is GA
+            # ("2026.08",   True,        True,     "neo4j",  0),
+
+            # HTTP Query API
+            # first iteration - behind feature flag
+            # records are returned flattened => not worth supporting
+            # ("5.19",      True,        False,     "http",   0),
+            # enabled by default
+            ("5.25",      True,        False,     "http",   0),
+            # added transaction support
+            ("5.26.0",    True,        False,     "http",   0),
+            # LTS version
+            ("5.26",      True,        False,     "http",   0),
+            # application/vnd.neo4j.query.v1.0
+            ("2025.10",   True,        False,     "http",   0),
+            # application/vnd.neo4j.query.v1.1
+            ("2025.11",   True,        False,     "http",   0),
+            # fixed conflating of zoned and offset date times
+            ("2026.04",   True,        False,     "http",   0),
         )
     ]
     configurations += [
@@ -137,12 +158,14 @@ def initialise_configurations(settings):
             # nightly build of official backwards-compatible version(s)
             ("5.26",     "5",      True,        False,    "neo4j",  0),
             ("5.26",     "5",      True,        True,     "neo4j", 60),
+            ("5.26",     "5",      True,        False,    "http",   0),
             # nightly build of matching version(s)
             ("2026.dev", "2026",   False,       False,    "bolt",   0),
             ("2026.dev", "2026",   False,       False,    "neo4j",  0),
             ("2026.dev", "2026",   True,        False,    "bolt",  90),
             ("2026.dev", "2026",   True,        False,    "neo4j",  0),
             ("2026.dev", "2026",   True,        True,     "neo4j", 90),
+            ("2026.dev", "2026",   True,        False,    "http",   0),
         )
     ]
 
@@ -450,26 +473,29 @@ def main(settings, configurations):
             # Start a Neo4j server
             if cluster:
                 print("\n    Starting neo4j cluster (%s)\n" % server_name)
-                server = neo4j.Cluster(neo4j_config.image,
-                                       server_name,
-                                       neo4j_artifacts_path,
-                                       neo4j_config.version)
+                server = neo4j.Cluster(
+                    neo4j_config.image, server_name, neo4j_artifacts_path,
+                    neo4j_config.version, neo4j_config.scheme,
+                )
             else:
                 print("\n    Starting neo4j standalone server (%s)\n"
                       % server_name)
                 server = neo4j.Standalone(
                     neo4j_config.image, server_name, neo4j_artifacts_path,
-                    "neo4jserver", 7687, neo4j_config.version,
-                    neo4j_config.edition
+                    "neo4jserver", 7687, 7474, neo4j_config.version,
+                    neo4j_config.edition, neo4j_config.scheme,
                 )
             server.start(networks[0])
+            addresses_bolt = server.addresses_bolt()
             addresses = server.addresses()
             hostname, port = addresses[0]
 
             # Wait until server is listening before running tests
             # Use driver container to check for Neo4j availability since
             # connect will be done from there
-            for address in addresses:
+            for address, address_bolt in zip(
+                addresses, addresses_bolt, strict=True
+            ):
                 print("Waiting for neo4j service at %s to be available"
                       % (address,))
                 driver_container.poll_host_and_port_until_available(*address)
@@ -479,7 +505,7 @@ def main(settings, configurations):
                 # port will be available before queries can be executed for
                 # clusters and for the enterprise edition in stand-alone mode.
                 if int(neo4j_config.version.split(".", 1)[0]) >= 5:
-                    core_address, core_port = address
+                    core_address, core_port = address_bolt
                     waiter_container.wait_for_all_dbs(
                         core_address, core_port, neo4j.username, neo4j.password
                     )

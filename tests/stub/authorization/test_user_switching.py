@@ -3,11 +3,11 @@ from contextlib import contextmanager
 import nutkit.protocol as types
 from nutkit.frontend import Driver
 from tests.shared import driver_feature
-from tests.stub.authorization.test_authorization import AuthorizationBase
+from tests.stub.authorization.base import AuthorizationBaseBolt
 from tests.stub.shared import StubServer
 
 
-class TestUserSwitchingV5x1(AuthorizationBase):
+class TestUserSwitchingV5x1(AuthorizationBaseBolt):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.API_SESSION_AUTH_CONFIG)

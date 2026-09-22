@@ -1,6 +1,5 @@
 import json
 from contextlib import contextmanager
-from dataclasses import dataclass
 
 import nutkit.protocol as types
 from nutkit.frontend import (
@@ -8,64 +7,15 @@ from nutkit.frontend import (
     Driver,
 )
 from tests.shared import get_driver_name
-from tests.stub.authorization.test_authorization import AuthorizationBase
+from tests.stub.authorization.base import (
+    AuthorizationBaseBolt,
+    HandleSecurityExceptionArgs,
+    TrackingAuthTokenManager,
+)
 from tests.stub.shared import StubServer
 
 
-@dataclass(frozen=True)
-class HandleSecurityExceptionArgs:
-    auth: types.AuthorizationToken
-    error_code: str
-
-
-class TrackingAuthTokenManager:
-    def __init__(self, backend):
-        self._backend = backend
-        self._get_auth_count = 0
-        self._handle_security_exception_args = []
-        self._manager = AuthTokenManager(
-            backend, self.get_auth, self.handle_security_exception
-        )
-
-    def get_auth(self):
-        self._get_auth_count += 1
-        return self.raw_get_auth()
-
-    def raw_get_auth(self):
-        return types.AuthorizationToken(
-            scheme="basic",
-            principal="neo4j",
-            credentials="pass"
-        )
-
-    def handle_security_exception(
-        self, auth: types.AuthorizationToken, code: str
-    ) -> bool:
-        args = HandleSecurityExceptionArgs(auth, code)
-        self._handle_security_exception_args.append(args)
-        return self._handles_security_exception(code)
-
-    def _handles_security_exception(self, code: str) -> bool:
-        return False
-
-    @property
-    def get_auth_count(self):
-        return self._get_auth_count
-
-    @property
-    def handle_security_exception_args(self):
-        return self._handle_security_exception_args
-
-    @property
-    def handle_security_exception_count(self):
-        return len(self._handle_security_exception_args)
-
-    @property
-    def manager(self):
-        return self._manager
-
-
-class TestAuthTokenManager5x1(AuthorizationBase):
+class TestAuthTokenManager5x1(AuthorizationBaseBolt):
 
     required_features = (types.Feature.BOLT_5_1,
                          types.Feature.AUTH_MANAGED)
