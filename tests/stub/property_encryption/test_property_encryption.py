@@ -279,3 +279,36 @@ class TestPropertyEncryption(TestkitTestCase):
                     case.encrypted, use_persisted_aad=True
                 )
                 self.assertEqual(decrypted, case.value)
+
+    def test_raises_on_disallowed_value(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
+
+        for disallowed_value in [
+            types.CypherMap({"string": types.CypherString("hello")}),
+            types.CypherList([
+                types.CypherTime(0, 0, 0, 0),
+                types.CypherTime(0, 0, 0, 0, utc_offset_s=60 * 60 * 1)
+            ]),
+            types.CypherList([
+                types.CypherPoint("cartesian", 1, 1),
+                types.CypherPoint("cartesian", 1, 1, 1)
+            ]),
+            types.CypherList([
+                types.CypherPoint("cartesian", 1, 1),
+                types.CypherPoint("wgs84", 1, 1)
+            ]),
+            types.CypherList([types.CypherVector("i8", b"\x01")]),
+            types.CypherList([
+                types.CypherList([types.CypherString("hello")])
+            ]),
+            types.CypherList([
+                types.CypherMap({"string": types.CypherString("hello")})
+            ]),
+        ]:
+            with self.subTest(value=disallowed_value):
+                with self.assertRaises(types.DriverError):
+                    driver.encrypt_to_bytes(
+                        disallowed_value,
+                        key_alias="k1"
+                    )
