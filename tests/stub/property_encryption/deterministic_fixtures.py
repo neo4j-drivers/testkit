@@ -135,4 +135,18 @@ DETERMINISTIC_TEST_CASES = [
             "6573746b69742d6b6579"
         ),
     ),
+    DeterministicFixture(
+        value=types.CypherNull(),
+        iv=bytes.fromhex(
+            "5455565758595a5b5c5d5e5f"
+        ),
+        encrypted=bytes.fromhex(
+            "01b86588454e56454c4f5045018d6465"
+            "7465726d696e6973746963cc11c56a32"
+            "a2d5ec6f489dadae9de9852db097844e"
+            "554c4c0100a2826976cc0c5455565758"
+            "595a5b5c5d5e5f866b65795f69648b74"
+            "6573746b69742d6b6579"
+        ),
+    ),
 ]
