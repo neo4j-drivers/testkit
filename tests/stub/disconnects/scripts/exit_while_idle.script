@@ -1,0 +1,15 @@
+!: BOLT 5.4
+!: ALLOW RESTART
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}}
+S: RECORD [1]
+S: SUCCESS {"type": "r"}
+C: RESET
+S: SUCCESS {}
+S: <SLEEP> 0.5
+S: <EXIT>
