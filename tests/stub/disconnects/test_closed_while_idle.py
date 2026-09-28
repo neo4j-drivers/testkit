@@ -13,6 +13,12 @@ class TestClosedWhileIdle(TestkitTestCase):
     connection with it, without the driver being told. A driver that only
     tracks its own view of the socket will hand the dead connection straight to
     the next query.
+
+    The transaction is deliberately left open. The server must not close the
+    socket until the connection is back in the pool, and ending an open
+    transaction is the one piece of cleanup no driver can skip, so it gives the
+    script something to wait for. Releasing after a plain autocommit query
+    leaves a driver with nothing to send, and the close then races the release.
     """
 
     required_features = (
@@ -36,7 +42,8 @@ class TestClosedWhileIdle(TestkitTestCase):
     def _run_query(self):
         session = self._driver.session("r")
         try:
-            result = session.run("RETURN 1 as n")
+            tx = session.begin_transaction()
+            result = tx.run("RETURN 1 as n")
             return result.list()
         finally:
             session.close()
@@ -49,8 +56,21 @@ class TestClosedWhileIdle(TestkitTestCase):
             time.sleep(0.1)
         return False
 
+    def _start_server(self):
+        # Ending the open transaction is the sync point: no driver can pool a
+        # connection with a transaction still open, so every driver puts that
+        # on the wire. A driver that also resets on release sends one more
+        # message, which the script has to consume or the release blocks.
+        if self.driver_supports_features(types.Feature.OPT_MINIMAL_RESETS):
+            release_reset = ""
+        else:
+            release_reset = "C: RESET\nS: SUCCESS {}"
+
+        self._server.start(self.script_path("exit_while_idle.script"),
+                           vars_={"#RELEASE_RESET#": release_reset})
+
     def test_discards_connection_closed_while_idle(self):
-        self._server.start(self.script_path("exit_while_idle.script"))
+        self._start_server()
 
         first = self._run_query()
         self.assertEqual(len(first), 1)

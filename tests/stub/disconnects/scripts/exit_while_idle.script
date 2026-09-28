@@ -4,12 +4,19 @@
 A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
 
+C: BEGIN {"{}": "*"}
+S: SUCCESS {}
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
 C: PULL {"n": {"Z": "*"}}
 S: RECORD [1]
 S: SUCCESS {"type": "r"}
-C: RESET
+{{
+    C: ROLLBACK
+----
+    C: RESET
+}}
 S: SUCCESS {}
+#RELEASE_RESET#
 S: <SLEEP> 0.5
 S: <EXIT>
