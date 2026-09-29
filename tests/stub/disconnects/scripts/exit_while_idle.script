@@ -1,22 +1,12 @@
-!: BOLT 5.4
-!: ALLOW RESTART
+!: BOLT 6.0
 
 A: HELLO {"{}": "*"}
 A: LOGON {"{}": "*"}
+*: RESET
 
-C: BEGIN {"{}": "*"}
-S: SUCCESS {}
 C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
 S: SUCCESS {"fields": ["n"]}
-C: PULL {"n": {"Z": "*"}}
+C: PULL {"n": {"Z": "*"}, "[qid]": "*"}
 S: RECORD [1]
 S: SUCCESS {"type": "r"}
-{{
-    C: ROLLBACK
-----
-    C: RESET
-}}
-S: SUCCESS {}
-#RELEASE_RESET#
-S: <SLEEP> 0.5
-S: <EXIT>
+*: RESET
