@@ -1,0 +1,12 @@
+!: BOLT 6.0
+
+A: HELLO {"{}": "*"}
+A: LOGON {"{}": "*"}
+*: RESET
+
+C: RUN {"U": "*"} {"{}": "*"} {"{}": "*"}
+S: SUCCESS {"fields": ["n"]}
+C: PULL {"n": {"Z": "*"}, "[qid]": "*"}
+S: RECORD [1]
+S: SUCCESS {"type": "r"}
+*: RESET

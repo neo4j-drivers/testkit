@@ -189,6 +189,11 @@ class Feature(Enum):
     # The driver caches connections (e.g., in a pool) and doesn't start a new
     # one (with hand-shake, HELLO, etc.) for each query.
     OPT_CONNECTION_REUSE = "Optimization:ConnectionReuse"
+    # Before handing out a pooled connection, the driver checks whether the
+    # operating system already knows the connection is dead (e.g., the server
+    # closed it while it sat idle in the pool) and discards it instead of
+    # failing on the next use.
+    OPT_DEAD_CONNECTION_DETECTION = "Optimization:DeadConnectionDetection"
     # The driver first tries to SUCCESSfully BEGIN a transaction before calling
     # the user-defined transaction function. This way, the (potentially costly)
     # transaction function is not started until a working transaction has been
