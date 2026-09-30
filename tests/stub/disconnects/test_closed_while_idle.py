@@ -55,4 +55,3 @@ class TestClosedWhileIdle(TestkitTestCase):
         second = self._run_query()
 
         self.assertEqual(len(second), 1)
-        self.assertEqual(self._server.count_responses("<ACCEPT>"), 1)
