@@ -284,6 +284,7 @@ class Driver:
         self._closed = True
         if self._auth_token_manager:
             self._auth_token_manager.close()
+        EncapsulatedKeyRepository.clear_all()
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,

@@ -107,6 +107,19 @@ class EncapsulatedKeyRepository:
     _stores: ClassVar[dict[str, _Store]] = {}
 
     @classmethod
+    def clear_all(cls):
+        """
+        Drop every repository's storage.
+
+        Called on driver close. There is no per-driver tracking of which
+        repository ids belong to which driver (no registration round trip
+        ever tells the frontend), so this clears everything rather than
+        just the closing driver's own data. Safe as long as no test needs
+        two drivers' repository data to coexist past one of them closing.
+        """
+        cls._stores.clear()
+
+    @classmethod
     def process_callbacks(cls, request):
         if isinstance(request, EncapsulatedKeyRepositoryFindByIdRequest):
             return cls._find_by_id(request)
