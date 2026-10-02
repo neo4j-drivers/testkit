@@ -102,22 +102,25 @@ class EncapsulatedKeyRepository:
     requests. Storage for one backend-configured repository is created
     lazily, keyed by whatever repository id the backend assigns when the
     profile is configured — there is no separate registration round trip.
+    Each request also carries the driver id it belongs to, learned the same
+    lazy way, so a driver's own repositories can be dropped on its close
+    without disturbing any other driver's data.
     """
 
     _stores: ClassVar[dict[str, _Store]] = {}
+    _driver_by_repository: ClassVar[dict[str, str]] = {}
 
     @classmethod
-    def clear_all(cls):
-        """
-        Drop every repository's storage.
-
-        Called on driver close. There is no per-driver tracking of which
-        repository ids belong to which driver (no registration round trip
-        ever tells the frontend), so this clears everything rather than
-        just the closing driver's own data. Safe as long as no test needs
-        two drivers' repository data to coexist past one of them closing.
-        """
-        cls._stores.clear()
+    def clear_for_driver(cls, driver_id):
+        """Drop storage for every repository that belongs to driver_id."""
+        repository_ids = [
+            repository_id
+            for repository_id, owner in cls._driver_by_repository.items()
+            if owner == driver_id
+        ]
+        for repository_id in repository_ids:
+            cls._stores.pop(repository_id, None)
+            cls._driver_by_repository.pop(repository_id, None)
 
     @classmethod
     def process_callbacks(cls, request):
@@ -136,21 +139,23 @@ class EncapsulatedKeyRepository:
         return None
 
     @classmethod
-    def _store_for(cls, repository_id: str) -> _Store:
+    def _store_for(cls, driver_id, repository_id: str) -> _Store:
+        if driver_id is not None:
+            cls._driver_by_repository[repository_id] = driver_id
         return cls._stores.setdefault(repository_id, _Store())
 
     @classmethod
     def _find_by_id(cls, request):
-        record = cls._store_for(request.repository_id).find_by_id(
-            request.key_id
-        )
+        record = cls._store_for(
+            request.driver_id, request.repository_id
+        ).find_by_id(request.key_id)
         return EncapsulatedKeyRepositoryFindByIdCompleted(request.id, record)
 
     @classmethod
     def _find_by_alias(cls, request):
-        record = cls._store_for(request.repository_id).find_by_alias(
-            request.alias
-        )
+        record = cls._store_for(
+            request.driver_id, request.repository_id
+        ).find_by_alias(request.alias)
         return EncapsulatedKeyRepositoryFindByAliasCompleted(
             request.id, record
         )
@@ -159,7 +164,9 @@ class EncapsulatedKeyRepository:
     def _create(cls, request):
         try:
             key_id = secrets.token_hex(8)
-            record = cls._store_for(request.repository_id).store(
+            record = cls._store_for(
+                request.driver_id, request.repository_id
+            ).store(
                 key_id, request.alias, request.encapsulation,
                 request.metadata
             )
@@ -171,7 +178,9 @@ class EncapsulatedKeyRepository:
     @classmethod
     def _import(cls, request):
         try:
-            record = cls._store_for(request.repository_id).store(
+            record = cls._store_for(
+                request.driver_id, request.repository_id
+            ).store(
                 request.key_id, request.alias, request.encapsulation,
                 request.metadata
             )
@@ -183,9 +192,9 @@ class EncapsulatedKeyRepository:
     @classmethod
     def _set_alias(cls, request):
         try:
-            cls._store_for(request.repository_id).set_alias(
-                request.key_id, request.alias
-            )
+            cls._store_for(
+                request.driver_id, request.repository_id
+            ).set_alias(request.key_id, request.alias)
         except _RepositoryError as error:
             return cls._error_completed(request.id, error)
 
@@ -194,7 +203,9 @@ class EncapsulatedKeyRepository:
     @classmethod
     def _delete(cls, request):
         try:
-            cls._store_for(request.repository_id).delete(request.key_id)
+            cls._store_for(
+                request.driver_id, request.repository_id
+            ).delete(request.key_id)
         except _RepositoryError as error:
             return cls._error_completed(request.id, error)
 

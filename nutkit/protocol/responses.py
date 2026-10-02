@@ -387,10 +387,11 @@ class EncapsulatedKeyRepositoryFindByIdRequest:
     respond with EncapsulatedKeyRepositoryFindByIdCompleted.
     """
 
-    def __init__(self, id, repositoryId, keyId):
+    def __init__(self, id, repositoryId, keyId, driverId=None):
         self.id = id
         self.repository_id = repositoryId
         self.key_id = keyId
+        self.driver_id = driverId
 
 
 class EncapsulatedKeyRepositoryFindByAliasRequest:
@@ -402,10 +403,11 @@ class EncapsulatedKeyRepositoryFindByAliasRequest:
     will respond with EncapsulatedKeyRepositoryFindByAliasCompleted.
     """
 
-    def __init__(self, id, repositoryId, alias):
+    def __init__(self, id, repositoryId, alias, driverId=None):
         self.id = id
         self.repository_id = repositoryId
         self.alias = alias
+        self.driver_id = driverId
 
 
 class EncapsulatedKeyRepositoryCreateRequest:
@@ -417,12 +419,14 @@ class EncapsulatedKeyRepositoryCreateRequest:
     respond with EncapsulatedKeyRepositoryCreateCompleted.
     """
 
-    def __init__(self, id, repositoryId, alias, encapsulation, metadata):
+    def __init__(self, id, repositoryId, alias, encapsulation, metadata,
+                 driverId=None):
         self.id = id
         self.repository_id = repositoryId
         self.alias = alias
         self.encapsulation = encapsulation
         self.metadata = metadata
+        self.driver_id = driverId
 
 
 class EncapsulatedKeyRepositoryImportRequest:
@@ -436,13 +440,14 @@ class EncapsulatedKeyRepositoryImportRequest:
     """
 
     def __init__(self, id, repositoryId, keyId, alias, encapsulation,
-                 metadata):
+                 metadata, driverId=None):
         self.id = id
         self.repository_id = repositoryId
         self.key_id = keyId
         self.alias = alias
         self.encapsulation = encapsulation
         self.metadata = metadata
+        self.driver_id = driverId
 
 
 class EncapsulatedKeyRepositorySetAliasRequest:
@@ -454,11 +459,12 @@ class EncapsulatedKeyRepositorySetAliasRequest:
     will respond with EncapsulatedKeyRepositorySetAliasCompleted.
     """
 
-    def __init__(self, id, repositoryId, keyId, alias=None):
+    def __init__(self, id, repositoryId, keyId, alias=None, driverId=None):
         self.id = id
         self.repository_id = repositoryId
         self.key_id = keyId
         self.alias = alias
+        self.driver_id = driverId
 
 
 class EncapsulatedKeyRepositoryDeleteRequest:
@@ -470,10 +476,11 @@ class EncapsulatedKeyRepositoryDeleteRequest:
     will respond with EncapsulatedKeyRepositoryDeleteCompleted.
     """
 
-    def __init__(self, id, repositoryId, keyId):
+    def __init__(self, id, repositoryId, keyId, driverId=None):
         self.id = id
         self.repository_id = repositoryId
         self.key_id = keyId
+        self.driver_id = driverId
 
 
 class Result:
