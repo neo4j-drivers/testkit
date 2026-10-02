@@ -1015,3 +1015,86 @@ class ImportEncapsulatedKey:
         self.encapsulation = encapsulation
         self.metadata = metadata
         self.profileName = profile_name
+
+
+class EncapsulatedKeyRepositoryFindByIdCompleted:
+    """
+    Answers an EncapsulatedKeyRepositoryFindByIdRequest.
+
+    :param request_id: Id of the request this answers.
+    :param record: The matching key record (a dict with id/alias/
+        encapsulation/metadata keys), or None if no key has that id.
+    """
+
+    def __init__(self, request_id, record=None):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositoryFindByAliasCompleted:
+    """
+    Answers an EncapsulatedKeyRepositoryFindByAliasRequest.
+
+    :param request_id: Id of the request this answers.
+    :param record: The matching key record, or None if no key has that
+        alias.
+    """
+
+    def __init__(self, request_id, record=None):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositoryCreateCompleted:
+    """
+    Answers an EncapsulatedKeyRepositoryCreateRequest.
+
+    :param request_id: Id of the request this answers.
+    :param record: The created key record.
+    """
+
+    def __init__(self, request_id, record):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositoryImportCompleted:
+    """
+    Answers an EncapsulatedKeyRepositoryImportRequest.
+
+    :param request_id: Id of the request this answers.
+    :param record: The imported key record.
+    """
+
+    def __init__(self, request_id, record):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositorySetAliasCompleted:
+    """Answers an EncapsulatedKeyRepositorySetAliasRequest."""
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class EncapsulatedKeyRepositoryDeleteCompleted:
+    """Answers an EncapsulatedKeyRepositoryDeleteRequest."""
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class EncapsulatedKeyRepositoryErrorCompleted:
+    """
+    Answers any EncapsulatedKeyRepository*Request with a repository failure.
+
+    :param request_id: Id of the request this answers.
+    :param error_type: One of "KeyNotFound", "AliasNotFound", "AliasInUse".
+    :param detail: The id or alias the error concerns.
+    """
+
+    def __init__(self, request_id, error_type, detail=None):
+        self.requestId = request_id
+        self.errorType = error_type
+        self.detail = detail

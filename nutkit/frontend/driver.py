@@ -8,6 +8,7 @@ from .auth_token_manager import (
 )
 from .bookmark_manager import BookmarkManager
 from .client_certificate_provider import ClientCertificateProvider
+from .encapsulated_key_repository import EncapsulatedKeyRepository
 from .session import Session
 
 
@@ -129,6 +130,7 @@ class Driver:
                 BearerAuthTokenManager,
                 BookmarkManager,
                 ClientCertificateProvider,
+                EncapsulatedKeyRepository,
             ):
                 cb_response = cb_processor.process_callbacks(res)
                 if cb_response is not None:
