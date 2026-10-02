@@ -14,6 +14,13 @@ from tests.stub.property_encryption.deterministic_fixtures import (
 from tests.stub.shared import StubServer
 
 
+def _with_mutated_profile_version(encrypted, version):
+    # profile_version is the tiny-int byte right after the "ENVELOPE" string.
+    mutated = bytearray(encrypted)
+    mutated[mutated.index(b"ENVELOPE") + len(b"ENVELOPE")] = version
+    return bytes(mutated)
+
+
 class TestPropertyEncryption(TestkitTestCase):
     required_features = (types.Feature.API_PROPERTY_ENCRYPTION,)
 
@@ -157,6 +164,22 @@ class TestPropertyEncryption(TestkitTestCase):
 
         with self.assertRaises(types.DriverError):
             driver.decrypt(encrypted, aad=types.CypherString("row-999"))
+
+    def test_decrypt_raises_on_unsupported_profile_version(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("hello world"), key_alias="k1"
+        )
+
+        for bad_version in (0, 2, 255):
+            with self.subTest(version=bad_version):
+                with self.assertRaises(types.DriverError):
+                    driver.decrypt(
+                        _with_mutated_profile_version(encrypted, bad_version),
+                        use_persisted_aad=True
+                    )
 
     def test_encrypt_raises_on_unknown_alias(self):
         driver = self._new_driver()
