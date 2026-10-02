@@ -233,6 +233,47 @@ class TestPropertyEncryption(TestkitTestCase):
         with self.assertRaises(types.DriverError):
             driver.create_encapsulated_key("k1")
 
+    def test_rebinding_a_keys_alias_moves_it_from_the_old_alias(self):
+        driver = self._new_driver()
+        key = driver.create_encapsulated_key("k1")
+
+        rebound = driver.set_encapsulated_key_alias(key.id, "k2")
+
+        self.assertEqual(rebound.alias, "k2")
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello"), key_alias="k1"
+            )
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("hello"), key_alias="k2"
+        )
+        decrypted = driver.decrypt(encrypted, use_persisted_aad=True)
+        self.assertEqual(decrypted, types.CypherString("hello"))
+
+    def test_clearing_a_keys_alias_leaves_it_unaliased(self):
+        driver = self._new_driver()
+        key = driver.create_encapsulated_key("k1")
+
+        cleared = driver.set_encapsulated_key_alias(key.id, None)
+
+        self.assertIsNone(cleared.alias)
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello"), key_alias="k1"
+            )
+
+    def test_deleting_a_key_makes_it_unusable_by_alias(self):
+        driver = self._new_driver()
+        key = driver.create_encapsulated_key("k1")
+
+        driver.delete_encapsulated_key(key.id)
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello"), key_alias="k1"
+            )
+
     def test_imported_key_decrypts_with_a_fixed_kek(self):
         driver_1 = self._new_deterministic_driver()
         encrypted = driver_1.encrypt_to_bytes(

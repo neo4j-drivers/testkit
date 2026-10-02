@@ -257,6 +257,25 @@ class Driver:
             raise Exception(f"Should be EncapsulatedKey but was: {res}")
         return res
 
+    def set_encapsulated_key_alias(self, key_id, alias=None, *,
+                                   profile_name=None):
+        req = protocol.SetEncapsulatedKeyAlias(
+            self._driver.id, key_id, alias, profile_name=profile_name
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncapsulatedKey):
+            raise Exception(f"Should be EncapsulatedKey but was: {res}")
+        return res
+
+    def delete_encapsulated_key(self, key_id, *, profile_name=None):
+        req = protocol.DeleteEncapsulatedKey(
+            self._driver.id, key_id, profile_name=profile_name
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncapsulatedKey):
+            raise Exception(f"Should be EncapsulatedKey but was: {res}")
+        return res
+
     def close(self):
         req = protocol.DriverClose(self._driver.id)
         res = self.send_and_receive(req, allow_resolution=False)

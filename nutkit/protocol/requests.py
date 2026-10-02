@@ -1017,6 +1017,44 @@ class ImportEncapsulatedKey:
         self.profileName = profile_name
 
 
+class SetEncapsulatedKeyAlias:
+    """
+    Request to rebind, or clear, an encapsulated key's alias.
+
+    The backend should respond with an EncapsulatedKey or an Error response.
+
+    :param driver_id: The id of the driver whose key to update.
+    :param id: The id of the key to set the alias on.
+    :param alias: The alias to bind, or None to clear it.
+    :param profile_name: The name of the encryption profile the key
+        belongs to, or None to use the sole configured profile.
+    """
+
+    def __init__(self, driver_id, id, alias=None, profile_name=None):
+        self.driverId = driver_id
+        self.id = id
+        self.alias = alias
+        self.profileName = profile_name
+
+
+class DeleteEncapsulatedKey:
+    """
+    Request to delete an encapsulated key.
+
+    The backend should respond with an EncapsulatedKey or an Error response.
+
+    :param driver_id: The id of the driver whose key to delete.
+    :param id: The id of the key to delete.
+    :param profile_name: The name of the encryption profile the key
+        belongs to, or None to use the sole configured profile.
+    """
+
+    def __init__(self, driver_id, id, profile_name=None):
+        self.driverId = driver_id
+        self.id = id
+        self.profileName = profile_name
+
+
 class EncapsulatedKeyRepositoryFindByIdCompleted:
     """
     Answers an EncapsulatedKeyRepositoryFindByIdRequest.
