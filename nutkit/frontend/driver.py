@@ -107,6 +107,9 @@ class Driver:
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
         while True:
             res = self._backend.receive(timeout=timeout, hooks=hooks)
+            if isinstance(res, protocol.EncapsulatedKeyRepositoryClosed):
+                EncapsulatedKeyRepository.forget(res.repository_id)
+                continue
             if allow_resolution:
                 if isinstance(res, protocol.ResolverResolutionRequired):
                     addresses = self.resolve(res.address)
@@ -284,7 +287,6 @@ class Driver:
         self._closed = True
         if self._auth_token_manager:
             self._auth_token_manager.close()
-        EncapsulatedKeyRepository.clear_for_driver(self._driver.id)
 
     def session(self, access_mode, bookmarks=None, database=None,
                 fetch_size=None, impersonated_user=None,
