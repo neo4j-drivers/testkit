@@ -14,6 +14,13 @@ from tests.stub.property_encryption.deterministic_fixtures import (
 from tests.stub.shared import StubServer
 
 
+def _with_mutated_profile_version(encrypted, version):
+    # profile_version is the tiny-int byte right after the "ENVELOPE" string.
+    mutated = bytearray(encrypted)
+    mutated[mutated.index(b"ENVELOPE") + len(b"ENVELOPE")] = version
+    return bytes(mutated)
+
+
 class TestPropertyEncryption(TestkitTestCase):
     required_features = (types.Feature.API_PROPERTY_ENCRYPTION,)
 
@@ -158,6 +165,22 @@ class TestPropertyEncryption(TestkitTestCase):
         with self.assertRaises(types.DriverError):
             driver.decrypt(encrypted, aad=types.CypherString("row-999"))
 
+    def test_decrypt_raises_on_unsupported_profile_version(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("hello world"), key_alias="k1"
+        )
+
+        for bad_version in (0, 2, 255):
+            with self.subTest(version=bad_version):
+                with self.assertRaises(types.DriverError):
+                    driver.decrypt(
+                        _with_mutated_profile_version(encrypted, bad_version),
+                        use_persisted_aad=True
+                    )
+
     def test_encrypt_raises_on_unknown_alias(self):
         driver = self._new_driver()
 
@@ -175,6 +198,13 @@ class TestPropertyEncryption(TestkitTestCase):
                 types.CypherString("hello world"),
                 profile_name="p2", key_alias="k1"
             )
+
+    def test_create_raises_when_the_alias_is_already_in_use(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
+
+        with self.assertRaises(types.DriverError):
+            driver.create_encapsulated_key("k1")
 
     def test_encrypt_raises_on_unknown_key_id(self):
         driver = self._new_driver()
@@ -209,6 +239,47 @@ class TestPropertyEncryption(TestkitTestCase):
 
         with self.assertRaises(types.DriverError):
             driver.create_encapsulated_key("k1")
+
+    def test_rebinding_a_keys_alias_moves_it_from_the_old_alias(self):
+        driver = self._new_driver()
+        key = driver.create_encapsulated_key("k1")
+
+        rebound = driver.set_encapsulated_key_alias(key.id, "k2")
+
+        self.assertEqual(rebound.alias, "k2")
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello"), key_alias="k1"
+            )
+
+        encrypted = driver.encrypt_to_bytes(
+            types.CypherString("hello"), key_alias="k2"
+        )
+        decrypted = driver.decrypt(encrypted, use_persisted_aad=True)
+        self.assertEqual(decrypted, types.CypherString("hello"))
+
+    def test_clearing_a_keys_alias_leaves_it_unaliased(self):
+        driver = self._new_driver()
+        key = driver.create_encapsulated_key("k1")
+
+        cleared = driver.set_encapsulated_key_alias(key.id, None)
+
+        self.assertIsNone(cleared.alias)
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello"), key_alias="k1"
+            )
+
+    def test_deleting_a_key_makes_it_unusable_by_alias(self):
+        driver = self._new_driver()
+        key = driver.create_encapsulated_key("k1")
+
+        driver.delete_encapsulated_key(key.id)
+
+        with self.assertRaises(types.DriverError):
+            driver.encrypt_to_bytes(
+                types.CypherString("hello"), key_alias="k1"
+            )
 
     def test_imported_key_decrypts_with_a_fixed_kek(self):
         driver_1 = self._new_deterministic_driver()

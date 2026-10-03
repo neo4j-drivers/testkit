@@ -378,6 +378,117 @@ class EncapsulatedKey:
         self.alias = alias
 
 
+class EncapsulatedKeyRepositoryFindByIdRequest:
+    """
+    Represents a need to look up an encapsulated key by id.
+
+    This message may be sent by the backend at any time should the driver
+    call FindByIdAsync on a reverse-request-backed repository. TestKit will
+    respond with EncapsulatedKeyRepositoryFindByIdCompleted.
+    """
+
+    def __init__(self, id, repositoryId, keyId):
+        self.id = id
+        self.repository_id = repositoryId
+        self.key_id = keyId
+
+
+class EncapsulatedKeyRepositoryFindByAliasRequest:
+    """
+    Represents a need to look up an encapsulated key by alias.
+
+    This message may be sent by the backend at any time should the driver
+    call FindByAliasAsync on a reverse-request-backed repository. TestKit
+    will respond with EncapsulatedKeyRepositoryFindByAliasCompleted.
+    """
+
+    def __init__(self, id, repositoryId, alias):
+        self.id = id
+        self.repository_id = repositoryId
+        self.alias = alias
+
+
+class EncapsulatedKeyRepositoryCreateRequest:
+    """
+    Represents a need to create a new encapsulated key.
+
+    This message may be sent by the backend at any time should the driver
+    call CreateAsync on a reverse-request-backed repository. TestKit will
+    respond with EncapsulatedKeyRepositoryCreateCompleted.
+    """
+
+    def __init__(self, id, repositoryId, alias, encapsulation, metadata):
+        self.id = id
+        self.repository_id = repositoryId
+        self.alias = alias
+        self.encapsulation = encapsulation
+        self.metadata = metadata
+
+
+class EncapsulatedKeyRepositoryImportRequest:
+    """
+    Represents a need to register a pre-existing encapsulated key.
+
+    The key is registered under a fixed id. This message may be sent by the
+    backend at any time should the driver call ImportAsync on a
+    reverse-request-backed repository. TestKit will respond with
+    EncapsulatedKeyRepositoryImportCompleted.
+    """
+
+    def __init__(self, id, repositoryId, keyId, alias, encapsulation,
+                 metadata):
+        self.id = id
+        self.repository_id = repositoryId
+        self.key_id = keyId
+        self.alias = alias
+        self.encapsulation = encapsulation
+        self.metadata = metadata
+
+
+class EncapsulatedKeyRepositorySetAliasRequest:
+    """
+    Represents a need to rebind (or clear) an encapsulated key's alias.
+
+    This message may be sent by the backend at any time should the driver
+    call SetAliasByIdAsync on a reverse-request-backed repository. TestKit
+    will respond with EncapsulatedKeyRepositorySetAliasCompleted.
+    """
+
+    def __init__(self, id, repositoryId, keyId, alias=None):
+        self.id = id
+        self.repository_id = repositoryId
+        self.key_id = keyId
+        self.alias = alias
+
+
+class EncapsulatedKeyRepositoryDeleteRequest:
+    """
+    Represents a need to delete an encapsulated key.
+
+    This message may be sent by the backend at any time should the driver
+    call DeleteByIdAsync on a reverse-request-backed repository. TestKit
+    will respond with EncapsulatedKeyRepositoryDeleteCompleted.
+    """
+
+    def __init__(self, id, repositoryId, keyId):
+        self.id = id
+        self.repository_id = repositoryId
+        self.key_id = keyId
+
+
+class EncapsulatedKeyRepositoryClosed:
+    """
+    Tells the frontend a repository's storage can be dropped.
+
+    Sent by the backend when processing DriverClose, one message per
+    repository the driver had configured. Unlike the Request/Completed
+    pairs above, this is one-way: TestKit does not reply to it.
+    """
+
+    def __init__(self, repositoryId):
+        self.repository_id = repositoryId
+
+
 class Result:
     """Represents a result instance on the backend."""
 

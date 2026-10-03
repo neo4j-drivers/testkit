@@ -8,6 +8,7 @@ from .auth_token_manager import (
 )
 from .bookmark_manager import BookmarkManager
 from .client_certificate_provider import ClientCertificateProvider
+from .encapsulated_key_repository import EncapsulatedKeyRepository
 from .session import Session
 
 
@@ -106,6 +107,9 @@ class Driver:
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
         while True:
             res = self._backend.receive(timeout=timeout, hooks=hooks)
+            if isinstance(res, protocol.EncapsulatedKeyRepositoryClosed):
+                EncapsulatedKeyRepository.forget(res.repository_id)
+                continue
             if allow_resolution:
                 if isinstance(res, protocol.ResolverResolutionRequired):
                     addresses = self.resolve(res.address)
@@ -129,6 +133,7 @@ class Driver:
                 BearerAuthTokenManager,
                 BookmarkManager,
                 ClientCertificateProvider,
+                EncapsulatedKeyRepository,
             ):
                 cb_response = cb_processor.process_callbacks(res)
                 if cb_response is not None:
@@ -249,6 +254,25 @@ class Driver:
         req = protocol.ImportEncapsulatedKey(
             self._driver.id, key_id, alias, encapsulation.hex(" "), metadata,
             profile_name=profile_name
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncapsulatedKey):
+            raise Exception(f"Should be EncapsulatedKey but was: {res}")
+        return res
+
+    def set_encapsulated_key_alias(self, key_id, alias=None, *,
+                                   profile_name=None):
+        req = protocol.SetEncapsulatedKeyAlias(
+            self._driver.id, key_id, alias, profile_name=profile_name
+        )
+        res = self.send_and_receive(req, allow_resolution=False)
+        if not isinstance(res, protocol.EncapsulatedKey):
+            raise Exception(f"Should be EncapsulatedKey but was: {res}")
+        return res
+
+    def delete_encapsulated_key(self, key_id, *, profile_name=None):
+        req = protocol.DeleteEncapsulatedKey(
+            self._driver.id, key_id, profile_name=profile_name
         )
         res = self.send_and_receive(req, allow_resolution=False)
         if not isinstance(res, protocol.EncapsulatedKey):
