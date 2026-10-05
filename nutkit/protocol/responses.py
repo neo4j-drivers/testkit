@@ -51,9 +51,13 @@ class SkipTest:
 class Driver:
     """Represents a driver instance on the backend."""
 
-    def __init__(self, id):
+    def __init__(self, id, keyRepositories=None):
         # Id of Driver instance on backend
         self.id = id
+        # Ids of the encapsulated key repositories the backend created for
+        # the driver's property encryption profiles. Only present on the
+        # reply to NewDriver, and only when profiles were configured.
+        self.key_repositories = keyRepositories
 
 
 class AuthTokenManager:
@@ -474,20 +478,6 @@ class EncapsulatedKeyRepositoryDeleteRequest:
         self.id = id
         self.repository_id = repositoryId
         self.key_id = keyId
-
-
-class EncapsulatedKeyRepositoryClosed:
-    """
-    Tells the frontend a repository's storage can be dropped.
-
-    Sent by the backend when processing DriverClose, one message per
-    repository the driver had configured. TestKit responds with
-    EncapsulatedKeyRepositoryClosedCompleted.
-    """
-
-    def __init__(self, id, repositoryId):
-        self.id = id
-        self.repository_id = repositoryId
 
 
 class Result:

@@ -92,6 +92,7 @@ class Driver:
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be Driver but was %s" % res)
         self._driver = res
+        self._key_repository_ids = res.key_repositories or []
         self._closed = False
 
     @staticmethod
@@ -107,13 +108,6 @@ class Driver:
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
         while True:
             res = self._backend.receive(timeout=timeout, hooks=hooks)
-            if isinstance(res, protocol.EncapsulatedKeyRepositoryClosed):
-                EncapsulatedKeyRepository.forget(res.repository_id)
-                self._backend.send(
-                    protocol.EncapsulatedKeyRepositoryClosedCompleted(res.id),
-                    hooks=hooks
-                )
-                continue
             if allow_resolution:
                 if isinstance(res, protocol.ResolverResolutionRequired):
                     addresses = self.resolve(res.address)
@@ -289,6 +283,8 @@ class Driver:
         if not isinstance(res, protocol.Driver):
             raise Exception(f"Should be Driver but was {res}")
         self._closed = True
+        for repository_id in self._key_repository_ids:
+            EncapsulatedKeyRepository.forget(repository_id)
         if self._auth_token_manager:
             self._auth_token_manager.close()
 

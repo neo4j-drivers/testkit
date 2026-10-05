@@ -1123,13 +1123,6 @@ class EncapsulatedKeyRepositoryDeleteCompleted:
         self.requestId = request_id
 
 
-class EncapsulatedKeyRepositoryClosedCompleted:
-    """Answers an EncapsulatedKeyRepositoryClosed."""
-
-    def __init__(self, request_id):
-        self.requestId = request_id
-
-
 class EncapsulatedKeyRepositoryErrorCompleted:
     """
     Answers any EncapsulatedKeyRepository*Request with a repository failure.

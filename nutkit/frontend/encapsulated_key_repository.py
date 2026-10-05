@@ -102,17 +102,15 @@ class EncapsulatedKeyRepository:
     requests. Storage for one backend-configured repository is created
     lazily, keyed by whatever repository id the backend assigns when the
     profile is configured — there is no separate registration round trip.
-    The backend tells the frontend when a repository's storage can be
-    dropped, via EncapsulatedKeyRepositoryClosed sent while processing
-    DriverClose: the backend already knows which repositories belong to
-    which driver, so the frontend does not need to track that itself.
+    The backend reports a driver's repository ids in its reply to NewDriver,
+    and the frontend drops their storage when that driver closes.
     """
 
     _stores: ClassVar[dict[str, _Store]] = {}
 
     @classmethod
     def forget(cls, repository_id):
-        """Drop one repository's storage, told by the backend to forget it."""
+        """Drop one repository's storage."""
         cls._stores.pop(repository_id, None)
 
     @classmethod
