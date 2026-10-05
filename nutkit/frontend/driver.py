@@ -93,6 +93,8 @@ class Driver:
             raise Exception("Should be Driver but was %s" % res)
         self._driver = res
         self._key_repository_ids = res.key_repositories or []
+        for repository_id in self._key_repository_ids:
+            EncapsulatedKeyRepository.announce(repository_id)
         self._closed = False
 
     @staticmethod

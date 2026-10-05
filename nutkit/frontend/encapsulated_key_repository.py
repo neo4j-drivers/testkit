@@ -99,14 +99,18 @@ class EncapsulatedKeyRepository:
     Default, dict-backed encapsulated key repository.
 
     Lives on the TestKit frontend, reachable by the backend through reverse
-    requests. Storage for one backend-configured repository is created
-    lazily, keyed by whatever repository id the backend assigns when the
-    profile is configured — there is no separate registration round trip.
-    The backend reports a driver's repository ids in its reply to NewDriver,
-    and the frontend drops their storage when that driver closes.
+    requests. The backend reports a driver's repository ids in its reply to
+    NewDriver; the frontend creates their storage then, and drops it when
+    that driver closes. A request naming any other repository id is a
+    backend bug and fails the test.
     """
 
     _stores: ClassVar[dict[str, _Store]] = {}
+
+    @classmethod
+    def announce(cls, repository_id):
+        """Create the storage for a repository the backend has announced."""
+        cls._stores[repository_id] = _Store()
 
     @classmethod
     def forget(cls, repository_id):
@@ -131,7 +135,13 @@ class EncapsulatedKeyRepository:
 
     @classmethod
     def _store_for(cls, repository_id: str) -> _Store:
-        return cls._stores.setdefault(repository_id, _Store())
+        store = cls._stores.get(repository_id)
+        if store is None:
+            raise Exception(
+                f"Backend used repository '{repository_id}', which it did not "
+                "announce for a live driver"
+            )
+        return store
 
     @classmethod
     def _find_by_id(cls, request):
