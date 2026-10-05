@@ -22,7 +22,28 @@ from ..protocol import (
     EncapsulatedKeyRepositorySetAliasRequest,
 )
 
-__all__ = ["EncapsulatedKeyRepository"]
+__all__ = ["EncapsulatedKeyRepository", "UnannouncedRepositoryError"]
+
+
+class UnannouncedRepositoryError(Exception):
+    """
+    The backend used a repository it did not announce for a live driver.
+
+    Carries the reply to send so the backend is not left waiting.
+    """
+
+    def __init__(self, request_id, repository_id):
+        super().__init__(request_id, repository_id)
+        self.repository_id = repository_id
+        self.reply = EncapsulatedKeyRepositoryErrorCompleted(
+            request_id, "UnknownRepository", repository_id
+        )
+
+    def __str__(self):
+        return (
+            f"Backend used repository '{self.repository_id}', which it did "
+            "not announce for a live driver"
+        )
 
 
 class _RepositoryError(Exception):
@@ -52,6 +73,11 @@ class _Store:
     ) -> dict:
         if alias is not None:
             self._ensure_alias_free(alias, key_id)
+
+        existing = self._keys_by_id.get(key_id)
+        if existing is not None and existing["alias"] is not None:
+            self._id_by_alias.pop(existing["alias"], None)
+        if alias is not None:
             self._id_by_alias[alias] = key_id
 
         record = {
@@ -134,25 +160,22 @@ class EncapsulatedKeyRepository:
         return None
 
     @classmethod
-    def _store_for(cls, repository_id: str) -> _Store:
-        store = cls._stores.get(repository_id)
+    def _store_for(cls, request) -> _Store:
+        store = cls._stores.get(request.repository_id)
         if store is None:
-            raise Exception(
-                f"Backend used repository '{repository_id}', which it did not "
-                "announce for a live driver"
-            )
+            raise UnannouncedRepositoryError(request.id, request.repository_id)
         return store
 
     @classmethod
     def _find_by_id(cls, request):
-        record = cls._store_for(request.repository_id).find_by_id(
+        record = cls._store_for(request).find_by_id(
             request.key_id
         )
         return EncapsulatedKeyRepositoryFindByIdCompleted(request.id, record)
 
     @classmethod
     def _find_by_alias(cls, request):
-        record = cls._store_for(request.repository_id).find_by_alias(
+        record = cls._store_for(request).find_by_alias(
             request.alias
         )
         return EncapsulatedKeyRepositoryFindByAliasCompleted(
@@ -163,7 +186,7 @@ class EncapsulatedKeyRepository:
     def _create(cls, request):
         try:
             key_id = secrets.token_hex(8)
-            record = cls._store_for(request.repository_id).store(
+            record = cls._store_for(request).store(
                 key_id, request.alias, request.encapsulation,
                 request.metadata
             )
@@ -175,7 +198,7 @@ class EncapsulatedKeyRepository:
     @classmethod
     def _import(cls, request):
         try:
-            record = cls._store_for(request.repository_id).store(
+            record = cls._store_for(request).store(
                 request.key_id, request.alias, request.encapsulation,
                 request.metadata
             )
@@ -187,7 +210,7 @@ class EncapsulatedKeyRepository:
     @classmethod
     def _set_alias(cls, request):
         try:
-            cls._store_for(request.repository_id).set_alias(
+            cls._store_for(request).set_alias(
                 request.key_id, request.alias
             )
         except _RepositoryError as error:
@@ -198,7 +221,7 @@ class EncapsulatedKeyRepository:
     @classmethod
     def _delete(cls, request):
         try:
-            cls._store_for(request.repository_id).delete(request.key_id)
+            cls._store_for(request).delete(request.key_id)
         except _RepositoryError as error:
             return cls._error_completed(request.id, error)
 

@@ -1090,7 +1090,8 @@ class EncapsulatedKeyRepositoryErrorCompleted:
     Answers any EncapsulatedKeyRepository*Request with a repository failure.
 
     :param request_id: Id of the request this answers.
-    :param error_type: One of "KeyNotFound", "AliasNotFound", "AliasInUse".
+    :param error_type: "KeyNotFound", "AliasInUse", or "UnknownRepository"
+        when the request named a repository the backend did not announce.
     :param detail: The id or alias the error concerns.
     """
 

@@ -199,7 +199,7 @@ class TestPropertyEncryption(TestkitTestCase):
                 profile_name="p2", key_alias="k1"
             )
 
-    def test_create_raises_when_the_alias_is_already_in_use(self):
+    def test_create_raises_when_the_repository_rejects_the_alias(self):
         driver = self._new_driver()
         driver.create_encapsulated_key("k1")
 
