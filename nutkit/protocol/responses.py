@@ -481,11 +481,12 @@ class EncapsulatedKeyRepositoryClosed:
     Tells the frontend a repository's storage can be dropped.
 
     Sent by the backend when processing DriverClose, one message per
-    repository the driver had configured. Unlike the Request/Completed
-    pairs above, this is one-way: TestKit does not reply to it.
+    repository the driver had configured. TestKit responds with
+    EncapsulatedKeyRepositoryClosedCompleted.
     """
 
-    def __init__(self, repositoryId):
+    def __init__(self, id, repositoryId):
+        self.id = id
         self.repository_id = repositoryId
 
 

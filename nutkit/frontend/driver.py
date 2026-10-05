@@ -109,6 +109,10 @@ class Driver:
             res = self._backend.receive(timeout=timeout, hooks=hooks)
             if isinstance(res, protocol.EncapsulatedKeyRepositoryClosed):
                 EncapsulatedKeyRepository.forget(res.repository_id)
+                self._backend.send(
+                    protocol.EncapsulatedKeyRepositoryClosedCompleted(res.id),
+                    hooks=hooks
+                )
                 continue
             if allow_resolution:
                 if isinstance(res, protocol.ResolverResolutionRequired):
