@@ -111,14 +111,8 @@ class Driver:
         return wire
 
     def receive(self, timeout=None, hooks=None, *, allow_resolution):
-        unannounced = None
         while True:
-            try:
-                res = self._backend.receive(timeout=timeout, hooks=hooks)
-            except Exception as error:
-                if unannounced is not None:
-                    raise unannounced from error
-                raise
+            res = self._backend.receive(timeout=timeout, hooks=hooks)
             if allow_resolution:
                 if isinstance(res, protocol.ResolverResolutionRequired):
                     addresses = self.resolve(res.address)
@@ -147,16 +141,14 @@ class Driver:
                 try:
                     cb_response = cb_processor.process_callbacks(res)
                 except UnannouncedRepositoryError as error:
-                    unannounced = error
-                    cb_response = error.reply
+                    self._backend.send(error.reply, hooks=hooks)
+                    raise
                 if cb_response is not None:
                     self._backend.send(cb_response, hooks=hooks)
                     break
             if cb_response is not None:
                 continue
 
-            if unannounced is not None:
-                raise unannounced
             return res
 
     def send(self, req, hooks=None):

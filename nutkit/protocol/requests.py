@@ -1092,7 +1092,7 @@ class EncapsulatedKeyRepositoryErrorCompleted:
     :param request_id: Id of the request this answers.
     :param error_type: "KeyNotFound", "AliasInUse", or "UnknownRepository"
         when the request named a repository the backend did not announce.
-    :param detail: The id or alias the error concerns.
+    :param detail: The key id, alias or repository id the error concerns.
     """
 
     def __init__(self, request_id, error_type, detail=None):
