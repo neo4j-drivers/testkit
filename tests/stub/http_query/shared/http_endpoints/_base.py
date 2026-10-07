@@ -276,9 +276,7 @@ class HttpEndpoint(abc.ABC):
             return {"Authorization": f"Basic {b64_auth_bytes}"}
         if auth.scheme == "bearer":
             token = auth.credentials  # type: ignore
-            token_bytes = str(token).encode()
-            b64_token_bytes = base64.b64encode(token_bytes).decode("ascii")
-            return {"Authorization": f"Bearer {b64_token_bytes}"}
+            return {"Authorization": f"Bearer {token}"}
 
         raise ValueError(
             f"Auth scheme {auth.scheme} is not supported via HTTP. "

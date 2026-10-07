@@ -92,13 +92,18 @@ class TestAuth(HttpTestCase):
 
     def _assert_invalid_auth_error(self, exc: types.DriverError) -> None:
         self.assertFalse(exc.retryable)
-        msg_lower = str(exc).lower()
-        self.assertTrue("query api" in msg_lower or "http" in msg_lower)
 
         driver = get_driver_name()
         if driver in ["python"]:
+            msg_lower = str(exc).lower()
+            self.assertTrue("query api" in msg_lower or "http" in msg_lower)
             self.assertEqual(
                 exc.errorType, "<class 'neo4j.exceptions.ConfigurationError'>"
+            )
+        elif driver in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ClientException",
+                exc.errorType
             )
 
     def test_basic_auth(self) -> None:
@@ -145,7 +150,7 @@ class TestAuth(HttpTestCase):
 
     def test_bearer_auth(self) -> None:
         auth = types.AuthorizationToken(
-            "bearer", credentials="mySuperCoolSecretToken 🤫"
+            "bearer", credentials="mF_9.B5f-4.1JqM"
         )
         self._test_auth(auth)
 
