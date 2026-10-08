@@ -446,8 +446,8 @@ class TestAuthTokenManager(HttpTestCase, AuthorizationBase):
 
     def test_error_session_run_with_header(self) -> None:
         def session_cb(session: Session) -> types.DriverError:
+            result = session.run(query(1))
             with self.assertRaises(types.DriverError) as exc:
-                result = session.run(query(1))
                 result.next()
             return exc.exception
 
@@ -534,8 +534,8 @@ class TestAuthTokenManager(HttpTestCase, AuthorizationBase):
     def test_error_explicit_tx_with_headers(self) -> None:
         def session_cb(session: Session) -> types.DriverError:
             with session.begin_transaction() as tx:
+                res = tx.run(query(1))
                 with self.assertRaises(types.DriverError) as exc:
-                    res = tx.run(query(1))
                     res.next()
             return exc.exception
 

@@ -40,10 +40,6 @@ class Int(HttpType):
             return None
 
         v = value_dict.value
-
-        if isinstance(v, int) and not isinstance(v, bool):
-            return cls(v)
-
         if not isinstance(v, str):
             value_dict.invalid_value(f"must be string, was {type(v)}")
             return None
