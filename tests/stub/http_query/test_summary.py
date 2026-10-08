@@ -739,7 +739,7 @@ class TestSummaryQueryType(_SummaryTestBase):
             )
             self.assertIn(query_type, message)
             self.assertIn("query type", message)
-        if driver_name in ["java"]:
+        elif driver_name in ["java"]:
             self.assertEqual(
                 "org.neo4j.driver.exceptions.ProtocolException",
                 exc.errorType
