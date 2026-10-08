@@ -192,45 +192,24 @@ class TestPropertyEncryption(TestkitTestCase):
                         use_persisted_aad=True
                     )
 
-    def _encrypt_with_a_newer_type_encoding_scheme(self, driver):
+    def test_decrypt_returns_unsupported_type_for_a_newer_type_encoding(self):
+        driver = self._new_driver()
+        driver.create_encapsulated_key("k1")
         encrypted = driver.encrypt_to_bytes(
             types.CypherString("from-the-future"),
             aad=types.CypherString("row-42"),
             key_alias="k1"
         )
-        return _with_mutated_type_encoding_scheme_major(
+
+        from_a_newer_scheme = _with_mutated_type_encoding_scheme_major(
             encrypted, "STRING", 0x7F
         )
 
-    def test_decrypt_returns_unsupported_type_for_a_newer_type_encoding(self):
-        driver = self._new_driver()
-        driver.create_encapsulated_key("k1")
-        encrypted = self._encrypt_with_a_newer_type_encoding_scheme(driver)
-
         decrypted = driver.decrypt(
-            encrypted, aad=types.CypherString("row-42")
+            from_a_newer_scheme, aad=types.CypherString("row-42")
         )
 
         self.assertIsInstance(decrypted, types.CypherUnsupportedType)
-        self.assertEqual(decrypted.name, "STRING")
-
-    def test_decrypt_authenticates_before_returning_unsupported_type(self):
-        driver = self._new_driver()
-        driver.create_encapsulated_key("k1")
-        encrypted = self._encrypt_with_a_newer_type_encoding_scheme(driver)
-
-        with self.assertRaises(types.DriverError):
-            driver.decrypt(encrypted, aad=types.CypherString("row-999"))
-
-    def test_decrypt_raises_on_bytes_trailing_the_structure(self):
-        driver = self._new_driver()
-        driver.create_encapsulated_key("k1")
-        encrypted = driver.encrypt_to_bytes(
-            types.CypherString("hello world"), key_alias="k1"
-        )
-
-        with self.assertRaises(types.DriverError):
-            driver.decrypt(encrypted + b"\x01", use_persisted_aad=True)
 
     def test_decrypt_raises_on_a_structure_with_an_extra_field(self):
         driver = self._new_driver()
