@@ -174,4 +174,33 @@ class HttpTestCase(TestkitTestCase):
             self.assertEqual(actual.elementId, expected.elementId)
             return
 
+        if isinstance(expected, types.CypherPath):
+            self.assertIsInstance(actual, types.CypherPath)
+
+            self.assertEqual(
+                len(actual.nodes.value),
+                len(expected.nodes.value),
+            )
+            self.assertEqual(
+                len(actual.relationships.value),
+                len(expected.relationships.value),
+            )
+
+            for expected_node, actual_node in zip(
+                expected.nodes.value,
+                actual.nodes.value,
+            ):
+                self._assert_http_value_equal(expected_node, actual_node)
+
+            for expected_relationship, actual_relationship in zip(
+                expected.relationships.value,
+                actual.relationships.value,
+            ):
+                self._assert_http_value_equal(
+                    expected_relationship,
+                    actual_relationship,
+                )
+
+            return
+
         self.assertEqual(actual, expected)
