@@ -137,4 +137,34 @@ class HttpTestCase(TestkitTestCase):
                 self.assertEqual(result.keys(), ["x"])
                 records = list(result)
                 self.assertEqual(len(records), 1)
-                self.assertEqual(records[0].values, [cypher_value])
+                self._assert_http_value_equal(
+                    cypher_value,
+                    records[0].values[0],
+                )
+
+    def _assert_http_value_equal(
+        self,
+        expected: t.Any,
+        actual: t.Any,
+    ) -> None:
+        if isinstance(expected, types.CypherNode):
+            # This ignores id comparison until there is a decision on how to
+            # deal with it.
+            self.assertEqual(actual.labels, expected.labels)
+            self.assertEqual(actual.props, expected.props)
+            self.assertEqual(actual.elementId, expected.elementId)
+            return
+
+        if isinstance(expected, types.CypherRelationship):
+            # This ignores id comparison until there is a decision on how to
+            # deal with it.
+            self.assertEqual(actual.startNodeElementId,
+                             expected.startNodeElementId)
+            self.assertEqual(actual.endNodeElementId,
+                             expected.endNodeElementId)
+            self.assertEqual(actual.type, expected.type)
+            self.assertEqual(actual.props, expected.props)
+            self.assertEqual(actual.elementId, expected.elementId)
+            return
+
+        self.assertEqual(actual, expected)
