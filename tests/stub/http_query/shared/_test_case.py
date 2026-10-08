@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+from collections import Counter
 from contextlib import (
     contextmanager,
     suppress,
@@ -150,7 +151,13 @@ class HttpTestCase(TestkitTestCase):
         if isinstance(expected, types.CypherNode):
             # This ignores id comparison until there is a decision on how to
             # deal with it.
-            self.assertEqual(actual.labels, expected.labels)
+            actual_labels = Counter(
+                label.value for label in actual.labels.value
+            )
+            expected_labels = Counter(
+                label.value for label in expected.labels.value
+            )
+            self.assertEqual(actual_labels, expected_labels)
             self.assertEqual(actual.props, expected.props)
             self.assertEqual(actual.elementId, expected.elementId)
             return
