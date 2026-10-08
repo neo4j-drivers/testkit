@@ -115,8 +115,12 @@ class TestGraph(HttpTestCase):
                 self._build_cypher_path("(0:n:1)<-[0:r:1]-(0:n:2)"),
                 self._build_cypher_path("(0:n:1)-[0:r:1]->(0:n:1)"),
                 self._build_cypher_path("(0:n:1)<-[0:r:1]-(0:n:1)"),
-                self._build_cypher_path("(0:n:1)-[0:r:1]->(0:n:2)<-[0:r:2]-(0:n:1)"),
-                self._build_cypher_path("(0:n:1)-[0:r:1]->(0:n:2)<-[0:r:1]-(0:n:1)"),
+                self._build_cypher_path(
+                    "(0:n:1)-[0:r:1]->(0:n:2)<-[0:r:2]-(0:n:1)"
+                ),
+                self._build_cypher_path(
+                    "(0:n:1)-[0:r:1]->(0:n:2)<-[0:r:1]-(0:n:1)"
+                ),
                 types.CypherPath(
                     nodes=types.CypherList(
                         [
@@ -196,7 +200,9 @@ class TestGraph(HttpTestCase):
                                 startNodeElementId=types.as_cypher_type(
                                     "0:node:0"
                                 ),
-                                endNodeElementId=types.as_cypher_type("1:node:0"),
+                                endNodeElementId=types.as_cypher_type(
+                                    "1:node:0"
+                                ),
                             ),
                             types.CypherRelationship(
                                 id=types.as_cypher_type(1),
@@ -208,7 +214,9 @@ class TestGraph(HttpTestCase):
                                 startNodeElementId=types.as_cypher_type(
                                     "0:node:0"
                                 ),
-                                endNodeElementId=types.as_cypher_type("1:node:0"),
+                                endNodeElementId=types.as_cypher_type(
+                                    "1:node:0"
+                                ),
                             ),
                         ]
                     ),
@@ -275,8 +283,12 @@ class TestGraph(HttpTestCase):
         element_id = match.group("relElementId")
         return types.CypherRelationship(
             id=types.as_cypher_type(int(element_id.split(":")[2])),
-            startNodeId=types.as_cypher_type(int(start_node.elementId.value.split(":")[2])),
-            endNodeId=types.as_cypher_type(int(end_node.elementId.value.split(":")[2])),
+            startNodeId=types.as_cypher_type(
+                int(start_node.elementId.value.split(":")[2])
+            ),
+            endNodeId=types.as_cypher_type(
+                int(end_node.elementId.value.split(":")[2])
+            ),
             type=types.as_cypher_type("REL"),
             props=types.as_cypher_type({}),
             elementId=types.as_cypher_type(element_id),
