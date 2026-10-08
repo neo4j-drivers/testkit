@@ -150,7 +150,7 @@ class TestAuth(HttpTestCase):
 
     def test_bearer_auth(self) -> None:
         auth = types.AuthorizationToken(
-            "bearer", credentials="mF_9.B5f-4.1JqM"
+            "bearer", credentials="Eeth5pew-._~+/ohTh8Moi==="
         )
         self._test_auth(auth)
 
