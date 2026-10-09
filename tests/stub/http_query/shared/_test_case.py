@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import typing as t
+from collections import Counter
 from contextlib import (
     contextmanager,
     suppress,
@@ -137,4 +138,69 @@ class HttpTestCase(TestkitTestCase):
                 self.assertEqual(result.keys(), ["x"])
                 records = list(result)
                 self.assertEqual(len(records), 1)
-                self.assertEqual(records[0].values, [cypher_value])
+                self._assert_http_value_equal(
+                    cypher_value,
+                    records[0].values[0],
+                )
+
+    def _assert_http_value_equal(
+        self,
+        expected: t.Any,
+        actual: t.Any,
+    ) -> None:
+        if isinstance(expected, types.CypherNode):
+            # This ignores id comparison until there is a decision on how to
+            # deal with it.
+            actual_labels = Counter(
+                label.value for label in actual.labels.value
+            )
+            expected_labels = Counter(
+                label.value for label in expected.labels.value
+            )
+            self.assertEqual(actual_labels, expected_labels)
+            self.assertEqual(actual.props, expected.props)
+            self.assertEqual(actual.elementId, expected.elementId)
+            return
+
+        if isinstance(expected, types.CypherRelationship):
+            # This ignores id comparison until there is a decision on how to
+            # deal with it.
+            self.assertEqual(actual.startNodeElementId,
+                             expected.startNodeElementId)
+            self.assertEqual(actual.endNodeElementId,
+                             expected.endNodeElementId)
+            self.assertEqual(actual.type, expected.type)
+            self.assertEqual(actual.props, expected.props)
+            self.assertEqual(actual.elementId, expected.elementId)
+            return
+
+        if isinstance(expected, types.CypherPath):
+            self.assertIsInstance(actual, types.CypherPath)
+
+            self.assertEqual(
+                len(actual.nodes.value),
+                len(expected.nodes.value),
+            )
+            self.assertEqual(
+                len(actual.relationships.value),
+                len(expected.relationships.value),
+            )
+
+            for expected_node, actual_node in zip(
+                expected.nodes.value,
+                actual.nodes.value,
+            ):
+                self._assert_http_value_equal(expected_node, actual_node)
+
+            for expected_relationship, actual_relationship in zip(
+                expected.relationships.value,
+                actual.relationships.value,
+            ):
+                self._assert_http_value_equal(
+                    expected_relationship,
+                    actual_relationship,
+                )
+
+            return
+
+        self.assertEqual(actual, expected)

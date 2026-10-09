@@ -469,6 +469,7 @@ def main(settings, configurations):
                 print(cmd)
                 subprocess.run(cmd)
             last_image = neo4j_config.image
+            docker.pull_if_missing(neo4j_config.image)
 
             # Start a Neo4j server
             if cluster:

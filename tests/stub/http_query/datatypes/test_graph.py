@@ -25,7 +25,7 @@ class TestGraph(HttpTestCase):
                     id=types.as_cypher_type(0),
                     labels=types.as_cypher_type([]),
                     props=types.as_cypher_type({}),
-                    elementId=types.as_cypher_type("node0"),
+                    elementId=types.as_cypher_type("0:node:0"),
                 ),
                 types.CypherNode(
                     id=types.as_cypher_type(0),
@@ -55,7 +55,7 @@ class TestGraph(HttpTestCase):
                             "life_goals": [None],
                         }
                     ),
-                    elementId=types.as_cypher_type("🪪"),
+                    elementId=types.as_cypher_type("0:node:0"),
                 ),
             ):
                 http_value = http_types.HttpType.from_cypher_type(cypher_value)
@@ -68,17 +68,17 @@ class TestGraph(HttpTestCase):
                 types.CypherRelationship(
                     id=types.as_cypher_type(0),
                     startNodeId=types.as_cypher_type(0),
-                    endNodeId=types.as_cypher_type(0),
+                    endNodeId=types.as_cypher_type(1),
                     type=types.as_cypher_type("KNOWS"),
                     props=types.as_cypher_type({}),
-                    elementId=types.as_cypher_type("rel0"),
-                    startNodeElementId=types.as_cypher_type("node0"),
-                    endNodeElementId=types.as_cypher_type("node1"),
+                    elementId=types.as_cypher_type("0:rel:0"),
+                    startNodeElementId=types.as_cypher_type("0:node:0"),
+                    endNodeElementId=types.as_cypher_type("0:node:1"),
                 ),
                 types.CypherRelationship(
                     id=types.as_cypher_type(0),
                     startNodeId=types.as_cypher_type(0),
-                    endNodeId=types.as_cypher_type(0),
+                    endNodeId=types.as_cypher_type(1),
                     type=types.as_cypher_type("🤺"),
                     props=types.as_cypher_type(
                         {
@@ -98,9 +98,9 @@ class TestGraph(HttpTestCase):
                             "✨?": "Lots of ✨!",
                         }
                     ),
-                    elementId=types.as_cypher_type("🪪"),
-                    startNodeElementId=types.as_cypher_type("🚰"),
-                    endNodeElementId=types.as_cypher_type("🪠"),
+                    elementId=types.as_cypher_type("0:rel:0"),
+                    startNodeElementId=types.as_cypher_type("0:node:0"),
+                    endNodeElementId=types.as_cypher_type("0:node:1"),
                 ),
             ):
                 http_value = http_types.HttpType.from_cypher_type(cypher_value)
@@ -110,13 +110,17 @@ class TestGraph(HttpTestCase):
     def test_path(self):
         with self.server() as server:
             for cypher_value in (
-                self._build_cypher_path("(n1)"),
-                self._build_cypher_path("(n1)-[r1]->(n2)"),
-                self._build_cypher_path("(n1)<-[r1]-(n2)"),
-                self._build_cypher_path("(n1)-[r1]->(n1)"),
-                self._build_cypher_path("(n1)<-[r1]-(n1)"),
-                self._build_cypher_path("(n1)-[r1]->(n2)<-[r2]-(n1)"),
-                self._build_cypher_path("(n1)-[r1]->(n2)<-[r1]-(n1)"),
+                self._build_cypher_path("(0:n:1)"),
+                self._build_cypher_path("(0:n:1)-[0:r:1]->(0:n:2)"),
+                self._build_cypher_path("(0:n:1)<-[0:r:1]-(0:n:2)"),
+                self._build_cypher_path("(0:n:1)-[0:r:1]->(0:n:1)"),
+                self._build_cypher_path("(0:n:1)<-[0:r:1]-(0:n:1)"),
+                self._build_cypher_path(
+                    "(0:n:1)-[0:r:1]->(0:n:2)<-[0:r:2]-(0:n:1)"
+                ),
+                self._build_cypher_path(
+                    "(0:n:1)-[0:r:1]->(0:n:2)<-[0:r:1]-(0:n:1)"
+                ),
                 types.CypherPath(
                     nodes=types.CypherList(
                         [
@@ -124,7 +128,7 @@ class TestGraph(HttpTestCase):
                                 id=types.as_cypher_type(0),
                                 labels=types.as_cypher_type(["A"]),
                                 props=types.as_cypher_type({}),
-                                elementId=types.as_cypher_type("node0"),
+                                elementId=types.as_cypher_type("0:node:0"),
                             ),
                             types.CypherNode(
                                 id=types.as_cypher_type(0),
@@ -154,13 +158,13 @@ class TestGraph(HttpTestCase):
                                         "life_goals": [None],
                                     }
                                 ),
-                                elementId=types.as_cypher_type("node1"),
+                                elementId=types.as_cypher_type("1:node:0"),
                             ),
                             types.CypherNode(
                                 id=types.as_cypher_type(0),
                                 labels=types.as_cypher_type(["A"]),
                                 props=types.as_cypher_type({}),
-                                elementId=types.as_cypher_type("node0"),
+                                elementId=types.as_cypher_type("0:node:0"),
                             ),
                         ]
                     ),
@@ -192,23 +196,27 @@ class TestGraph(HttpTestCase):
                                         "✨?": "Lots of ✨!",
                                     }
                                 ),
-                                elementId=types.as_cypher_type("rel0"),
+                                elementId=types.as_cypher_type("0:rel:0"),
                                 startNodeElementId=types.as_cypher_type(
-                                    "node0"
+                                    "0:node:0"
                                 ),
-                                endNodeElementId=types.as_cypher_type("node1"),
+                                endNodeElementId=types.as_cypher_type(
+                                    "1:node:0"
+                                ),
                             ),
                             types.CypherRelationship(
-                                id=types.as_cypher_type(0),
+                                id=types.as_cypher_type(1),
                                 startNodeId=types.as_cypher_type(0),
                                 endNodeId=types.as_cypher_type(0),
                                 type=types.as_cypher_type("RELATES_TO"),
                                 props=types.as_cypher_type({}),
-                                elementId=types.as_cypher_type("rel1"),
+                                elementId=types.as_cypher_type("0:rel:1"),
                                 startNodeElementId=types.as_cypher_type(
-                                    "node0"
+                                    "0:node:0"
                                 ),
-                                endNodeElementId=types.as_cypher_type("node1"),
+                                endNodeElementId=types.as_cypher_type(
+                                    "1:node:0"
+                                ),
                             ),
                         ]
                     ),
@@ -259,7 +267,7 @@ class TestGraph(HttpTestCase):
     def _node_from_match(cls, match: re.Match) -> types.CypherNode:
         element_id = match.group("nodeElementId")
         return types.CypherNode(
-            id=types.as_cypher_type(0),
+            id=types.as_cypher_type(int(element_id.split(":")[2])),
             labels=types.as_cypher_type(["Node"]),
             props=types.as_cypher_type({}),
             elementId=types.as_cypher_type(element_id),
@@ -274,9 +282,13 @@ class TestGraph(HttpTestCase):
     ) -> types.CypherRelationship:
         element_id = match.group("relElementId")
         return types.CypherRelationship(
-            id=types.as_cypher_type(0),
-            startNodeId=types.as_cypher_type(0),
-            endNodeId=types.as_cypher_type(0),
+            id=types.as_cypher_type(int(element_id.split(":")[2])),
+            startNodeId=types.as_cypher_type(
+                int(start_node.elementId.value.split(":")[2])
+            ),
+            endNodeId=types.as_cypher_type(
+                int(end_node.elementId.value.split(":")[2])
+            ),
             type=types.as_cypher_type("REL"),
             props=types.as_cypher_type({}),
             elementId=types.as_cypher_type(element_id),
