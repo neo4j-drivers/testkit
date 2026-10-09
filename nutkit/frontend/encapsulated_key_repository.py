@@ -1,0 +1,234 @@
+from __future__ import annotations
+
+import secrets
+from typing import (
+    Any,
+    ClassVar,
+)
+
+from ..protocol import (
+    EncapsulatedKeyRepositoryCreateCompleted,
+    EncapsulatedKeyRepositoryCreateRequest,
+    EncapsulatedKeyRepositoryDeleteCompleted,
+    EncapsulatedKeyRepositoryDeleteRequest,
+    EncapsulatedKeyRepositoryErrorCompleted,
+    EncapsulatedKeyRepositoryFindByAliasCompleted,
+    EncapsulatedKeyRepositoryFindByAliasRequest,
+    EncapsulatedKeyRepositoryFindByIdCompleted,
+    EncapsulatedKeyRepositoryFindByIdRequest,
+    EncapsulatedKeyRepositoryImportCompleted,
+    EncapsulatedKeyRepositoryImportRequest,
+    EncapsulatedKeyRepositorySetAliasCompleted,
+    EncapsulatedKeyRepositorySetAliasRequest,
+)
+
+__all__ = ["EncapsulatedKeyRepository", "UnannouncedRepositoryError"]
+
+
+class UnannouncedRepositoryError(Exception):
+    """
+    The backend used a repository it did not announce for a live driver.
+
+    Carries the reply to send so the backend is not left waiting.
+    """
+
+    def __init__(self, request_id, repository_id):
+        super().__init__(request_id, repository_id)
+        self.repository_id = repository_id
+        self.reply = EncapsulatedKeyRepositoryErrorCompleted(
+            request_id, "UnknownRepository", repository_id
+        )
+
+    def __str__(self):
+        return (
+            f"Backend used repository '{self.repository_id}', which it did "
+            "not announce for a live driver"
+        )
+
+
+class _RepositoryError(Exception):
+    def __init__(self, error_type: str, detail: str):
+        super().__init__(error_type, detail)
+        self.error_type = error_type
+        self.detail = detail
+
+
+class _Store:
+    """One backend-configured repository's key and alias data."""
+
+    def __init__(self):
+        self._keys_by_id: dict[str, dict] = {}
+        self._id_by_alias: dict[str, str] = {}
+
+    def find_by_id(self, key_id: str) -> dict | None:
+        return self._keys_by_id.get(key_id)
+
+    def find_by_alias(self, alias: str) -> dict | None:
+        key_id = self._id_by_alias.get(alias)
+        return self._keys_by_id.get(key_id) if key_id is not None else None
+
+    def store(
+        self, key_id: str, alias: str | None, encapsulation: Any,
+        metadata: Any
+    ) -> dict:
+        if alias is not None:
+            self._ensure_alias_free(alias, key_id)
+
+        existing = self._keys_by_id.get(key_id)
+        if existing is not None and existing["alias"] is not None:
+            self._id_by_alias.pop(existing["alias"], None)
+        if alias is not None:
+            self._id_by_alias[alias] = key_id
+
+        record = {
+            "id": key_id,
+            "alias": alias,
+            "encapsulation": encapsulation,
+            "metadata": metadata,
+        }
+        self._keys_by_id[key_id] = record
+        return record
+
+    def set_alias(self, key_id: str, alias: str | None) -> None:
+        record = self._get_or_raise(key_id)
+        if alias is not None:
+            self._ensure_alias_free(alias, key_id)
+
+        old_alias = record["alias"]
+        if old_alias is not None:
+            self._id_by_alias.pop(old_alias, None)
+        if alias is not None:
+            self._id_by_alias[alias] = key_id
+
+        record["alias"] = alias
+
+    def delete(self, key_id: str) -> None:
+        record = self._get_or_raise(key_id)
+        if record["alias"] is not None:
+            self._id_by_alias.pop(record["alias"], None)
+        del self._keys_by_id[key_id]
+
+    def _ensure_alias_free(self, alias: str, id_claiming_it: str) -> None:
+        owner = self._id_by_alias.get(alias)
+        if owner is not None and owner != id_claiming_it:
+            raise _RepositoryError("AliasInUse", alias)
+
+    def _get_or_raise(self, key_id: str) -> dict:
+        record = self._keys_by_id.get(key_id)
+        if record is None:
+            raise _RepositoryError("KeyNotFound", key_id)
+        return record
+
+
+class EncapsulatedKeyRepository:
+    """
+    Default, dict-backed encapsulated key repository.
+
+    Lives on the TestKit frontend, reachable by the backend through reverse
+    requests. The backend reports a driver's repository ids in its reply to
+    NewDriver; the frontend creates their storage then, and drops it when
+    that driver closes. A request naming any other repository id is a
+    backend bug and fails the test.
+    """
+
+    _stores: ClassVar[dict[str, _Store]] = {}
+
+    @classmethod
+    def announce(cls, repository_id):
+        """Create the storage for a repository the backend has announced."""
+        cls._stores[repository_id] = _Store()
+
+    @classmethod
+    def forget(cls, repository_id):
+        """Drop one repository's storage."""
+        cls._stores.pop(repository_id, None)
+
+    @classmethod
+    def process_callbacks(cls, request):
+        if isinstance(request, EncapsulatedKeyRepositoryFindByIdRequest):
+            return cls._find_by_id(request)
+        if isinstance(request, EncapsulatedKeyRepositoryFindByAliasRequest):
+            return cls._find_by_alias(request)
+        if isinstance(request, EncapsulatedKeyRepositoryCreateRequest):
+            return cls._create(request)
+        if isinstance(request, EncapsulatedKeyRepositoryImportRequest):
+            return cls._import(request)
+        if isinstance(request, EncapsulatedKeyRepositorySetAliasRequest):
+            return cls._set_alias(request)
+        if isinstance(request, EncapsulatedKeyRepositoryDeleteRequest):
+            return cls._delete(request)
+        return None
+
+    @classmethod
+    def _store_for(cls, request) -> _Store:
+        store = cls._stores.get(request.repository_id)
+        if store is None:
+            raise UnannouncedRepositoryError(request.id, request.repository_id)
+        return store
+
+    @classmethod
+    def _find_by_id(cls, request):
+        record = cls._store_for(request).find_by_id(
+            request.key_id
+        )
+        return EncapsulatedKeyRepositoryFindByIdCompleted(request.id, record)
+
+    @classmethod
+    def _find_by_alias(cls, request):
+        record = cls._store_for(request).find_by_alias(
+            request.alias
+        )
+        return EncapsulatedKeyRepositoryFindByAliasCompleted(
+            request.id, record
+        )
+
+    @classmethod
+    def _create(cls, request):
+        try:
+            key_id = secrets.token_hex(8)
+            record = cls._store_for(request).store(
+                key_id, request.alias, request.encapsulation,
+                request.metadata
+            )
+        except _RepositoryError as error:
+            return cls._error_completed(request.id, error)
+
+        return EncapsulatedKeyRepositoryCreateCompleted(request.id, record)
+
+    @classmethod
+    def _import(cls, request):
+        try:
+            record = cls._store_for(request).store(
+                request.key_id, request.alias, request.encapsulation,
+                request.metadata
+            )
+        except _RepositoryError as error:
+            return cls._error_completed(request.id, error)
+
+        return EncapsulatedKeyRepositoryImportCompleted(request.id, record)
+
+    @classmethod
+    def _set_alias(cls, request):
+        try:
+            cls._store_for(request).set_alias(
+                request.key_id, request.alias
+            )
+        except _RepositoryError as error:
+            return cls._error_completed(request.id, error)
+
+        return EncapsulatedKeyRepositorySetAliasCompleted(request.id)
+
+    @classmethod
+    def _delete(cls, request):
+        try:
+            cls._store_for(request).delete(request.key_id)
+        except _RepositoryError as error:
+            return cls._error_completed(request.id, error)
+
+        return EncapsulatedKeyRepositoryDeleteCompleted(request.id)
+
+    @staticmethod
+    def _error_completed(request_id, error: _RepositoryError):
+        return EncapsulatedKeyRepositoryErrorCompleted(
+            request_id, error.error_type, error.detail
+        )

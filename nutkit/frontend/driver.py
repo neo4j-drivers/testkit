@@ -8,6 +8,10 @@ from .auth_token_manager import (
 )
 from .bookmark_manager import BookmarkManager
 from .client_certificate_provider import ClientCertificateProvider
+from .encapsulated_key_repository import (
+    EncapsulatedKeyRepository,
+    UnannouncedRepositoryError,
+)
 from .session import Session
 
 
@@ -91,6 +95,9 @@ class Driver:
         if not isinstance(res, protocol.Driver):
             raise Exception("Should be Driver but was %s" % res)
         self._driver = res
+        self._key_repository_ids = res.key_repositories or []
+        for repository_id in self._key_repository_ids:
+            EncapsulatedKeyRepository.announce(repository_id)
         self._closed = False
 
     @staticmethod
@@ -129,8 +136,13 @@ class Driver:
                 BearerAuthTokenManager,
                 BookmarkManager,
                 ClientCertificateProvider,
+                EncapsulatedKeyRepository,
             ):
-                cb_response = cb_processor.process_callbacks(res)
+                try:
+                    cb_response = cb_processor.process_callbacks(res)
+                except UnannouncedRepositoryError as error:
+                    self._backend.send(error.reply, hooks=hooks)
+                    raise
                 if cb_response is not None:
                     self._backend.send(cb_response, hooks=hooks)
                     break
@@ -257,9 +269,13 @@ class Driver:
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)
-        res = self.send_and_receive(req, allow_resolution=False)
-        if not isinstance(res, protocol.Driver):
-            raise Exception(f"Should be Driver but was {res}")
+        try:
+            res = self.send_and_receive(req, allow_resolution=False)
+            if not isinstance(res, protocol.Driver):
+                raise Exception(f"Should be Driver but was {res}")
+        finally:
+            for repository_id in self._key_repository_ids:
+                EncapsulatedKeyRepository.forget(repository_id)
         self._closed = True
         if self._auth_token_manager:
             self._auth_token_manager.close()
