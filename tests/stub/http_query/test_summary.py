@@ -739,6 +739,11 @@ class TestSummaryQueryType(_SummaryTestBase):
             )
             self.assertIn(query_type, message)
             self.assertIn("query type", message)
+        elif driver_name in ["java"]:
+            self.assertEqual(
+                "org.neo4j.driver.exceptions.ProtocolException",
+                exc.errorType
+            )
         else:
             raise NotImplementedError(f"Add error mapping for {driver_name}")
 
