@@ -160,6 +160,15 @@ def start(name):
     return container
 
 
+def pull_if_missing(image):
+    inspect = ["docker", "image", "inspect", image]
+    present = subprocess.run(
+        inspect, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    ).returncode == 0
+    if not present:
+        _subprocess_run(["docker", "pull", image], check=True)
+
+
 def run(image, name, command=None, mount_map=None, host_map=None,
         port_map=None, env_map=None, working_folder=None, network=None,
         aliases=None, log_path=None, extra_args=None, background=False):
