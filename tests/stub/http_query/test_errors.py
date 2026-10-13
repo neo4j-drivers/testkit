@@ -5,6 +5,7 @@ from random import shuffle
 
 from nutkit import protocol as types
 from tests.shared import (
+    driver_feature,
     get_driver_name,
     Potential,
 )
@@ -630,6 +631,7 @@ class TestErrors(HttpTestCase):
             driver.execute_query(QUERY, routing="w", database=DB)
         return exc_capture.exception
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_execute_query(self) -> None:
         # In BOLT terms, this is equivalent to a transaction's
         # BEGIN message receiving a FAILURE response.
@@ -639,6 +641,7 @@ class TestErrors(HttpTestCase):
             send_query_records=False,
         )
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_execute_query_no_headers(self) -> None:
         # In BOLT terms, this is equivalent to a transaction's
         # RUN message receiving a FAILURE response.
@@ -648,6 +651,7 @@ class TestErrors(HttpTestCase):
             send_query_records=False,
         )
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_execute_query_with_headers(self) -> None:
         # In BOLT terms, this is equivalent to a transaction's
         # first PULL message receiving a FAILURE response.
@@ -657,6 +661,7 @@ class TestErrors(HttpTestCase):
             send_query_records=False,
         )
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_execute_query_with_records(self) -> None:
         # In BOLT terms, this is equivalent to some transaction's
         # PULL message receiving a FAILURE response
