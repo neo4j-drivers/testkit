@@ -16,18 +16,16 @@ from ..protocol import (
     EncapsulatedKeyRepositoryFindByAliasRequest,
     EncapsulatedKeyRepositoryFindByIdCompleted,
     EncapsulatedKeyRepositoryFindByIdRequest,
-    EncapsulatedKeyRepositoryImportCompleted,
-    EncapsulatedKeyRepositoryImportRequest,
     EncapsulatedKeyRepositorySetAliasCompleted,
     EncapsulatedKeyRepositorySetAliasRequest,
 )
 
-__all__ = ["EncapsulatedKeyRepository", "UnannouncedRepositoryError"]
+__all__ = ["EncapsulatedKeyRepository", "UnknownRepositoryError"]
 
 
-class UnannouncedRepositoryError(Exception):
+class UnknownRepositoryError(Exception):
     """
-    The backend used a repository it did not announce for a live driver.
+    The backend used a repository TestKit did not assign to a live driver.
 
     Carries the reply to send so the backend is not left waiting.
     """
@@ -41,8 +39,8 @@ class UnannouncedRepositoryError(Exception):
 
     def __str__(self):
         return (
-            f"Backend used repository '{self.repository_id}', which it did "
-            "not announce for a live driver"
+            f"Backend used repository '{self.repository_id}', which TestKit "
+            "did not assign to a live driver"
         )
 
 
@@ -54,7 +52,7 @@ class _RepositoryError(Exception):
 
 
 class _Store:
-    """One backend-configured repository's key and alias data."""
+    """One repository's key and alias data."""
 
     def __init__(self):
         self._keys_by_id: dict[str, dict] = {}
@@ -125,18 +123,27 @@ class EncapsulatedKeyRepository:
     Default, dict-backed encapsulated key repository.
 
     Lives on the TestKit frontend, reachable by the backend through reverse
-    requests. The backend reports a driver's repository ids in its reply to
-    NewDriver; the frontend creates their storage then, and drops it when
-    that driver closes. A request naming any other repository id is a
-    backend bug and fails the test.
+    requests. TestKit creates one repository per encryption profile and
+    sends its id in NewDriver; the repository is dropped when that driver
+    closes. A request naming any other repository id is a backend bug and
+    fails the test.
     """
 
     _stores: ClassVar[dict[str, _Store]] = {}
 
     @classmethod
-    def announce(cls, repository_id):
-        """Create the storage for a repository the backend has announced."""
+    def create(cls):
+        """Create a repository and return its id."""
+        repository_id = secrets.token_hex(8)
         cls._stores[repository_id] = _Store()
+        return repository_id
+
+    @classmethod
+    def seed(cls, repository_id, key_id, alias, encapsulation, metadata):
+        """Store a pre-existing key directly, without involving the driver."""
+        cls._stores[repository_id].store(
+            key_id, alias, encapsulation, metadata
+        )
 
     @classmethod
     def forget(cls, repository_id):
@@ -151,8 +158,6 @@ class EncapsulatedKeyRepository:
             return cls._find_by_alias(request)
         if isinstance(request, EncapsulatedKeyRepositoryCreateRequest):
             return cls._create(request)
-        if isinstance(request, EncapsulatedKeyRepositoryImportRequest):
-            return cls._import(request)
         if isinstance(request, EncapsulatedKeyRepositorySetAliasRequest):
             return cls._set_alias(request)
         if isinstance(request, EncapsulatedKeyRepositoryDeleteRequest):
@@ -163,7 +168,7 @@ class EncapsulatedKeyRepository:
     def _store_for(cls, request) -> _Store:
         store = cls._stores.get(request.repository_id)
         if store is None:
-            raise UnannouncedRepositoryError(request.id, request.repository_id)
+            raise UnknownRepositoryError(request.id, request.repository_id)
         return store
 
     @classmethod
@@ -194,18 +199,6 @@ class EncapsulatedKeyRepository:
             return cls._error_completed(request.id, error)
 
         return EncapsulatedKeyRepositoryCreateCompleted(request.id, record)
-
-    @classmethod
-    def _import(cls, request):
-        try:
-            record = cls._store_for(request).store(
-                request.key_id, request.alias, request.encapsulation,
-                request.metadata
-            )
-        except _RepositoryError as error:
-            return cls._error_completed(request.id, error)
-
-        return EncapsulatedKeyRepositoryImportCompleted(request.id, record)
 
     @classmethod
     def _set_alias(cls, request):

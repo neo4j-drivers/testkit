@@ -10,7 +10,7 @@ from .bookmark_manager import BookmarkManager
 from .client_certificate_provider import ClientCertificateProvider
 from .encapsulated_key_repository import (
     EncapsulatedKeyRepository,
-    UnannouncedRepositoryError,
+    UnknownRepositoryError,
 )
 from .session import Session
 
@@ -65,6 +65,7 @@ class Driver:
             else:
                 client_certificate_provider_id_ = client_certificate.id
 
+        self._repository_ids_by_profile = {}
         property_encryption_profiles_ = None
         if property_encryption_profiles is not None:
             property_encryption_profiles_ = [
@@ -91,20 +92,22 @@ class Driver:
             disable_auto_commit_retries=disable_auto_commit_retries,
             property_encryption_profiles=property_encryption_profiles_,
         )
-        res = backend.send_and_receive(req)
-        if not isinstance(res, protocol.Driver):
-            raise Exception("Should be Driver but was %s" % res)
+        try:
+            res = backend.send_and_receive(req)
+            if not isinstance(res, protocol.Driver):
+                raise Exception("Should be Driver but was %s" % res)
+        except BaseException:
+            self._forget_repositories()
+            raise
         self._driver = res
-        self._key_repository_ids = res.key_repositories or []
-        for repository_id in self._key_repository_ids:
-            EncapsulatedKeyRepository.announce(repository_id)
         self._closed = False
 
-    @staticmethod
-    def _encryption_profile_wire(profile):
+    def _encryption_profile_wire(self, profile):
         if isinstance(profile, str):
-            return {"name": profile}
-        wire = {"name": profile["name"]}
+            profile = {"name": profile}
+        repository_id = EncapsulatedKeyRepository.create()
+        self._repository_ids_by_profile[profile["name"]] = repository_id
+        wire = {"name": profile["name"], "repositoryId": repository_id}
         kek = profile.get("kek")
         if kek is not None:
             wire["kek"] = kek.hex(" ")
@@ -140,7 +143,7 @@ class Driver:
             ):
                 try:
                     cb_response = cb_processor.process_callbacks(res)
-                except UnannouncedRepositoryError as error:
+                except UnknownRepositoryError as error:
                     self._backend.send(error.reply, hooks=hooks)
                     raise
                 if cb_response is not None:
@@ -256,16 +259,26 @@ class Driver:
             raise Exception(f"Should be EncapsulatedKey but was: {res}")
         return res
 
+    def _forget_repositories(self):
+        for repository_id in self._repository_ids_by_profile.values():
+            EncapsulatedKeyRepository.forget(repository_id)
+
     def import_encapsulated_key(self, key_id, alias, encapsulation, metadata,
                                 *, profile_name=None):
-        req = protocol.ImportEncapsulatedKey(
-            self._driver.id, key_id, alias, encapsulation.hex(" "), metadata,
-            profile_name=profile_name
+        EncapsulatedKeyRepository.seed(
+            self._repository_id_for(profile_name), key_id, alias,
+            encapsulation.hex(" "), metadata
         )
-        res = self.send_and_receive(req, allow_resolution=False)
-        if not isinstance(res, protocol.EncapsulatedKey):
-            raise Exception(f"Should be EncapsulatedKey but was: {res}")
-        return res
+
+    def _repository_id_for(self, profile_name):
+        if profile_name is not None:
+            return self._repository_ids_by_profile[profile_name]
+        if len(self._repository_ids_by_profile) != 1:
+            raise ValueError(
+                "profile_name is required unless exactly one encryption "
+                "profile is configured"
+            )
+        return next(iter(self._repository_ids_by_profile.values()))
 
     def close(self):
         req = protocol.DriverClose(self._driver.id)
@@ -274,8 +287,7 @@ class Driver:
             if not isinstance(res, protocol.Driver):
                 raise Exception(f"Should be Driver but was {res}")
         finally:
-            for repository_id in self._key_repository_ids:
-                EncapsulatedKeyRepository.forget(repository_id)
+            self._forget_repositories()
         self._closed = True
         if self._auth_token_manager:
             self._auth_token_manager.close()

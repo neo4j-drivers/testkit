@@ -51,13 +51,9 @@ class SkipTest:
 class Driver:
     """Represents a driver instance on the backend."""
 
-    def __init__(self, id, keyRepositories=None):
+    def __init__(self, id):
         # Id of Driver instance on backend
         self.id = id
-        # Ids of the encapsulated key repositories the backend created for
-        # the driver's property encryption profiles. Only present on the
-        # reply to NewDriver, and only when profiles were configured.
-        self.key_repositories = keyRepositories
 
 
 class AuthTokenManager:
@@ -373,8 +369,7 @@ class EncapsulatedKey:
     """
     An encapsulated data encryption key.
 
-    Sent in response to a CreateEncapsulatedKey or ImportEncapsulatedKey
-    request.
+    Sent in response to a CreateEncapsulatedKey request.
     """
 
     def __init__(self, id, alias):
@@ -424,26 +419,6 @@ class EncapsulatedKeyRepositoryCreateRequest:
     def __init__(self, id, repositoryId, alias, encapsulation, metadata):
         self.id = id
         self.repository_id = repositoryId
-        self.alias = alias
-        self.encapsulation = encapsulation
-        self.metadata = metadata
-
-
-class EncapsulatedKeyRepositoryImportRequest:
-    """
-    Represents a need to register a pre-existing encapsulated key.
-
-    The key is registered under a fixed id. This message may be sent by the
-    backend at any time should the driver call ImportAsync on a
-    reverse-request-backed repository. TestKit will respond with
-    EncapsulatedKeyRepositoryImportCompleted.
-    """
-
-    def __init__(self, id, repositoryId, keyId, alias, encapsulation,
-                 metadata):
-        self.id = id
-        self.repository_id = repositoryId
-        self.key_id = keyId
         self.alias = alias
         self.encapsulation = encapsulation
         self.metadata = metadata
