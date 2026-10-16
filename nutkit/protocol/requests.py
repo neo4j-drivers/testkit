@@ -982,36 +982,75 @@ class CreateEncapsulatedKey:
         self.profileName = profile_name
 
 
-class ImportEncapsulatedKey:
+class EncapsulatedKeyRepositoryFindByIdCompleted:
     """
-    Request to register a pre-existing encapsulated data encryption key.
+    Answers an EncapsulatedKeyRepositoryFindByIdRequest.
 
-    Unlike CreateEncapsulatedKey, this does not generate a new key via the
-    profile's KeyEncapsulationService; it seeds the profile's
-    EncapsulatedKeyRepository directly with an encapsulation obtained
-    elsewhere (e.g. a fixture, or a prior CreateEncapsulatedKey response).
-
-    The backend should respond with an EncapsulatedKey or an Error response.
-
-    :param driver_id: The id of the driver to import the key into.
-    :param id: The id to store the imported key under. Explicit so the
-        key id recorded in the Encrypted structure's metadata is predictable
-        regardless of the backend repository's own id-generation scheme,
-        which byte-exact encryption tests depend on.
-    :param alias: The alias to bind to the imported key.
-    :param encapsulation: The encapsulated (wrapped) data encryption key
-        bytes.
-    :param metadata: The key encapsulation service's metadata for the
-        encapsulation.
-    :param profile_name: The name of the encryption profile to import the
-        key into, or None to use the sole configured profile.
+    :param request_id: Id of the request this answers.
+    :param record: The matching key record (a dict with id/alias/
+        encapsulation/metadata keys), or None if no key has that id.
     """
 
-    def __init__(self, driver_id, id, alias, encapsulation, metadata,
-                 profile_name=None):
-        self.driverId = driver_id
-        self.id = id
-        self.alias = alias
-        self.encapsulation = encapsulation
-        self.metadata = metadata
-        self.profileName = profile_name
+    def __init__(self, request_id, record=None):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositoryFindByAliasCompleted:
+    """
+    Answers an EncapsulatedKeyRepositoryFindByAliasRequest.
+
+    :param request_id: Id of the request this answers.
+    :param record: The matching key record, or None if no key has that
+        alias.
+    """
+
+    def __init__(self, request_id, record=None):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositoryCreateCompleted:
+    """
+    Answers an EncapsulatedKeyRepositoryCreateRequest.
+
+    :param request_id: Id of the request this answers.
+    :param record: The created key record.
+    """
+
+    def __init__(self, request_id, record):
+        self.requestId = request_id
+        self.record = record
+
+
+class EncapsulatedKeyRepositorySetAliasCompleted:
+    """Answers an EncapsulatedKeyRepositorySetAliasRequest."""
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class EncapsulatedKeyRepositoryDeleteCompleted:
+    """Answers an EncapsulatedKeyRepositoryDeleteRequest."""
+
+    def __init__(self, request_id):
+        self.requestId = request_id
+
+
+class EncapsulatedKeyRepositoryErrorCompleted:
+    """
+    Answers any EncapsulatedKeyRepository*Request with a repository failure.
+
+    :param request_id: Id of the request this answers.
+    :param error_type: "KeyNotFound", "AliasInUse", "UnknownRepository"
+        when the request named a repository TestKit did not assign to a
+        live driver, or "InvalidEncapsulation" when the encapsulation was
+        not a hex string.
+    :param detail: The key id, alias, repository id or encapsulation the
+        error concerns.
+    """
+
+    def __init__(self, request_id, error_type, detail=None):
+        self.requestId = request_id
+        self.errorType = error_type
+        self.detail = detail
