@@ -23,7 +23,7 @@ repos:
       - id: flake8
         additional_dependencies:
           - flake8-bugbear
-          - flake8-builtins
+          - flake8-builtins==2.4.0
           - flake8-docstrings
           - flake8-picky-parentheses
           - flake8-quotes
