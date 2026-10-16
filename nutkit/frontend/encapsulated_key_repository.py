@@ -72,13 +72,12 @@ class _Store:
         self._id_by_alias: dict[str, str] = {}
 
     def find_by_id(self, key_id: str) -> dict | None:
-        return self._wire(self._keys_by_id.get(key_id))
+        record = self._keys_by_id.get(key_id)
+        return self._wire(record) if record is not None else None
 
     def find_by_alias(self, alias: str) -> dict | None:
         key_id = self._id_by_alias.get(alias)
-        if key_id is None:
-            return None
-        return self._wire(self._keys_by_id.get(key_id))
+        return self.find_by_id(key_id) if key_id is not None else None
 
     def store(
         self, key_id: str, alias: str | None, encapsulation: bytes,
@@ -103,9 +102,7 @@ class _Store:
         return self._wire(record)
 
     @staticmethod
-    def _wire(record: dict | None) -> dict | None:
-        if record is None:
-            return None
+    def _wire(record: dict) -> dict:
         return {**record, "encapsulation": record["encapsulation"].hex(" ")}
 
     def set_alias(self, key_id: str, alias: str | None) -> None:
