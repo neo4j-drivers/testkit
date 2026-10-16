@@ -1042,10 +1042,12 @@ class EncapsulatedKeyRepositoryErrorCompleted:
     Answers any EncapsulatedKeyRepository*Request with a repository failure.
 
     :param request_id: Id of the request this answers.
-    :param error_type: "KeyNotFound", "AliasInUse", or "UnknownRepository"
+    :param error_type: "KeyNotFound", "AliasInUse", "UnknownRepository"
         when the request named a repository TestKit did not assign to a
-        live driver.
-    :param detail: The key id, alias or repository id the error concerns.
+        live driver, or "InvalidEncapsulation" when the encapsulation was
+        not a hex string.
+    :param detail: The key id, alias, repository id or encapsulation the
+        error concerns.
     """
 
     def __init__(self, request_id, error_type, detail=None):

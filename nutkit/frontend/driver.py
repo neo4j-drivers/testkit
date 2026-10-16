@@ -10,7 +10,7 @@ from .bookmark_manager import BookmarkManager
 from .client_certificate_provider import ClientCertificateProvider
 from .encapsulated_key_repository import (
     EncapsulatedKeyRepository,
-    UnknownRepositoryError,
+    InvalidRepositoryRequestError,
 )
 from .session import Session
 
@@ -143,7 +143,7 @@ class Driver:
             ):
                 try:
                     cb_response = cb_processor.process_callbacks(res)
-                except UnknownRepositoryError as error:
+                except InvalidRepositoryRequestError as error:
                     self._backend.send(error.reply, hooks=hooks)
                     raise
                 if cb_response is not None:
@@ -267,7 +267,7 @@ class Driver:
                                 *, profile_name=None):
         EncapsulatedKeyRepository.seed(
             self._repository_id_for(profile_name), key_id, alias,
-            encapsulation.hex(" "), metadata
+            encapsulation, metadata
         )
 
     def _repository_id_for(self, profile_name):

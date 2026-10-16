@@ -20,27 +20,40 @@ from ..protocol import (
     EncapsulatedKeyRepositorySetAliasRequest,
 )
 
-__all__ = ["EncapsulatedKeyRepository", "UnknownRepositoryError"]
+__all__ = ["EncapsulatedKeyRepository", "InvalidRepositoryRequestError"]
 
 
-class UnknownRepositoryError(Exception):
+class InvalidRepositoryRequestError(Exception):
     """
-    The backend used a repository TestKit did not assign to a live driver.
+    The backend sent a repository request that breaks the protocol.
 
     Carries the reply to send so the backend is not left waiting.
     """
 
-    def __init__(self, request_id, repository_id):
-        super().__init__(request_id, repository_id)
-        self.repository_id = repository_id
+    def __init__(self, request_id, error_type, detail, message):
+        super().__init__(request_id, error_type, detail, message)
+        self.message = message
         self.reply = EncapsulatedKeyRepositoryErrorCompleted(
-            request_id, "UnknownRepository", repository_id
+            request_id, error_type, detail
         )
 
     def __str__(self):
-        return (
-            f"Backend used repository '{self.repository_id}', which TestKit "
-            "did not assign to a live driver"
+        return self.message
+
+    @classmethod
+    def unknown_repository(cls, request_id, repository_id):
+        return cls(
+            request_id, "UnknownRepository", repository_id,
+            f"Backend used repository '{repository_id}', which TestKit did "
+            "not assign to a live driver"
+        )
+
+    @classmethod
+    def invalid_encapsulation(cls, request_id, encapsulation):
+        return cls(
+            request_id, "InvalidEncapsulation", encapsulation,
+            f"Backend sent encapsulation '{encapsulation}', which is not a "
+            "hex string"
         )
 
 
@@ -59,14 +72,16 @@ class _Store:
         self._id_by_alias: dict[str, str] = {}
 
     def find_by_id(self, key_id: str) -> dict | None:
-        return self._keys_by_id.get(key_id)
+        return self._wire(self._keys_by_id.get(key_id))
 
     def find_by_alias(self, alias: str) -> dict | None:
         key_id = self._id_by_alias.get(alias)
-        return self._keys_by_id.get(key_id) if key_id is not None else None
+        if key_id is None:
+            return None
+        return self._wire(self._keys_by_id.get(key_id))
 
     def store(
-        self, key_id: str, alias: str | None, encapsulation: Any,
+        self, key_id: str, alias: str | None, encapsulation: bytes,
         metadata: Any
     ) -> dict:
         if alias is not None:
@@ -85,7 +100,13 @@ class _Store:
             "metadata": metadata,
         }
         self._keys_by_id[key_id] = record
-        return record
+        return self._wire(record)
+
+    @staticmethod
+    def _wire(record: dict | None) -> dict | None:
+        if record is None:
+            return None
+        return {**record, "encapsulation": record["encapsulation"].hex(" ")}
 
     def set_alias(self, key_id: str, alias: str | None) -> None:
         record = self._get_or_raise(key_id)
@@ -168,7 +189,9 @@ class EncapsulatedKeyRepository:
     def _store_for(cls, request) -> _Store:
         store = cls._stores.get(request.repository_id)
         if store is None:
-            raise UnknownRepositoryError(request.id, request.repository_id)
+            raise InvalidRepositoryRequestError.unknown_repository(
+                request.id, request.repository_id
+            )
         return store
 
     @classmethod
@@ -189,16 +212,25 @@ class EncapsulatedKeyRepository:
 
     @classmethod
     def _create(cls, request):
+        encapsulation = cls._decode_encapsulation(request)
         try:
             key_id = secrets.token_hex(8)
             record = cls._store_for(request).store(
-                key_id, request.alias, request.encapsulation,
-                request.metadata
+                key_id, request.alias, encapsulation, request.metadata
             )
         except _RepositoryError as error:
             return cls._error_completed(request.id, error)
 
         return EncapsulatedKeyRepositoryCreateCompleted(request.id, record)
+
+    @staticmethod
+    def _decode_encapsulation(request):
+        try:
+            return bytes.fromhex(request.encapsulation)
+        except (TypeError, ValueError):
+            raise InvalidRepositoryRequestError.invalid_encapsulation(
+                request.id, request.encapsulation
+            ) from None
 
     @classmethod
     def _set_alias(cls, request):
