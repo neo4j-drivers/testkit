@@ -4,6 +4,7 @@ import typing as t
 from contextlib import contextmanager
 
 from nutkit import protocol as types
+from tests.shared import driver_feature
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -69,6 +70,7 @@ class TestClustering(HttpTestCase):
         self._assert_query_1(keys1, records1)
         self._assert_query_2(keys2, records2)
 
+    @driver_feature(types.Feature.API_DRIVER_EXECUTE_QUERY)
     def test_affinity_header_execute_query(self) -> None:
         with (
             self._affinity_test_setup() as server,
