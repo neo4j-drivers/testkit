@@ -22,6 +22,8 @@ from tests.shared import (
 )
 
 _SERVER_SUPPORTED_TZ_IDS = []
+AVERAGE_SECONDS_IN_MONTH = 2629746
+AVERAGE_SECONDS_IN_DAY = 86400
 
 
 class TestDataTypes(_TestTypesBase):
@@ -709,12 +711,20 @@ class TestDataTypes(_TestTypesBase):
                         dt.timezone_id = "UTC"
                 self.assertEqual(values, [dt])
 
-    def test_duration_components(self):
+    def test_duration_components_ns_safe(self):
+        max_total_ns = MAX_INT64
+        min_total_ns = MIN_INT64 + 854775809
+        max_s, max_ns = divmod(max_total_ns, 1000000000)
+        min_s, min_ns = divmod(min_total_ns, 1000000000)
+        # Python's divmod is Euclidean
+        # min_s, min_ns = -min_s, -min_ns
         for (mo, d, s, ns_os, ns) in (
+            (0, 0, 0, 0, 0),
             (3, 4, 999, 123456789, 999_123456789),
-            (0, 0, MAX_INT64, 999999999, -1),  # LUL, Cypher overflows
+            (0, 0, max_s, max_ns, max_total_ns),
+            (0, 0, min_s, min_ns, min_total_ns),
         ):
-            with self.subTest(mo=mo, d=d, s=s, ns=ns):
+            with self.subTest(mo=mo, d=d, s=s, ns_os=ns_os, ns=ns):
                 self._create_driver_and_session()
                 values = self._read_query_values(
                     "CYPHER runtime=interpreted WITH $x AS x "
@@ -728,6 +738,37 @@ class TestDataTypes(_TestTypesBase):
                     values,
                     [types.CypherList(list(map(types.CypherInt,
                                                [mo, d, s, ns_os, ns])))]
+                )
+
+    def test_duration_components(self):
+        def max_value(module):
+            return MAX_INT64 // module
+
+        def min_value(module):
+            return MIN_INT64 // module - (MIN_INT64 % module == 0) + 1
+
+        for (mo, d, s, ns) in (
+            (max_value(AVERAGE_SECONDS_IN_MONTH), 0, 0, 0),
+            (min_value(AVERAGE_SECONDS_IN_MONTH), 0, 0, 0),
+            (0, max_value(AVERAGE_SECONDS_IN_DAY), 0, 0),
+            (0, min_value(AVERAGE_SECONDS_IN_DAY), 0, 0),
+            (0, 0, MAX_INT64, 0),
+            (0, 0, MIN_INT64, 0),
+        ):
+            with self.subTest(mo=mo, d=d, s=s, ns=ns):
+                self._create_driver_and_session()
+                values = self._read_query_values(
+                    "CYPHER runtime=interpreted WITH $x AS x "
+                    "RETURN [x.months, x.days, x.seconds, "
+                    "x.nanosecondsOfSecond]",
+                    params={"x": types.CypherDuration(
+                        months=mo, days=d, seconds=s, nanoseconds=ns
+                    )}
+                )
+                self.assertEqual(
+                    values,
+                    [types.CypherList(list(map(types.CypherInt,
+                                               [mo, d, s, ns])))]
                 )
 
     def test_nested_duration(self):
