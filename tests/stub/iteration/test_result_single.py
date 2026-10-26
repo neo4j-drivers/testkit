@@ -27,6 +27,12 @@ class TestResultSingle(IterationTestBase):
                 "org.neo4j.driver.exceptions.NoSuchRecordException",
                 error.errorType
             )
+        elif driver in ["php"]:
+            self.assertEqual(
+                "Laudis\\Neo4j\\Exception\\Neo4jException",
+                error.errorType
+            )
+            self.assertIn("exactly one", error.msg.lower())
         else:
             self.fail("no error mapping is defined for %s driver" % driver)
 

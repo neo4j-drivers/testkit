@@ -13,7 +13,7 @@ class TestResultSingleOptional(IterationTestBase):
         self.assertEqual(1, len(warnings))
         warning = warnings[0]
         driver = get_driver_name()
-        if driver in ["python"]:
+        if driver in ["python", "php"]:
             self.assertIn("multiple", warning)
         else:
             self.fail("no error mapping is defined for %s driver" % driver)

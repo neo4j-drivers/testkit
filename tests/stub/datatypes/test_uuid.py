@@ -131,7 +131,7 @@ class TestUuid6x0(_UuidTestCase):
 
         driver_name = get_driver_name()
         msg = exc.exception.msg.lower()
-        if driver_name in ["python"]:
+        if driver_name in ["python", "php"]:
             self.assertIn("packstream", msg)
             self.assertIn("e0", msg)  # UUID PackStream type marker byte
         elif driver_name in ["dotnet"]:
