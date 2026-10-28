@@ -5,6 +5,8 @@ import re
 from dataclasses import dataclass
 from os.path import join
 
+import psutil
+
 import docker
 
 
@@ -299,6 +301,19 @@ def _get_base_env_map(version, accept_license):
 
     if accept_license:
         env_map["NEO4J_ACCEPT_LICENSE_AGREEMENT"] = "yes"
+
+    # mem_max = psutil.virtual_memory().total
+    mem_avail = psutil.virtual_memory().available
+    if version >= (5, 0):
+        env_map.update({
+            "NEO4J_server_memory_heap_initial__size": f"{mem_avail // 2000}k",
+            # "NEO4J_server_memory_heap_max__size": f"{mem_max // 2000}k",
+        })
+    else:
+        env_map.update({
+            "NEO4J_dbms_memory_heap_initial__size": f"{mem_avail // 2000}k",
+            # "NEO4J_dbms_memory_heap_max__size": f"{mem_max // 2000}k",
+        })
 
     # Allow password to be short for testing
     if version >= (5, 3) and len(password) < 8:
