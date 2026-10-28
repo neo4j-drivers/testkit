@@ -99,9 +99,7 @@ def initialise_configurations(settings):
     configurations = [
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
-            # not officially supported versions
-            ("4.2",       True,        False,    "neo4j",  0),
-            ("4.3",       True,        False,    "neo4j",  0),
+            # latest 4.4 LTS version, it is still supported for a few customers
             ("4.4",       True,        False,    "neo4j",  0),
             # Selected 5.x versions
             # Oldest 5.x version (BOLT 5.0) would be 5.0.
