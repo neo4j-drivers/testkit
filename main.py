@@ -100,7 +100,6 @@ def initialise_configurations(settings):
             ("3.5",    True,        False,    "bolt",   0),
             ("3.5",    True,        True,     "neo4j", 60),
             ("4.1",    True,        False,    "neo4j",  0),
-            ("4.2",    True,        False,    "neo4j",  0),
             ("4.3",    True,        False,    "neo4j",  0),
             ("4.4",    False,       False,    "bolt",   0),
             ("4.4",    False,       False,    "neo4j",  0),
