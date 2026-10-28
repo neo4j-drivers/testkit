@@ -95,9 +95,6 @@ def initialise_configurations(settings):
     configurations = [
         generate_config(version_, enterprise_, cluster_, scheme_, stress_test_)
         for (version_, enterprise_, cluster_, scheme_, stress_test_) in (
-            # not officially supported versions
-            ("4.2",    True,        False,    "neo4j",  0),
-            ("4.3",    True,        False,    "neo4j",  0),
             # official backwards-compatibility
             # LTS version
             ("4.4",    False,       False,    "bolt",   0),
