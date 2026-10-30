@@ -713,7 +713,7 @@ class TestDataTypes(_TestTypesBase):
 
     def test_duration_components_ns_safe(self):
         max_total_ns = MAX_INT64
-        min_total_ns = MIN_INT64 + 854775809
+        min_total_ns = MIN_INT64
         max_s, max_ns = divmod(max_total_ns, 1000000000)
         min_s, min_ns = divmod(min_total_ns, 1000000000)
         # Python's divmod is Euclidean
