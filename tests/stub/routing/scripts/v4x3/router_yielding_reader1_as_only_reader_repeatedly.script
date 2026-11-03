@@ -1,0 +1,16 @@
+!: BOLT #VERSION#
+!: ALLOW RESTART
+
+C: HELLO {"scheme": "basic", "credentials": "c", "principal": "p", "user_agent": "007", "routing": #ROUTINGCTX#, "[patch_bolt]": "*"}
+S: SUCCESS {"server": "#SERVER_AGENT#", "connection_id": "bolt-123456789"}
+*: RESET
+{+
+    {{
+        C: ROUTE #ROUTINGCTX# [] null
+    ----
+        C: ROUTE #ROUTINGCTX# [] "system"
+    }}
+    S: SUCCESS { "rt": { "ttl": 1000, "servers": [{"addresses": ["#HOST#:9000"], "role":"ROUTE"}, {"addresses": ["#HOST#:9010"], "role":"READ"}, {"addresses": ["#HOST#:9010"], "role":"WRITE"}]}}
+    *: RESET
++}
+?: GOODBYE
