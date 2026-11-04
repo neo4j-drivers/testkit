@@ -845,6 +845,8 @@ class RoutingV5x0(RoutingBase):
 
     @driver_feature(types.Feature.API_DRIVER_VERIFY_CONNECTIVITY)
     def test_should_verify_connectivity_once_unreachable_reader_is_back(self):
+        if self.bolt_version in ("3", "4.2", "4.3"):
+            self.skipTest("routing table carries no database name")
         driver = Driver(self._backend, self._uri_with_context, self._auth,
                         self._userAgent)
         self.start_server(
