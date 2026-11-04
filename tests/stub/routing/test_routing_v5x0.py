@@ -843,6 +843,30 @@ class RoutingV5x0(RoutingBase):
         self._routingServer1.done()
         self.assertTrue(failed)
 
+    @driver_feature(types.Feature.API_DRIVER_VERIFY_CONNECTIVITY)
+    def test_should_verify_connectivity_once_unreachable_reader_is_back(self):
+        if self.bolt_version in ("3", "4.2", "4.3"):
+            self.skipTest("routing table carries no database name")
+        self.start_server(
+            self._routingServer1,
+            "router_yielding_reader1_as_only_reader_repeatedly.script"
+        )
+
+        with Driver(
+            self._backend,
+            self._uri_with_context,
+            self._auth,
+            self._userAgent,
+        ) as driver:
+            with self.assertRaises(types.DriverError):
+                driver.verify_connectivity()
+
+            self.start_server(self._readServer1, "empty_reader.script")
+            driver.verify_connectivity()
+
+        self._routingServer1.done()
+        self._readServer1.done()
+
     @driver_feature(types.Feature.BACKEND_RT_FETCH)
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(
         self
