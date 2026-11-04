@@ -100,6 +100,9 @@ class RoutingV4x4(test_routing_v5x0.RoutingV5x0):
     def test_should_fail_discovery_when_router_fails_with_unknown_code(self):
         super().test_should_fail_discovery_when_router_fails_with_unknown_code()  # noqa: E501
 
+    def test_should_verify_connectivity_once_unreachable_reader_is_back(self):
+        super().test_should_verify_connectivity_once_unreachable_reader_is_back()  # noqa: E501
+
     def test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code(self):  # noqa: E501
         super().test_should_fail_when_writing_on_writer_that_returns_not_a_leader_code()  # noqa: E501
 
