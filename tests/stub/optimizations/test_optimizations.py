@@ -170,7 +170,7 @@ class TestOptimizations(TestkitTestCase):
                                           + (("_tx_" + use_tx) if use_tx
                                              else "")
                                           + ("_one_shot_session" if new_session
-                                             else"_reuse_session")
+                                             else "_reuse_session")
                                           + ("_discard" if consume
                                              else "_pull")):
                             self.double_read(mode, new_session, use_tx, False,

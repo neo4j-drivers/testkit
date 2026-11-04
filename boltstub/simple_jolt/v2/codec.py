@@ -24,7 +24,7 @@ from ..v1.codec import (
     JoltReverseRelationTransformer,
     JoltTypeTransformer,
 )
-from .types import (
+from .jolt_types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,
@@ -92,7 +92,7 @@ class JoltNodeTransformer(JoltNodeTransformer):
             raise JOLTValueError("Node id must be int or none")
         if not isinstance(labels, list):
             raise JOLTValueError("Node labels must be list")
-        if not all(map(lambda l: isinstance(l, str), labels)):
+        if not all(isinstance(label, str) for label in labels):
             raise JOLTValueError("Node labels must be list of str")
         if not isinstance(properties, dict):
             raise JOLTValueError("Node properties must be dict")
@@ -102,7 +102,7 @@ class JoltNodeTransformer(JoltNodeTransformer):
             raise JOLTValueError("Node's element_id must equal id if present")
 
         properties = {k: decode_cb(v) for k, v in properties.items()}
-        assert all(map(lambda e: isinstance(e, str), properties.keys()))
+        assert all(isinstance(e, str) for e in properties)
         return JoltNode(id_, labels, properties, element_id)
 
     @classmethod
@@ -124,7 +124,7 @@ class JoltRelationTransformer(JoltRelationTransformer):
         if not isinstance(value, list) or len(value) != 8:
             raise JOLTValueError('Expecting list of length 8 after sigil "%s"'
                                  % cls.sigil)
-        id_, start_node_id, rel_type, end_node_id, properties, element_id,\
+        id_, start_node_id, rel_type, end_node_id, properties, element_id, \
             start_node_element_id, end_node_element_id = value
 
         if not isinstance(id_, int) and id_ is not None:

@@ -67,7 +67,7 @@ class TestSessionRun(TestkitTestCase):
             types.CypherMap({"name": types.CypherString("Alice")})
         )
         self.assertIsInstance(result.next(), types.NullRecord)
-        isinstance(result.next(), types.NullRecord)
+        self.assertIsInstance(result.next(), types.NullRecord)
 
     @cluster_unsafe_test
     def test_can_return_relationship(self):
@@ -85,7 +85,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(value.props,
                          types.CypherMap({"since": types.CypherInt(1999)}))
         self.assertIsInstance(result.next(), types.NullRecord)
-        isinstance(result.next(), types.NullRecord)
+        self.assertIsInstance(result.next(), types.NullRecord)
 
     @cluster_unsafe_test
     def test_can_return_path(self):
@@ -126,7 +126,7 @@ class TestSessionRun(TestkitTestCase):
         self.assertEqual(rels[0].type, types.CypherString("KNOWS"))
         self.assertEqual(rels[0].props, types.CypherMap({}))
 
-        isinstance(result.next(), types.NullRecord)
+        self.assertIsInstance(result.next(), types.NullRecord)
 
     @cluster_unsafe_test
     def test_autocommit_transactions_should_support_metadata(self):
