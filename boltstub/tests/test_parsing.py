@@ -20,7 +20,10 @@ import copy
 import itertools
 import re
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import (
+    Collection,
+    Iterator,
+)
 
 import lark
 import pytest
@@ -181,9 +184,19 @@ def assert_dialogue_blocks_block_list(block_list, lines=None):
         expected_blocks[i][0](block_list.blocks[i], expected_blocks[i][1])
 
 
-def whitespace_generator(n: int,
-                         optional_with_nl: set | None,
-                         optional_without_nl: set | None) -> \
+def whitespace_generator(
+    n: int,
+    optional_with_nl: set | None,
+    optional_without_nl: set | None
+) -> Collection[tuple[str]]:
+    return tuple(
+        _whitespace_generator(n, optional_with_nl, optional_without_nl)
+    )
+
+
+def _whitespace_generator(n: int,
+                          optional_with_nl: set | None,
+                          optional_without_nl: set | None) -> \
         Iterator[tuple[str]]:
     if optional_with_nl is None:
         optional_with_nl = set()
@@ -324,7 +337,7 @@ def test_message_fields(line_type, fields, fail, extra_ws, unverified_script,
         ])
 
 
-@pytest.mark.parametrize("order", itertools.permutations(range(3), 3))
+@pytest.mark.parametrize("order", tuple(itertools.permutations(range(3), 3)))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(7, {0, 6},
                                                           {1, 3, 5}))
 def test_simple_dialogue(order, extra_ws, unverified_script):
@@ -475,7 +488,7 @@ def test_simple_1_loop(extra_ws, unverified_script):
 
 @pytest.mark.parametrize(
     ("else_", "elif_", "extra_ws"),
-    (
+    tuple(
         (else_, elif_, extra_ws_)
         for else_ in (True, False)
         for elif_ in (0, 1, 2)
@@ -507,7 +520,7 @@ def test_conditional(else_, elif_, extra_ws, unverified_script):
         assert_client_block(inner_block, [expected_message])
 
 
-@pytest.mark.parametrize("bang", zip(VALID_BANGS, BANG_EFFECTS))
+@pytest.mark.parametrize("bang", tuple(zip(VALID_BANGS, BANG_EFFECTS)))
 @pytest.mark.parametrize("extra_ws", whitespace_generator(3, {0, 2}, None))
 def test_simple_bang_line(bang, extra_ws, unverified_script):
     bang, bang_effect = bang

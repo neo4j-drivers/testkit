@@ -496,10 +496,12 @@ class TestBlockList:
 
     @pytest.mark.parametrize(
         ("skips", "reset_idx"),
-        ((skips, reset_idx)
-         for skips in (set(itertools.product((True, False), repeat=2))
-                       - {(True, True)})
-         for reset_idx in range(1, 4 - sum(skips)))
+        tuple(
+            (skips, reset_idx)
+            for skips in (set(itertools.product((True, False), repeat=2))
+                          - {(True, True)})
+            for reset_idx in range(1, 4 - sum(skips))
+        )
     )
     def test_reset_consecutive_non_deterministic(self, block_non_det,
                                                  skips, reset_idx):
@@ -510,10 +512,12 @@ class TestBlockList:
 
     @pytest.mark.parametrize(
         ("skips", "reset_idx"),
-        ((skips, reset_idx)
-         for skips in (set(itertools.product((True, False), repeat=3))
-                       - {(True, True, True)})
-         for reset_idx in range(1, 4 - sum(skips)))
+        tuple(
+            (skips, reset_idx)
+            for skips in (set(itertools.product((True, False), repeat=3))
+                          - {(True, True, True)})
+            for reset_idx in range(1, 4 - sum(skips))
+        )
     )
     def test_reset_only_consecutive_non_deterministic(self, block_only_non_det,
                                                       skips, reset_idx):
@@ -704,7 +708,8 @@ class TestParallelBlock:
             ], 5)
         ], 1)
 
-    @pytest.mark.parametrize("order", itertools.permutations((0, 0, 1, 1), 4))
+    @pytest.mark.parametrize("order",
+                             tuple(itertools.permutations((0, 0, 1, 1), 4)))
     def test_block_read(self, block_read, order):
         msg1 = ["MSG11", "MSG12"]
         msg2 = ["MSG21", "MSG22"]
@@ -730,7 +735,8 @@ class TestParallelBlock:
         channel.reset()
         assert not block_read.can_consume(channel)
 
-    @pytest.mark.parametrize("order", itertools.permutations((0, 1), 2))
+    @pytest.mark.parametrize("order",
+                             tuple(itertools.permutations((0, 1), 2)))
     def test_block_write(self, block_write, order):
         if order == (0, 1):
             channel = channel_factory(["MSG1", "MSG2", "NOMATCH"])
@@ -750,7 +756,8 @@ class TestParallelBlock:
         assert block_write.done(channel)
         assert not block_write.can_consume(channel)
 
-    @pytest.mark.parametrize("order", itertools.permutations((0, 0, 1, 1), 4))
+    @pytest.mark.parametrize("order",
+                             tuple(itertools.permutations((0, 0, 1, 1), 4)))
     @pytest.mark.parametrize("reset_idx", range(1, 5))
     def test_block_reset(self, block_read, order, reset_idx):
         msg1 = ["MSG11", "MSG12"]

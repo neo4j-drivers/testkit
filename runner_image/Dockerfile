@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM ubuntu:24.04 AS build
+FROM ubuntu:26.04 AS build
 
 ARG BUILD_RUST_STUB=true
 
@@ -10,7 +10,7 @@ if [ "$BUILD_RUST_STUB" = "true" ]; then
     apt-get update
     apt-get install -y python3 python3-dev gcc curl
     rm -rf /var/lib/apt/lists/*
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain=1.89.0
     export PATH="/root/.cargo/bin:$PATH"
     cp -r /tmp/boltstub/* .
     cargo build --release
@@ -21,7 +21,7 @@ else
 fi
 EOF
 
-FROM ubuntu:24.04
+FROM ubuntu:26.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
