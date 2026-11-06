@@ -9,7 +9,7 @@ from ..common.errors import (
     NoFullRepresentation,
     NoSimpleRepresentation,
 )
-from .types import (
+from .jolt_types import (
     JoltDate,
     JoltDateTime,
     JoltDuration,
@@ -398,12 +398,12 @@ class JoltNodeTransformer(JoltTypeTransformer):
             raise JOLTValueError("Node id must be int")
         if not isinstance(labels, list):
             raise JOLTValueError("Node labels must be list")
-        if not all(map(lambda l: isinstance(l, str), labels)):
+        if not all(isinstance(label, str) for label in labels):
             raise JOLTValueError("Node labels must be list of str")
         if not isinstance(properties, dict):
             raise JOLTValueError("Node properties must be dict")
         properties = {k: decode_cb(v) for k, v in properties.items()}
-        assert all(map(lambda e: isinstance(e, str), properties.keys()))
+        assert all(isinstance(e, str) for e in properties)
         return JoltNode(id_, labels, properties)
 
     @staticmethod

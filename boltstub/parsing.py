@@ -28,7 +28,7 @@ from .errors import (
     ServerExit,
 )
 from .packstream import Structure
-from .simple_jolt.common.types import (
+from .simple_jolt.common.jolt_types import (
     JoltType,
     JoltWildcard,
 )
@@ -65,7 +65,7 @@ class CopyableRLock:
 
 
 class LineError(lark.GrammarError):
-    def __init__(self, line, *args, **kwargs):
+    def __init__(self, line, *args, **kwargs):  # noqa: B042
         assert isinstance(line, Line)
         self.line = line
         if args and isinstance(args[0], str):
@@ -75,7 +75,17 @@ class LineError(lark.GrammarError):
         super().__init__(*args, **kwargs)
 
     def __repr__(self):
-        str(self.args)
+        return str(self.args)
+
+    def __copy__(self):
+        obj = LineError(self.line)
+        obj.args = self.args
+        return obj
+
+    def __deepcopy__(self, memo):
+        obj = LineError(deepcopy(self.line, memo))
+        obj.args = deepcopy(self.args, memo)
+        return obj
 
 
 class Line(str, abc.ABC):
@@ -313,7 +323,7 @@ class ClientLine(MessageLine):
             return type(is_) in should.types
         if isinstance(is_, Structure):
             return is_ == should
-        if type(should) != type(is_):
+        if type(should) is not type(is_):
             return False
         if isinstance(should, (list, tuple)):
             if len(should) != len(is_):

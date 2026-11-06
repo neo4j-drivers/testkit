@@ -1,4 +1,4 @@
-FROM ubuntu:20.04
+FROM ubuntu:26.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
@@ -7,6 +7,7 @@ RUN apt-get update && \
         tzdata \
         python3 \
         python3-pip \
+        python3-venv \
         golang \
     && rm -rf /var/lib/apt/lists/*
 
