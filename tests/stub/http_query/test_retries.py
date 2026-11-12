@@ -222,5 +222,7 @@ class TestRetries(HttpTestCase):
                 "<class 'neo4j.exceptions.IncompleteCommit'>",
                 error.errorType,
             )
+        elif driver_name in ["dotnet"]:
+            self.assertEqual("IncompleteCommitError", error.errorType)
         else:
             raise NotImplementedError(f"Add error assertion for {driver_name}")
