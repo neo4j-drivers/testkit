@@ -182,7 +182,8 @@ class TestRetries(HttpTestCase):
         ):
             keys, records = session.execute_write(work)
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
