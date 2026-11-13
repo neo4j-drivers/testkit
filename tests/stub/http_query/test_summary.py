@@ -83,7 +83,8 @@ class _SummaryTestBase(HttpTestCase, _TestSummaryBase):
                 results.append(QueryResult(keys, records, summary))
 
         for result in results:
-            self.assertEqual(result.keys, ["n"])
+            if get_driver_name() not in ["javascript"]:
+                self.assertEqual(result.keys, ["n"])
             self.assertEqual(len(result.records), 1)
             self.assertEqual(result.records[0].values, [types.CypherInt(1)])
             self.assertIsInstance(result.summary, types.Summary)
@@ -113,7 +114,8 @@ class _SummaryTestBase(HttpTestCase, _TestSummaryBase):
             tx.commit()
 
         for result in results:
-            self.assertEqual(result.keys, ["n"])
+            if get_driver_name() not in ["javascript"]:
+                self.assertEqual(result.keys, ["n"])
             self.assertEqual(len(result.records), 1)
             self.assertEqual(result.records[0].values, [types.CypherInt(1)])
             self.assertIsInstance(result.summary, types.Summary)

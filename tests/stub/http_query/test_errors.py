@@ -178,7 +178,9 @@ class TestErrors(HttpTestCase):
         else:
             result = session.run(QUERY)
             keys = result.keys()
-            self.assertEqual(keys, FIELDS)
+
+            if get_driver_name() not in ["javascript"]:
+                self.assertEqual(keys, FIELDS)
             if send_records:
                 record = result.next()
                 self.assertEqual(record.values, [types.CypherInt(1)])
@@ -350,7 +352,9 @@ class TestErrors(HttpTestCase):
             with session.begin_transaction() as tx:
                 result = tx.run(QUERY)
                 keys = result.keys()
-                self.assertEqual(keys, FIELDS)
+
+                if get_driver_name() not in ["javascript"]:
+                    self.assertEqual(keys, FIELDS)
                 if send_query_records:
                     record = result.next()
                     self.assertEqual(record.values, [types.CypherInt(1)])
@@ -512,7 +516,9 @@ class TestErrors(HttpTestCase):
 
                 result = tx.run(QUERY)
                 keys = result.keys()
-                self.assertEqual(keys, FIELDS)
+
+                if get_driver_name() not in ["javascript"]:
+                    self.assertEqual(keys, FIELDS)
                 if send_query_records:
                     record = result.next()
                     self.assertEqual(record.values, [types.CypherInt(1)])

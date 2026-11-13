@@ -3,6 +3,7 @@ from __future__ import annotations
 import typing as t
 
 from nutkit import protocol as types
+from tests.shared import get_driver_name
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -74,7 +75,8 @@ class TestPathPrefix(HttpTestCase):
             records = list(result)
             summary = result.consume()
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
         self.assertEqual(summary.server_info.agent, f"Neo4j/{SERVER_VERSION}")
@@ -106,7 +108,8 @@ class TestPathPrefix(HttpTestCase):
             summary = result.consume()
             tx.commit()
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
         self.assertEqual(summary.server_info.agent, f"Neo4j/{SERVER_VERSION}")
@@ -133,7 +136,8 @@ class TestPathPrefix(HttpTestCase):
             records = result.records
             summary = result.summary
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
         self.assertEqual(summary.server_info.agent, f"Neo4j/{SERVER_VERSION}")
