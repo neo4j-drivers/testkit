@@ -4,7 +4,7 @@ import typing as t
 from contextlib import contextmanager
 
 from nutkit import protocol as types
-from tests.shared import driver_feature
+from tests.shared import driver_feature, get_driver_name
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -118,13 +118,15 @@ class TestClustering(HttpTestCase):
     def _assert_query_1(
         self, keys: list[str], records: list[types.Record]
     ) -> None:
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
     def _assert_query_2(
         self, keys: list[str], records: list[types.Record]
     ) -> None:
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(2)])

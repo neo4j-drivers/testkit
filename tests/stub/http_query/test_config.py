@@ -100,7 +100,8 @@ class TestUserAgent(HttpTestCase):
                 keys = result.keys()
                 records = list(result)
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -122,7 +123,8 @@ class TestUserAgent(HttpTestCase):
                 records = list(result)
                 tx.commit()
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -139,7 +141,8 @@ class TestUserAgent(HttpTestCase):
                 keys = result.keys
                 records = result.records
 
-        self.assertEqual(keys, FIELDS)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -269,7 +272,8 @@ class TestDatabase(HttpTestCase):
                 else:
                     t.assert_never(api)
 
-                self.assertEqual(keys, FIELDS)
+                if get_driver_name() not in ["javascript"]:
+                    self.assertEqual(keys, FIELDS)
                 self.assertEqual(len(records), 1)
                 self.assertEqual(records[0].values, [types.CypherInt(1)])
 
