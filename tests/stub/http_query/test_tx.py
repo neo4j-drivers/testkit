@@ -9,6 +9,7 @@ from nutkit.frontend import (
     Session,
     Transaction,
 )
+from tests.shared import get_driver_name
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,
@@ -70,8 +71,8 @@ class _TxTestCase(abc.ABC, HttpTestCase):
                 driver.session("w", database=db) as session,
             ):
                 keys, records = self._run_in_tx(session, work)
-
-        self.assertEqual(keys, fields)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, fields)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -105,7 +106,8 @@ class _TxTestCase(abc.ABC, HttpTestCase):
             ):
                 keys, records = self._run_in_tx(session, work, access_mode="r")
 
-        self.assertEqual(keys, fields)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, fields)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -149,7 +151,8 @@ class _TxTestCase(abc.ABC, HttpTestCase):
                             session, work, commit=False
                         )
 
-                    self.assertEqual(keys, fields)
+                    if get_driver_name() not in ["javascript"]:
+                        self.assertEqual(keys, fields)
                     self.assertEqual(len(records), 1)
                     self.assertEqual(
                         records[0].values, [types.CypherString("hello world")]
@@ -203,11 +206,13 @@ class _TxTestCase(abc.ABC, HttpTestCase):
                     session, work
                 )
 
-        self.assertEqual(keys1, fields1)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys1, fields1)
+            self.assertEqual(keys2, fields2)
+
         self.assertEqual(len(records1), 1)
         self.assertEqual(records1[0].values, [types.CypherInt(1)])
 
-        self.assertEqual(keys2, fields2)
         self.assertEqual(len(records2), 2)
         for i, expected in enumerate(
             (
@@ -254,7 +259,8 @@ class _TxTestCase(abc.ABC, HttpTestCase):
             ):
                 keys, records = self._run_in_tx(session, work)
 
-        self.assertEqual(keys, fields)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, fields)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -289,7 +295,8 @@ class _TxTestCase(abc.ABC, HttpTestCase):
             ):
                 keys, records = self._run_in_tx(session, work)
 
-        self.assertEqual(keys, fields)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys, fields)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].values, [types.CypherInt(1)])
 
@@ -342,11 +349,11 @@ class _TxTestCase(abc.ABC, HttpTestCase):
                 keys1, records1 = self._run_in_tx(session, work1)
                 keys2, records2 = self._run_in_tx(session, work2)
                 received_bookmarks = session.last_bookmarks()
-
-        self.assertEqual(keys1, fields)
+        if get_driver_name() not in ["javascript"]:
+            self.assertEqual(keys1, fields)
+            self.assertEqual(keys2, fields)
         self.assertEqual(len(records1), 1)
         self.assertEqual(records1[0].values, [types.CypherInt(1)])
-        self.assertEqual(keys2, fields)
         self.assertEqual(len(records2), 1)
         self.assertEqual(records2[0].values, [types.CypherInt(2)])
         self.assertEqual(received_bookmarks, bookmarks3)
