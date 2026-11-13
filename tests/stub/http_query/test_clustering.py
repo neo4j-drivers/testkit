@@ -4,7 +4,10 @@ import typing as t
 from contextlib import contextmanager
 
 from nutkit import protocol as types
-from tests.shared import driver_feature, get_driver_name
+from tests.shared import (
+    driver_feature,
+    get_driver_name,
+)
 from tests.stub.http_query.shared import (
     http_types,
     HttpTestCase,

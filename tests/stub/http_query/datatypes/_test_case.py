@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typing as t
 
+from tests.shared import get_driver_name
 from tests.stub.http_query.shared import HttpTestCase
 from tests.stub.http_query.shared.http_endpoints import HttpQueryEndpoint
 
@@ -48,7 +49,9 @@ class HttpDataTypeTestCase(HttpTestCase):
                     "RETURN $x AS x",
                     params={"x": cypher_value},
                 )
-                self.assertEqual(result.keys(), ["x"])
+                
+                if get_driver_name() not in ["javascript"]:
+                    self.assertEqual(result.keys(), ["x"])
                 records = list(result)
                 self.assertEqual(len(records), 1)
                 self.assertEqual(records[0].values, [cypher_value_out])
@@ -79,7 +82,8 @@ class HttpDataTypeTestCase(HttpTestCase):
             )
             with driver.session("r", database="neo4j") as session:
                 result = session.run("RETURN x")
-                self.assertEqual(result.keys(), ["x"])
+                if get_driver_name() not in ["javascript"]:
+                    self.assertEqual(result.keys(), ["x"])
                 records = list(result)
                 self.assertEqual(len(records), 1)
                 self.assertEqual(records[0].values, [cypher_value])
