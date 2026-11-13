@@ -49,7 +49,7 @@ class HttpDataTypeTestCase(HttpTestCase):
                     "RETURN $x AS x",
                     params={"x": cypher_value},
                 )
-                
+
                 if get_driver_name() not in ["javascript"]:
                     self.assertEqual(result.keys(), ["x"])
                 records = list(result)
