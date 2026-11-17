@@ -1335,6 +1335,9 @@ class TestSummaryProfile(_SummaryTestBase):
             {
                 "dbHits": 1,
                 "rows": 1,
+                "pageCacheHits": 0,
+                "pageCacheMisses": 0,
+                "pageCacheHitRatio": 0.0,
                 "time": 0,
                 "identifiers": ["n"],
                 "operatorType": "ProduceResults@neo4j",
@@ -1567,6 +1570,9 @@ class TestSummaryProfile(_SummaryTestBase):
             {
                 "dbHits": 1,
                 "rows": 1,
+                "pageCacheHits": 0,
+                "pageCacheMisses": 0,
+                "pageCacheHitRatio": 0.0,
                 "time": 0,
                 "identifiers": ["n"],
                 "operatorType": "ProduceResults@neo4j",
