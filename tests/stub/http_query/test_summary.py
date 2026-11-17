@@ -744,6 +744,10 @@ class TestSummaryQueryType(_SummaryTestBase):
                 "org.neo4j.driver.exceptions.ProtocolException",
                 exc.errorType
             )
+        elif driver_name in ["dotnet"]:
+            self.assertEqual("ProtocolError", exc.errorType)
+            self.assertIn(query_type, message)
+            self.assertIn("query type", message)
         else:
             raise NotImplementedError(f"Add error mapping for {driver_name}")
 
