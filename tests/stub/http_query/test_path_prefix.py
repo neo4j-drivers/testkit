@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import posixpath
 import typing as t
 from contextlib import contextmanager
 
@@ -32,6 +31,12 @@ FIELDS = ["n"]
 RECORDS: list[list[http_types.HttpType]] = [[http_types.Int(1)]]
 AUTH = HttpTestCase.AUTH
 SERVER_VERSION = "2025.13.99999"
+REQUEST_PREFIX_BY_URI_PATH = {
+    "": "",
+    "/foo": "/foo",
+    "/foo/": "/foo",
+    "foo/bar/baz/../oh_boy": "/foo/bar/oh_boy",
+}
 
 
 def _make_query_endpoint() -> HttpQueryEndpoint:
@@ -66,7 +71,7 @@ class TestPathPrefix(HttpTestCase):
         self, server: HTTPServer, path: str
     ) -> t.Generator[Driver]:
         with self.driver(server, AUTH, relative_path=path) as driver:
-            server.path_prefix = posixpath.normpath("/" + path.lstrip("/"))
+            server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
             yield driver
 
     def _test_session_run(self, server: HTTPServer, path: str) -> None:
@@ -90,7 +95,7 @@ class TestPathPrefix(HttpTestCase):
 
     def test_session_run(self) -> None:
         with self.server() as server:
-            for prefix in ("", "/foo", "/foo/", "foo/bar/baz/../oh_boy"):
+            for prefix in REQUEST_PREFIX_BY_URI_PATH:
                 with (
                     self.subTest(prefix=prefix),
                     self.server_session(server),
@@ -122,7 +127,7 @@ class TestPathPrefix(HttpTestCase):
 
     def test_explicit_tx(self) -> None:
         with self.server() as server:
-            for prefix in ("", "/foo", "/foo/", "foo/bar/baz/../oh_boy"):
+            for prefix in REQUEST_PREFIX_BY_URI_PATH:
                 with (
                     self.subTest(prefix=prefix),
                     self.server_session(server),
@@ -149,7 +154,7 @@ class TestPathPrefix(HttpTestCase):
 
     def test_execute_query(self) -> None:
         with self.server() as server:
-            for prefix in ("", "/foo", "/foo/", "foo/bar/baz/../oh_boy"):
+            for prefix in REQUEST_PREFIX_BY_URI_PATH:
                 with (
                     self.subTest(prefix=prefix),
                     self.server_session(server),
