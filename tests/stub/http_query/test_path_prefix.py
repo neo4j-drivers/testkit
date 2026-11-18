@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import typing as t
-from contextlib import contextmanager
 
 from nutkit import protocol as types
 from tests.stub.http_query.shared import (
@@ -18,7 +17,6 @@ from tests.stub.http_query.shared.http_endpoints import (
 from tests.stub.http_query.shared.http_server import HandlerType
 
 if t.TYPE_CHECKING:
-    from nutkit.frontend import Driver
     from tests.stub.http_query.shared.http_server import HTTPServer
 
     T = t.TypeVar("T")
@@ -66,27 +64,22 @@ def _make_tx_endpoint() -> HttpEndpoint:
 
 
 class TestPathPrefix(HttpTestCase):
-    @contextmanager
-    def _driver_with_prefix(
-        self, server: HTTPServer, path: str
-    ) -> t.Generator[Driver]:
-        with self.driver(server, AUTH, relative_path=path) as driver:
-            server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
-            yield driver
-
     def _test_session_run(self, server: HTTPServer, path: str) -> None:
         query_endpoint = _make_query_endpoint()
 
-        with self._driver_with_prefix(server, path) as driver:
-            server.install_discovery_endpoint(version=SERVER_VERSION)
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.ONESHOT
-            )
-            with driver.session("w", database=DB) as session:
-                result = session.run(QUERY)
-                keys = result.keys()
-                records = list(result)
-                summary = result.consume()
+        server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
+        server.install_discovery_endpoint(version=SERVER_VERSION)
+        server.install_endpoint(
+            query_endpoint, handler_type=HandlerType.ONESHOT
+        )
+        with (
+            self.driver(server, AUTH, relative_path=path) as driver,
+            driver.session("w", database=DB) as session,
+        ):
+            result = session.run(QUERY)
+            keys = result.keys()
+            records = list(result)
+            summary = result.consume()
 
         self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
@@ -105,20 +98,21 @@ class TestPathPrefix(HttpTestCase):
     def _test_explicit_tx(self, server: HTTPServer, path: str) -> None:
         query_endpoint = _make_tx_endpoint()
 
-        with self._driver_with_prefix(server, path) as driver:
-            server.install_discovery_endpoint(version=SERVER_VERSION)
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.PERMANENT
-            )
-            with (
-                driver.session("w", database=DB) as session,
-                session.begin_transaction() as tx,
-            ):
-                result = tx.run(QUERY)
-                keys = result.keys()
-                records = list(result)
-                summary = result.consume()
-                tx.commit()
+        server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
+        server.install_discovery_endpoint(version=SERVER_VERSION)
+        server.install_endpoint(
+            query_endpoint, handler_type=HandlerType.PERMANENT
+        )
+        with (
+            self.driver(server, AUTH, relative_path=path) as driver,
+            driver.session("w", database=DB) as session,
+            session.begin_transaction() as tx,
+        ):
+            result = tx.run(QUERY)
+            keys = result.keys()
+            records = list(result)
+            summary = result.consume()
+            tx.commit()
 
         self.assertEqual(keys, FIELDS)
         self.assertEqual(len(records), 1)
@@ -137,11 +131,12 @@ class TestPathPrefix(HttpTestCase):
     def _test_execute_query(self, server: HTTPServer, path: str) -> None:
         query_endpoint = _make_tx_endpoint()
 
-        with self._driver_with_prefix(server, path) as driver:
-            server.install_discovery_endpoint(version=SERVER_VERSION)
-            server.install_endpoint(
-                query_endpoint, handler_type=HandlerType.PERMANENT
-            )
+        server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
+        server.install_discovery_endpoint(version=SERVER_VERSION)
+        server.install_endpoint(
+            query_endpoint, handler_type=HandlerType.PERMANENT
+        )
+        with self.driver(server, AUTH, relative_path=path) as driver:
             result = driver.execute_query(QUERY, database=DB)
             keys = result.keys
             records = result.records
