@@ -662,6 +662,10 @@ class TestDataTypes(_TestTypesBase):
         self.assertEqual(values, [data, dt1, dt2])
 
     def test_cypher_created_datetime(self):
+        server_info = get_server_info()
+        utc_zone_is_sent_as_offset = (
+            server_info.is_http and server_info.parsed_version() < (2026, 4)
+        )
         for (s, dt) in (
             (
                 "datetime('1976-06-13T12:34:56')",
@@ -703,6 +707,8 @@ class TestDataTypes(_TestTypesBase):
             with self.subTest(s=s, dt=dt):
                 self._create_driver_and_session()
                 values = self._read_query_values(f"RETURN {s}")
+                if utc_zone_is_sent_as_offset and dt.timezone_id == "UTC":
+                    dt.timezone_id = None
                 if get_driver_name() == "python":
                     # Python cannot discriminate between +00:00
                     # and +00:00[UTC]

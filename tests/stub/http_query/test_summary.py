@@ -744,6 +744,10 @@ class TestSummaryQueryType(_SummaryTestBase):
                 "org.neo4j.driver.exceptions.ProtocolException",
                 exc.errorType
             )
+        elif driver_name in ["dotnet"]:
+            self.assertEqual("ProtocolError", exc.errorType)
+            self.assertIn(query_type, message)
+            self.assertIn("query type", message)
         else:
             raise NotImplementedError(f"Add error mapping for {driver_name}")
 
@@ -1331,6 +1335,9 @@ class TestSummaryProfile(_SummaryTestBase):
             {
                 "dbHits": 1,
                 "rows": 1,
+                "pageCacheHits": 0,
+                "pageCacheMisses": 0,
+                "pageCacheHitRatio": 0.0,
                 "time": 0,
                 "identifiers": ["n"],
                 "operatorType": "ProduceResults@neo4j",
@@ -1563,6 +1570,9 @@ class TestSummaryProfile(_SummaryTestBase):
             {
                 "dbHits": 1,
                 "rows": 1,
+                "pageCacheHits": 0,
+                "pageCacheMisses": 0,
+                "pageCacheHitRatio": 0.0,
                 "time": 0,
                 "identifiers": ["n"],
                 "operatorType": "ProduceResults@neo4j",

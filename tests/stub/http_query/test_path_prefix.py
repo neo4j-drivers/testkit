@@ -29,6 +29,12 @@ FIELDS = ["n"]
 RECORDS: list[list[http_types.HttpType]] = [[http_types.Int(1)]]
 AUTH = HttpTestCase.AUTH
 SERVER_VERSION = "2025.13.99999"
+REQUEST_PREFIX_BY_URI_PATH = {
+    "": "",
+    "/foo": "/foo",
+    "/foo/": "/foo",
+    "foo/bar/baz/../oh_boy": "/foo/bar/oh_boy",
+}
 
 
 def _make_query_endpoint() -> HttpQueryEndpoint:
@@ -61,6 +67,7 @@ class TestPathPrefix(HttpTestCase):
     def _test_session_run(self, server: HTTPServer, path: str) -> None:
         query_endpoint = _make_query_endpoint()
 
+        server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
         server.install_discovery_endpoint(version=SERVER_VERSION)
         server.install_endpoint(
             query_endpoint, handler_type=HandlerType.ONESHOT
@@ -81,7 +88,7 @@ class TestPathPrefix(HttpTestCase):
 
     def test_session_run(self) -> None:
         with self.server() as server:
-            for prefix in ("", "/foo", "/foo/", "foo/bar/baz/../oh_boy"):
+            for prefix in REQUEST_PREFIX_BY_URI_PATH:
                 with (
                     self.subTest(prefix=prefix),
                     self.server_session(server),
@@ -91,6 +98,7 @@ class TestPathPrefix(HttpTestCase):
     def _test_explicit_tx(self, server: HTTPServer, path: str) -> None:
         query_endpoint = _make_tx_endpoint()
 
+        server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
         server.install_discovery_endpoint(version=SERVER_VERSION)
         server.install_endpoint(
             query_endpoint, handler_type=HandlerType.PERMANENT
@@ -113,7 +121,7 @@ class TestPathPrefix(HttpTestCase):
 
     def test_explicit_tx(self) -> None:
         with self.server() as server:
-            for prefix in ("", "/foo", "/foo/", "foo/bar/baz/../oh_boy"):
+            for prefix in REQUEST_PREFIX_BY_URI_PATH:
                 with (
                     self.subTest(prefix=prefix),
                     self.server_session(server),
@@ -123,6 +131,7 @@ class TestPathPrefix(HttpTestCase):
     def _test_execute_query(self, server: HTTPServer, path: str) -> None:
         query_endpoint = _make_tx_endpoint()
 
+        server.path_prefix = REQUEST_PREFIX_BY_URI_PATH[path]
         server.install_discovery_endpoint(version=SERVER_VERSION)
         server.install_endpoint(
             query_endpoint, handler_type=HandlerType.PERMANENT
@@ -140,7 +149,7 @@ class TestPathPrefix(HttpTestCase):
 
     def test_execute_query(self) -> None:
         with self.server() as server:
-            for prefix in ("", "/foo", "/foo/", "foo/bar/baz/../oh_boy"):
+            for prefix in REQUEST_PREFIX_BY_URI_PATH:
                 with (
                     self.subTest(prefix=prefix),
                     self.server_session(server),
