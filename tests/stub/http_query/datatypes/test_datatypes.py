@@ -72,7 +72,7 @@ class TestTypes(HttpDataTypeTestCase):
                                 types.CypherFloat(value),
                                 http_types.Float(value),
                             )
-                    else: 
+                    else:
                         self._echo_session_run(
                             server,
                             types.CypherFloat(value),
