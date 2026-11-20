@@ -84,11 +84,6 @@ class TestDataTypes(_TestTypesBase):
                     and isinstance(val.value, str)
                 ):
                     continue
-            # TODO: remove this block once all languages work
-            if get_driver_name() in ["java", "javascript", "go", "dotnet"]:
-                # driver backend  does not implement byte values
-                if isinstance(val, types.CypherBytes):
-                    continue
             with self.subTest(x=val):
                 self._verify_can_echo(val)
 
