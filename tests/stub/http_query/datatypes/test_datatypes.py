@@ -60,11 +60,24 @@ class TestTypes(HttpDataTypeTestCase):
 
             for value in values:
                 with self.subTest(x=value):
-                    self._echo_session_run(
-                        server,
-                        types.CypherFloat(value),
-                        http_types.Float(value),
-                    )
+                    if self.driver_supports_features(
+                        types.Feature.DETAIL_NUMBER_IS_NUMBER
+                    ):
+                        if (
+                            not isinstance(value, types.CypherFloat)
+                            and not float(value) % 1 == 0
+                        ):
+                            self._echo_session_run(
+                                server,
+                                types.CypherFloat(value),
+                                http_types.Float(value),
+                            )
+                    else: 
+                        self._echo_session_run(
+                            server,
+                            types.CypherFloat(value),
+                            http_types.Float(value),
+                        )
 
     def test_str(self):
         with self.server() as server:
