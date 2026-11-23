@@ -117,7 +117,7 @@ class HTTPServer:
         self._server.path_prefix = value
 
     def url_for(self, suffix: str) -> str:
-        return self._server.url_for(self._server.prefix_path(suffix))
+        return self._server.url_for(suffix)
 
     @property
     def host(self) -> str:
