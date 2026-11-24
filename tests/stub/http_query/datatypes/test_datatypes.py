@@ -32,12 +32,15 @@ class TestTypes(HttpDataTypeTestCase):
     def test_int(self):
         with self.server() as server:
             for value in (MIN_INT64, -1337, -1, 0, 1, 1337, MAX_INT64):
-                with self.subTest(x=value):
-                    self._echo_session_run(
-                        server,
-                        types.CypherInt(value),
-                        http_types.Int(value),
-                    )
+                if not self.driver_supports_features(
+                                types.Feature.DETAIL_NUMBER_IS_NUMBER
+                            ) or abs(value) < 2**53:
+                    with self.subTest(x=value):
+                        self._echo_session_run(
+                            server,
+                            types.CypherInt(value),
+                            http_types.Int(value),
+                        )
 
     def test_float(self):
         with self.server() as server:
