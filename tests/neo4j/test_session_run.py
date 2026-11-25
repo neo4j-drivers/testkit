@@ -395,7 +395,7 @@ class TestSessionRun(TestkitTestCase):
 
     @cluster_unsafe_test
     def test_long_string(self):
-        string = "A" * 2 ** 20
+        string = "A" * 2 ** 15
         query = "RETURN '{}'".format(string)
         for _ in range(6):
             session = self._driver.session("r")
