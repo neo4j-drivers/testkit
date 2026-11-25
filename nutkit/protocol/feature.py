@@ -230,6 +230,10 @@ class Feature(Enum):
     CONF_HINT_CON_RECV_TIMEOUT = "ConfHint:connection.recv_timeout_seconds"
 
     # === BACKEND FEATURES FOR TESTING ===
+    # The backend/driver offers a way to configure a driver with a custom DNS
+    # resolver. This configuration option is for testing purposes and might
+    # not be exposed to the user.
+    BACKEND_DNS_RESOLVER = "Backend:DNSResolver"
     # The backend understands the FakeTimeInstall, FakeTimeUninstall and
     # FakeTimeTick protocol messages and provides a way to mock the system
     # time. This is mainly used for testing various timeouts.
