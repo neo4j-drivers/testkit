@@ -653,10 +653,12 @@ def test_plays_through(server_version, request_tag, request_name, field_rep,
      "request_name",
      "response_tag",
      "response_name"),
-    ((v, req_t, req_n, res_t, res_n)
-     for v in ALL_BOLT_VERSIONS
-     for req_v, req_t, req_n in ALL_REQUESTS_PER_VERSION if req_v == v
-     for res_v, res_t, res_n in ALL_RESPONSES_PER_VERSION if res_v == v)
+    tuple(
+        (v, req_t, req_n, res_t, res_n)
+        for v in ALL_BOLT_VERSIONS
+        for req_v, req_t, req_n in ALL_REQUESTS_PER_VERSION if req_v == v
+        for res_v, res_t, res_n in ALL_RESPONSES_PER_VERSION if res_v == v
+    )
 )
 @pytest.mark.parametrize("with_auto", (True, False))
 def test_manual_replies(server_version, request_tag, request_name,
@@ -689,8 +691,10 @@ def test_manual_replies(server_version, request_tag, request_name,
 
 @pytest.mark.parametrize(
     ("server_version", "response_tag", "response_name"),
-    (next(r for r in ALL_RESPONSES_PER_VERSION if r[0] == v)
-     for v in ALL_BOLT_VERSIONS)
+    tuple(
+        next(r for r in ALL_RESPONSES_PER_VERSION if r[0] == v)
+        for v in ALL_BOLT_VERSIONS
+    )
 )
 def test_initial_response(server_version, response_tag, response_name,
                           server_factory):

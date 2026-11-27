@@ -30,7 +30,8 @@ def check_availability(driver, host, port):
             name = record.get("name")
             if not isinstance(name, str):
                 LAST_ERROR = "name not str"
-                db_names.add(name)
+                return False
+            db_names.add(name)
             status_req = record.get("requestedStatus")
             if not isinstance(status_req, str):
                 LAST_ERROR = "requestedStatus not str"
@@ -48,11 +49,13 @@ def check_availability(driver, host, port):
             rec_address = record.get("address")
             if not isinstance(rec_address, str):
                 LAST_ERROR = "address not str"
+                return False
             if rec_address != address:
                 continue  # db on different server
             name = record.get("name")
             if not isinstance(name, str):
                 LAST_ERROR = "name not str"
+                return False
             db_names.add(name)
         if not {"system", "neo4j"} <= db_names:
             LAST_ERROR = (

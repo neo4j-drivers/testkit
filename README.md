@@ -3,7 +3,7 @@
 ## Running all test suites within docker containers
 
 Requirements on host:
-  * Python >= 3.12
+  * Python 3.14
   * Docker >= 19.03
 
 Environment variables:
